@@ -15,6 +15,7 @@ from sqlalchemy import create_engine
 # Register every model on Base.metadata for the drift check.
 import relay.audit.models
 import relay.catalog.models
+import relay.continuity.models
 import relay.directory.models
 import relay.identity.models
 import relay.jobs.models
@@ -22,7 +23,7 @@ import relay.platform.models  # noqa: F401
 from relay.shared.db.base import Base
 from tests.db import APP_ROLE, OWNER_URL, libpq_url
 
-MANAGED_SCHEMAS = ("platform", "identity", "audit", "directory", "catalog")
+MANAGED_SCHEMAS = ("platform", "identity", "audit", "directory", "catalog", "continuity")
 TENANT_ROOT = ("platform", "tenant")
 # Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.
 GLOBAL_TABLES = {("identity", "user_account"), ("identity", "workspace_creation_request")}

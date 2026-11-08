@@ -30,15 +30,32 @@ class Permission(StrEnum):
     DIRECTORY_MANAGE = "directory.manage"
     RESPONSIBILITY_READ = "responsibility.read"
     RESPONSIBILITY_MANAGE = "responsibility.manage"
+    MEMBER_READ = "member.read"
+    CASE_READ = "case.read"
+    CASE_MANAGE = "case.manage"
+    CASE_APPROVE = "case.approve"
 
 
 # Granted to any verified identity, independent of workspace membership.
 PRINCIPAL_PERMISSIONS: Final = frozenset({Permission.WORKSPACE_CREATE})
 
 _READ: Final = frozenset(
-    {Permission.WORKSPACE_READ, Permission.DIRECTORY_READ, Permission.RESPONSIBILITY_READ}
+    {
+        Permission.WORKSPACE_READ,
+        Permission.DIRECTORY_READ,
+        Permission.RESPONSIBILITY_READ,
+        Permission.MEMBER_READ,
+        Permission.CASE_READ,
+    }
 )
-_MANAGE: Final = frozenset({Permission.DIRECTORY_MANAGE, Permission.RESPONSIBILITY_MANAGE})
+_MANAGE: Final = frozenset(
+    {
+        Permission.DIRECTORY_MANAGE,
+        Permission.RESPONSIBILITY_MANAGE,
+        Permission.CASE_MANAGE,
+        Permission.CASE_APPROVE,
+    }
+)
 
 ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
     "owner": _READ | _MANAGE | {Permission.AUDIT_READ},
