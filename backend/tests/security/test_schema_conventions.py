@@ -13,11 +13,11 @@ from alembic.migration import MigrationContext
 from sqlalchemy import create_engine
 
 # Register every model on Base.metadata for the drift check.
-import relay.audit.models  # noqa: F401
-import relay.catalog.models  # noqa: F401
-import relay.directory.models  # noqa: F401
-import relay.identity.models  # noqa: F401
-import relay.jobs.models  # noqa: F401
+import relay.audit.models
+import relay.catalog.models
+import relay.directory.models
+import relay.identity.models
+import relay.jobs.models
 import relay.platform.models  # noqa: F401
 from relay.shared.db.base import Base
 from tests.db import APP_ROLE, OWNER_URL, libpq_url

@@ -9,11 +9,11 @@ from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # Register every model on Base.metadata (autogenerate comparisons).
-import relay.audit.models  # noqa: F401
-import relay.catalog.models  # noqa: F401
-import relay.directory.models  # noqa: F401
-import relay.identity.models  # noqa: F401
-import relay.jobs.models  # noqa: F401
+import relay.audit.models
+import relay.catalog.models
+import relay.directory.models
+import relay.identity.models
+import relay.jobs.models
 import relay.platform.models  # noqa: F401
 from relay.config import MigrationSettings
 from relay.shared.db.base import Base
