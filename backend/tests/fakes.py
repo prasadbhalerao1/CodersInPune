@@ -60,6 +60,11 @@ class FakeExternal:
     activity_forbidden: bool = False  # simulate missing Pull requests/Issues permission
     members_forbidden: bool = False  # simulate missing Organization > Members permission
     calls: list[str] = field(default_factory=list)
+    # Resend: list of outcomes to return in order ("ok", "500", "422", "timeout"); then "ok".
+    resend_script: list[str] = field(default_factory=list)
+    emails: list[dict[str, Any]] = field(default_factory=list)  # accepted messages
+    resend_keys: dict[str, str] = field(default_factory=dict)  # idempotency key -> id
+    resend_requests: int = 0
 
     def __post_init__(self) -> None:
         self.private_key_pem, self._public_key = _private_key_pem()
@@ -75,10 +80,20 @@ class FakeExternal:
             "workos_api_key": "sk_test_fake",
         }
 
+    email_settings: dict[str, Any] = field(
+        default_factory=lambda: {
+            "resend_api_key": "re_test_key",
+            "email_from": "Relay <notifications@relay.test>",
+            "frontend_base_url": "https://relay.test",
+        }
+    )
+
     def __call__(self, request: httpx.Request) -> httpx.Response:
         host, path, method = request.url.host, request.url.path, request.method
         if host == "api.workos.com":
             return self._workos(method, path, request)
+        if host == "api.resend.com":
+            return self._resend(request)
         if self.github_down:
             return httpx.Response(502)
         if host == "github.com" and path == "/login/oauth/access_token":
@@ -91,6 +106,23 @@ class FakeExternal:
         if host == "api.github.com":
             return self._github(method, path, request)
         return httpx.Response(404)
+
+    def _resend(self, request: httpx.Request) -> httpx.Response:
+        if request.headers.get("authorization") != "Bearer re_test_key":
+            return httpx.Response(401, json={"name": "missing_api_key"})
+        self.resend_requests += 1
+        key = request.headers.get("idempotency-key", "")
+        if key in self.resend_keys:  # Resend replays the original response for a key
+            return httpx.Response(200, json={"id": self.resend_keys[key]})
+        outcome = self.resend_script.pop(0) if self.resend_script else "ok"
+        if outcome == "timeout":
+            raise httpx.ReadTimeout("timed out", request=request)
+        if outcome != "ok":
+            return httpx.Response(int(outcome), json={"name": "validation_error"})
+        message_id = f"email_{len(self.emails) + 1}"
+        self.resend_keys[key] = message_id
+        self.emails.append({**json.loads(request.content), "idempotency_key": key})
+        return httpx.Response(200, json={"id": message_id})
 
     def _workos(self, method: str, path: str, request: httpx.Request) -> httpx.Response:
         if request.headers.get("authorization") != "Bearer sk_test_fake":

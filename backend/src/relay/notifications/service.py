@@ -25,6 +25,7 @@ from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.jobs import outbox
 from relay.jobs.models import OutboxEvent
+from relay.notifications import email
 from relay.notifications.models import Notification
 from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import StrictInput
@@ -162,7 +163,7 @@ async def _still_due(session: AsyncSession, payload: dict[str, Any]) -> bool:
     )
 
 
-async def _deliver(session: AsyncSession, event: OutboxEvent, _ctx: outbox.JobContext) -> None:
+async def _deliver(session: AsyncSession, event: OutboxEvent, ctx: outbox.JobContext) -> None:
     payload = event.payload
     if payload["kind"] in ("task_due_soon", "task_overdue") and not await _still_due(
         session, payload
@@ -190,11 +191,16 @@ async def _deliver(session: AsyncSession, event: OutboxEvent, _ctx: outbox.JobCo
         if user_id != actor and user_id in members
     ]
     if rows:
-        await session.execute(
-            insert(Notification)
-            .values(rows)
-            .on_conflict_do_nothing(index_elements=["tenant_id", "dedupe_key"])
+        created = list(
+            await session.scalars(
+                insert(Notification)
+                .values(rows)
+                .on_conflict_do_nothing(index_elements=["tenant_id", "dedupe_key"])
+                .returning(Notification)
+            )
         )
+        # Email is an extra channel for the notifications created just now (never twice).
+        await email.queue_for_notifications(session, ctx, created)
 
 
 outbox.register(EVENT, _deliver)

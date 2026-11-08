@@ -90,6 +90,7 @@ def create_app(
     app.include_router(knowledge_api.router)
     app.include_router(imports_api.router)
     app.include_router(notifications_api.router)
+    app.include_router(notifications_api.admin)
     app.include_router(directory_api.router)
     app.include_router(risks_api.router)
     app.include_router(continuity_api.router)

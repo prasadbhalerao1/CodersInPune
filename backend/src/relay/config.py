@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     github_web_base_url: str = "https://github.com"
     # Webhook HMAC secret (App settings > Webhook secret). Unset = webhooks rejected (503).
     github_webhook_secret: SecretStr | None = None
+    # Email (Resend). Unset key = email off; in-app notifications are unaffected.
+    resend_api_key: SecretStr | None = None
+    resend_api_base_url: str = "https://api.resend.com"
+    email_from: str | None = None  # e.g. "Relay <notifications@mail.example.com>"
+    email_reply_to: str | None = None
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
 

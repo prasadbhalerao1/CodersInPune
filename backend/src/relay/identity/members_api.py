@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, status
 from relay.identity import members as svc
 from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.notifications.email_provider import email_configured
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["members"])
 me = APIRouter(prefix="/me", tags=["members"])
@@ -35,7 +36,11 @@ async def invite(
 ) -> svc.InvitationView:
     state = request.app.state
     return await svc.create_invitation(
-        access, body, state.workos, state.settings.invitation_ttl_days
+        access,
+        body,
+        state.workos,
+        state.settings.invitation_ttl_days,
+        email_jobs=state.jobs if email_configured(state.settings) else None,
     )
 
 

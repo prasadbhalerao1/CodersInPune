@@ -10,6 +10,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import procrastinate
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -21,6 +22,8 @@ from relay.identity.models import ACTIVE, Invitation, Membership, UserAccount
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workos_api import WorkOSClient, WorkOSUnavailableError
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.notifications import email as email_service
+from relay.notifications.models import EmailDelivery
 from relay.platform.models import Tenant
 from relay.policy.permissions import Permission, authorize, visible
 from relay.shared.api_types import Email, StrictInput
@@ -83,14 +86,14 @@ def _member_view(m: Membership) -> WorkspaceMemberView:
     )
 
 
-def _invitation_view(i: Invitation) -> InvitationView:
+def _invitation_view(i: Invitation, emailed: bool = False) -> InvitationView:
     return InvitationView(
         id=i.id,
         email=i.email,
         role=i.role,
         status=i.status,
         expired=i.status == "pending" and i.expires_at <= _now(),
-        email_sent=i.workos_invitation_id is not None,
+        email_sent=emailed or i.workos_invitation_id is not None,
         created_at=i.created_at,
         expires_at=i.expires_at,
     )
@@ -184,12 +187,27 @@ async def list_invitations(access: WorkspaceAccess) -> list[InvitationView]:
         )
         .order_by(Invitation.created_at.desc())
     )
-    return [_invitation_view(i) for i in rows]
+    invitations = list(rows)
+    emailed = set(
+        await access.session.scalars(
+            select(EmailDelivery.invitation_id).where(
+                EmailDelivery.invitation_id.in_([i.id for i in invitations]),
+                EmailDelivery.status.in_(("pending", "sent")),
+            )
+        )
+    )
+    return [_invitation_view(i, i.id in emailed) for i in invitations]
 
 
 async def create_invitation(
-    access: WorkspaceAccess, data: InvitationIn, workos: WorkOSClient, ttl_days: int
+    access: WorkspaceAccess,
+    data: InvitationIn,
+    workos: WorkOSClient,
+    ttl_days: int,
+    email_jobs: procrastinate.App | None = None,
 ) -> InvitationView:
+    """With Relay email configured (`email_jobs`), Relay sends its own invitation email
+    through the outbox; otherwise WorkOS sends one (best effort)."""
     authorize(access, Permission.MEMBER_MANAGE)
     if data.role == "owner" and access.role != "owner":
         raise ApiError(403, "owner_required", "Only owners can invite owners.")
@@ -218,11 +236,14 @@ async def create_invitation(
         raise ApiError(
             409, "invitation_exists", "There is already a pending invitation for that email."
         ) from exc
-    invitation.workos_invitation_id = await workos.send_invitation(email, ttl_days)
+    if email_jobs is not None:
+        await email_service.queue_invitation(access.session, email_jobs, invitation)
+    else:
+        invitation.workos_invitation_id = await workos.send_invitation(email, ttl_days)
     await access.session.flush()
     await access.session.refresh(invitation)
     _record(access, "invitation.created", "invitation", invitation.id, role=data.role)
-    return _invitation_view(invitation)
+    return _invitation_view(invitation, emailed=email_jobs is not None)
 
 
 async def revoke_invitation(
