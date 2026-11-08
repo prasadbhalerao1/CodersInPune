@@ -1,0 +1,76 @@
+import asyncio
+import os
+import subprocess
+import sys
+from collections.abc import AsyncIterator
+from pathlib import Path
+from typing import Any
+
+import psycopg
+import pytest
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+from relay.config import Settings
+from relay.shared.db import create_engine, create_session_factory
+from tests.db import APP_ROLE, APP_URL, OWNER_URL, libpq_url
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope="session")
+def anyio_backend() -> tuple[str, dict[str, Any]]:
+    # psycopg async needs a selector loop on Windows (see relay/__main__.py).
+    options: dict[str, Any] = {}
+    if sys.platform == "win32":
+        options["loop_factory"] = asyncio.SelectorEventLoop
+    return ("asyncio", options)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def migrated_database() -> None:
+    """Rebuild the test schema from migrations: proves downgrade and upgrade both work."""
+    env = {**os.environ, "RELAY_MIGRATION_DATABASE_URL": OWNER_URL, "RELAY_APP_DB_ROLE": APP_ROLE}
+    for args in (["downgrade", "base"], ["upgrade", "head"]):
+        result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            [sys.executable, "-m", "alembic", *args],
+            cwd=BACKEND_DIR,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            pytest.fail(
+                f"alembic {' '.join(args)} failed. Is Postgres running "
+                f"(`docker compose up -d --wait`)?\n{result.stderr}",
+                pytrace=False,
+            )
+
+
+@pytest.fixture(autouse=True)
+def clean_tables() -> None:
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute(
+            "TRUNCATE platform.tenant_probe_item, platform.tenant_probe, platform.tenant CASCADE"
+        )
+
+
+def make_settings(**overrides: Any) -> Settings:
+    return Settings(**{"database_url": APP_URL, "environment": "test", **overrides})
+
+
+@pytest.fixture
+def settings() -> Settings:
+    return make_settings()
+
+
+@pytest.fixture
+async def engine(settings: Settings) -> AsyncIterator[AsyncEngine]:
+    eng = create_engine(settings)
+    yield eng
+    await eng.dispose()
+
+
+@pytest.fixture
+def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return create_session_factory(engine)

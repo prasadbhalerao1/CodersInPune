@@ -33,7 +33,7 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF", "SIM", "PT"]
-ignore = ["S101"] # assert is fine in tests
+ignore = ["S101", "RUF012"] # assert in tests; RUF012 flags SQLAlchemy __table_args__
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S105", "S106"]  # dev-only credentials in test defaults
@@ -44,6 +44,7 @@ strict = true
 python_version = "3.14"
 mypy_path = "src"
 packages = ["relay", "tests"]
+plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

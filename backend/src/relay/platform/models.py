@@ -35,9 +35,7 @@ class Tenant(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
     name: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class TenantProbe(Base):
@@ -53,9 +51,7 @@ class TenantProbe(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
     name: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class TenantProbeItem(Base):
