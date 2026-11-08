@@ -29,8 +29,8 @@ from relay.shared.db.base import Base
 
 SCHEMA = "catalog"
 CRITICALITIES: Final = ("critical", "high", "standard", "low")
-ROLES: Final = ("primary", "co_owner", "backup")
-CHANGE_TYPES: Final = ("assigned", "ended")
+ROLES: Final = ("primary", "co_owner", "backup", "temporary")
+CHANGE_TYPES: Final = ("assigned", "ended", "extended")
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -84,6 +84,7 @@ class OwnershipAssignment(Base):
         CheckConstraint(_in("role", ROLES), name="role"),
         CheckConstraint("num_nonnulls(person_id, team_id) = 1", name="one_assignee"),
         CheckConstraint("valid_to IS NULL OR valid_to > valid_from", name="valid_range"),
+        CheckConstraint("role <> 'temporary' OR valid_to IS NOT NULL", name="temporary_bounded"),
         Index(None, "tenant_id", "responsibility_id"),
         {"schema": SCHEMA},
     )

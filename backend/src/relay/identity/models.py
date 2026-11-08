@@ -70,6 +70,9 @@ class Membership(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     role: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text)
+    # Self-reported at sign-in; for display only, never for authorization.
+    display_name: Mapped[str | None] = mapped_column(Text)
+    email: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

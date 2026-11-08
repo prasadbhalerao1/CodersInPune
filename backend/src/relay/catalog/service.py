@@ -34,6 +34,10 @@ _CONSTRAINT_ERRORS = {
         "primary_owner_conflict",
         "Another primary owner is assigned for this period. Replace the primary owner instead.",
     ),
+    "ex_ownership_assignment_one_temporary": (
+        "coverage_conflict",
+        "Someone already covers this responsibility for part of that period.",
+    ),
     "ex_ownership_assignment_one_role": (
         "assignment_overlap",
         "This person or team already holds a role on this responsibility for this period.",
@@ -229,7 +233,7 @@ async def _require_active(access: WorkspaceAccess, responsibility_id: uuid.UUID)
     return responsibility
 
 
-async def _require_assignee(access: WorkspaceAccess, assignee: Assignee) -> None:
+async def require_assignee(access: WorkspaceAccess, assignee: Assignee) -> None:
     model = Person if assignee.person_id else Team
     target_id = assignee.person_id or assignee.team_id
     found = await access.session.scalar(
@@ -417,7 +421,7 @@ async def get_responsibility(
     def is_active(a: OwnershipAssignment) -> bool:
         return a.valid_from <= at and (a.valid_to is None or a.valid_to > at)
 
-    role_order = {"primary": 0, "co_owner": 1, "backup": 2}
+    role_order = {"temporary": 0, "primary": 1, "co_owner": 2, "backup": 3}
     owners = sorted((a for a in assignments if is_active(a)), key=lambda a: role_order[a.role])
     return ResponsibilityDetail(
         id=r.id,
@@ -521,7 +525,7 @@ async def assign_owner(
 ) -> ResponsibilityDetail:
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
     await _require_active(access, responsibility_id)
-    await _require_assignee(access, data)
+    await require_assignee(access, data)
     assignment = await _insert_assignment(
         access, responsibility_id, data.role, data, _aware(data.starts_at), data.reason
     )
@@ -566,47 +570,142 @@ async def end_assignment(
     return await get_responsibility(access, responsibility_id)
 
 
-async def replace_primary(
-    access: WorkspaceAccess, responsibility_id: uuid.UUID, data: ReplacePrimaryIn
-) -> ResponsibilityDetail:
-    """End the current primary (and any other role the new owner holds) at
-    `effective_at`, then start the new primary there: one atomic, contiguous handover."""
+async def handover(
+    access: WorkspaceAccess,
+    responsibility_id: uuid.UUID,
+    role: str,
+    recipient: Assignee,
+    at: datetime,
+    reason: str | None,
+    *,
+    from_assignment_id: uuid.UUID | None = None,
+) -> OwnershipAssignment:
+    """Contiguous handover of `role` to `recipient` at `at` (possibly in the future).
+
+    Ends, at `at`: the current primary (for role=primary) or `from_assignment_id`, plus any
+    other normal role the recipient holds on this responsibility. Then starts the recipient's
+    assignment `[at, open)`. History is only appended; nothing is deleted or rewritten.
+    """
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
     await _require_active(access, responsibility_id)
-    await _require_assignee(access, data)
-    at = _aware(data.effective_at)
-    new_assignee = data.person_id or data.team_id
+    await require_assignee(access, recipient)
+    new_holder = recipient.person_id or recipient.team_id
     active = list(
         await access.session.scalars(
             select(OwnershipAssignment)
-            .where(OwnershipAssignment.responsibility_id == responsibility_id, active_at(at))
+            .where(
+                OwnershipAssignment.responsibility_id == responsibility_id,
+                OwnershipAssignment.role != "temporary",
+                active_at(at),
+            )
             .with_for_update()
         )
     )
-    previous = next((a for a in active if a.role == "primary"), None)
-    if previous is not None and (previous.person_id or previous.team_id) == new_assignee:
-        raise ApiError(409, "already_primary", "That owner is already the primary owner.")
+    if any(a.role == role and (a.person_id or a.team_id) == new_holder for a in active):
+        raise ApiError(409, "already_assigned", "That owner already holds this role.")
     to_end = [
-        a for a in active if a.role == "primary" or (a.person_id or a.team_id) == new_assignee
+        a
+        for a in active
+        if (role == "primary" and a.role == "primary")
+        or a.id == from_assignment_id
+        or (a.person_id or a.team_id) == new_holder
     ]
     for assignment in to_end:
         if assignment.valid_from >= at:
             raise ApiError(
                 409, "scheduled_conflict", "End the scheduled assignment before replacing it."
             )
-        await _end(access, assignment, at, data.reason)
-    new_primary = await _insert_assignment(
-        access, responsibility_id, "primary", data, at, data.reason
+        await _end(access, assignment, at, reason)
+    return await _insert_assignment(access, responsibility_id, role, recipient, at, reason)
+
+
+async def replace_primary(
+    access: WorkspaceAccess, responsibility_id: uuid.UUID, data: ReplacePrimaryIn
+) -> ResponsibilityDetail:
+    """End the current primary (and any other role the new owner holds) at
+    `effective_at`, then start the new primary there: one atomic, contiguous handover."""
+    at = _aware(data.effective_at)
+    previous = await access.session.scalar(
+        select(OwnershipAssignment.id).where(
+            OwnershipAssignment.responsibility_id == responsibility_id,
+            OwnershipAssignment.role == "primary",
+            active_at(at),
+        )
     )
+    new_primary = await handover(access, responsibility_id, "primary", data, at, data.reason)
     _audit(
         access,
         "ownership.primary_replaced",
         "ownership_assignment",
         new_primary.id,
         responsibility_id=str(responsibility_id),
-        previous_assignment_id=str(previous.id) if previous else None,
+        previous_assignment_id=str(previous) if previous else None,
     )
     return await get_responsibility(access, responsibility_id)
+
+
+async def start_cover(
+    access: WorkspaceAccess,
+    responsibility_id: uuid.UUID,
+    recipient: Assignee,
+    starts_at: datetime,
+    ends_at: datetime,
+    reason: str | None,
+) -> OwnershipAssignment:
+    """Temporary coverage `[starts_at, ends_at)`. Original owners stay untouched, so normal
+    ownership resumes automatically when the range ends — no job or manual restore needed."""
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await _require_active(access, responsibility_id)
+    await require_assignee(access, recipient)
+    assignment = OwnershipAssignment(
+        id=uuid.uuid7(),
+        tenant_id=access.tenant_id,
+        responsibility_id=responsibility_id,
+        role="temporary",
+        person_id=recipient.person_id,
+        team_id=recipient.team_id,
+        valid_from=starts_at,
+        valid_to=ends_at,
+        reason=reason,
+        created_by=access.user_id,
+    )
+    access.session.add(assignment)
+    await _flush_assignments(access)
+    _record_change(access, assignment, "assigned", reason)
+    return assignment
+
+
+async def _locked_assignment(
+    access: WorkspaceAccess, assignment_id: uuid.UUID
+) -> OwnershipAssignment:
+    assignment = await access.session.scalar(
+        select(OwnershipAssignment).where(OwnershipAssignment.id == assignment_id).with_for_update()
+    )
+    if assignment is None:
+        raise ApiError(404, "assignment_not_found", "Assignment not found.")
+    return assignment
+
+
+async def end_assignment_at(
+    access: WorkspaceAccess, assignment_id: uuid.UUID, at: datetime, reason: str | None
+) -> None:
+    """End (or shorten) an assignment at `at`; e.g. an early return from coverage."""
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await _end(access, await _locked_assignment(access, assignment_id), at, reason)
+
+
+async def extend_cover(
+    access: WorkspaceAccess, assignment_id: uuid.UUID, ends_at: datetime, reason: str | None
+) -> None:
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    assignment = await _locked_assignment(access, assignment_id)
+    if assignment.role != "temporary" or assignment.valid_to is None:
+        raise ApiError(409, "not_temporary", "Only temporary coverage can be extended.")
+    if ends_at <= assignment.valid_to:
+        raise ApiError(422, "invalid_extension", "The new end must be later than the current end.")
+    assignment.valid_to = ends_at
+    await _flush_assignments(access)
+    _record_change(access, assignment, "extended", reason)
 
 
 async def ownership_history(

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 # Register every model on Base.metadata (autogenerate comparisons).
 import relay.audit.models
 import relay.catalog.models
+import relay.continuity.models
 import relay.directory.models
 import relay.identity.models
 import relay.jobs.models
@@ -18,7 +19,7 @@ import relay.platform.models  # noqa: F401
 from relay.config import MigrationSettings
 from relay.shared.db.base import Base
 
-MANAGED_SCHEMAS = {"platform", "identity", "audit", "directory", "catalog"}
+MANAGED_SCHEMAS = {"platform", "identity", "audit", "directory", "catalog", "continuity"}
 
 config = context.config
 if config.config_file_name is not None:

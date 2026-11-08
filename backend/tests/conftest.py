@@ -27,9 +27,21 @@ def anyio_backend() -> tuple[str, dict[str, Any]]:
     return ("asyncio", options)
 
 
+def _truncate_all_tables() -> None:
+    """Empty every table left by a previous run so the downgrade/upgrade cycle starts clean."""
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        tables = conn.execute(
+            "SELECT format('%I.%I', schemaname, tablename) FROM pg_tables "
+            "WHERE tableowner = current_user AND tablename <> 'alembic_version'"
+        ).fetchall()
+        if tables:
+            conn.execute(f"TRUNCATE {', '.join(t[0] for t in tables)} CASCADE")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def migrated_database() -> None:
     """Rebuild the test schema from migrations: proves downgrade and upgrade both work."""
+    _truncate_all_tables()
     env = {**os.environ, "RELAY_MIGRATION_DATABASE_URL": OWNER_URL, "RELAY_APP_DB_ROLE": APP_ROLE}
     for args in (["downgrade", "base"], ["upgrade", "head"]):
         result = subprocess.run(  # noqa: S603 - fixed argv, no shell
@@ -52,7 +64,9 @@ def migrated_database() -> None:
 def clean_tables() -> None:
     with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
         conn.execute(
-            "TRUNCATE catalog.ownership_assignment_change, catalog.ownership_assignment, "
+            "TRUNCATE continuity.case_approval, continuity.case_readiness_criterion, "
+            "continuity.case_task, continuity.case_scope_item, continuity.continuity_case, "
+            "catalog.ownership_assignment_change, catalog.ownership_assignment, "
             "catalog.responsibility, directory.team_member, directory.team, directory.person, "
             "public.procrastinate_events, public.procrastinate_jobs, "
             "public.procrastinate_periodic_defers, public.procrastinate_workers, "
