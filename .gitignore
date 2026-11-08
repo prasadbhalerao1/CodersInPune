@@ -8,3 +8,11 @@ coverage/
 !.env.example
 *.pem
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
