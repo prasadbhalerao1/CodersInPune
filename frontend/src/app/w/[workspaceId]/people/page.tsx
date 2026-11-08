@@ -36,7 +36,7 @@ export default async function PeoplePage({ params }: PageProps<"/w/[workspaceId]
               action={createPersonAction.bind(null, workspaceId)}
               className="rounded-lg border p-4"
             >
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
                 <Field label="Name" htmlFor="display_name">
                   <input
                     id="display_name"
@@ -57,6 +57,16 @@ export default async function PeoplePage({ params }: PageProps<"/w/[workspaceId]
                 </Field>
                 <Field label="Title (optional)" htmlFor="title">
                   <input id="title" name="title" maxLength={200} className={inputClass} />
+                </Field>
+                <Field label="GitHub login" htmlFor="github_login">
+                  <input
+                    id="github_login"
+                    name="github_login"
+                    maxLength={39}
+                    pattern="[A-Za-z0-9-]{1,39}"
+                    placeholder="octocat"
+                    className={inputClass}
+                  />
                 </Field>
               </div>
               <div>
@@ -81,7 +91,9 @@ export default async function PeoplePage({ params }: PageProps<"/w/[workspaceId]
                       </Badge>
                     ) : null}
                     <span className="text-muted-foreground block truncate text-xs">
-                      {[p.title, p.email].filter(Boolean).join(" · ") || "—"}
+                      {[p.title, p.email, p.github_login && `@${p.github_login}`]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
                     </span>
                   </span>
                   {manage ? (
@@ -110,7 +122,7 @@ export default async function PeoplePage({ params }: PageProps<"/w/[workspaceId]
               action={createTeamAction.bind(null, workspaceId)}
               className="rounded-lg border p-4"
             >
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Team name" htmlFor="team-name">
                   <input
                     id="team-name"
@@ -125,6 +137,15 @@ export default async function PeoplePage({ params }: PageProps<"/w/[workspaceId]
                     id="team-description"
                     name="description"
                     maxLength={4000}
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="GitHub team (org/slug)" htmlFor="team-github">
+                  <input
+                    id="team-github"
+                    name="github_slug"
+                    maxLength={140}
+                    placeholder="acme/platform"
                     className={inputClass}
                   />
                 </Field>

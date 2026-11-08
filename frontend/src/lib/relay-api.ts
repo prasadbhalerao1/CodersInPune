@@ -3,6 +3,10 @@ import "server-only";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 
 import type {
+  IntegrationView,
+  InvitationView,
+  MyInvitationView,
+  SuggestionView,
   CaseDetail,
   CaseSummary,
   ChangeView,
@@ -97,7 +101,15 @@ export const api = {
   listTeams: (id: string, query?: Query) =>
     relayFetch<TeamView[]>(withQuery(`${ws(id)}/teams`, query)),
 
-  members: (id: string) => relayFetch<WorkspaceMemberView[]>(`${ws(id)}/members`),
+  members: (id: string, query?: Query) =>
+    relayFetch<WorkspaceMemberView[]>(withQuery(`${ws(id)}/members`, query)),
+  invitations: (id: string) => relayFetch<InvitationView[]>(`${ws(id)}/invitations`),
+  myInvitations: () => relayFetch<MyInvitationView[]>("/me/invitations"),
+  github: (id: string) => relayFetch<IntegrationView>(`${ws(id)}/integrations/github`),
+  githubSuggestions: (id: string, status = "open") =>
+    relayFetch<SuggestionView[]>(
+      withQuery(`${ws(id)}/integrations/github/suggestions`, { status }),
+    ),
   myWork: (id: string) => relayFetch<MyWorkView>(`${ws(id)}/my-work`),
   listCases: (id: string, query?: Query) =>
     relayFetch<CaseSummary[]>(withQuery(`${ws(id)}/cases`, query)),
@@ -112,5 +124,7 @@ export const api = {
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
 };
+
+export const isOwner = (workspace: WorkspaceView) => workspace.role === "owner";
 
 export const canManage = (workspace: WorkspaceView) => ["owner", "admin"].includes(workspace.role);

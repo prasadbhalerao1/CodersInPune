@@ -63,6 +63,7 @@ export type PersonView = {
   display_name: string;
   email: string | null;
   title: string | null;
+  github_login: string | null;
   status: "active" | "archived";
   created_at: string;
 };
@@ -73,6 +74,7 @@ export type TeamView = {
   id: string;
   name: string;
   description: string | null;
+  github_slug: string | null;
   status: "active" | "archived";
   created_at: string;
   members: TeamMemberView[];
@@ -219,6 +221,81 @@ export type HistoryView = {
   details: Record<string, string | number | boolean | null>;
 };
 
-export type WorkspaceMemberView = { user_id: string; name: string; role: string };
+export type WorkspaceRole = "owner" | "admin" | "member" | "guest" | "auditor";
+
+export type WorkspaceMemberView = {
+  user_id: string;
+  name: string;
+  email: string | null;
+  role: WorkspaceRole;
+  status: "active" | "suspended" | "removed";
+  joined_at: string;
+};
+
+export type InvitationView = {
+  id: string;
+  email: string;
+  role: WorkspaceRole;
+  status: string;
+  expired: boolean;
+  email_sent: boolean;
+  created_at: string;
+  expires_at: string;
+};
+
+export type MyInvitationView = {
+  id: string;
+  workspace_id: string;
+  workspace_name: string;
+  role: WorkspaceRole;
+  expires_at: string;
+};
+
+export type InstallationView = {
+  id: string;
+  installation_id: number;
+  account_login: string;
+  account_type: string;
+  status: "active" | "revoked" | "disconnected";
+  last_synced_at: string | null;
+  last_sync_status: "never" | "queued" | "ok" | "partial" | "error";
+  last_sync_error: string | null;
+};
+
+export type RepositoryView = {
+  id: string;
+  installation_ref: string;
+  full_name: string;
+  html_url: string;
+  private: boolean;
+  archived: boolean;
+  selected: boolean;
+  accessible: boolean;
+  last_synced_at: string | null;
+  sync_error: string | null;
+  responsibility_id: string | null;
+};
+
+export type IntegrationView = {
+  configured: boolean;
+  installations: InstallationView[];
+  repositories: RepositoryView[];
+  open_suggestions: number;
+};
+
+export type SuggestionView = {
+  id: string;
+  repository_id: string;
+  repository: string;
+  repository_url: string;
+  handle: string;
+  handle_type: "user" | "team" | "catalog";
+  proposed_role: "primary" | "co_owner" | "backup";
+  reason: string;
+  evidence: { source: string; detail: string }[];
+  status: "open" | "approved" | "dismissed" | "deferred" | "withdrawn";
+  match: { type: "person" | "team"; id: string; name: string } | null;
+  responsibility_id: string | null;
+};
 
 export type MyWorkView = { tasks: TaskView[]; approvals: CaseSummary[]; attention: CaseSummary[] };

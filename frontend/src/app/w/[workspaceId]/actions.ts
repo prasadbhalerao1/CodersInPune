@@ -137,6 +137,7 @@ export async function createPersonAction(
       display_name: text(fd, "display_name"),
       email: optional(fd, "email"),
       title: optional(fd, "title"),
+      github_login: optional(fd, "github_login"),
     }),
   );
 }
@@ -161,6 +162,7 @@ export async function createTeamAction(
     api.send(workspaceId, "POST", "/teams", {
       name: text(fd, "name"),
       description: optional(fd, "description"),
+      github_slug: optional(fd, "github_slug"),
     }),
   );
 }

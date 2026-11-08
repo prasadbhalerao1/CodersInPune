@@ -13,6 +13,10 @@ const LIVE = [
   { label: "Risks", path: "/risks" },
   { label: "People & Teams", path: "/people" },
 ] as const;
+const SETTINGS = [
+  { label: "Members", path: "/members" },
+  { label: "Integrations", path: "/integrations" },
+] as const;
 const LATER = ["Knowledge", "Insights"] as const;
 
 export function SidebarNav() {
@@ -50,6 +54,31 @@ export function SidebarNav() {
           );
         })}
       </ul>
+      <div>
+        <p className="text-muted-foreground mb-1 px-2 text-xs font-medium">Workspace</p>
+        <ul className="flex flex-col gap-0.5">
+          {SETTINGS.map(({ label, path }) => {
+            const href = base + path;
+            const active = pathname.startsWith(href);
+            return (
+              <li key={label}>
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "block rounded-md px-2 py-1.5 transition-colors",
+                    active
+                      ? "bg-foreground/[0.06] font-medium"
+                      : "hover:bg-muted text-foreground/80",
+                  )}
+                >
+                  {label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
       <div>
         <p className="text-muted-foreground mb-1 px-2 text-xs font-medium">Coming later</p>
         <ul>
