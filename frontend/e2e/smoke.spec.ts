@@ -54,6 +54,15 @@ test("add people and a responsibility with an owner, and see the risk", async ({
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(names.leaving).first()).toBeVisible();
 
+  // Knowledge: capture a procedure on the responsibility, then find it by search.
+  await page.getByText("+ Add knowledge").click();
+  await page.getByLabel("Title", { exact: true }).fill(`Runbook ${stamp}`);
+  await page.getByLabel("Content").fill("Rotate the webhook secret, then redeploy.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText(`Runbook ${stamp}`)).toBeVisible();
+  await page.goto(`${base}/knowledge?q=webhook+secret`);
+  await expect(page.getByText(`Runbook ${stamp}`)).toBeVisible();
+
   await page.goto(`${base}/risks`);
   await expect(page.getByText("No backup").first()).toBeVisible();
 });
@@ -69,6 +78,10 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await submitAndSettle(page, "Add");
   await page.getByLabel("Recipient", { exact: true }).selectOption({ label: names.joining });
   await submitAndSettle(page, "Save");
+
+  // The responsibility's runbook is surfaced in the case; record that it was handed over.
+  await page.getByRole("button", { name: "Mark handed over" }).click();
+  await expect(page.getByText("Handed over", { exact: true })).toBeVisible();
 
   await page.getByLabel("New task").fill("Walk through the runbook");
   await submitAndSettle(page, "Add task");

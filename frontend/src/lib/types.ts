@@ -543,3 +543,46 @@ export type BulkResultView = {
   status: string | null;
   error: string | null;
 };
+
+export type KnowledgeKind = "note" | "link" | "document" | "procedure" | "context";
+
+export type KnowledgeView = {
+  id: string;
+  responsibility_id: string;
+  responsibility_name: string;
+  kind: KnowledgeKind;
+  title: string;
+  body: string | null;
+  url: string | null;
+  visibility: "workspace" | "managers";
+  origin: "person";
+  status: "active" | "archived";
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+  last_reviewed_at: string | null;
+  last_reviewed_by_name: string | null;
+  freshness: "fresh" | "stale";
+  can_edit: boolean;
+};
+
+export type KnowledgeOverviewView = {
+  results: KnowledgeView[];
+  missing: { responsibility_id: string; responsibility_name: string; criticality: Criticality }[];
+  stale_items: number;
+  fresh_items: number;
+};
+
+export type CaseKnowledgeItemView = {
+  responsibility_id: string;
+  responsibility_name: string;
+  knowledge: KnowledgeView[];
+  records: {
+    id: string;
+    knowledge_item_id: string | null;
+    outcome: "handed_over" | "missing";
+    note: string | null;
+    recorded_by_name: string;
+    recorded_at: string;
+  }[];
+};

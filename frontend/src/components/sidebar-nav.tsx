@@ -12,6 +12,7 @@ const LIVE = [
   { label: "Cases", path: "/cases" },
   { label: "Responsibilities", path: "/responsibilities" },
   { label: "Assets", path: "/assets" },
+  { label: "Knowledge", path: "/knowledge" },
   { label: "Risks", path: "/risks" },
   { label: "People & Teams", path: "/people" },
 ] as const;
@@ -21,7 +22,7 @@ const SETTINGS = [
   { label: "Import", path: "/import" },
   { label: "Audit log", path: "/audit" },
 ] as const;
-const LATER = ["Knowledge", "Insights"] as const;
+const LATER = ["Insights"] as const;
 
 export function SidebarNav() {
   const { workspaceId } = useParams<{ workspaceId?: string }>();

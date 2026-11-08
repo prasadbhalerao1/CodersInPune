@@ -5,6 +5,9 @@ import { connection } from "next/server";
 
 import type {
   ActivityView,
+  CaseKnowledgeItemView,
+  KnowledgeOverviewView,
+  KnowledgeView,
   GitHubTeamView,
   IdentityView,
   SignalView,
@@ -147,6 +150,12 @@ export const api = {
     relayFetch<ActivityView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/activity`),
   caseBriefing: (id: string, caseId: string) =>
     relayFetch<BriefingView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/briefing`),
+  knowledge: (id: string, query?: Query) =>
+    relayFetch<KnowledgeOverviewView>(withQuery(`${ws(id)}/knowledge`, query)),
+  responsibilityKnowledge: (id: string, rid: string) =>
+    relayFetch<KnowledgeView[]>(`${ws(id)}/responsibilities/${encodeURIComponent(rid)}/knowledge`),
+  caseKnowledge: (id: string, caseId: string) =>
+    relayFetch<CaseKnowledgeItemView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/knowledge`),
   inbox: (id: string, query?: Query) =>
     relayFetch<InboxView>(withQuery(`${ws(id)}/notifications`, query)),
   auditEvents: (id: string, query?: Query) =>

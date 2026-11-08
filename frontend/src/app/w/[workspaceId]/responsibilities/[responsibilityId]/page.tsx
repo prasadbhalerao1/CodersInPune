@@ -13,6 +13,7 @@ import { Badge, CriticalityBadge, ROLE_LABEL, RoleBadge } from "@/components/ui/
 import { buttonVariants } from "@/components/ui/button";
 import { linkAssetAction, unlinkAssetAction } from "@/app/w/[workspaceId]/assets/actions";
 import { ASSET_TYPE_LABEL } from "@/app/w/[workspaceId]/assets/labels";
+import { AddKnowledgeForm, KnowledgeList } from "@/app/w/[workspaceId]/knowledge/knowledge-list";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
 import type { AssignmentView, PersonView, TeamView } from "@/lib/types";
@@ -30,13 +31,14 @@ export default async function ResponsibilityPage({
 }: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]">) {
   const [{ workspaceId, responsibilityId }, query] = await Promise.all([params, searchParams]);
   const asOf = typeof query.as_of === "string" ? query.as_of : undefined;
-  const [workspace, detail, history, people, teams, assets] = await Promise.all([
+  const [workspace, detail, history, people, teams, assets, knowledge] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.getResponsibility(workspaceId, responsibilityId, asOf)),
     attempt(api.responsibilityHistory(workspaceId, responsibilityId)),
     attempt(api.listPeople(workspaceId)),
     attempt(api.listTeams(workspaceId)),
     attempt(api.assets(workspaceId)),
+    attempt(api.responsibilityKnowledge(workspaceId, responsibilityId)),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
@@ -45,6 +47,7 @@ export default async function ResponsibilityPage({
   if (!teams.ok) return <ApiErrorNotice error={teams.error} />;
 
   const r = detail.data;
+  const canWriteKnowledge = !["guest", "auditor"].includes(workspace.data.role);
   const linked = new Set(r.assets.map((a) => a.id));
   const linkable = assets.ok ? assets.data.filter((a) => !linked.has(a.id)) : [];
   const manage = canManage(workspace.data) && r.status === "active";
@@ -120,6 +123,41 @@ export default async function ResponsibilityPage({
               }
             />
           </Section>
+
+          <section id="knowledge" className="scroll-mt-6">
+            <Section
+              title="Knowledge"
+              description={
+                knowledge.ok && knowledge.data.some((k) => k.freshness === "stale")
+                  ? "Some items haven't been reviewed in 90 days."
+                  : "Procedures, links and context someone new would need."
+              }
+            >
+              {!knowledge.ok ? (
+                <ApiErrorNotice error={knowledge.error} />
+              ) : knowledge.data.length === 0 ? (
+                <p className="rounded-lg border border-dashed p-4 text-sm">
+                  <span className="font-medium">Nothing written down yet.</span>{" "}
+                  <span className="text-muted-foreground">
+                    If the owner left tomorrow, what would their replacement need?
+                  </span>
+                </p>
+              ) : (
+                <KnowledgeList
+                  workspaceId={workspaceId}
+                  items={knowledge.data}
+                  canWrite={canWriteKnowledge}
+                />
+              )}
+              {canWriteKnowledge && r.status === "active" ? (
+                <AddKnowledgeForm
+                  workspaceId={workspaceId}
+                  responsibilityId={responsibilityId}
+                  canRestrict={canManage(workspace.data)}
+                />
+              ) : null}
+            </Section>
+          </section>
 
           <Section
             title="Assets"

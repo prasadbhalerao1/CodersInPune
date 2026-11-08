@@ -11,6 +11,7 @@ import { addCommentAction, caseCommandAction } from "../actions";
 import { CASE_TYPES } from "../labels";
 import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
 import { CommentComposer } from "./comment-composer";
+import { KnowledgeHandover } from "./knowledge-handover";
 import { ApprovalPanel, ReadinessSection, ScopeSection, TasksSection } from "./sections";
 
 const STEPS = [
@@ -43,14 +44,17 @@ function nextStep(c: CaseDetail): string {
 
 export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/cases/[caseId]">) {
   const { workspaceId, caseId } = await params;
-  const [detail, activity, people, teams, members, responsibilities] = await Promise.all([
-    attempt(api.getCase(workspaceId, caseId)),
-    attempt(api.caseActivity(workspaceId, caseId)),
-    attempt(api.listPeople(workspaceId)),
-    attempt(api.listTeams(workspaceId)),
-    attempt(api.members(workspaceId)),
-    attempt(api.listResponsibilities(workspaceId)),
-  ]);
+  const [detail, activity, people, teams, members, responsibilities, knowledge] = await Promise.all(
+    [
+      attempt(api.getCase(workspaceId, caseId)),
+      attempt(api.caseActivity(workspaceId, caseId)),
+      attempt(api.listPeople(workspaceId)),
+      attempt(api.listTeams(workspaceId)),
+      attempt(api.members(workspaceId)),
+      attempt(api.listResponsibilities(workspaceId)),
+      attempt(api.caseKnowledge(workspaceId, caseId)),
+    ],
+  );
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
   if (!activity.ok) return <ApiErrorNotice error={activity.error} />;
   if (!people.ok) return <ApiErrorNotice error={people.error} />;
@@ -156,6 +160,17 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
           />
           <TasksSection {...ctx} members={members.data} />
           <ReadinessSection {...ctx} />
+          {knowledge.ok ? (
+            <KnowledgeHandover
+              workspaceId={workspaceId}
+              caseId={caseId}
+              entries={knowledge.data}
+              canRecord={
+                c.allowed_actions.includes("add_task") &&
+                (c.case_type === "transfer" || c.case_type === "departure")
+              }
+            />
+          ) : null}
           {briefing?.ok ? <BriefingSection briefing={briefing.data} /> : null}
           <ActivityPanel
             activity={activity.data}
