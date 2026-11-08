@@ -6,71 +6,24 @@ real RS256 JWTs; only the WorkOS JWKS response is simulated.
 
 import uuid
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import anyio
 import httpx
 import pytest
-from fastapi import FastAPI
-from sqlalchemy import select, text, update
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from relay.app import create_app
 from relay.identity import models as identity_models
-from relay.identity.models import Membership, UserAccount
+from relay.identity.tokens import VerifiedIdentity
 from relay.platform.workspaces import create_workspace
 from relay.shared.db import unit_of_work
 from relay.shared.db.session import establish_tenant_context
-from tests.conftest import make_settings
+from tests.api import Api, make_api
 from tests.db import count_rows
-from tests.tokens import JwksServer, SigningKey, bearer, make_token
+from tests.tokens import SigningKey, bearer, make_token
 
 pytestmark = pytest.mark.anyio
-
-
-@dataclass
-class Api:
-    app: FastAPI
-    client: httpx.AsyncClient
-    key: SigningKey
-
-    def as_user(self, sub: str) -> dict[str, str]:
-        return bearer(make_token(self.key, sub))
-
-    async def create_workspace(self, sub: str, name: str, key: str | None = None) -> uuid.UUID:
-        response = await self.client.post(
-            "/workspaces",
-            json={"name": name},
-            headers={**self.as_user(sub), "Idempotency-Key": key or uuid.uuid4().hex},
-        )
-        assert response.status_code == 201, response.text
-        return uuid.UUID(response.json()["id"])
-
-    async def set_membership_status(self, tenant: uuid.UUID, sub: str, status: str) -> None:
-        """Simulates an admin action, executed through the app role under RLS.
-
-        Runs with the member's principal only so their user id is resolvable; there is no
-        membership-management API yet.
-        """
-        user_id = select(UserAccount.id).where(UserAccount.workos_user_id == sub).scalar_subquery()
-        async with unit_of_work(self.app.state.session_factory, tenant, sub) as session:
-            result = await session.execute(
-                update(Membership)
-                .where(Membership.tenant_id == tenant, Membership.user_id == user_id)
-                .values(status=status)
-            )
-            assert result.rowcount == 1  # type: ignore[attr-defined]
-
-
-@asynccontextmanager
-async def make_api(**settings: object) -> AsyncIterator[Api]:
-    key = SigningKey(kid="key-1")
-    app = create_app(make_settings(**settings), JwksServer(keys=[key]).transport)
-    async with app.router.lifespan_context(app):
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            yield Api(app, client, key)
 
 
 @pytest.fixture
@@ -211,13 +164,20 @@ async def test_workspace_creation_is_atomic(api: Api, monkeypatch: pytest.Monkey
     monkeypatch.setattr(identity_models, "OWNER_ROLE", "superuser")
     with pytest.raises(IntegrityError):
         await create_workspace(
-            api.app.state.session_factory, "user_atomic", "Broken", "key-atomic-1"
+            api.app.state.session_factory,
+            api.app.state.jobs,
+            VerifiedIdentity("user_atomic", None, datetime.now(UTC)),
+            "Broken",
+            "key-atomic-1",
         )
     for table in (
         "platform.tenant",
         "identity.user_account",
         "identity.membership",
         "identity.workspace_creation_request",
+        "audit.audit_event",
+        "platform.outbox_event",
+        "public.procrastinate_jobs",
     ):
         assert count_rows(table) == 0, table
 

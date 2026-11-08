@@ -52,7 +52,10 @@ def migrated_database() -> None:
 def clean_tables() -> None:
     with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
         conn.execute(
-            "TRUNCATE identity.workspace_creation_request, identity.membership, "
+            "TRUNCATE public.procrastinate_events, public.procrastinate_jobs, "
+            "public.procrastinate_periodic_defers, public.procrastinate_workers, "
+            "audit.audit_event, platform.outbox_event, "
+            "identity.workspace_creation_request, identity.membership, "
             "identity.user_account, platform.tenant_probe_item, platform.tenant_probe, "
             "platform.tenant CASCADE"
         )

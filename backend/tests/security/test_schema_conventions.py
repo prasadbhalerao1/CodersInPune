@@ -17,7 +17,7 @@ import relay.platform.models  # noqa: F401
 from relay.shared.db.base import Base
 from tests.db import APP_ROLE, OWNER_URL, libpq_url
 
-MANAGED_SCHEMAS = ("platform", "identity")
+MANAGED_SCHEMAS = ("platform", "identity", "audit")
 TENANT_ROOT = ("platform", "tenant")
 # Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.
 GLOBAL_TABLES = {("identity", "user_account"), ("identity", "workspace_creation_request")}
