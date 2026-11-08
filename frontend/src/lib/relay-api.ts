@@ -5,6 +5,9 @@ import { connection } from "next/server";
 
 import type {
   ActivityView,
+  GitHubTeamView,
+  IdentityView,
+  SignalView,
   AssetDetail,
   AssetSummary,
   AuditEventView,
@@ -125,6 +128,10 @@ export const api = {
   invitations: (id: string) => relayFetch<InvitationView[]>(`${ws(id)}/invitations`),
   myInvitations: () => relayFetch<MyInvitationView[]>("/me/invitations"),
   github: (id: string) => relayFetch<IntegrationView>(`${ws(id)}/integrations/github`),
+  githubIdentities: (id: string, status?: string) =>
+    relayFetch<IdentityView[]>(withQuery(`${ws(id)}/integrations/github/identities`, { status })),
+  githubTeams: (id: string) => relayFetch<GitHubTeamView[]>(`${ws(id)}/integrations/github/teams`),
+  githubSignals: (id: string) => relayFetch<SignalView[]>(`${ws(id)}/integrations/github/signals`),
   githubSuggestions: (id: string, status = "open") =>
     relayFetch<SuggestionView[]>(
       withQuery(`${ws(id)}/integrations/github/suggestions`, { status }),

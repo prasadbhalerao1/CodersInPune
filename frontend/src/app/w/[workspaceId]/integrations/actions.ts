@@ -80,3 +80,65 @@ export async function decideSuggestionAction(
     }),
   );
 }
+
+export async function decideIdentityAction(
+  workspaceId: string,
+  identityId: string,
+  action: "link" | "unlink" | "dismiss" | "create_person",
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const personId = String(fd.get("person_id") ?? "") || undefined;
+  if (action === "link" && !personId) return { error: "Choose a person." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `${gh}/identities/${identityId}/decision`, {
+      action,
+      person_id: personId,
+    }),
+  );
+}
+
+export async function linkTeamAction(
+  workspaceId: string,
+  githubTeamId: string,
+  action: "link" | "create" | "unlink",
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const teamId = String(fd.get("team_id") ?? "") || undefined;
+  if (action === "link" && !teamId) return { error: "Choose a Relay team." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `${gh}/teams/${githubTeamId}/link`, {
+      action,
+      team_id: teamId,
+      import_members: true,
+    }),
+  );
+}
+
+export type BulkState = ActionState & { done?: number; failed?: { id: string; error: string }[] };
+
+export async function bulkSuggestionsAction(
+  workspaceId: string,
+  _state: BulkState,
+  fd: FormData,
+): Promise<BulkState> {
+  const ids = [...new Set(fd.getAll("ids").map(String))];
+  const action = String(fd.get("bulk_action") ?? "");
+  if (!ids.length) return { error: "Select at least one suggestion." };
+  if (!["approve", "defer", "dismiss"].includes(action)) return { error: "Choose an action." };
+  try {
+    const results = await api.send<{ id: string; ok: boolean; error: string | null }[]>(
+      workspaceId,
+      "POST",
+      `${gh}/suggestions/bulk`,
+      { ids, action },
+    );
+    revalidatePath(`/w/${workspaceId}`, "layout");
+    const failed = results.filter((r) => !r.ok).map((r) => ({ id: r.id, error: r.error ?? "" }));
+    return { done: results.length - failed.length, failed };
+  } catch (error) {
+    if (error instanceof RelayApiError) return { error: error.message };
+    throw error;
+  }
+}

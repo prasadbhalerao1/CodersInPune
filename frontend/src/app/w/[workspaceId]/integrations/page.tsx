@@ -9,6 +9,7 @@ import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { InstallationView } from "@/lib/types";
 
+import { GitHubTabs } from "./github/tabs";
 import {
   connectGitHubAction,
   disconnectInstallationAction,
@@ -37,10 +38,27 @@ export default async function IntegrationsPage({
   const { configured, installations, repositories, open_suggestions } = github.data;
   const connected = installations.filter((i) => i.status !== "disconnected");
   const base = `/w/${workspaceId}/integrations`;
+  const [review, signals] = connected.length
+    ? await Promise.all([
+        attempt(api.githubIdentities(workspaceId, "review")),
+        attempt(api.githubSignals(workspaceId)),
+      ])
+    : [null, null];
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="Integrations" />
+      <PageHeader title="GitHub" />
+      {connected.length ? (
+        <GitHubTabs
+          workspaceId={workspaceId}
+          current="overview"
+          counts={{
+            suggestions: open_suggestions,
+            identities: review?.ok ? review.data.length : 0,
+            signals: signals?.ok ? signals.data.length : 0,
+          }}
+        />
+      ) : null}
       <div className="flex max-w-5xl flex-col gap-8 p-6">
         {query.connected ? (
           <p role="status" className="rounded-lg border px-4 py-3 text-sm">
@@ -90,7 +108,7 @@ export default async function IntegrationsPage({
                       {i.last_synced_at
                         ? `Last synced ${formatDateTime(i.last_synced_at)}`
                         : "Never synced"}
-                      {i.last_sync_error ? ` · ${i.last_sync_error}` : ""}
+                      {" · webhooks + 6-hourly reconciliation"}
                     </span>
                   </span>
                   {i.status === "revoked" ? (
@@ -102,7 +120,9 @@ export default async function IntegrationsPage({
                   )}
                   <ActionForm action={syncInstallationAction.bind(null, workspaceId, i.id)}>
                     <SubmitButton size="sm" variant="outline" pendingLabel="Queuing…">
-                      Sync now
+                      {i.last_sync_status === "error" || i.status === "revoked"
+                        ? "Retry sync"
+                        : "Sync now"}
                     </SubmitButton>
                   </ActionForm>
                   <ActionForm action={disconnectInstallationAction.bind(null, workspaceId, i.id)}>
@@ -110,6 +130,14 @@ export default async function IntegrationsPage({
                       Disconnect
                     </SubmitButton>
                   </ActionForm>
+                  {i.last_sync_error ? (
+                    <p
+                      role="status"
+                      className="w-full rounded-md border border-amber-600/20 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                    >
+                      {i.last_sync_error}
+                    </p>
+                  ) : null}
                 </li>
               ))}
             </ul>

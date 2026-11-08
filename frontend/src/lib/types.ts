@@ -327,7 +327,7 @@ export type SuggestionView = {
   handle_type: "user" | "team" | "catalog";
   proposed_role: "primary" | "co_owner" | "backup";
   reason: string;
-  evidence: { source: string; detail: string }[];
+  evidence: { source: string; detail: string; url?: string | null }[];
   status: "open" | "approved" | "dismissed" | "deferred" | "withdrawn";
   match: { type: "person" | "team"; id: string; name: string } | null;
   responsibility_id: string | null;
@@ -497,4 +497,49 @@ export type AuditEventView = {
   target_id: string | null;
   target_label: string | null;
   metadata: Record<string, string | number | boolean | null>;
+};
+
+export type PersonRef = { id: string; name: string };
+
+export type IdentityView = {
+  id: string;
+  login: string;
+  name: string | null;
+  public_email: string | null;
+  link_status: "unmatched" | "suggested" | "linked" | "dismissed";
+  person: PersonRef | null;
+  suggested_person: PersonRef | null;
+  match_reason: string | null;
+  teams: string[];
+  recent_items: number;
+  profile_url: string;
+};
+
+export type GitHubTeamView = {
+  id: string;
+  org: string;
+  slug: string;
+  name: string;
+  removed: boolean;
+  linked_team: PersonRef | null;
+  members: { login: string; person: PersonRef | null }[];
+};
+
+export type SignalView = {
+  key: string;
+  kind: "owner_inactive" | "active_non_owner" | "unmaintained" | "unowned_active";
+  severity: Severity;
+  title: string;
+  explanation: string;
+  repository: string;
+  repository_url: string;
+  responsibility: PersonRef | null;
+  evidence: { label: string; url: string }[];
+};
+
+export type BulkResultView = {
+  id: string;
+  ok: boolean;
+  status: string | null;
+  error: string | null;
 };
