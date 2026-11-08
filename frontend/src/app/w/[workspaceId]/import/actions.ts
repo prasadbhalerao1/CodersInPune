@@ -18,14 +18,14 @@ export async function importCsvAction(
 ): Promise<ImportState> {
   const kind = String(fd.get("kind") ?? "") as ImportKind;
   const step = fd.get("step") === "commit" ? "commit" : "preview";
-  const file = fd.get("file");
+  const csv = String(fd.get("csv") ?? "");
   if (!KINDS.includes(kind)) return { error: "Choose what you are importing." };
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a CSV file." };
-  if (file.size > MAX_BYTES) return { error: "The file is larger than 500 KB. Split it up." };
+  if (!csv.trim()) return { error: "Choose a CSV file." };
+  if (csv.length > MAX_BYTES) return { error: "The file is larger than 500 KB. Split it up." };
   try {
     const result = await api.send<ImportResultView>(workspaceId, "POST", `/imports/${step}`, {
       kind,
-      csv: await file.text(),
+      csv,
     });
     if (step === "commit") revalidatePath(`/w/${workspaceId}`, "layout");
     return { result };

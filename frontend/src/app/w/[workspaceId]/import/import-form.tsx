@@ -69,12 +69,22 @@ export function ImportForm({ workspaceId }: { workspaceId: string }) {
     {},
   );
   const [kind, setKind] = useState<ImportKind>("people");
+  // The file is read into state: forms reset after each action, and the commit step must
+  // send exactly the content that was previewed.
+  const [file, setFile] = useState<{ name: string; text: string } | null>(null);
   const selected = KINDS.find((k) => k.value === kind) ?? KINDS[0];
-  const result = state.result?.kind === kind ? state.result : undefined;
+  const [sent, setSent] = useState<string | null>(null);
+  // Only show (and allow committing) the result for the exact file and kind previewed.
+  const result =
+    state.result?.kind === kind && file !== null && sent === file.text ? state.result : undefined;
   const template = `data:text/csv;charset=utf-8,${encodeURIComponent(selected.example)}`;
 
   return (
-    <form action={action} className="flex flex-col gap-6">
+    <form
+      action={action}
+      onSubmit={() => setSent(file?.text ?? null)}
+      className="flex flex-col gap-6"
+    >
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-2 text-sm font-semibold">What are you importing?</legend>
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-3">
@@ -113,16 +123,24 @@ export function ImportForm({ workspaceId }: { workspaceId: string }) {
           CSV file
           <input
             type="file"
-            name="file"
             accept=".csv,text/csv"
-            required
+            onChange={async (e) => {
+              const chosen = e.target.files?.[0];
+              setFile(chosen ? { name: chosen.name, text: await chosen.text() } : null);
+            }}
             className={cn(
               inputClass,
               "file:text-foreground py-1.5 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium",
             )}
           />
         </label>
-        <StepButton step="preview">Preview</StepButton>
+        <input type="hidden" name="csv" value={file?.text ?? ""} />
+        {file ? (
+          <span className="text-muted-foreground self-center text-xs">{file.name}</span>
+        ) : null}
+        <StepButton step="preview" disabled={!file}>
+          Preview
+        </StepButton>
         {result && !result.committed ? (
           <StepButton step="commit" disabled={result.created === 0}>
             {`Import ${result.created} ${result.created === 1 ? "row" : "rows"}`}
@@ -177,7 +195,11 @@ export function ImportForm({ workspaceId }: { workspaceId: string }) {
                     <td className="text-muted-foreground px-3 py-2 tabular-nums">{r.line}</td>
                     <td className="px-3 py-2 font-medium">{r.label || "—"}</td>
                     <td className="px-3 py-2">
-                      <Badge tone={ACTION[r.action].tone}>{ACTION[r.action].label}</Badge>
+                      <Badge tone={ACTION[r.action].tone}>
+                        {result.committed && r.action === "create"
+                          ? "Created"
+                          : ACTION[r.action].label}
+                      </Badge>
                     </td>
                     <td className="text-muted-foreground px-3 py-2 text-xs">{r.message}</td>
                   </tr>

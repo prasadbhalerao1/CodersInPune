@@ -154,8 +154,12 @@ async def _lookup(access: WorkspaceAccess) -> _Lookup:
 
 def _first_error(exc: ValidationError) -> str:
     error = exc.errors()[0]
-    where = ".".join(str(p) for p in error["loc"])
-    return f"{where}: {error['msg']}" if where else str(error["msg"])
+    where = ".".join(str(p) for p in error["loc"]).replace("display_name", "name") or "value"
+    if error["type"] == "string_pattern_mismatch":
+        return f"{where} is not valid."
+    if error["type"] == "literal_error":
+        return f"{where} must be one of: {error['ctx']['expected']}."
+    return f"{where}: {error['msg']}"
 
 
 def _check_people(rows: list[tuple[int, dict[str, str]]], lookup: _Lookup) -> list[_Row]:
