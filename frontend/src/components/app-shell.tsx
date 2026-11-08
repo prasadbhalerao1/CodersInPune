@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
+
+import { UserMenu } from "@/components/user-menu";
 
 // Navigation per Blueprint §H.1. Items are placeholders until their milestone ships;
 // they render as disabled so the shell's structure is visible without dead links.
@@ -39,6 +42,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           ))}
         </nav>
+        <div className="border-t p-4">
+          <Suspense fallback={<span className="text-muted-foreground text-sm">…</span>}>
+            <UserMenu />
+          </Suspense>
+        </div>
       </aside>
       <main className="flex min-w-0 flex-1 flex-col">{children}</main>
     </div>
