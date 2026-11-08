@@ -19,6 +19,7 @@ cp .env.example .env
 uv sync
 uv run alembic upgrade head        # runs as the owner role
 uv run relay-api                   # http://127.0.0.1:8000/health/live and /health/ready
+uv run relay-worker                # background jobs (separate terminal)
 
 # 3. Frontend (separate terminal)
 cd frontend

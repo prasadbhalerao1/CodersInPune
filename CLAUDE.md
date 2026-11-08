@@ -15,7 +15,7 @@ section there; don't re-derive decisions. Record any deviation as an ADR in `doc
 
 ## Commands
 - DB: `docker compose up -d --wait`
-- Backend (in `backend/`): `uv run alembic upgrade head` · `uv run relay-api` ·
+- Backend (in `backend/`): `uv run alembic upgrade head` · `uv run relay-api` · `uv run relay-worker` ·
   `uv run pytest` · `uv run ruff format . && uv run ruff check .` · `uv run mypy`
 - Frontend (in `frontend/`): `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm format` · `pnpm build`
 
@@ -43,6 +43,16 @@ section there; don't re-derive decisions. Record any deviation as an ADR in `doc
 8. No Redis, Celery, Temporal, LangGraph, Neo4j, Qdrant, brokers or microservices without an
    ADR showing a Register trigger was met. Queue = Procrastinate behind a transactional outbox.
 9. LLMs (later milestones) only produce proposals; they never hold write tools.
+11. Every service that reads or changes protected data calls `authorize()` (and lists use
+    `visible()`) from `relay/policy/permissions.py` *inside the service*. New permissions are
+    registry entries; unknown permissions and roles are denied.
+12. Audit events (`relay/audit/service.record`) are written in the same transaction as the
+    change; the table is append-only. Metadata holds identifiers/enums only, never tokens,
+    secrets or user content.
+13. Domain events go through `relay/jobs/outbox.emit` in the domain transaction; it defers the
+    Procrastinate job on the same connection. Handlers must be idempotent and run under the
+    job's tenant context as `relay_app`. Procrastinate's schema is vendored per version
+    (`migrations/sql/`); upgrading it needs a migration.
 10. No AGPL/GPL/SSPL/BSL/SUL production dependencies.
 
 ## Windows note
