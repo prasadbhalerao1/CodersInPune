@@ -7,6 +7,7 @@ dependencies = [
     "alembic>=1.20.1",
     "fastapi>=0.162.2",
     "httpx>=0.28.1",
+    "procrastinate==3.10.0",
     "psycopg[binary]>=3.3.8",
     "pydantic-settings>=2.16.2",
     "pyjwt[crypto]>=2.15.1",
@@ -16,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 relay-api = "relay.__main__:main"
+relay-worker = "relay.worker:main"
 
 [build-system]
 requires = ["uv_build>=0.12.18,<0.13.0"]

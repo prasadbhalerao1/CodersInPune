@@ -3,17 +3,22 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Request, Response, status
+import procrastinate
+from fastapi import APIRouter, Header, Query, Request, Response, status
 from pydantic import BaseModel, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from relay.audit import service as audit
 from relay.identity import models as identity_models
 from relay.identity.auth import Identity
 from relay.identity.models import ACTIVE, Membership, UserAccount, WorkspaceCreationRequest
-from relay.identity.workspace_access import CurrentWorkspace
+from relay.identity.tokens import VerifiedIdentity
+from relay.identity.workspace_access import CurrentWorkspace, WorkspaceAccess
+from relay.jobs import outbox
 from relay.platform.models import Tenant
+from relay.policy.permissions import Permission, authorize, authorize_principal
 from relay.shared.db.session import unit_of_work
 from relay.shared.errors import ApiError
 
@@ -67,13 +72,22 @@ async def _workspace_for_user(
 
 
 async def create_workspace(
-    factory: async_sessionmaker[AsyncSession], workos_user_id: str, name: str, key: str
+    factory: async_sessionmaker[AsyncSession],
+    jobs: procrastinate.App,
+    identity: VerifiedIdentity,
+    name: str,
+    key: str,
 ) -> tuple[WorkspaceSummary, bool]:
     """Create workspace + owner membership atomically; replay returns the original.
+
+    The same transaction writes the audit events and the `workspace.created` outbox event
+    (with its job), so either all of it exists or none of it does.
 
     Returns (workspace, created). The new tenant ID is generated here, so the tenant
     context of this transaction is never client-derived.
     """
+    authorize_principal(identity, Permission.WORKSPACE_CREATE)
+    workos_user_id = identity.workos_user_id
     tenant_id = uuid.uuid7()
     async with unit_of_work(factory, tenant_id, workos_user_id) as session:
         user_id = await _resolve_user_id(session, workos_user_id)
@@ -97,8 +111,10 @@ async def create_workspace(
 
         session.add(Tenant(id=tenant_id, name=name))
         await session.flush()
+        membership_id = uuid.uuid7()
         session.add(
             Membership(
+                id=membership_id,
                 tenant_id=tenant_id,
                 user_id=user_id,
                 role=identity_models.OWNER_ROLE,
@@ -106,6 +122,30 @@ async def create_workspace(
             )
         )
         await session.flush()
+        audit.record(
+            session,
+            tenant_id=tenant_id,
+            action="workspace.created",
+            actor_user_id=user_id,
+            target_type="workspace",
+            target_id=tenant_id,
+        )
+        audit.record(
+            session,
+            tenant_id=tenant_id,
+            action="membership.created",
+            actor_user_id=user_id,
+            target_type="membership",
+            target_id=membership_id,
+            details={"role": identity_models.OWNER_ROLE, "status": ACTIVE},
+        )
+        await outbox.emit(
+            session,
+            jobs,
+            tenant_id=tenant_id,
+            event_type="workspace.created",
+            payload={"workspace_id": str(tenant_id), "created_by": str(user_id)},
+        )
         return WorkspaceSummary(id=tenant_id, name=name, role=identity_models.OWNER_ROLE), True
 
 
@@ -135,14 +175,30 @@ async def create_my_workspace(
     response: Response,
 ) -> WorkspaceSummary:
     summary, created = await create_workspace(
-        request.app.state.session_factory, identity.workos_user_id, body.name, idempotency_key
+        request.app.state.session_factory,
+        request.app.state.jobs,
+        identity,
+        body.name,
+        idempotency_key,
     )
     if not created:
         response.status_code = status.HTTP_200_OK
     return summary
 
 
-@router.get("/{workspace_id}")
-async def get_workspace(access: CurrentWorkspace) -> WorkspaceSummary:
+async def read_workspace(access: WorkspaceAccess) -> WorkspaceSummary:
+    authorize(access, Permission.WORKSPACE_READ)
     tenant = await access.session.get_one(Tenant, access.tenant_id)
     return WorkspaceSummary(id=tenant.id, name=tenant.name, role=access.role)
+
+
+@router.get("/{workspace_id}")
+async def get_workspace(access: CurrentWorkspace) -> WorkspaceSummary:
+    return await read_workspace(access)
+
+
+@router.get("/{workspace_id}/audit-events")
+async def list_audit_events(
+    access: CurrentWorkspace, limit: Annotated[int, Query(ge=1, le=200)] = 50
+) -> list[audit.AuditEventView]:
+    return await audit.list_events(access, limit=limit)

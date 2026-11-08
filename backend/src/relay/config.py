@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     db_ready_timeout_seconds: float = 2.0
     api_host: str = "127.0.0.1"
     api_port: int = 8000
+    worker_concurrency: int = Field(default=1, ge=1, le=16)
 
     # WorkOS AuthKit access-token verification. Issuer and JWKS URL derive from the
     # client ID (WorkOS docs: iss = {api}/user_management/{client_id},

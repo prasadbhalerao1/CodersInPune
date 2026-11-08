@@ -13,7 +13,7 @@ import relay.platform.models  # noqa: F401
 from relay.config import MigrationSettings
 from relay.shared.db.base import Base
 
-MANAGED_SCHEMAS = {"platform", "identity"}
+MANAGED_SCHEMAS = {"platform", "identity", "audit"}
 
 config = context.config
 if config.config_file_name is not None:

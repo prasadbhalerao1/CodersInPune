@@ -1,0 +1,36 @@
+"""Procrastinate application. Execution mechanism only; the outbox is the source of truth."""
+
+import uuid
+
+import procrastinate
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from relay.config import Settings
+from relay.jobs import outbox
+
+# Retries cover transient failures (DB restarts, deadlocks). After the last attempt the
+# job is `failed` and can be retried manually (`procrastinate ... retry`); the outbox row
+# stays unprocessed, so no work is lost.
+RETRY = procrastinate.RetryStrategy(max_attempts=5, exponential_wait=2)
+
+
+def libpq_conninfo(database_url: str) -> str:
+    return database_url.replace("postgresql+psycopg://", "postgresql://", 1)
+
+
+def create_job_app(
+    settings: Settings, session_factory: async_sessionmaker[AsyncSession]
+) -> procrastinate.App:
+    """Same restricted `relay_app` role as the API; jobs never bypass RLS."""
+    app = procrastinate.App(
+        connector=procrastinate.PsycopgConnector(
+            conninfo=libpq_conninfo(settings.database_url),
+            kwargs={"prepare_threshold": None},
+        )
+    )
+
+    @app.task(name=outbox.PROCESS_TASK, retry=RETRY)
+    async def process_outbox_event(tenant_id: str, event_id: str) -> None:
+        await outbox.process(session_factory, uuid.UUID(tenant_id), uuid.UUID(event_id))
+
+    return app

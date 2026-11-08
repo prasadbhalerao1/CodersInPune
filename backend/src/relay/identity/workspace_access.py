@@ -28,6 +28,7 @@ class WorkspaceAccess:
     user_id: uuid.UUID
     membership_id: uuid.UUID
     role: str
+    workos_user_id: str
 
 
 async def get_workspace_access(
@@ -57,7 +58,9 @@ async def get_workspace_access(
         if status != ACTIVE:
             raise ApiError(403, "membership_inactive", "Your access to this workspace is inactive.")
         await establish_tenant_context(session, workspace_id)
-        yield WorkspaceAccess(session, workspace_id, user_id, membership_id, role)
+        yield WorkspaceAccess(
+            session, workspace_id, user_id, membership_id, role, identity.workos_user_id
+        )
 
 
 CurrentWorkspace = Annotated[WorkspaceAccess, Depends(get_workspace_access)]

@@ -21,8 +21,7 @@ class ApiError(Exception):
         self.headers = headers
 
 
-async def _handle_api_error(_request: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, ApiError)
+def api_error_response(exc: ApiError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status,
         content={
@@ -35,6 +34,11 @@ async def _handle_api_error(_request: Request, exc: Exception) -> JSONResponse:
         media_type="application/problem+json",
         headers=exc.headers,
     )
+
+
+async def _handle_api_error(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, ApiError)
+    return api_error_response(exc)
 
 
 def register_error_handlers(app: FastAPI) -> None:
