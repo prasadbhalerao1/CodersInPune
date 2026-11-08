@@ -43,6 +43,7 @@ section there; don't re-derive decisions. Record any deviation as an ADR in `doc
 8. No Redis, Celery, Temporal, LangGraph, Neo4j, Qdrant, brokers or microservices without an
    ADR showing a Register trigger was met. Queue = Procrastinate behind a transactional outbox.
 9. LLMs (later milestones) only produce proposals; they never hold write tools.
+10. No AGPL/GPL/SSPL/BSL/SUL production dependencies.
 11. Every service that reads or changes protected data calls `authorize()` (and lists use
     `visible()`) from `relay/policy/permissions.py` *inside the service*. New permissions are
     registry entries; unknown permissions and roles are denied.
@@ -53,7 +54,6 @@ section there; don't re-derive decisions. Record any deviation as an ADR in `doc
     Procrastinate job on the same connection. Handlers must be idempotent and run under the
     job's tenant context as `relay_app`. Procrastinate's schema is vendored per version
     (`migrations/sql/`); upgrading it needs a migration.
-10. No AGPL/GPL/SSPL/BSL/SUL production dependencies.
 
 ## Windows note
 psycopg async needs a selector event loop on Windows; `relay/__main__.py`, `migrations/env.py`
