@@ -161,7 +161,8 @@ async def test_transient_failures_retry_with_the_same_key_then_fail_visibly(
     first = await run(api, ws.id, "email.send")
     second = await run(api, ws.id, "email.send")
     third = await run(api, ws.id, "email.send")
-    assert isinstance(first[0], Exception) and isinstance(second[0], Exception)
+    assert isinstance(first[0], Exception)
+    assert isinstance(second[0], Exception)
     assert third == [True]
     assert len(ext.emails) == 1  # one email despite three attempts
     status = "SELECT status, attempts FROM notifications.email_delivery"
