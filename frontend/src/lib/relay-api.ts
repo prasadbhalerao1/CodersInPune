@@ -2,11 +2,20 @@ import "server-only";
 
 import { withAuth } from "@workos-inc/authkit-nextjs";
 
+import type {
+  ChangeView,
+  OverviewView,
+  PersonView,
+  ResponsibilityDetail,
+  ResponsibilitySummary,
+  RiskView,
+  TeamView,
+  WorkspaceView,
+} from "@/lib/types";
+
 // Server-side client for the Relay API. The WorkOS access token stays on the server:
 // it is read from the encrypted session cookie and sent as a bearer token, never exposed
 // to the browser. The API verifies it and resolves workspaces through Relay membership.
-
-export type Workspace = { id: string; name: string; role: string };
 
 export class RelayApiError extends Error {
   constructor(
@@ -18,13 +27,22 @@ export class RelayApiError extends Error {
   }
 }
 
+type Query = Record<string, string | undefined>;
+
 function apiBaseUrl(): string {
   const url = process.env.RELAY_API_URL;
   if (!url) throw new Error("RELAY_API_URL is not configured");
   return url.replace(/\/$/, "");
 }
 
-async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+function withQuery(path: string, query?: Query): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) if (value) params.set(key, value);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
+export async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { accessToken } = await withAuth({ ensureSignedIn: true });
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${accessToken}`);
@@ -35,29 +53,50 @@ async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     const problem = (await response.json().catch(() => ({}))) as {
       code?: string;
-      detail?: string;
+      detail?: string | { msg: string }[];
     };
-    throw new RelayApiError(
-      response.status,
-      problem.code,
-      problem.detail ?? `Relay API error ${response.status}`,
-    );
+    const detail = Array.isArray(problem.detail)
+      ? problem.detail.map((d) => d.msg).join("; ")
+      : problem.detail;
+    throw new RelayApiError(response.status, problem.code, detail ?? `Request failed`);
   }
-  return (await response.json()) as T;
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
-export function listWorkspaces(): Promise<Workspace[]> {
-  return relayFetch<Workspace[]>("/workspaces");
-}
+const ws = (workspaceId: string) => `/workspaces/${encodeURIComponent(workspaceId)}`;
 
-export function getWorkspace(id: string): Promise<Workspace> {
-  return relayFetch<Workspace>(`/workspaces/${encodeURIComponent(id)}`);
-}
+export const api = {
+  listWorkspaces: () => relayFetch<WorkspaceView[]>("/workspaces"),
+  getWorkspace: (id: string) => relayFetch<WorkspaceView>(ws(id)),
+  createWorkspace: (name: string, idempotencyKey: string) =>
+    relayFetch<WorkspaceView>("/workspaces", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+      headers: { "Idempotency-Key": idempotencyKey },
+    }),
 
-export function createWorkspace(name: string, idempotencyKey: string): Promise<Workspace> {
-  return relayFetch<Workspace>("/workspaces", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-    headers: { "Idempotency-Key": idempotencyKey },
-  });
-}
+  overview: (id: string) => relayFetch<OverviewView>(`${ws(id)}/overview`),
+  risks: (id: string) => relayFetch<RiskView[]>(`${ws(id)}/risks`),
+
+  listResponsibilities: (id: string, query?: Query) =>
+    relayFetch<ResponsibilitySummary[]>(withQuery(`${ws(id)}/responsibilities`, query)),
+  getResponsibility: (id: string, rid: string, asOf?: string) =>
+    relayFetch<ResponsibilityDetail>(
+      withQuery(`${ws(id)}/responsibilities/${encodeURIComponent(rid)}`, { as_of: asOf }),
+    ),
+  responsibilityHistory: (id: string, rid: string) =>
+    relayFetch<ChangeView[]>(`${ws(id)}/responsibilities/${encodeURIComponent(rid)}/history`),
+
+  listPeople: (id: string, query?: Query) =>
+    relayFetch<PersonView[]>(withQuery(`${ws(id)}/people`, query)),
+  listTeams: (id: string, query?: Query) =>
+    relayFetch<TeamView[]>(withQuery(`${ws(id)}/teams`, query)),
+
+  send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
+    relayFetch<T>(`${ws(id)}${path}`, {
+      method,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+};
+
+export const canManage = (workspace: WorkspaceView) => ["owner", "admin"].includes(workspace.role);

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
-import { listWorkspaces, RelayApiError } from "@/lib/relay-api";
+import { api, RelayApiError } from "@/lib/relay-api";
 
 import { CreateWorkspaceForm } from "./create-workspace-form";
 
@@ -24,7 +24,7 @@ export default function WorkspacesPage() {
 async function WorkspaceList() {
   let workspaces;
   try {
-    workspaces = await listWorkspaces();
+    workspaces = await api.listWorkspaces();
   } catch (error) {
     if (error instanceof RelayApiError) return <ApiErrorNotice error={error} />;
     throw error;

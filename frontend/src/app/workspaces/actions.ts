@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createWorkspace, RelayApiError } from "@/lib/relay-api";
+import { api, RelayApiError } from "@/lib/relay-api";
 
 export type CreateWorkspaceState = { error?: string };
 
@@ -19,7 +19,7 @@ export async function createWorkspaceAction(
 
   let workspaceId: string;
   try {
-    workspaceId = (await createWorkspace(name, idempotencyKey)).id;
+    workspaceId = (await api.createWorkspace(name, idempotencyKey)).id;
   } catch (error) {
     if (error instanceof RelayApiError && error.status === 401) {
       return { error: "Your session could not be verified. Sign out and sign in again." };

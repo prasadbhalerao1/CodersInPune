@@ -1,0 +1,27 @@
+import { ApiErrorNotice } from "@/components/api-error-notice";
+import { PageHeader } from "@/components/page";
+import { attempt } from "@/lib/attempt";
+import { api } from "@/lib/relay-api";
+
+import { updateResponsibilityAction } from "../../../actions";
+import { ResponsibilityForm } from "../../responsibility-form";
+
+export default async function EditResponsibilityPage({
+  params,
+}: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]/edit">) {
+  const { workspaceId, responsibilityId } = await params;
+  const result = await attempt(api.getResponsibility(workspaceId, responsibilityId));
+  if (!result.ok) return <ApiErrorNotice error={result.error} />;
+  return (
+    <div className="flex flex-1 flex-col">
+      <PageHeader title={`Edit ${result.data.name}`} />
+      <div className="p-6">
+        <ResponsibilityForm
+          action={updateResponsibilityAction.bind(null, workspaceId, responsibilityId)}
+          initial={result.data}
+          submitLabel="Save changes"
+        />
+      </div>
+    </div>
+  );
+}
