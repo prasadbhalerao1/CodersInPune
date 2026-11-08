@@ -51,7 +51,7 @@ class TeamUpdate(StrictInput):
     status: Status | None = None
 
 
-class MemberView(BaseModel):
+class TeamMemberView(BaseModel):
     person_id: uuid.UUID
     display_name: str
 
@@ -62,7 +62,7 @@ class TeamView(BaseModel):
     description: str | None
     status: str
     created_at: datetime
-    members: list[MemberView] = []
+    members: list[TeamMemberView] = []
 
 
 def _person_view(p: Person) -> PersonView:
@@ -167,9 +167,11 @@ async def list_teams(
         )
         .order_by(Person.display_name)
     )
-    by_team: dict[uuid.UUID, list[MemberView]] = {}
+    by_team: dict[uuid.UUID, list[TeamMemberView]] = {}
     for team_id, person_id, name in members:
-        by_team.setdefault(team_id, []).append(MemberView(person_id=person_id, display_name=name))
+        by_team.setdefault(team_id, []).append(
+            TeamMemberView(person_id=person_id, display_name=name)
+        )
     for team in teams:
         team.members = by_team.get(team.id, [])
     return teams

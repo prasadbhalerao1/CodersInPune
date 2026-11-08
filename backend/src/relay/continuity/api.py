@@ -11,7 +11,7 @@ Detail = svc.CaseDetail
 
 
 @router.get("/members")
-async def members(access: CurrentWorkspace) -> list[svc.MemberView]:
+async def members(access: CurrentWorkspace) -> list[svc.WorkspaceMemberView]:
     return await svc.list_members(access)
 
 

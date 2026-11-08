@@ -228,7 +228,7 @@ class CaseDetail(CaseSummary):
     approvals: list[ApprovalView]
 
 
-class MemberView(BaseModel):
+class WorkspaceMemberView(BaseModel):
     user_id: uuid.UUID
     name: str
     role: str
@@ -256,7 +256,7 @@ async def _member_names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
     return {user_id: name or email or "Member" for user_id, name, email in rows}
 
 
-async def list_members(access: WorkspaceAccess) -> list[MemberView]:
+async def list_members(access: WorkspaceAccess) -> list[WorkspaceMemberView]:
     authorize(access, Permission.MEMBER_READ)
     rows = await access.session.execute(
         select(Membership.user_id, Membership.display_name, Membership.email, Membership.role)
@@ -267,7 +267,7 @@ async def list_members(access: WorkspaceAccess) -> list[MemberView]:
         .order_by(Membership.display_name, Membership.user_id)
     )
     return [
-        MemberView(user_id=uid, name=name or email or "Member", role=role)
+        WorkspaceMemberView(user_id=uid, name=name or email or "Member", role=role)
         for uid, name, email, role in rows
     ]
 
