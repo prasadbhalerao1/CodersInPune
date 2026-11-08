@@ -16,6 +16,7 @@ from relay.directory import api as directory_api
 from relay.identity import members_api, profile
 from relay.identity.tokens import WorkOSTokenVerifier
 from relay.identity.workos_api import WorkOSClient
+from relay.imports import api as imports_api
 from relay.integrations.github import api as github_api
 from relay.integrations.github.client import GitHubClient
 from relay.jobs import outbox
@@ -85,6 +86,7 @@ def create_app(
     app.include_router(workspaces.router)
     app.include_router(catalog_api.router)
     app.include_router(assets_api.router)
+    app.include_router(imports_api.router)
     app.include_router(directory_api.router)
     app.include_router(risks_api.router)
     app.include_router(continuity_api.router)

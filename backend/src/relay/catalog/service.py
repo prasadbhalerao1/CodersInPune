@@ -511,6 +511,11 @@ async def get_responsibility(
 async def create_responsibility(
     access: WorkspaceAccess, data: ResponsibilityIn
 ) -> ResponsibilityDetail:
+    responsibility = await add_responsibility(access, data)
+    return await get_responsibility(access, responsibility.id)
+
+
+async def add_responsibility(access: WorkspaceAccess, data: ResponsibilityIn) -> Responsibility:
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
     responsibility = Responsibility(
         id=uuid.uuid7(),
@@ -530,7 +535,7 @@ async def create_responsibility(
         responsibility.id,
         criticality=data.criticality,
     )
-    return await get_responsibility(access, responsibility.id)
+    return responsibility
 
 
 async def update_responsibility(
@@ -588,9 +593,10 @@ async def set_responsibility_status(
 # ---------------------------------------------------------------- ownership
 
 
-async def assign_owner(
+async def add_assignment(
     access: WorkspaceAccess, responsibility_id: uuid.UUID, data: AssignmentIn
-) -> ResponsibilityDetail:
+) -> OwnershipAssignment:
+    """Assign without replacing anyone: the EXCLUDE constraints reject a second primary."""
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
     await require_active_responsibility(access, responsibility_id)
     await require_assignee(access, data)
@@ -605,6 +611,13 @@ async def assign_owner(
         role=data.role,
         responsibility_id=str(responsibility_id),
     )
+    return assignment
+
+
+async def assign_owner(
+    access: WorkspaceAccess, responsibility_id: uuid.UUID, data: AssignmentIn
+) -> ResponsibilityDetail:
+    await add_assignment(access, responsibility_id, data)
     return await get_responsibility(access, responsibility_id)
 
 
