@@ -4,7 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ async def ready(request: Request, response: Response) -> HealthResponse:
     timeout: float = request.app.state.settings.db_ready_timeout_seconds
     try:
         async with asyncio.timeout(timeout), engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
+            await conn.execute(select(1))
         database: CheckStatus = "ok"
     except Exception:
         # Details go to logs only; the endpoint is unauthenticated.

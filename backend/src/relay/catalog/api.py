@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
 
 from fastapi import APIRouter, status
+from pydantic import AwareDatetime
 
 from relay.catalog import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
@@ -30,7 +30,7 @@ async def create(access: CurrentWorkspace, body: svc.ResponsibilityIn) -> Detail
 
 @router.get("/{responsibility_id}")
 async def detail(
-    access: CurrentWorkspace, responsibility_id: uuid.UUID, as_of: datetime | None = None
+    access: CurrentWorkspace, responsibility_id: uuid.UUID, as_of: AwareDatetime | None = None
 ) -> Detail:
     return await svc.get_responsibility(access, responsibility_id, as_of=as_of)
 

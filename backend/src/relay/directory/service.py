@@ -12,19 +12,19 @@ from relay.audit import service as audit
 from relay.directory.models import Person, Team, TeamMember
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
-from relay.shared.api_types import Email, LongText, Name, ShortText, blank_to_none
+from relay.shared.api_types import Email, LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
 
 Status = Literal["active", "archived"]
 
 
-class PersonIn(BaseModel):
+class PersonIn(StrictInput):
     display_name: Name
     email: Email | None = None
     title: ShortText | None = None
 
 
-class PersonUpdate(BaseModel):
+class PersonUpdate(StrictInput):
     display_name: Name | None = None
     email: Email | None = None
     title: ShortText | None = None
@@ -40,12 +40,12 @@ class PersonView(BaseModel):
     created_at: datetime
 
 
-class TeamIn(BaseModel):
+class TeamIn(StrictInput):
     name: Name
     description: LongText | None = None
 
 
-class TeamUpdate(BaseModel):
+class TeamUpdate(StrictInput):
     name: Name | None = None
     description: LongText | None = None
     status: Status | None = None

@@ -12,5 +12,5 @@ async def list_risks(access: CurrentWorkspace) -> list[svc.RiskView]:
 
 
 @router.get("/overview")
-async def overview(access: CurrentWorkspace) -> svc.Overview:
+async def overview(access: CurrentWorkspace) -> svc.OverviewView:
     return await svc.overview(access)

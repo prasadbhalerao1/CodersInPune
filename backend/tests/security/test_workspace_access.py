@@ -188,9 +188,10 @@ async def test_workspace_creation_rejects_client_supplied_creator(api: Api) -> N
         json={"name": "Spoof", "user_id": str(uuid.uuid4()), "workos_user_id": "user_victim"},
         headers={**api.as_user("user_real"), "Idempotency-Key": "spoof-attempt-1"},
     )
-    assert response.status_code == 201
-    assert count_rows("identity.user_account", "workos_user_id = 'user_victim'") == 0
-    assert count_rows("identity.user_account", "workos_user_id = 'user_real'") == 1
+    # Unknown fields are rejected outright, so a creator can never be smuggled in.
+    assert response.status_code == 422
+    assert count_rows("identity.user_account") == 0
+    assert count_rows("platform.tenant") == 0
 
 
 async def test_retry_with_same_idempotency_key_returns_original_workspace(api: Api) -> None:

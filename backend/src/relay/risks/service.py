@@ -29,7 +29,7 @@ Severity = Literal["high", "medium", "low"]
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 
-class RiskSubject(BaseModel):
+class RiskSubjectView(BaseModel):
     id: uuid.UUID
     name: str
     criticality: str
@@ -42,13 +42,13 @@ class RiskView(BaseModel):
     title: str
     explanation: str
     recommendation: str
-    responsibility: RiskSubject | None = None
+    responsibility: RiskSubjectView | None = None
     person_id: uuid.UUID | None = None
     person_name: str | None = None
-    related: list[RiskSubject] = []
+    related: list[RiskSubjectView] = []
 
 
-class RecentChange(BaseModel):
+class RecentChangeView(BaseModel):
     changed_at: datetime
     change_type: str
     role: str
@@ -58,14 +58,14 @@ class RecentChange(BaseModel):
     reason: str | None
 
 
-class Overview(BaseModel):
+class OverviewView(BaseModel):
     active_responsibilities: int
     without_primary_owner: int
     critical_without_backup: int
     open_risks: int
     risks_by_severity: dict[str, int]
     top_risks: list[RiskView]
-    recent_changes: list[RecentChange]
+    recent_changes: list[RecentChangeView]
 
 
 async def compute_risks(access: WorkspaceAccess) -> list[RiskView]:
@@ -109,7 +109,7 @@ async def compute_risks(access: WorkspaceAccess) -> list[RiskView]:
     sole_owner_of: dict[uuid.UUID, list[Responsibility]] = defaultdict(list)
 
     for r in responsibilities:
-        subject = RiskSubject(id=r.id, name=r.name, criticality=r.criticality)
+        subject = RiskSubjectView(id=r.id, name=r.name, criticality=r.criticality)
         mine = by_responsibility.get(r.id, [])
         roles = {a.role for a in mine}
         holders = {a.person_id or a.team_id for a in mine}
@@ -197,7 +197,7 @@ async def compute_risks(access: WorkspaceAccess) -> list[RiskView]:
                 person_id=person_id,
                 person_name=name,
                 related=[
-                    RiskSubject(id=r.id, name=r.name, criticality=r.criticality) for r in owned
+                    RiskSubjectView(id=r.id, name=r.name, criticality=r.criticality) for r in owned
                 ],
             )
         )
@@ -206,7 +206,7 @@ async def compute_risks(access: WorkspaceAccess) -> list[RiskView]:
     return risks
 
 
-async def overview(access: WorkspaceAccess) -> Overview:
+async def overview(access: WorkspaceAccess) -> OverviewView:
     risks = await compute_risks(access)
     session = access.session
     active = list(
@@ -236,7 +236,7 @@ async def overview(access: WorkspaceAccess) -> Overview:
     ).all()
     assignees = await assignee_views(session, [a for _, a, _ in rows])
     by_severity = {s: sum(1 for r in risks if r.severity == s) for s in ("high", "medium", "low")}
-    return Overview(
+    return OverviewView(
         active_responsibilities=len(active),
         without_primary_owner=sum(1 for r in risks if r.rule == "no_primary_owner"),
         critical_without_backup=sum(
@@ -250,7 +250,7 @@ async def overview(access: WorkspaceAccess) -> Overview:
         risks_by_severity=by_severity,
         top_risks=risks[:5],
         recent_changes=[
-            RecentChange(
+            RecentChangeView(
                 changed_at=c.changed_at,
                 change_type=c.change_type,
                 role=a.role,

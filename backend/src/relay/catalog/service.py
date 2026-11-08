@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import AwareDatetime, BaseModel, model_validator
 from sqlalchemy import ColumnElement, and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +22,7 @@ from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange,
 from relay.directory.models import Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
-from relay.shared.api_types import LongText, Name, ShortText, blank_to_none
+from relay.shared.api_types import LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
 
 Criticality = Literal["critical", "high", "standard", "low"]
@@ -44,14 +44,14 @@ _CONSTRAINT_ERRORS = {
 # ---------------------------------------------------------------- schemas
 
 
-class ResponsibilityIn(BaseModel):
+class ResponsibilityIn(StrictInput):
     name: Name
     description: LongText | None = None
     category: ShortText | None = None
     criticality: Criticality = "standard"
 
 
-class ResponsibilityUpdate(BaseModel):
+class ResponsibilityUpdate(StrictInput):
     version: int
     name: Name | None = None
     description: LongText | None = None
@@ -59,7 +59,7 @@ class ResponsibilityUpdate(BaseModel):
     criticality: Criticality | None = None
 
 
-class Assignee(BaseModel):
+class Assignee(StrictInput):
     person_id: uuid.UUID | None = None
     team_id: uuid.UUID | None = None
 
@@ -72,17 +72,17 @@ class Assignee(BaseModel):
 
 class AssignmentIn(Assignee):
     role: Role
-    starts_at: datetime | None = None
+    starts_at: AwareDatetime | None = None
     reason: LongText | None = None
 
 
-class EndAssignmentIn(BaseModel):
-    ends_at: datetime | None = None
+class EndAssignmentIn(StrictInput):
+    ends_at: AwareDatetime | None = None
     reason: LongText | None = None
 
 
 class ReplacePrimaryIn(Assignee):
-    effective_at: datetime | None = None
+    effective_at: AwareDatetime | None = None
     reason: LongText | None = None
 
 

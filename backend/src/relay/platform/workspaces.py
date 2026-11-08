@@ -19,6 +19,7 @@ from relay.identity.workspace_access import CurrentWorkspace, WorkspaceAccess
 from relay.jobs import outbox
 from relay.platform.models import Tenant
 from relay.policy.permissions import Permission, authorize, authorize_principal
+from relay.shared.api_types import StrictInput
 from relay.shared.db.session import unit_of_work
 from relay.shared.errors import ApiError
 
@@ -33,13 +34,13 @@ IdempotencyKey = Annotated[
 ]
 
 
-class WorkspaceSummary(BaseModel):
+class WorkspaceView(BaseModel):
     id: uuid.UUID
     name: str
     role: str
 
 
-class CreateWorkspace(BaseModel):
+class WorkspaceIn(StrictInput):
     name: WorkspaceName
 
 
@@ -60,7 +61,7 @@ async def _resolve_user_id(session: AsyncSession, workos_user_id: str) -> uuid.U
 
 async def _workspace_for_user(
     session: AsyncSession, user_id: uuid.UUID, tenant_id: uuid.UUID
-) -> WorkspaceSummary | None:
+) -> WorkspaceView | None:
     row = (
         await session.execute(
             select(Tenant.id, Tenant.name, Membership.role)
@@ -68,7 +69,7 @@ async def _workspace_for_user(
             .where(Membership.user_id == user_id, Tenant.id == tenant_id)
         )
     ).one_or_none()
-    return WorkspaceSummary(id=row[0], name=row[1], role=row[2]) if row else None
+    return WorkspaceView(id=row[0], name=row[1], role=row[2]) if row else None
 
 
 async def create_workspace(
@@ -77,7 +78,7 @@ async def create_workspace(
     identity: VerifiedIdentity,
     name: str,
     key: str,
-) -> tuple[WorkspaceSummary, bool]:
+) -> tuple[WorkspaceView, bool]:
     """Create workspace + owner membership atomically; replay returns the original.
 
     The same transaction writes the audit events and the `workspace.created` outbox event
@@ -146,11 +147,11 @@ async def create_workspace(
             event_type="workspace.created",
             payload={"workspace_id": str(tenant_id), "created_by": str(user_id)},
         )
-        return WorkspaceSummary(id=tenant_id, name=name, role=identity_models.OWNER_ROLE), True
+        return WorkspaceView(id=tenant_id, name=name, role=identity_models.OWNER_ROLE), True
 
 
 @router.get("")
-async def list_my_workspaces(identity: Identity, request: Request) -> list[WorkspaceSummary]:
+async def list_my_workspaces(identity: Identity, request: Request) -> list[WorkspaceView]:
     """Workspaces where the caller has an active membership. No tenant context needed."""
     async with unit_of_work(request.app.state.session_factory, None, identity.workos_user_id) as s:
         rows = await s.execute(
@@ -163,17 +164,17 @@ async def list_my_workspaces(identity: Identity, request: Request) -> list[Works
             )
             .order_by(Tenant.name, Tenant.id)
         )
-        return [WorkspaceSummary(id=r[0], name=r[1], role=r[2]) for r in rows]
+        return [WorkspaceView(id=r[0], name=r[1], role=r[2]) for r in rows]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_my_workspace(
-    body: CreateWorkspace,
+    body: WorkspaceIn,
     identity: Identity,
     idempotency_key: IdempotencyKey,
     request: Request,
     response: Response,
-) -> WorkspaceSummary:
+) -> WorkspaceView:
     summary, created = await create_workspace(
         request.app.state.session_factory,
         request.app.state.jobs,
@@ -186,14 +187,14 @@ async def create_my_workspace(
     return summary
 
 
-async def read_workspace(access: WorkspaceAccess) -> WorkspaceSummary:
+async def read_workspace(access: WorkspaceAccess) -> WorkspaceView:
     authorize(access, Permission.WORKSPACE_READ)
     tenant = await access.session.get_one(Tenant, access.tenant_id)
-    return WorkspaceSummary(id=tenant.id, name=tenant.name, role=access.role)
+    return WorkspaceView(id=tenant.id, name=tenant.name, role=access.role)
 
 
 @router.get("/{workspace_id}")
-async def get_workspace(access: CurrentWorkspace) -> WorkspaceSummary:
+async def get_workspace(access: CurrentWorkspace) -> WorkspaceView:
     return await read_workspace(access)
 
 

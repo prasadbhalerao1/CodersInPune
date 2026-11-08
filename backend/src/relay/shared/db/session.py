@@ -17,7 +17,7 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy import Connection, event, text
+from sqlalchemy import Connection, Function, event, func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, SessionTransaction
 
@@ -26,6 +26,11 @@ PRINCIPAL_SETTING = "app.principal"
 _TENANT_INFO_KEY = "relay.tenant_id"
 _PRINCIPAL_INFO_KEY = "relay.principal"
 _MAX_PRINCIPAL_LENGTH = 255
+
+
+def _set_local(name: str, value: str) -> Function[str]:
+    """`pg_catalog.set_config(name, value, is_local => true)` as a bound expression."""
+    return func.pg_catalog.set_config(name, value, True)
 
 
 class TenantSession(Session):
@@ -39,16 +44,10 @@ def _apply_request_context(
     tenant_id = session.info.get(_TENANT_INFO_KEY)
     principal = session.info.get(_PRINCIPAL_INFO_KEY)
     connection.execute(
-        text(
-            "SELECT pg_catalog.set_config(:tenant_name, :tenant, true), "
-            "pg_catalog.set_config(:principal_name, :principal, true)"
-        ),
-        {
-            "tenant_name": TENANT_SETTING,
-            "tenant": str(tenant_id) if tenant_id is not None else "",
-            "principal_name": PRINCIPAL_SETTING,
-            "principal": principal or "",
-        },
+        select(
+            _set_local(TENANT_SETTING, str(tenant_id) if tenant_id is not None else ""),
+            _set_local(PRINCIPAL_SETTING, principal or ""),
+        )
     )
 
 
@@ -74,10 +73,7 @@ async def establish_tenant_context(session: AsyncSession, tenant_id: uuid.UUID) 
             return
         raise RuntimeError("session is already bound to a different tenant")
     session.info[_TENANT_INFO_KEY] = tenant_id
-    await session.execute(
-        text("SELECT pg_catalog.set_config(:name, :value, true)"),
-        {"name": TENANT_SETTING, "value": str(tenant_id)},
-    )
+    await session.execute(select(_set_local(TENANT_SETTING, str(tenant_id))))
 
 
 @asynccontextmanager
