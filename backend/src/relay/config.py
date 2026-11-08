@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     github_private_key: SecretStr | None = None
     github_api_base_url: str = "https://api.github.com"
     github_web_base_url: str = "https://github.com"
+    # Webhook HMAC secret (App settings > Webhook secret). Unset = webhooks rejected (503).
+    github_webhook_secret: SecretStr | None = None
+    # Activity window for PR/issue metadata and ownership signals.
+    github_activity_days: int = Field(default=90, ge=7, le=365)
 
     @property
     def resolved_workos_issuer(self) -> str:

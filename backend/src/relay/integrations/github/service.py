@@ -32,7 +32,14 @@ from relay.catalog import service as catalog
 from relay.directory.models import Person, Team
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
-from relay.integrations.github.client import GitHubClient, GitHubError, GitHubNotConfiguredError
+from relay.integrations.github import directory_sync
+from relay.integrations.github.client import (
+    GitHubClient,
+    GitHubError,
+    GitHubNotConfiguredError,
+    User,
+    WorkItem,
+)
 from relay.integrations.github.models import (
     GitHubConnectState,
     GitHubInstallation,
@@ -297,6 +304,7 @@ async def complete_connect(
             None,
         )
         await access.session.flush()
+        await directory_sync.upsert_route(access.session, access.tenant_id, data.installation_id)
         await outbox.emit(
             access.session,
             jobs,
@@ -318,6 +326,7 @@ async def disconnect(access: WorkspaceAccess, installation_ref: uuid.UUID) -> In
     authorize(access, Permission.INTEGRATION_MANAGE)
     installation = await _installation(access, installation_ref)
     installation.status = "disconnected"
+    await directory_sync.remove_route(access.session, installation.installation_id)
     repo_ids = select(GitHubRepository.id).where(
         GitHubRepository.installation_ref == installation_ref
     )
@@ -441,22 +450,48 @@ def _proposals(
             "catalog_info": "Declared as owner in the Backstage catalog descriptor",
             "codeowners": "Listed in CODEOWNERS",
             "maintainer": "Has maintain/admin access to the repository",
+            "activity": "Recently active in the repository",
         }
         result[handle] = (
             items[0].handle_type,
             role,
             "; ".join(reasons[s] for s in sorted(sources)),
-            [{"source": i.source, "detail": i.detail} for i in items],
+            [{"source": i.source, "detail": i.detail, "url": i.url} for i in items],
         )
     return result
 
 
-async def _fetch_evidence(github: GitHubClient, token: str, full_name: str) -> list[OwnerEvidence]:
+ACTIVITY_THRESHOLD = 3  # authored pull requests in the window to count as evidence
+
+
+def activity_evidence(items: list[WorkItem], days: int) -> list[OwnerEvidence]:
+    """People who authored several pull requests recently (deterministic, no scoring)."""
+    authored: dict[str, list[WorkItem]] = defaultdict(list)
+    for item in items:
+        if item.kind == "pull_request" and item.author is not None:
+            authored[item.author.login].append(item)
+    return [
+        OwnerEvidence(
+            f"@{login}",
+            "user",
+            "activity",
+            f"Authored {len(prs)} pull requests in the last {days} days",
+            False,
+            url=prs[0].html_url,
+        )
+        for login, prs in sorted(authored.items())
+        if len(prs) >= ACTIVITY_THRESHOLD
+    ]
+
+
+async def _fetch_evidence(
+    github: GitHubClient, token: str, full_name: str
+) -> tuple[list[OwnerEvidence], list[User]]:
     """HTTP only (no session), so repositories can be fetched concurrently."""
     paths = (*CODEOWNERS_PATHS, *CATALOG_PATHS)
     contents, maintainers = await asyncio.gather(
         asyncio.gather(*(github.file(token, full_name, path) for path in paths)),
-        github.maintainers(token, full_name),
+        github.maintainer_users(token, full_name),
     )
     found = dict(zip(paths, contents, strict=True))
     evidence: list[OwnerEvidence] = []
@@ -469,10 +504,10 @@ async def _fetch_evidence(github: GitHubClient, token: str, full_name: str) -> l
             evidence += parse_catalog_info(content)
             break
     evidence += [
-        OwnerEvidence(handle, "user", "maintainer", f"collaborator role: {role}", False)
-        for handle, role in maintainers
+        OwnerEvidence(f"@{user.login}", "user", "maintainer", f"collaborator role: {role}", False)
+        for user, role in maintainers
     ]
-    return evidence
+    return evidence, [user for user, _ in maintainers]
 
 
 async def _apply_evidence(
@@ -538,6 +573,9 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     try:
         token = await github.installation_token(installation.installation_id)
         repositories = await github.repositories(token)
+        await directory_sync.upsert_route(
+            session, installation.tenant_id, installation.installation_id
+        )
     except GitHubError as exc:
         if exc.status in (0,) or exc.status >= 500:
             raise  # transient: let the job retry
@@ -582,6 +620,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
             remote.default_branch,
         )
         repo.private, repo.archived, repo.accessible = remote.private, remote.archived, True
+        repo.pushed_at = remote.pushed_at
     for github_id, repo in known.items():
         if github_id not in seen:
             repo.accessible, repo.sync_error = False, "No longer accessible to the GitHub App."
@@ -606,21 +645,55 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     )
     limit = asyncio.Semaphore(FETCH_CONCURRENCY)
 
-    async def fetch(full_name: str) -> list[OwnerEvidence] | GitHubError:
+    days = ctx.settings.github_activity_days
+    since = datetime.now(UTC) - timedelta(days=days)
+    notes: list[str] = []
+
+    async def fetch(
+        full_name: str,
+    ) -> tuple[list[OwnerEvidence] | GitHubError, list[User], list[WorkItem] | GitHubError]:
         async with limit:
+            users: list[User] = []
             try:
-                return await _fetch_evidence(github, token, full_name)
+                evidence: list[OwnerEvidence] | GitHubError
+                evidence, users = await _fetch_evidence(github, token, full_name)
             except GitHubError as exc:
-                return exc
+                evidence = exc
+            try:
+                items: list[WorkItem] | GitHubError = await github.work_items(
+                    token, full_name, since
+                )
+            except GitHubError as exc:
+                items = exc
+            return evidence, users, items
 
     # Reads run concurrently; writes stay sequential on the job's single session.
     fetched = await asyncio.gather(*(fetch(repo.full_name) for repo in targets))
-    for repo, result in zip(targets, fetched, strict=True):
-        ok = await _apply_evidence(session, repo, result) and ok
+    for repo, (evidence, users, items) in zip(targets, fetched, strict=True):
+        if isinstance(items, GitHubError):
+            if items.status in (401, 403):
+                notes.append(
+                    "Pull request and issue activity not synced: grant the app "
+                    "'Pull requests: Read-only' and 'Issues: Read-only'."
+                )
+            elif items.status != 404:
+                ok = False
+        else:
+            await directory_sync.upsert_work_items(session, repo, items)
+            if not isinstance(evidence, GitHubError):
+                evidence = evidence + activity_evidence(items, days)
+        await directory_sync.upsert_identities(session, installation.tenant_id, users)
+        ok = await _apply_evidence(session, repo, evidence) and ok
+    team_note = await directory_sync.sync_teams(session, installation, github, token)
+    if team_note:
+        notes.append(team_note)
+    await directory_sync.enrich_profiles(session, github, token)
+    if not ok:
+        notes.insert(0, "Some repositories could not be read; see each repository.")
     installation.status = "active"
     installation.last_synced_at = func.now()
-    installation.last_sync_status = "ok" if ok else "partial"
-    installation.last_sync_error = None if ok else "Some repositories could not be read."
+    installation.last_sync_status = "ok" if ok and not notes else "partial"
+    installation.last_sync_error = " ".join(dict.fromkeys(notes)) or None
 
 
 outbox.register(SYNC_EVENT, handle_sync)

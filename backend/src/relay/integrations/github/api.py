@@ -1,10 +1,11 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Header, Request
 
 from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.integrations.github import review, webhooks
 from relay.integrations.github import service as svc
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/integrations/github", tags=["github"])
@@ -65,3 +66,70 @@ async def complete(
         state.session_factory, identity, state.github, state.jobs, body
     )
     return {"workspace_id": workspace_id}
+
+
+# ---- evidence review (owners/admins)
+
+
+@router.get("/identities")
+async def identities(
+    access: CurrentWorkspace,
+    status: Literal["review", "unmatched", "suggested", "linked", "dismissed"] | None = None,
+) -> list[review.IdentityView]:
+    return await review.list_identities(access, status=status)
+
+
+@router.post("/identities/{identity_id}/decision")
+async def decide_identity(
+    access: CurrentWorkspace, identity_id: uuid.UUID, body: review.IdentityDecisionIn
+) -> review.IdentityView:
+    return await review.decide_identity(access, identity_id, body)
+
+
+@router.get("/teams")
+async def teams(access: CurrentWorkspace) -> list[review.GitHubTeamView]:
+    return await review.list_github_teams(access)
+
+
+@router.post("/teams/{github_team_id}/link")
+async def link_team(
+    access: CurrentWorkspace, github_team_id: uuid.UUID, body: review.TeamLinkIn
+) -> review.GitHubTeamView:
+    return await review.link_team(access, github_team_id, body)
+
+
+@router.get("/signals")
+async def signals(access: CurrentWorkspace, request: Request) -> list[review.SignalView]:
+    return await review.ownership_signals(
+        access, days=request.app.state.settings.github_activity_days
+    )
+
+
+@router.post("/suggestions/bulk")
+async def bulk_decide(
+    access: CurrentWorkspace, body: review.BulkDecisionIn
+) -> list[review.BulkResultView]:
+    return await review.bulk_decide(access, body)
+
+
+# ---- webhooks (no user session: authenticated by HMAC signature)
+
+
+@callback.post("/webhook", status_code=202)
+async def webhook(
+    request: Request,
+    x_github_event: Annotated[str, Header()] = "",
+    x_github_delivery: Annotated[str, Header()] = "",
+    x_hub_signature_256: Annotated[str | None, Header()] = None,
+) -> dict[str, int]:
+    state = request.app.state
+    queued = await webhooks.receive(
+        state.session_factory,
+        state.settings,
+        state.jobs,
+        event=x_github_event,
+        delivery_id=x_github_delivery,
+        signature=x_hub_signature_256,
+        body=await request.body(),
+    )
+    return {"queued": queued}

@@ -1,5 +1,6 @@
 """Procrastinate application. Execution mechanism only; the outbox is the source of truth."""
 
+import dataclasses
 import uuid
 
 import procrastinate
@@ -8,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 # Imported for their side effects: modules register outbox handlers at import time, and
 # relay.models completes the ORM metadata for cross-module foreign keys.
 import relay.integrations.github.service
+import relay.integrations.github.webhooks
 import relay.models
-import relay.notifications.service  # noqa: F401
+import relay.notifications.service
 from relay.config import Settings
 from relay.jobs import outbox
 
@@ -36,8 +38,15 @@ def create_job_app(
         )
     )
 
+    ctx = dataclasses.replace(ctx or outbox.JobContext(), jobs=app)
+
     @app.task(name=outbox.PROCESS_TASK, retry=RETRY)
     async def process_outbox_event(tenant_id: str, event_id: str) -> None:
         await outbox.process(session_factory, uuid.UUID(tenant_id), uuid.UUID(event_id), ctx)
+
+    @app.periodic(cron="17 */6 * * *")
+    @app.task(name="relay.github_reconcile", queueing_lock="github_reconcile")
+    async def github_reconcile(timestamp: int) -> None:
+        await relay.integrations.github.webhooks.reconcile(session_factory, app)
 
     return app

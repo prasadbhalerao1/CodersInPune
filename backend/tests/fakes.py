@@ -6,6 +6,7 @@ the manual checks listed in README. The GitHub app JWT is really verified here.
 
 import base64
 import json
+import zlib
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -15,6 +16,15 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 GITHUB_APP_ID = "123456"
+
+
+def user_id(login: str) -> int:
+    """Stable fake GitHub user id for a login."""
+    return zlib.crc32(login.lower().encode()) + 1000
+
+
+def gh_user(login: str) -> dict[str, Any]:
+    return {"id": user_id(login), "login": login, "type": "User"}
 
 
 def _private_key_pem() -> tuple[str, Any]:
@@ -32,6 +42,9 @@ class FakeRepo:
     files: dict[str, str] = field(default_factory=dict)
     collaborators: list[tuple[str, str]] = field(default_factory=list)  # (login, role_name)
     archived: bool = False
+    pulls: list[dict[str, Any]] = field(default_factory=list)  # REST pull objects
+    issues: list[dict[str, Any]] = field(default_factory=list)  # REST issue objects
+    pushed_at: str | None = None
 
 
 @dataclass
@@ -42,6 +55,11 @@ class FakeExternal:
     revoked_installations: set[int] = field(default_factory=set)
     repos: list[FakeRepo] = field(default_factory=list)
     github_down: bool = False
+    teams: dict[str, list[str]] = field(default_factory=dict)  # slug -> member logins
+    profiles: dict[str, dict[str, Any]] = field(default_factory=dict)  # login -> name/email
+    activity_forbidden: bool = False  # simulate missing Pull requests/Issues permission
+    members_forbidden: bool = False  # simulate missing Organization > Members permission
+    calls: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.private_key_pem, self._public_key = _private_key_pem()
@@ -92,6 +110,7 @@ class FakeExternal:
 
     def _github(self, method: str, path: str, request: httpx.Request) -> httpx.Response:
         token = request.headers.get("authorization", "").removeprefix("Bearer ")
+        self.calls.append(f"{method} {path}")
         if path == "/user/installations":
             code = token.removeprefix("ghu_")
             ids = self.oauth_codes.get(code, [])
@@ -122,12 +141,35 @@ class FakeExternal:
                     "default_branch": "main",
                     "private": True,
                     "archived": r.archived,
+                    "pushed_at": r.pushed_at,
                 }
                 for r in self.repos
             ]
             return httpx.Response(200, json={"total_count": len(repos), "repositories": repos})
+        page = int(request.url.params.get("page", "1"))
+        if path.startswith("/users/"):
+            login = path.rsplit("/", 1)[-1]
+            return httpx.Response(200, json={**gh_user(login), **self.profiles.get(login, {})})
+        if path.startswith("/orgs/"):
+            if self.members_forbidden:
+                return httpx.Response(403)
+            parts = path.split("/")
+            if path.endswith("/teams"):
+                body = [
+                    {"id": zlib.crc32(slug.encode()), "slug": slug, "name": slug.title()}
+                    for slug in self.teams
+                ]
+                return httpx.Response(200, json=body if page == 1 else [])
+            if path.endswith("/members"):
+                members = [gh_user(m) for m in self.teams.get(parts[4], [])]
+                return httpx.Response(200, json=members if page == 1 else [])
         for repo in self.repos:
             prefix = f"/repos/{repo.full_name}"
+            if path in (f"{prefix}/pulls", f"{prefix}/issues"):
+                if self.activity_forbidden:
+                    return httpx.Response(403)
+                items = repo.pulls if path.endswith("/pulls") else repo.issues
+                return httpx.Response(200, json=items if page == 1 else [])
             if path.startswith(f"{prefix}/contents/"):
                 content = repo.files.get(path.removeprefix(f"{prefix}/contents/"))
                 if content is None:
@@ -140,8 +182,36 @@ class FakeExternal:
                 return httpx.Response(
                     200,
                     json=[
-                        {"login": login, "type": "User", "role_name": role}
-                        for login, role in repo.collaborators
+                        {**gh_user(login), "role_name": role} for login, role in repo.collaborators
                     ],
                 )
         return httpx.Response(404)
+
+
+def pull(
+    number: int,
+    author: str,
+    *,
+    updated: str = "2026-11-01T10:00:00Z",
+    state: str = "open",
+    merged: str | None = None,
+    reviewers: tuple[str, ...] = (),
+    repo: str = "acme/payments",
+) -> dict[str, Any]:
+    """A REST pull request object (with a body, which Relay must never store)."""
+    return {
+        "id": 900_000 + number,
+        "number": number,
+        "title": f"Change {number}",
+        "body": "SECRET BODY TEXT",
+        "state": state,
+        "user": gh_user(author),
+        "assignees": [],
+        "requested_reviewers": [gh_user(r) for r in reviewers],
+        "labels": [{"name": "backend"}],
+        "html_url": f"https://github.com/{repo}/pull/{number}",
+        "created_at": "2026-10-01T10:00:00Z",
+        "updated_at": updated,
+        "closed_at": merged,
+        "merged_at": merged,
+    }

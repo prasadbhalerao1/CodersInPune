@@ -15,12 +15,14 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
+    Integer,
     Text,
     UniqueConstraint,
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from relay.shared.db.base import Base
@@ -115,6 +117,8 @@ class GitHubRepository(Base):
     responsibility_id: Mapped[uuid.UUID | None]
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sync_error: Mapped[str | None] = mapped_column(Text)
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OwnershipSuggestion(Base):
@@ -159,3 +163,158 @@ class OwnershipSuggestion(Base):
     assignment_id: Mapped[uuid.UUID | None]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+def _fk(columns: list[str], target: str, name: str) -> ForeignKeyConstraint:
+    return ForeignKeyConstraint(
+        ["tenant_id", *columns], [f"{target}.tenant_id", f"{target}.id"], name=name
+    )
+
+
+class GitHubIdentity(Base):
+    """A GitHub user seen in evidence. Linked to a person only by an explicit decision."""
+
+    __tablename__ = "github_identity"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "github_user_id"),
+        _fk(["person_id"], "directory.person", "fk_github_identity_person"),
+        _fk(["suggested_person_id"], "directory.person", "fk_github_identity_suggested_person"),
+        CheckConstraint(
+            "link_status IN ('unmatched', 'suggested', 'linked', 'dismissed')", name="link_status"
+        ),
+        CheckConstraint("(link_status = 'linked') = (person_id IS NOT NULL)", name="linked_person"),
+        Index(
+            "uq_github_identity_tenant_id_person_id",
+            "tenant_id",
+            "person_id",
+            unique=True,
+            postgresql_where=text("person_id IS NOT NULL"),
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    github_user_id: Mapped[int] = mapped_column(BigInteger)
+    login: Mapped[str] = mapped_column(Text)
+    name: Mapped[str | None] = mapped_column(Text)
+    public_email: Mapped[str | None] = mapped_column(Text)
+    link_status: Mapped[str] = mapped_column(Text, server_default="unmatched")
+    person_id: Mapped[uuid.UUID | None]
+    suggested_person_id: Mapped[uuid.UUID | None]
+    match_reason: Mapped[str | None] = mapped_column(Text)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GitHubTeam(Base):
+    __tablename__ = "github_team"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "github_team_id"),
+        _fk(
+            ["installation_ref"], "integrations.github_installation", "fk_github_team_installation"
+        ),
+        _fk(["team_id"], "directory.team", "fk_github_team_team"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    installation_ref: Mapped[uuid.UUID]
+    github_team_id: Mapped[int] = mapped_column(BigInteger)
+    org_login: Mapped[str] = mapped_column(Text)
+    slug: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    team_id: Mapped[uuid.UUID | None]
+    removed: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GitHubTeamMember(Base):
+    __tablename__ = "github_team_member"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "github_team_ref", "identity_ref"),
+        _fk(["github_team_ref"], "integrations.github_team", "fk_github_team_member_team"),
+        _fk(["identity_ref"], "integrations.github_identity", "fk_github_team_member_identity"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    github_team_ref: Mapped[uuid.UUID]
+    identity_ref: Mapped[uuid.UUID]
+
+
+class GitHubWorkItem(Base):
+    """Pull request / issue metadata only: no bodies, comments, diffs or code."""
+
+    __tablename__ = "github_work_item"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "repository_id", "kind", "number"),
+        _fk(["repository_id"], "integrations.github_repository", "fk_github_work_item_repository"),
+        CheckConstraint("kind IN ('pull_request', 'issue')", name="kind"),
+        CheckConstraint("state IN ('open', 'closed', 'merged')", name="state"),
+        Index(None, "tenant_id", "repository_id", "gh_updated_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    repository_id: Mapped[uuid.UUID]
+    kind: Mapped[str] = mapped_column(Text)
+    number: Mapped[int] = mapped_column(Integer)
+    github_id: Mapped[int] = mapped_column(BigInteger)
+    title: Mapped[str] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(Text)
+    author_login: Mapped[str | None] = mapped_column(Text)
+    assignee_logins: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    reviewer_logins: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    labels: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    html_url: Mapped[str] = mapped_column(Text)
+    gh_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    gh_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class WebhookDelivery(Base):
+    """One row per X-GitHub-Delivery per workspace: the dedupe key for redeliveries."""
+
+    __tablename__ = "webhook_delivery"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "delivery_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    delivery_id: Mapped[str] = mapped_column(Text)
+    event: Mapped[str] = mapped_column(Text)
+    action: Mapped[str | None] = mapped_column(Text)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class GitHubInstallationRoute(Base):
+    """installation id -> workspace, for routing webhooks (see migration 0015)."""
+
+    __tablename__ = "github_installation_route"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "installation_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    installation_id: Mapped[int] = mapped_column(BigInteger)

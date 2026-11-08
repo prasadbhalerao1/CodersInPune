@@ -39,6 +39,8 @@ class JobContext:
 
     http: httpx.AsyncClient | None = None
     settings: Settings | None = None
+    # The job app itself, so a handler can queue follow-up work through the outbox.
+    jobs: procrastinate.App | None = None
 
 
 Handler = Callable[[AsyncSession, OutboxEvent, JobContext], Awaitable[None]]

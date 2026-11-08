@@ -13,9 +13,10 @@ MAX_FILE_BYTES = 64 * 1024
 class OwnerEvidence:
     handle: str  # "@user", "@org/team", or a Backstage owner reference
     handle_type: str  # user | team | catalog
-    source: str  # codeowners | catalog_info | maintainer
+    source: str  # codeowners | catalog_info | maintainer | activity
     detail: str  # the line, field or role that supports it
     repo_wide: bool  # True if it covers the whole repository
+    url: str | None = None  # where to see the evidence on GitHub
 
 
 def parse_codeowners(content: str, path: str) -> list[OwnerEvidence]:
