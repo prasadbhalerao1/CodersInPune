@@ -8,7 +8,13 @@ Rules (severity in brackets; each risk explains itself in plain language):
 - single_person_dependency: one person solely owns >= 2 responsibilities
   [high if any is critical/high, else medium]
 
-Risks are recomputed on every read, so they resolve as soon as the catalogue is fixed.
+Risks are recomputed on every read. `risk_record` keeps their lifecycle:
+- open: detected and nobody has decided anything yet;
+- acknowledged: someone has seen it and owns fixing it (still counted as open work);
+- accepted: deliberately tolerated until a date, with a reason; when the date passes it is
+  open again;
+- resolved: the condition no longer holds (recorded automatically, with the time). If it
+  recurs it opens again as a fresh risk.
 """
 
 import uuid
@@ -16,17 +22,32 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 
+from relay.audit import service as audit
 from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange, Responsibility
 from relay.catalog.service import active_at, assignee_views
 from relay.directory.models import Person, Team
+from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
+from relay.risks.models import RiskRecord
+from relay.shared.api_types import LongText, StrictInput
+from relay.shared.errors import ApiError
 
 Severity = Literal["high", "medium", "low"]
+RiskStatus = Literal["open", "acknowledged", "accepted", "resolved"]
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+ACTIVE: tuple[RiskStatus, ...] = ("open", "acknowledged")
+
+
+class RiskDecisionIn(StrictInput):
+    key: str
+    action: Literal["acknowledge", "accept", "reopen"]
+    note: LongText | None = None
+    accepted_until: AwareDatetime | None = None
 
 
 class RiskSubjectView(BaseModel):
@@ -46,6 +67,22 @@ class RiskView(BaseModel):
     person_id: uuid.UUID | None = None
     person_name: str | None = None
     related: list[RiskSubjectView] = []
+    status: RiskStatus = "open"
+    note: str | None = None
+    accepted_until: datetime | None = None
+    decided_by_name: str | None = None
+    decided_at: datetime | None = None
+    first_detected_at: datetime | None = None
+
+
+class ResolvedRiskView(BaseModel):
+    key: str
+    rule: str
+    severity: Severity
+    title: str
+    subject: str | None
+    first_detected_at: datetime
+    resolved_at: datetime
 
 
 class RecentChangeView(BaseModel):
@@ -63,13 +100,14 @@ class OverviewView(BaseModel):
     without_primary_owner: int
     critical_without_backup: int
     open_risks: int
+    acknowledged_risks: int
+    accepted_risks: int
     risks_by_severity: dict[str, int]
     top_risks: list[RiskView]
     recent_changes: list[RecentChangeView]
 
 
-async def compute_risks(access: WorkspaceAccess) -> list[RiskView]:
-    authorize(access, Permission.RESPONSIBILITY_READ)
+async def _detect(access: WorkspaceAccess) -> list[RiskView]:
     session = access.session
     now = datetime.now(UTC)
     responsibilities = list(
@@ -206,8 +244,184 @@ async def compute_risks(access: WorkspaceAccess) -> list[RiskView]:
     return risks
 
 
+def _subject(risk: RiskView) -> str | None:
+    return risk.responsibility.name if risk.responsibility else risk.person_name
+
+
+async def _member_names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
+    rows = await access.session.execute(
+        select(Membership.user_id, Membership.display_name, Membership.email).where(
+            visible(access, Permission.MEMBER_READ, Membership.tenant_id)
+        )
+    )
+    return {user_id: name or email or "Member" for user_id, name, email in rows}
+
+
+async def _reconcile(access: WorkspaceAccess, detected: list[RiskView]) -> None:
+    """Bring `risk_record` in line with what is detected now and annotate each risk.
+
+    Idempotent and safe under concurrent reads (insert-if-absent, then row locks; rows
+    are only updated when something changed). Lifecycle changes the system makes
+    (resolved, recurred, acceptance expired) are audited with a system actor.
+    """
+    session = access.session
+    now = datetime.now(UTC)
+    if detected:
+        await session.execute(
+            insert(RiskRecord)
+            .values(
+                [
+                    {
+                        "tenant_id": access.tenant_id,
+                        "risk_key": r.key,
+                        "rule": r.rule,
+                        "severity": r.severity,
+                        "title": r.title,
+                        "subject": _subject(r),
+                    }
+                    for r in detected
+                ]
+            )
+            .on_conflict_do_nothing(index_elements=["tenant_id", "risk_key"])
+        )
+    records = {
+        r.risk_key: r
+        for r in await session.scalars(
+            select(RiskRecord)
+            .where(visible(access, Permission.RESPONSIBILITY_READ, RiskRecord.tenant_id))
+            .order_by(RiskRecord.id)
+            .with_for_update()
+        )
+    }
+
+    def system_event(record: RiskRecord, action: str) -> None:
+        audit.record(
+            session,
+            tenant_id=access.tenant_id,
+            action=action,
+            actor_user_id=None,
+            target_type="risk",
+            target_id=record.id,
+            details={"rule": record.rule},
+        )
+
+    for risk in detected:
+        record = records[risk.key]
+        labels = (risk.severity, risk.title, _subject(risk))
+        if (record.severity, record.title, record.subject) != labels:
+            record.severity, record.title, record.subject = labels
+        if record.status == "resolved":
+            record.status, record.resolved_at, record.first_detected_at = "open", None, now
+            record.note = record.accepted_until = record.decided_at = None
+            record.decided_by = None
+            record.updated_at = now
+            system_event(record, "risk.recurred")
+        elif record.status == "accepted" and record.accepted_until and record.accepted_until <= now:
+            record.status, record.updated_at = "open", now
+            system_event(record, "risk.acceptance_expired")
+    current = {r.key for r in detected}
+    for key, record in records.items():
+        if key not in current and record.status != "resolved":
+            record.status, record.resolved_at, record.updated_at = "resolved", now, now
+            system_event(record, "risk.resolved")
+
+    names = await _member_names(access)
+    for risk in detected:
+        record = records[risk.key]
+        risk.status = record.status  # type: ignore[assignment]
+        risk.note = record.note
+        risk.accepted_until = record.accepted_until
+        risk.decided_by_name = names.get(record.decided_by) if record.decided_by else None
+        risk.decided_at = record.decided_at
+        risk.first_detected_at = record.first_detected_at
+
+
+async def compute_risks(
+    access: WorkspaceAccess, *, statuses: tuple[RiskStatus, ...] | None = ACTIVE
+) -> list[RiskView]:
+    """Detected risks with their lifecycle state; `statuses=None` returns every one."""
+    authorize(access, Permission.RESPONSIBILITY_READ)
+    detected = await _detect(access)
+    await _reconcile(access, detected)
+    return [r for r in detected if statuses is None or r.status in statuses]
+
+
+async def resolved_risks(access: WorkspaceAccess) -> list[ResolvedRiskView]:
+    await compute_risks(access)  # reconcile first so freshly fixed risks appear
+    records = await access.session.scalars(
+        select(RiskRecord)
+        .where(
+            visible(access, Permission.RESPONSIBILITY_READ, RiskRecord.tenant_id),
+            RiskRecord.status == "resolved",
+        )
+        .order_by(RiskRecord.resolved_at.desc())
+        .limit(100)
+    )
+    return [
+        ResolvedRiskView(
+            key=r.risk_key,
+            rule=r.rule,
+            severity=r.severity,
+            title=r.title,
+            subject=r.subject,
+            first_detected_at=r.first_detected_at,
+            resolved_at=r.resolved_at or r.updated_at,
+        )
+        for r in records
+    ]
+
+
+async def decide_risk(access: WorkspaceAccess, data: RiskDecisionIn) -> RiskView:
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    detected = {r.key for r in await compute_risks(access, statuses=None)}
+    record = await access.session.scalar(
+        select(RiskRecord).where(
+            RiskRecord.risk_key == data.key,
+            visible(access, Permission.RESPONSIBILITY_READ, RiskRecord.tenant_id),
+        )
+    )
+    if record is None or data.key not in detected:
+        raise ApiError(404, "risk_not_found", "This risk is not currently detected.")
+    now = datetime.now(UTC)
+    if data.action == "accept":
+        if not data.note:
+            raise ApiError(422, "reason_required", "Accepting a risk needs a reason.")
+        if data.accepted_until is None or data.accepted_until <= now:
+            raise ApiError(422, "invalid_until", "Accept the risk until a future date.")
+        if (data.accepted_until - now).days > 366:
+            raise ApiError(422, "invalid_until", "Accept a risk for at most a year.")
+        record.status, record.accepted_until = "accepted", data.accepted_until
+    elif data.action == "acknowledge":
+        if record.status == "acknowledged":
+            raise ApiError(409, "already_acknowledged", "This risk is already acknowledged.")
+        record.status, record.accepted_until = "acknowledged", None
+    else:
+        if record.status == "open":
+            raise ApiError(409, "already_open", "This risk is already open.")
+        record.status, record.accepted_until = "open", None
+    record.note = data.note or None
+    record.decided_by, record.decided_at, record.updated_at = access.user_id, now, now
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action={"accept": "risk.accepted", "acknowledge": "risk.acknowledged"}.get(
+            data.action, "risk.reopened"
+        ),
+        actor_user_id=access.user_id,
+        target_type="risk",
+        target_id=record.id,
+        details={
+            "rule": record.rule,
+            "accepted_until": record.accepted_until.isoformat() if record.accepted_until else None,
+        },
+    )
+    await access.session.flush()
+    return next(r for r in await compute_risks(access, statuses=None) if r.key == data.key)
+
+
 async def overview(access: WorkspaceAccess) -> OverviewView:
-    risks = await compute_risks(access)
+    every = await compute_risks(access, statuses=None)
+    risks = [r for r in every if r.status in ACTIVE]
     session = access.session
     active = list(
         await session.scalars(
@@ -247,6 +461,8 @@ async def overview(access: WorkspaceAccess) -> OverviewView:
             and r.responsibility.criticality == "critical"
         ),
         open_risks=len(risks),
+        acknowledged_risks=sum(1 for r in risks if r.status == "acknowledged"),
+        accepted_risks=sum(1 for r in every if r.status == "accepted"),
         risks_by_severity=by_severity,
         top_risks=risks[:5],
         recent_changes=[
