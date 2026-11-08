@@ -42,7 +42,9 @@ live in Relay; signing in grants access to nothing until a membership exists.
 4. Copy the client ID and API key into `frontend/.env.local` (from `frontend/.env.example`),
    generate `WORKOS_COOKIE_PASSWORD` (`openssl rand -base64 32`), and set
    `WORKOS_ISSUER=https://api.workos.com/user_management/<client_id>`.
-5. Set `RELAY_WORKOS_CLIENT_ID=<client_id>` in `backend/.env`.
+5. Set `RELAY_WORKOS_CLIENT_ID=<client_id>` and `RELAY_WORKOS_API_KEY=<api_key>` in
+   `backend/.env`. The API key is used server-side to read verified emails and send
+   workspace invitations; without it, invitations return 503.
 6. Confirm the token parameters the API enforces:
    - `curl https://api.workos.com/user_management/<client_id>/.well-known/openid-configuration`
      → `issuer` must equal the value above.
@@ -52,6 +54,26 @@ live in Relay; signing in grants access to nothing until a membership exists.
 Manual end-to-end check (not covered by automated tests, which use locally generated keys):
 sign in at `http://localhost:3000` → create a workspace → open it → sign out → confirm
 `/workspaces` redirects to sign-in.
+
+## GitHub App setup (optional)
+
+Relay reads repository metadata, `CODEOWNERS`, `catalog-info.yaml` and maintainers. It never
+reads source code and stores no GitHub tokens: installation tokens are minted per sync.
+
+1. Create a GitHub App (personal account or organisation → Settings → Developer settings →
+   GitHub Apps → New):
+   - Callback URL: `http://localhost:3000/integrations/github/callback`
+   - Enable **Request user authorization (OAuth) during installation** (Relay verifies the
+     installer owns the installation; the `installation_id` alone is not trusted).
+   - Webhook: inactive.
+   - Repository permissions: **Contents: Read-only**, **Metadata: Read-only**. Nothing else.
+2. Generate a client secret and a private key.
+3. In `backend/.env` set `RELAY_GITHUB_APP_ID`, `RELAY_GITHUB_APP_SLUG` (from the app URL),
+   `RELAY_GITHUB_CLIENT_ID`, `RELAY_GITHUB_CLIENT_SECRET` and `RELAY_GITHUB_PRIVATE_KEY`.
+4. Restart `relay-api` and `relay-worker`, then open a workspace → Integrations → Connect GitHub.
+
+Sync runs on connect and on "Sync now" (no webhooks yet). Suggestions are reviewed under
+Integrations → Review suggestions; approving never replaces an existing primary owner.
 
 ## Checks
 
