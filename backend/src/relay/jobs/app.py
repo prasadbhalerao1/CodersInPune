@@ -5,7 +5,8 @@ import uuid
 import procrastinate
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-import relay.integrations.github.service  # noqa: F401  (registers its job handler)
+import relay.integrations.github.service
+import relay.models  # noqa: F401  (complete metadata for cross-module foreign keys)
 from relay.config import Settings
 from relay.jobs import outbox
 
