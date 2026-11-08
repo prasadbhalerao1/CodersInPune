@@ -110,7 +110,7 @@ class FakeExternal:
 
     def _github(self, method: str, path: str, request: httpx.Request) -> httpx.Response:
         token = request.headers.get("authorization", "").removeprefix("Bearer ")
-        self.calls.append(f"{method} {path}")
+        self.calls.append(f"{method} {request.url.path}?{request.url.query.decode()}")
         if path == "/user/installations":
             code = token.removeprefix("ghu_")
             ids = self.oauth_codes.get(code, [])

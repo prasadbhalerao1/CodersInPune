@@ -162,13 +162,16 @@ class GitHubClient:
         return response
 
     async def _paginate(self, path: str, token: str, key: str | None = None) -> AsyncIterator[Any]:
+        # httpx replaces a URL's own query string when `params` is given, so merge them.
+        route, _, query = path.partition("?")
+        base_params = dict(httpx.QueryParams(query))
         page = 1
         while True:
             response = await self._call(
                 "GET",
-                f"{self._s.github_api_base_url}{path}",
+                f"{self._s.github_api_base_url}{route}",
                 token,
-                params={"per_page": 100, "page": page},
+                params={**base_params, "per_page": 100, "page": page},
             )
             if response.status_code == 404:
                 raise GitHubError(404, "not found")

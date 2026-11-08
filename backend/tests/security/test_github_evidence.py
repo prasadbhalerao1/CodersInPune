@@ -143,6 +143,10 @@ async def test_sync_ingests_teams_identities_and_metadata_but_never_bodies(
     for table in ("integrations.github_work_item", "platform.outbox_event", "audit.audit_event"):
         assert not scalar(f"SELECT count(*) FROM {table} t WHERE t::text LIKE '%%SECRET BODY%%'")  # noqa: S608
 
+    # Query filters reach GitHub (httpx would otherwise drop them in favour of paging).
+    assert any("state=all" in c and "/pulls" in c for c in ext.calls)
+    assert any("affiliation=direct" in c for c in ext.calls)
+
     suggestions = await ws.call("GET", "/integrations/github/suggestions")
     bea = next(s for s in suggestions if s["handle"] == "@bea")
     assert bea["evidence"][0]["source"] == "activity"
