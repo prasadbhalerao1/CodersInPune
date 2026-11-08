@@ -5,7 +5,7 @@ from typing import Annotated
 
 import procrastinate
 from fastapi import APIRouter, Header, Query, Request, Response, status
-from pydantic import BaseModel, StringConstraints
+from pydantic import AwareDatetime, BaseModel, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -200,6 +200,20 @@ async def get_workspace(access: CurrentWorkspace) -> WorkspaceView:
 
 @router.get("/{workspace_id}/audit-events")
 async def list_audit_events(
-    access: CurrentWorkspace, limit: Annotated[int, Query(ge=1, le=200)] = 50
+    access: CurrentWorkspace,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    category: Annotated[str | None, Query(pattern=r"^[a-z_]{1,40}$")] = None,
+    actor_user_id: uuid.UUID | None = None,
+    target_type: Annotated[str | None, Query(pattern=r"^[a-z_]{1,40}$")] = None,
+    target_id: uuid.UUID | None = None,
+    before: AwareDatetime | None = None,
 ) -> list[audit.AuditEventView]:
-    return await audit.list_events(access, limit=limit)
+    return await audit.list_events(
+        access,
+        limit=limit,
+        category=category,
+        actor_user_id=actor_user_id,
+        target_type=target_type,
+        target_id=target_id,
+        before=before,
+    )

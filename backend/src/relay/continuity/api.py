@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastapi import APIRouter, status
 
-from relay.continuity import collaboration
+from relay.continuity import briefing, collaboration
 from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
@@ -140,3 +140,8 @@ async def add_comment(
     access: CurrentWorkspace, case_id: uuid.UUID, body: collaboration.CommentIn, jobs: Jobs
 ) -> collaboration.ActivityView:
     return await collaboration.add_comment(access, case_id, body, jobs)
+
+
+@router.get("/cases/{case_id}/briefing")
+async def return_briefing(access: CurrentWorkspace, case_id: uuid.UUID) -> briefing.BriefingView:
+    return await briefing.return_briefing(access, case_id)
