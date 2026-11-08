@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange, Responsibility
-from relay.catalog.service import active_at
+from relay.catalog.service import active_at, assignee_views
 from relay.directory.models import Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
@@ -234,25 +234,7 @@ async def overview(access: WorkspaceAccess) -> Overview:
             .limit(8)
         )
     ).all()
-    names: dict[uuid.UUID, str] = {}
-    person_ids = {a.person_id for _, a, _ in rows if a.person_id}
-    team_ids = {a.team_id for _, a, _ in rows if a.team_id}
-    if person_ids:
-        names |= dict(
-            (
-                await session.execute(
-                    select(Person.id, Person.display_name).where(Person.id.in_(person_ids))
-                )
-            )
-            .tuples()
-            .all()
-        )
-    if team_ids:
-        names |= dict(
-            (await session.execute(select(Team.id, Team.name).where(Team.id.in_(team_ids))))
-            .tuples()
-            .all()
-        )
+    assignees = await assignee_views(session, [a for _, a, _ in rows])
     by_severity = {s: sum(1 for r in risks if r.severity == s) for s in ("high", "medium", "low")}
     return Overview(
         active_responsibilities=len(active),
@@ -272,7 +254,7 @@ async def overview(access: WorkspaceAccess) -> Overview:
                 changed_at=c.changed_at,
                 change_type=c.change_type,
                 role=a.role,
-                assignee_name=names.get(a.person_id or a.team_id, "Unknown"),  # type: ignore[arg-type]
+                assignee_name=assignees[a.person_id or a.team_id].name,  # type: ignore[index]
                 responsibility_id=c.responsibility_id,
                 responsibility_name=name,
                 reason=c.reason,

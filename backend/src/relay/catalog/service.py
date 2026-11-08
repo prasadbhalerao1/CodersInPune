@@ -177,7 +177,7 @@ def _pattern(q: str) -> str:
     return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
 
-async def _assignees(
+async def assignee_views(
     session: AsyncSession, assignments: Sequence[OwnershipAssignment]
 ) -> dict[uuid.UUID, AssigneeView]:
     person_ids = {a.person_id for a in assignments if a.person_id}
@@ -374,7 +374,7 @@ async def list_responsibilities(
             )
         )
     )
-    assignees = await _assignees(access.session, current)
+    assignees = await assignee_views(access.session, current)
     summaries = []
     for r in responsibilities:
         mine = [a for a in current if a.responsibility_id == r.id]
@@ -411,7 +411,7 @@ async def get_responsibility(
             .order_by(OwnershipAssignment.valid_from.desc(), OwnershipAssignment.id.desc())
         )
     )
-    assignees = await _assignees(access.session, assignments)
+    assignees = await assignee_views(access.session, assignments)
     now = _now()
 
     def is_active(a: OwnershipAssignment) -> bool:
@@ -631,7 +631,7 @@ async def ownership_history(
             )
         )
     ).all()
-    assignees = await _assignees(access.session, [a for _, a in rows])
+    assignees = await assignee_views(access.session, [a for _, a in rows])
     return [
         ChangeView(
             id=c.id,
