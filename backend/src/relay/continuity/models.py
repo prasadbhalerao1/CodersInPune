@@ -247,3 +247,45 @@ class CaseMention(Base):
     comment_id: Mapped[uuid.UUID]
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CaseKnowledge(Base):
+    """What knowledge was handed over (or found missing) for a responsibility in a case."""
+
+    __tablename__ = "case_knowledge"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_knowledge_case"),
+        _tenant_fk(
+            ["responsibility_id"], "catalog.responsibility", "fk_case_knowledge_responsibility"
+        ),
+        _tenant_fk(
+            ["knowledge_item_id"], "catalog.knowledge_item", "fk_case_knowledge_knowledge_item"
+        ),
+        CheckConstraint("outcome IN ('handed_over', 'missing')", name="outcome"),
+        CheckConstraint(
+            "outcome = 'missing' OR knowledge_item_id IS NOT NULL", name="item_required"
+        ),
+        CheckConstraint("note IS NULL OR char_length(note) <= 4000", name="note_length"),
+        Index(
+            "uq_case_knowledge_tenant_id_case_id_knowledge_item_id",
+            "tenant_id",
+            "case_id",
+            "knowledge_item_id",
+            unique=True,
+            postgresql_where=text("knowledge_item_id IS NOT NULL"),
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    case_id: Mapped[uuid.UUID]
+    responsibility_id: Mapped[uuid.UUID]
+    knowledge_item_id: Mapped[uuid.UUID | None]
+    outcome: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    recorded_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

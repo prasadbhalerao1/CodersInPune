@@ -14,6 +14,7 @@ from typing import Final
 
 from sqlalchemy import (
     CheckConstraint,
+    Computed,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -23,6 +24,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from relay.shared.db.base import Base
@@ -205,3 +207,56 @@ class ResponsibilityAsset(Base):
     relationship: Mapped[str] = mapped_column(Text, server_default="stewards")
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+KNOWLEDGE_SEARCH = (
+    "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
+    "setweight(to_tsvector('english', coalesce(body, '')), 'B')"
+)
+
+
+class KnowledgeItem(Base):
+    """Knowledge attached to a responsibility. Authorship and source are kept; freshness
+    comes from `last_reviewed_at`. Only people author knowledge in this release."""
+
+    __tablename__ = "knowledge_item"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "responsibility_id"],
+            ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
+            name="fk_knowledge_item_responsibility",
+        ),
+        CheckConstraint(
+            "kind IN ('note', 'link', 'document', 'procedure', 'context')", name="kind"
+        ),
+        CheckConstraint("char_length(title) BETWEEN 1 AND 200", name="title_length"),
+        CheckConstraint("body IS NULL OR char_length(body) <= 20000", name="body_length"),
+        CheckConstraint("url IS NULL OR url ~ '^https?://'", name="url"),
+        CheckConstraint("body IS NOT NULL OR url IS NOT NULL", name="has_content"),
+        CheckConstraint("visibility IN ('workspace', 'managers')", name="visibility"),
+        CheckConstraint("origin IN ('person')", name="origin"),
+        CheckConstraint("status IN ('active', 'archived')", name="status"),
+        Index(None, "tenant_id", "responsibility_id"),
+        Index("ix_knowledge_item_search", "search", postgresql_using="gin"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    responsibility_id: Mapped[uuid.UUID]
+    kind: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    body: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    visibility: Mapped[str] = mapped_column(Text, server_default="workspace")
+    origin: Mapped[str] = mapped_column(Text, server_default="person")
+    status: Mapped[str] = mapped_column(Text, server_default="active")
+    author_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    last_reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("identity.user_account.id")
+    )
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    search: Mapped[str | None] = mapped_column(TSVECTOR, Computed(KNOWLEDGE_SEARCH, persisted=True))
