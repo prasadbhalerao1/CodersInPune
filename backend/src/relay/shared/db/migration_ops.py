@@ -46,6 +46,24 @@ def enable_tenant_rls(schema: str, table: str, column: str = "tenant_id") -> Non
     )
 
 
+def enable_rls(schema: str, table: str) -> None:
+    """Enable + force RLS with no policy (deny-all until policies are created).
+
+    For global tables whose policies are not the standard tenant policy.
+    """
+    target = qualified(schema, table)
+    op.execute(f"ALTER TABLE {target} ENABLE ROW LEVEL SECURITY")
+    op.execute(f"ALTER TABLE {target} FORCE ROW LEVEL SECURITY")
+
+
+def grant_function(signature: str, role: str) -> None:
+    """Revoke PUBLIC execute and grant it to `role`. `signature` is e.g. 'x.f()'."""
+    if not re.fullmatch(r"[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\(\)", signature):
+        raise ValueError(f"unsafe function signature: {signature!r}")
+    op.execute(f"REVOKE ALL ON FUNCTION {signature} FROM PUBLIC")
+    op.execute(f"GRANT EXECUTE ON FUNCTION {signature} TO {_ident(role)}")
+
+
 def grant_table(schema: str, table: str, role: str, privileges: list[str]) -> None:
     allowed = {"SELECT", "INSERT", "UPDATE", "DELETE"}
     if not privileges or not set(privileges) <= allowed:

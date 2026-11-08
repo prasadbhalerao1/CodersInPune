@@ -8,11 +8,12 @@ from alembic import context
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-import relay.platform.models  # noqa: F401  (registers tables on Base.metadata)
+import relay.identity.models
+import relay.platform.models  # noqa: F401
 from relay.config import MigrationSettings
 from relay.shared.db.base import Base
 
-MANAGED_SCHEMAS = {"platform"}
+MANAGED_SCHEMAS = {"platform", "identity"}
 
 config = context.config
 if config.config_file_name is not None:
