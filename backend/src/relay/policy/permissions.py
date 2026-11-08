@@ -26,17 +26,26 @@ class Permission(StrEnum):
     WORKSPACE_CREATE = "workspace.create"
     WORKSPACE_READ = "workspace.read"
     AUDIT_READ = "audit.read"
+    DIRECTORY_READ = "directory.read"
+    DIRECTORY_MANAGE = "directory.manage"
+    RESPONSIBILITY_READ = "responsibility.read"
+    RESPONSIBILITY_MANAGE = "responsibility.manage"
 
 
 # Granted to any verified identity, independent of workspace membership.
 PRINCIPAL_PERMISSIONS: Final = frozenset({Permission.WORKSPACE_CREATE})
 
+_READ: Final = frozenset(
+    {Permission.WORKSPACE_READ, Permission.DIRECTORY_READ, Permission.RESPONSIBILITY_READ}
+)
+_MANAGE: Final = frozenset({Permission.DIRECTORY_MANAGE, Permission.RESPONSIBILITY_MANAGE})
+
 ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
-    "owner": frozenset({Permission.WORKSPACE_READ, Permission.AUDIT_READ}),
-    "admin": frozenset({Permission.WORKSPACE_READ, Permission.AUDIT_READ}),
-    "auditor": frozenset({Permission.WORKSPACE_READ, Permission.AUDIT_READ}),
-    "member": frozenset({Permission.WORKSPACE_READ}),
-    "guest": frozenset({Permission.WORKSPACE_READ}),
+    "owner": _READ | _MANAGE | {Permission.AUDIT_READ},
+    "admin": _READ | _MANAGE | {Permission.AUDIT_READ},
+    "auditor": _READ | {Permission.AUDIT_READ},
+    "member": _READ,
+    "guest": _READ,
 }
 
 

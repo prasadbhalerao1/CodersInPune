@@ -8,12 +8,17 @@ from alembic import context
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-import relay.identity.models
+# Register every model on Base.metadata (autogenerate comparisons).
+import relay.audit.models  # noqa: F401
+import relay.catalog.models  # noqa: F401
+import relay.directory.models  # noqa: F401
+import relay.identity.models  # noqa: F401
+import relay.jobs.models  # noqa: F401
 import relay.platform.models  # noqa: F401
 from relay.config import MigrationSettings
 from relay.shared.db.base import Base
 
-MANAGED_SCHEMAS = {"platform", "identity", "audit"}
+MANAGED_SCHEMAS = {"platform", "identity", "audit", "directory", "catalog"}
 
 config = context.config
 if config.config_file_name is not None:

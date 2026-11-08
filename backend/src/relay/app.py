@@ -8,11 +8,14 @@ from fastapi.responses import JSONResponse
 
 from relay import health
 from relay.audit import service as audit
+from relay.catalog import api as catalog_api
 from relay.config import Settings
+from relay.directory import api as directory_api
 from relay.identity.tokens import WorkOSTokenVerifier
 from relay.jobs.app import create_job_app
 from relay.platform import workspaces
 from relay.policy.permissions import PermissionDenied
+from relay.risks import api as risks_api
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 from relay.shared.errors import api_error_response, register_error_handlers
 
@@ -67,4 +70,7 @@ def create_app(
     app.add_exception_handler(PermissionDenied, _handle_permission_denied)
     app.include_router(health.router)
     app.include_router(workspaces.router)
+    app.include_router(catalog_api.router)
+    app.include_router(directory_api.router)
+    app.include_router(risks_api.router)
     return app
