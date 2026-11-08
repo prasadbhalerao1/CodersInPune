@@ -138,6 +138,7 @@ export async function createPersonAction(
       email: optional(fd, "email"),
       title: optional(fd, "title"),
       github_login: optional(fd, "github_login"),
+      department_id: optional(fd, "department_id"),
     }),
   );
 }
@@ -163,6 +164,7 @@ export async function createTeamAction(
       name: text(fd, "name"),
       description: optional(fd, "description"),
       github_slug: optional(fd, "github_slug"),
+      department_id: optional(fd, "department_id"),
     }),
   );
 }
@@ -188,5 +190,42 @@ export async function removeTeamMemberAction(
 ): Promise<ActionState> {
   return mutate(workspaceId, () =>
     api.send(workspaceId, "DELETE", `/teams/${teamId}/members/${personId}`),
+  );
+}
+
+export async function createDepartmentAction(
+  workspaceId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", "/departments", {
+      name: text(fd, "name"),
+      description: optional(fd, "description"),
+    }),
+  );
+}
+
+export async function setDepartmentStatusAction(
+  workspaceId: string,
+  departmentId: string,
+  status: "active" | "archived",
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PATCH", `/departments/${departmentId}`, { status }),
+  );
+}
+
+export async function setDepartmentAction(
+  workspaceId: string,
+  kind: "people" | "teams",
+  id: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PATCH", `/${kind}/${id}`, {
+      department_id: optional(fd, "department_id") ?? null,
+    }),
   );
 }

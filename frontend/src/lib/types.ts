@@ -6,7 +6,13 @@ export type Severity = "high" | "medium" | "low";
 
 export type WorkspaceView = { id: string; name: string; role: string };
 
-export type AssigneeView = { type: "person" | "team"; id: string; name: string; status: string };
+export type AssigneeView = {
+  type: "person" | "team";
+  id: string;
+  name: string;
+  status: string;
+  department_name: string | null;
+};
 
 export type AssignmentView = {
   id: string;
@@ -43,6 +49,7 @@ export type ResponsibilityDetail = {
   as_of: string;
   owners_as_of: AssignmentView[];
   assignments: AssignmentView[];
+  assets: LinkedAssetView[];
 };
 
 export type ChangeView = {
@@ -64,6 +71,8 @@ export type PersonView = {
   email: string | null;
   title: string | null;
   github_login: string | null;
+  department_id: string | null;
+  department_name: string | null;
   status: "active" | "archived";
   created_at: string;
 };
@@ -75,6 +84,8 @@ export type TeamView = {
   name: string;
   description: string | null;
   github_slug: string | null;
+  department_id: string | null;
+  department_name: string | null;
   status: "active" | "archived";
   created_at: string;
   members: TeamMemberView[];
@@ -93,6 +104,24 @@ export type RiskView = {
   person_id: string | null;
   person_name: string | null;
   related: RiskSubjectView[];
+  status: RiskStatus;
+  note: string | null;
+  accepted_until: string | null;
+  decided_by_name: string | null;
+  decided_at: string | null;
+  first_detected_at: string | null;
+};
+
+export type RiskStatus = "open" | "acknowledged" | "accepted" | "resolved";
+
+export type ResolvedRiskView = {
+  key: string;
+  rule: string;
+  severity: Severity;
+  title: string;
+  subject: string | null;
+  first_detected_at: string;
+  resolved_at: string;
 };
 
 export type RecentChangeView = {
@@ -110,6 +139,8 @@ export type OverviewView = {
   without_primary_owner: number;
   critical_without_backup: number;
   open_risks: number;
+  acknowledged_risks: number;
+  accepted_risks: number;
   risks_by_severity: Record<Severity, number>;
   top_risks: RiskView[];
   recent_changes: RecentChangeView[];
@@ -130,6 +161,8 @@ export type CaseSummary = {
   scope_count: number;
   open_tasks: number;
   overdue_tasks: number;
+  emergency: boolean;
+  emergency_reason: string | null;
   updated_at: string;
 };
 
@@ -194,7 +227,9 @@ export type CaseAction =
   | "complete"
   | "extend"
   | "add_task"
-  | "add_criterion";
+  | "add_criterion"
+  | "set_emergency"
+  | "comment";
 
 export type CaseDetail = CaseSummary & {
   reason: string | null;
@@ -298,4 +333,168 @@ export type SuggestionView = {
   responsibility_id: string | null;
 };
 
-export type MyWorkView = { tasks: TaskView[]; approvals: CaseSummary[]; attention: CaseSummary[] };
+export type MyWorkView = {
+  emergencies: CaseSummary[];
+  tasks: TaskView[];
+  approvals: CaseSummary[];
+  attention: CaseSummary[];
+};
+
+export type DepartmentView = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: "active" | "archived";
+  people_count: number;
+  team_count: number;
+  created_at: string;
+};
+
+export type AssetType =
+  "repository" | "service" | "project" | "process" | "vendor" | "document_collection" | "other";
+
+export type LinkedAssetView = {
+  id: string;
+  name: string;
+  asset_type: AssetType;
+  url: string | null;
+  status: "active" | "archived";
+  relationship: "stewards" | "uses";
+};
+
+export type AssetSummary = {
+  id: string;
+  name: string;
+  asset_type: AssetType;
+  description: string | null;
+  url: string | null;
+  status: "active" | "archived";
+  responsibility_count: number;
+  updated_at: string;
+};
+
+export type AssetResponsibilityView = {
+  id: string;
+  name: string;
+  criticality: Criticality;
+  relationship: "stewards" | "uses";
+  primary_owner: AssigneeView | null;
+};
+
+export type AssetDetail = AssetSummary & {
+  created_at: string;
+  responsibilities: AssetResponsibilityView[];
+};
+
+export type ImportKind = "people" | "responsibilities" | "assignments";
+
+export type ImportRowView = {
+  line: number;
+  action: "create" | "skip" | "error";
+  label: string;
+  message: string | null;
+};
+
+export type ImportResultView = {
+  kind: ImportKind;
+  committed: boolean;
+  columns: string[];
+  ignored_columns: string[];
+  rows: ImportRowView[];
+  created: number;
+  skipped: number;
+  errors: number;
+};
+
+export type MentionView = { user_id: string; name: string };
+
+export type ActivityView = {
+  kind: "comment" | "event";
+  id: string;
+  occurred_at: string;
+  actor_name: string | null;
+  body: string | null;
+  mentions: MentionView[];
+  action: string | null;
+  details: Record<string, string | number | boolean | null>;
+};
+
+export type NotificationKind =
+  | "task_assigned"
+  | "task_due_soon"
+  | "task_overdue"
+  | "approval_requested"
+  | "mentioned"
+  | "case_update";
+
+export type NotificationView = {
+  id: string;
+  kind: NotificationKind;
+  detail: string | null;
+  case_id: string;
+  case_title: string;
+  case_emergency: boolean;
+  task_id: string | null;
+  task_title: string | null;
+  actor_name: string | null;
+  created_at: string;
+  read_at: string | null;
+};
+
+export type InboxView = { unread: number; items: NotificationView[] };
+
+export type BriefingItemView = {
+  responsibility_id: string;
+  responsibility_name: string;
+  criticality: Criticality;
+  covered_by: string | null;
+  cover_ends_at: string | null;
+  restoration: "not_started" | "covering" | "restored" | "excepted";
+  original_owner_active: boolean;
+  handover_notes: string | null;
+  exception_reason: string | null;
+};
+
+export type BriefingView = {
+  case_id: string;
+  title: string;
+  person_name: string | null;
+  period_start: string;
+  period_end: string;
+  returned: boolean;
+  items: BriefingItemView[];
+  ownership_changes: {
+    changed_at: string;
+    responsibility_name: string;
+    change_type: string;
+    role: Role;
+    assignee_name: string;
+    reason: string | null;
+  }[];
+  responsibility_events: {
+    occurred_at: string;
+    responsibility_name: string;
+    action: string;
+    actor_name: string | null;
+  }[];
+  tasks: {
+    title: string;
+    status: string;
+    assignee_name: string | null;
+    completed_at: string | null;
+  }[];
+  notes: ActivityView[];
+};
+
+export type AuditEventView = {
+  id: string;
+  occurred_at: string;
+  actor_type: "user" | "system";
+  actor_user_id: string | null;
+  actor_name: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  target_label: string | null;
+  metadata: Record<string, string | number | boolean | null>;
+};

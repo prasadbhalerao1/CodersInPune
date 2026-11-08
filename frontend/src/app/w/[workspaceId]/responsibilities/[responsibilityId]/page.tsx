@@ -11,6 +11,8 @@ import { ApiErrorNotice } from "@/components/api-error-notice";
 import { formatDateTime, PageHeader, Section } from "@/components/page";
 import { Badge, CriticalityBadge, ROLE_LABEL, RoleBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { linkAssetAction, unlinkAssetAction } from "@/app/w/[workspaceId]/assets/actions";
+import { ASSET_TYPE_LABEL } from "@/app/w/[workspaceId]/assets/labels";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
 import type { AssignmentView, PersonView, TeamView } from "@/lib/types";
@@ -28,12 +30,13 @@ export default async function ResponsibilityPage({
 }: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]">) {
   const [{ workspaceId, responsibilityId }, query] = await Promise.all([params, searchParams]);
   const asOf = typeof query.as_of === "string" ? query.as_of : undefined;
-  const [workspace, detail, history, people, teams] = await Promise.all([
+  const [workspace, detail, history, people, teams, assets] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.getResponsibility(workspaceId, responsibilityId, asOf)),
     attempt(api.responsibilityHistory(workspaceId, responsibilityId)),
     attempt(api.listPeople(workspaceId)),
     attempt(api.listTeams(workspaceId)),
+    attempt(api.assets(workspaceId)),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
@@ -42,6 +45,8 @@ export default async function ResponsibilityPage({
   if (!teams.ok) return <ApiErrorNotice error={teams.error} />;
 
   const r = detail.data;
+  const linked = new Set(r.assets.map((a) => a.id));
+  const linkable = assets.ok ? assets.data.filter((a) => !linked.has(a.id)) : [];
   const manage = canManage(workspace.data) && r.status === "active";
   const base = `/w/${workspaceId}/responsibilities/${responsibilityId}`;
 
@@ -114,6 +119,76 @@ export default async function ResponsibilityPage({
                   : undefined
               }
             />
+          </Section>
+
+          <Section
+            title="Assets"
+            description="What this responsibility looks after. Ownership stays here, not on the asset."
+          >
+            {r.assets.length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border p-4 text-sm">
+                No assets linked yet.
+              </p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {r.assets.map((a) => (
+                  <li key={a.id} className="flex items-center gap-3 px-4 py-2 text-sm">
+                    <Link
+                      href={`/w/${workspaceId}/assets/${a.id}`}
+                      className="min-w-0 flex-1 truncate font-medium hover:underline"
+                    >
+                      {a.name}
+                    </Link>
+                    <Badge tone="muted">{ASSET_TYPE_LABEL[a.asset_type]}</Badge>
+                    <span className="text-muted-foreground w-16 text-xs">
+                      {a.relationship === "stewards" ? "Stewards" : "Uses"}
+                    </span>
+                    {manage ? (
+                      <ActionForm
+                        action={unlinkAssetAction.bind(null, workspaceId, responsibilityId, a.id)}
+                      >
+                        <SubmitButton variant="ghost" size="sm" pendingLabel="…">
+                          Unlink
+                        </SubmitButton>
+                      </ActionForm>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {manage && linkable.length > 0 ? (
+              <ActionForm
+                action={linkAssetAction.bind(null, workspaceId, responsibilityId)}
+                className="flex-row flex-wrap items-center gap-2"
+              >
+                <select
+                  name="asset_id"
+                  defaultValue=""
+                  aria-label="Asset to link"
+                  className={`${inputClass} h-8 max-w-xs`}
+                >
+                  <option value="" disabled>
+                    Link an asset…
+                  </option>
+                  {linkable.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  name="relationship"
+                  aria-label="Relationship"
+                  className={`${inputClass} h-8 w-28`}
+                >
+                  <option value="stewards">Stewards</option>
+                  <option value="uses">Uses</option>
+                </select>
+                <SubmitButton variant="outline" size="sm">
+                  Link
+                </SubmitButton>
+              </ActionForm>
+            ) : null}
           </Section>
 
           <Section

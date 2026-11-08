@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader } from "@/components/page";
-import { Badge, CaseStatusBadge } from "@/components/ui/badge";
+import { Badge, CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
@@ -76,7 +76,10 @@ export default async function CasesPage({
                   className="hover:bg-muted/40 grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_9rem_8rem_7rem]"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{c.title}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="truncate font-medium">{c.title}</span>
+                      {c.emergency ? <EmergencyBadge /> : null}
+                    </span>
                     <span className="text-muted-foreground block truncate text-xs">
                       {CASE_TYPES[c.case_type].label}
                       {c.affected_person_name ? ` · ${c.affected_person_name}` : ""}

@@ -8,14 +8,18 @@ import { cn } from "@/lib/utils";
 const LIVE = [
   { label: "Overview", path: "" },
   { label: "My Work", path: "/my-work" },
+  { label: "Inbox", path: "/inbox" },
   { label: "Cases", path: "/cases" },
   { label: "Responsibilities", path: "/responsibilities" },
+  { label: "Assets", path: "/assets" },
   { label: "Risks", path: "/risks" },
   { label: "People & Teams", path: "/people" },
 ] as const;
 const SETTINGS = [
   { label: "Members", path: "/members" },
   { label: "Integrations", path: "/integrations" },
+  { label: "Import", path: "/import" },
+  { label: "Audit log", path: "/audit" },
 ] as const;
 const LATER = ["Knowledge", "Insights"] as const;
 

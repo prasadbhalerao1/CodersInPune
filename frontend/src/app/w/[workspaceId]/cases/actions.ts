@@ -186,3 +186,33 @@ export async function setCriterionStatusAction(
     }),
   );
 }
+
+export async function addCommentAction(
+  workspaceId: string,
+  caseId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const body = text(fd, "body");
+  if (!body) return { error: "Write something first." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", casePath(caseId, "/comments"), {
+      body,
+      mention_user_ids: [...new Set(fd.getAll("mention_user_ids").map(String))],
+    }),
+  );
+}
+
+export async function setEmergencyAction(
+  workspaceId: string,
+  caseId: string,
+  emergency: boolean,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const reason = optional(fd, "reason");
+  if (emergency && !reason) return { error: "Say why this is an emergency." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", casePath(caseId, "/emergency"), { emergency, reason }),
+  );
+}

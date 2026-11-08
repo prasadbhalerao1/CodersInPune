@@ -11,7 +11,6 @@ import { formatDateTime, Section } from "@/components/page";
 import { Badge, CriticalityBadge, ROLE_LABEL } from "@/components/ui/badge";
 import type {
   CaseDetail,
-  HistoryView,
   WorkspaceMemberView,
   PersonView,
   ResponsibilitySummary,
@@ -487,46 +486,6 @@ export function ApprovalPanel({ workspaceId, caseId, detail: c }: Ctx) {
           </SubmitButton>
         </ActionForm>
       ) : null}
-    </Section>
-  );
-}
-
-const ACTION_LABEL: Record<string, string> = {
-  "case.created": "Case created",
-  "case.updated": "Case details updated",
-  "case.scope_added": "Responsibility added",
-  "case.scope_updated": "Scope updated",
-  "case.scope_removed": "Responsibility removed",
-  "case.submitted": "Submitted for approval",
-  "case.approved": "Plan approved",
-  "case.rejected": "Plan rejected",
-  "case.executed": "Ownership changes applied",
-  "case.extended": "Coverage extended",
-  "case.completed": "Case completed",
-  "case.cancelled": "Case cancelled",
-  "case.task_added": "Task added",
-  "case.task_updated": "Task updated",
-  "case.criterion_added": "Readiness check added",
-  "case.criterion_updated": "Readiness check updated",
-};
-
-export function HistoryPanel({ history }: { history: HistoryView[] }) {
-  return (
-    <Section title="History">
-      <ol className="relative flex flex-col gap-3 border-l pl-4">
-        {history.map((h, i) => (
-          <li key={i} className="text-sm">
-            <span
-              className="bg-background absolute -left-[4.5px] mt-1.5 size-2 rounded-full border"
-              aria-hidden
-            />
-            <p>{ACTION_LABEL[h.action] ?? h.action}</p>
-            <p className="text-muted-foreground text-xs">
-              {h.actor_name ?? "Someone"} · {formatDateTime(h.occurred_at)}
-            </p>
-          </li>
-        ))}
-      </ol>
     </Section>
   );
 }

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { CaseStatus, Criticality, Role, Severity } from "@/lib/types";
+import type { CaseStatus, Criticality, RiskStatus, Role, Severity } from "@/lib/types";
 
 // Colour carries meaning only: red = act now, amber = attention, neutral otherwise.
 const TONES = {
@@ -76,6 +76,26 @@ export function CaseStatusBadge({ value }: { value: CaseStatus }) {
     <Badge tone={s.tone} className="gap-1.5">
       <span aria-hidden className={cn("size-1.5 rounded-full", s.dot)} />
       {s.label}
+    </Badge>
+  );
+}
+
+const RISK_STATUS: Record<RiskStatus, { label: string; tone: Tone }> = {
+  open: { label: "Open", tone: "neutral" },
+  acknowledged: { label: "Acknowledged", tone: "muted" },
+  accepted: { label: "Accepted", tone: "muted" },
+  resolved: { label: "Resolved", tone: "muted" },
+};
+
+export function RiskStatusBadge({ value }: { value: RiskStatus }) {
+  return <Badge tone={RISK_STATUS[value].tone}>{RISK_STATUS[value].label}</Badge>;
+}
+
+export function EmergencyBadge() {
+  return (
+    <Badge tone="danger" className="gap-1.5">
+      <span aria-hidden className="size-1.5 rounded-full bg-red-600" />
+      Emergency
     </Badge>
   );
 }

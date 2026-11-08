@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/page";
-import { Badge, CaseStatusBadge } from "@/components/ui/badge";
+import { Badge, CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { CaseSummary } from "@/lib/types";
@@ -23,7 +23,7 @@ export default async function MyWorkPage({
   const filter = FILTERS.find((f) => f.key === query.show)?.key ?? "all";
   const work = await attempt(api.myWork(workspaceId));
   if (!work.ok) return <ApiErrorNotice error={work.error} />;
-  const { tasks, approvals, attention } = work.data;
+  const { emergencies, tasks, approvals, attention } = work.data;
   const base = `/w/${workspaceId}`;
   const show = (key: (typeof FILTERS)[number]["key"]) => filter === "all" || filter === key;
   const empty = tasks.length + approvals.length + attention.length === 0;
@@ -54,6 +54,34 @@ export default async function MyWorkPage({
             title="You're all caught up"
             description="Tasks assigned to you, approvals you can give and cases you coordinate appear here."
           />
+        ) : null}
+        {emergencies.length > 0 ? (
+          <section
+            aria-label="Emergency cases"
+            className="rounded-lg border border-red-600/25 bg-red-50/60 dark:bg-red-950/20"
+          >
+            <p className="px-4 pt-3 text-xs font-semibold text-red-900 dark:text-red-200">
+              Emergency cases
+            </p>
+            <ul className="divide-y divide-red-600/10">
+              {emergencies.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`${base}/cases/${c.id}`}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-100/50 dark:hover:bg-red-950/30"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{c.title}</span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {c.emergency_reason}
+                      </span>
+                    </span>
+                    <CaseStatusBadge value={c.status} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
         {show("tasks") && tasks.length > 0 ? (
           <Section title="Tasks assigned to me" description="Complete them from the case.">
@@ -114,7 +142,10 @@ function CaseList({
               className="hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm"
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{c.title}</span>
+                <span className="flex items-center gap-2">
+                  <span className="truncate font-medium">{c.title}</span>
+                  {c.emergency ? <EmergencyBadge /> : null}
+                </span>
                 <span className="text-muted-foreground text-xs">
                   {hint ?? `${c.open_tasks} open tasks`}
                   {c.overdue_tasks ? ` · ${c.overdue_tasks} overdue` : ""}

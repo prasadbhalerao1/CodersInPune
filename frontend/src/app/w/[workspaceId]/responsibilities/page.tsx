@@ -18,15 +18,20 @@ export default async function ResponsibilitiesPage({
     q: pick("q"),
     criticality: pick("criticality"),
     status: pick("status") ?? "active",
+    department_id: pick("department_id"),
   };
-  const [workspace, list] = await Promise.all([
+  const [workspace, list, departments] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.listResponsibilities(workspaceId, filters)),
+    attempt(api.departments(workspaceId)),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!list.ok) return <ApiErrorNotice error={list.error} />;
   const base = `/w/${workspaceId}/responsibilities`;
-  const filtered = Boolean(filters.q || filters.criticality || filters.status !== "active");
+  const filtered = Boolean(
+    filters.q || filters.criticality || filters.department_id || filters.status !== "active",
+  );
+  const departmentOptions = departments.ok ? departments.data : [];
   const manage = canManage(workspace.data);
 
   return (
@@ -35,9 +40,17 @@ export default async function ResponsibilitiesPage({
         title="Responsibilities"
         actions={
           manage ? (
-            <Link href={`${base}/new`} className={buttonVariants({ size: "sm" })}>
-              New responsibility
-            </Link>
+            <>
+              <Link
+                href={`/w/${workspaceId}/import`}
+                className={buttonVariants({ size: "sm", variant: "ghost" })}
+              >
+                Import CSV
+              </Link>
+              <Link href={`${base}/new`} className={buttonVariants({ size: "sm" })}>
+                New responsibility
+              </Link>
+            </>
           ) : null
         }
       />
@@ -62,6 +75,21 @@ export default async function ResponsibilitiesPage({
             <option value="standard">Standard</option>
             <option value="low">Low</option>
           </select>
+          {departmentOptions.length > 0 ? (
+            <select
+              name="department_id"
+              defaultValue={filters.department_id ?? ""}
+              aria-label="Department"
+              className={`${inputClass} w-44`}
+            >
+              <option value="">Any department</option>
+              {departmentOptions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <select
             name="status"
             defaultValue={filters.status}
@@ -124,7 +152,14 @@ export default async function ResponsibilitiesPage({
                     </td>
                     <td className="px-4 py-2.5">
                       {r.primary_owner ? (
-                        r.primary_owner.name
+                        <>
+                          {r.primary_owner.name}
+                          {r.primary_owner.department_name ? (
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              {r.primary_owner.department_name}
+                            </span>
+                          ) : null}
+                        </>
                       ) : (
                         <Badge tone="warning">Unowned</Badge>
                       )}

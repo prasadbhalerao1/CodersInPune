@@ -1,21 +1,17 @@
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { formatDateTime, PageHeader } from "@/components/page";
-import { CaseStatusBadge } from "@/components/ui/badge";
+import { CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { CaseDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { caseCommandAction } from "../actions";
+import { addCommentAction, caseCommandAction } from "../actions";
 import { CASE_TYPES } from "../labels";
-import {
-  ApprovalPanel,
-  HistoryPanel,
-  ReadinessSection,
-  ScopeSection,
-  TasksSection,
-} from "./sections";
+import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
+import { CommentComposer } from "./comment-composer";
+import { ApprovalPanel, ReadinessSection, ScopeSection, TasksSection } from "./sections";
 
 const STEPS = [
   { status: "draft", label: "Scope" },
@@ -47,16 +43,16 @@ function nextStep(c: CaseDetail): string {
 
 export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/cases/[caseId]">) {
   const { workspaceId, caseId } = await params;
-  const [detail, history, people, teams, members, responsibilities] = await Promise.all([
+  const [detail, activity, people, teams, members, responsibilities] = await Promise.all([
     attempt(api.getCase(workspaceId, caseId)),
-    attempt(api.caseHistory(workspaceId, caseId)),
+    attempt(api.caseActivity(workspaceId, caseId)),
     attempt(api.listPeople(workspaceId)),
     attempt(api.listTeams(workspaceId)),
     attempt(api.members(workspaceId)),
     attempt(api.listResponsibilities(workspaceId)),
   ]);
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
-  if (!history.ok) return <ApiErrorNotice error={history.error} />;
+  if (!activity.ok) return <ApiErrorNotice error={activity.error} />;
   if (!people.ok) return <ApiErrorNotice error={people.error} />;
   if (!teams.ok) return <ApiErrorNotice error={teams.error} />;
   if (!members.ok) return <ApiErrorNotice error={members.error} />;
@@ -68,6 +64,13 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
     caseCommandAction.bind(null, workspaceId, caseId, name);
   const reached = STEPS.findIndex((s) => s.status === c.status);
   const ctx = { workspaceId, caseId, detail: c };
+  const briefing =
+    c.case_type === "coverage" && (c.status === "executing" || c.status === "completed")
+      ? await attempt(api.caseBriefing(workspaceId, caseId))
+      : null;
+  const mentionable = members.data
+    .filter((m) => m.status === "active")
+    .map((m) => ({ user_id: m.user_id, name: m.name }));
 
   return (
     <div className="flex flex-1 flex-col">
@@ -75,6 +78,7 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
         title={c.title}
         actions={
           <>
+            {c.emergency ? <EmergencyBadge /> : null}
             <CaseStatusBadge value={c.status} />
             {can("cancel") ? (
               <ActionForm action={command("cancel")}>
@@ -109,6 +113,7 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
           </>
         }
       />
+      <EmergencyBanner detail={c} />
       <div className="border-b px-6 py-3">
         <ol className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs" aria-label="Progress">
           {STEPS.map((step, i) => {
@@ -151,6 +156,18 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
           />
           <TasksSection {...ctx} members={members.data} />
           <ReadinessSection {...ctx} />
+          {briefing?.ok ? <BriefingSection briefing={briefing.data} /> : null}
+          <ActivityPanel
+            activity={activity.data}
+            composer={
+              c.allowed_actions.includes("comment") ? (
+                <CommentComposer
+                  action={addCommentAction.bind(null, workspaceId, caseId)}
+                  members={mentionable}
+                />
+              ) : undefined
+            }
+          />
         </div>
         <aside className="flex flex-col gap-6">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
@@ -181,7 +198,7 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
             <p className="text-muted-foreground text-sm whitespace-pre-line">{c.reason}</p>
           ) : null}
           <ApprovalPanel {...ctx} />
-          <HistoryPanel history={history.data} />
+          <EmergencyControl {...ctx} />
         </aside>
       </div>
     </div>

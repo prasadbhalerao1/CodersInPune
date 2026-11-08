@@ -4,6 +4,14 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { connection } from "next/server";
 
 import type {
+  ActivityView,
+  AssetDetail,
+  AssetSummary,
+  AuditEventView,
+  BriefingView,
+  DepartmentView,
+  InboxView,
+  ResolvedRiskView,
   IntegrationView,
   InvitationView,
   MyInvitationView,
@@ -88,7 +96,9 @@ export const api = {
     }),
 
   overview: (id: string) => relayFetch<OverviewView>(`${ws(id)}/overview`),
-  risks: (id: string) => relayFetch<RiskView[]>(`${ws(id)}/risks`),
+  risks: (id: string, status: "active" | "accepted" | "all" = "active") =>
+    relayFetch<RiskView[]>(withQuery(`${ws(id)}/risks`, { status })),
+  resolvedRisks: (id: string) => relayFetch<ResolvedRiskView[]>(`${ws(id)}/risks/resolved`),
 
   listResponsibilities: (id: string, query?: Query) =>
     relayFetch<ResponsibilitySummary[]>(withQuery(`${ws(id)}/responsibilities`, query)),
@@ -103,6 +113,12 @@ export const api = {
     relayFetch<PersonView[]>(withQuery(`${ws(id)}/people`, query)),
   listTeams: (id: string, query?: Query) =>
     relayFetch<TeamView[]>(withQuery(`${ws(id)}/teams`, query)),
+  departments: (id: string, query?: Query) =>
+    relayFetch<DepartmentView[]>(withQuery(`${ws(id)}/departments`, query)),
+  assets: (id: string, query?: Query) =>
+    relayFetch<AssetSummary[]>(withQuery(`${ws(id)}/assets`, query)),
+  getAsset: (id: string, assetId: string) =>
+    relayFetch<AssetDetail>(`${ws(id)}/assets/${encodeURIComponent(assetId)}`),
 
   members: (id: string, query?: Query) =>
     relayFetch<WorkspaceMemberView[]>(withQuery(`${ws(id)}/members`, query)),
@@ -120,6 +136,14 @@ export const api = {
     relayFetch<CaseDetail>(`${ws(id)}/cases/${encodeURIComponent(caseId)}`),
   caseHistory: (id: string, caseId: string) =>
     relayFetch<HistoryView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/history`),
+  caseActivity: (id: string, caseId: string) =>
+    relayFetch<ActivityView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/activity`),
+  caseBriefing: (id: string, caseId: string) =>
+    relayFetch<BriefingView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/briefing`),
+  inbox: (id: string, query?: Query) =>
+    relayFetch<InboxView>(withQuery(`${ws(id)}/notifications`, query)),
+  auditEvents: (id: string, query?: Query) =>
+    relayFetch<AuditEventView[]>(withQuery(`${ws(id)}/audit-events`, query)),
 
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {
@@ -129,5 +153,8 @@ export const api = {
 };
 
 export const isOwner = (workspace: WorkspaceView) => workspace.role === "owner";
+
+export const canAudit = (workspace: WorkspaceView) =>
+  ["owner", "admin", "auditor"].includes(workspace.role);
 
 export const canManage = (workspace: WorkspaceView) => ["owner", "admin"].includes(workspace.role);
