@@ -5,15 +5,12 @@ from collections.abc import Sequence
 
 import anyio
 import anyio.lowlevel
-import httpx
 import psycopg
 import pytest
-from fastapi import Header, Request
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from relay.app import create_app
 from relay.platform.models import Tenant, TenantProbe, TenantProbeItem
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 from tests.conftest import make_settings
@@ -210,36 +207,6 @@ async def test_concurrent_units_of_work_stay_isolated() -> None:
                 tg.start_soon(read_repeatedly, tenant, expected)
     finally:
         await engine.dispose()
-
-
-async def test_tenant_context_does_not_leak_between_requests() -> None:
-    # A test-only route stands in for the authenticated dependency that arrives with
-    # WorkOS AuthKit; production code has no header-based tenant selection.
-    app = create_app(make_settings(db_pool_size=1, db_max_overflow=0))
-
-    @app.get("/_test/probes")
-    async def list_probes(
-        request: Request, x_test_tenant: str | None = Header(default=None)
-    ) -> list[str]:
-        tenant = uuid.UUID(x_test_tenant) if x_test_tenant else None
-        async with unit_of_work(request.app.state.session_factory, tenant) as session:
-            return await probe_names(session)
-
-    async with app.router.lifespan_context(app):
-        tenant_a = await create_tenant(app.state.session_factory, "A", probes=("a1",))
-        tenant_b = await create_tenant(app.state.session_factory, "B", probes=("b1",))
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            for headers, expected in [
-                ({"x-test-tenant": str(tenant_a)}, ["a1"]),
-                ({}, []),
-                ({"x-test-tenant": str(tenant_b)}, ["b1"]),
-                ({}, []),
-                ({"x-test-tenant": str(tenant_a)}, ["a1"]),
-            ]:
-                response = await client.get("/_test/probes", headers=headers)
-                assert response.status_code == 200
-                assert response.json() == expected
 
 
 async def test_unit_of_work_rejects_non_uuid_tenant(

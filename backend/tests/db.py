@@ -3,6 +3,7 @@
 import os
 import uuid
 
+import psycopg
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay.platform.models import Tenant, TenantProbe
@@ -18,11 +19,25 @@ OWNER_URL = os.environ.get(
     "RELAY_TEST_MIGRATION_DATABASE_URL",
     "postgresql+psycopg://relay_owner:relay_owner_dev@localhost:5432/relay_test",
 )
+# Bootstrap superuser: used ONLY by assertions that must count rows regardless of RLS
+# (e.g. "nothing was half-written"). Never used by code under test.
+INSPECTOR_URL = os.environ.get(
+    "RELAY_TEST_INSPECTOR_DATABASE_URL",
+    "postgresql://postgres:postgres_dev@localhost:5432/relay_test",
+)
 APP_ROLE = "relay_app"
 
 
 def libpq_url(url: str) -> str:
     return url.replace("postgresql+psycopg://", "postgresql://", 1)
+
+
+def count_rows(table: str, where: str = "true", params: tuple[object, ...] = ()) -> int:
+    """Count rows bypassing RLS. `table` and `where` are test-authored literals."""
+    with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
+        row = conn.execute(f"SELECT count(*) FROM {table} WHERE {where}", params).fetchone()  # noqa: S608
+    assert row is not None
+    return int(row[0])
 
 
 async def create_tenant(

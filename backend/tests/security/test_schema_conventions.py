@@ -12,12 +12,15 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine
 
-import relay.platform.models  # noqa: F401  (registers tables)
+import relay.identity.models
+import relay.platform.models  # noqa: F401
 from relay.shared.db.base import Base
 from tests.db import APP_ROLE, OWNER_URL, libpq_url
 
-MANAGED_SCHEMAS = ("platform",)
+MANAGED_SCHEMAS = ("platform", "identity")
 TENANT_ROOT = ("platform", "tenant")
+# Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.
+GLOBAL_TABLES = {("identity", "user_account"), ("identity", "workspace_creation_request")}
 
 
 @pytest.fixture
@@ -46,8 +49,22 @@ def test_every_managed_table_is_tenant_scoped_or_the_tenant_root(
         (list(MANAGED_SCHEMAS),),
     ).fetchall()
     scoped = set(tenant_tables(catalog))
-    unscoped = {(r[0], r[1]) for r in rows} - scoped - {TENANT_ROOT}
+    unscoped = {(r[0], r[1]) for r in rows} - scoped - {TENANT_ROOT} - GLOBAL_TABLES
     assert unscoped == set(), "tables without tenant_id need an explicit exemption"
+
+
+def test_global_tables_force_rls_with_policies(catalog: psycopg.Connection) -> None:
+    for schema, table in sorted(GLOBAL_TABLES):
+        row = catalog.execute(
+            """
+            SELECT c.relrowsecurity, c.relforcerowsecurity,
+                   (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid) > 0
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = %s AND c.relname = %s
+            """,
+            (schema, table),
+        ).fetchone()
+        assert row == (True, True, True), f"{schema}.{table}"
 
 
 def test_rls_enabled_forced_and_policy_present(catalog: psycopg.Connection) -> None:

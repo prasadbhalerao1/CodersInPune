@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from relay.config import Settings
 from relay.shared.db import create_engine, create_session_factory
 from tests.db import APP_ROLE, APP_URL, OWNER_URL, libpq_url
+from tests.tokens import CLIENT_ID
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -51,12 +52,19 @@ def migrated_database() -> None:
 def clean_tables() -> None:
     with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
         conn.execute(
-            "TRUNCATE platform.tenant_probe_item, platform.tenant_probe, platform.tenant CASCADE"
+            "TRUNCATE identity.workspace_creation_request, identity.membership, "
+            "identity.user_account, platform.tenant_probe_item, platform.tenant_probe, "
+            "platform.tenant CASCADE"
         )
 
 
 def make_settings(**overrides: Any) -> Settings:
-    return Settings(**{"database_url": APP_URL, "environment": "test", **overrides})
+    defaults: dict[str, Any] = {
+        "database_url": APP_URL,
+        "environment": "test",
+        "workos_client_id": CLIENT_ID,
+    }
+    return Settings(**{**defaults, **overrides})
 
 
 @pytest.fixture
