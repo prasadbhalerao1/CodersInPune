@@ -14,12 +14,21 @@ import relay.catalog.models
 import relay.continuity.models
 import relay.directory.models
 import relay.identity.models
+import relay.integrations.github.models
 import relay.jobs.models
 import relay.platform.models  # noqa: F401
 from relay.config import MigrationSettings
 from relay.shared.db.base import Base
 
-MANAGED_SCHEMAS = {"platform", "identity", "audit", "directory", "catalog", "continuity"}
+MANAGED_SCHEMAS = {
+    "platform",
+    "identity",
+    "audit",
+    "directory",
+    "catalog",
+    "continuity",
+    "integrations",
+}
 
 config = context.config
 if config.config_file_name is not None:

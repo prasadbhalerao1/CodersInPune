@@ -13,13 +13,16 @@ event processed and records the outcome, all in one transaction.
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 
+import httpx
 import procrastinate
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay.audit import service as audit
+from relay.config import Settings
 from relay.jobs.models import OutboxEvent
 from relay.shared.db.session import unit_of_work
 
@@ -27,16 +30,30 @@ logger = logging.getLogger(__name__)
 
 PROCESS_TASK = "relay.process_outbox_event"
 
-Handler = Callable[[AsyncSession, OutboxEvent], Awaitable[None]]
+
+@dataclass(frozen=True, slots=True)
+class JobContext:
+    """Services a handler may need (e.g. outbound HTTP); built once per worker."""
+
+    http: httpx.AsyncClient | None = None
+    settings: Settings | None = None
 
 
-async def _workspace_created(_session: AsyncSession, _event: OutboxEvent) -> None:
+Handler = Callable[[AsyncSession, OutboxEvent, JobContext], Awaitable[None]]
+
+
+async def _workspace_created(_session: AsyncSession, _event: OutboxEvent, _ctx: JobContext) -> None:
     # First consumer: no downstream work yet. Processing proves the pipeline end to end;
     # M1+ handlers (e.g. seeding defaults) attach here.
     return None
 
 
 HANDLERS: dict[str, Handler] = {"workspace.created": _workspace_created}
+
+
+def register(event_type: str, handler: Handler) -> None:
+    """Register a handler for an event type (modules call this at import time)."""
+    HANDLERS[event_type] = handler
 
 
 async def emit(
@@ -64,7 +81,10 @@ async def emit(
 
 
 async def process(
-    factory: async_sessionmaker[AsyncSession], tenant_id: uuid.UUID, event_id: uuid.UUID
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    event_id: uuid.UUID,
+    ctx: JobContext | None = None,
 ) -> bool:
     """Process one event. Returns False if it was already processed or is not visible."""
     try:
@@ -78,7 +98,7 @@ async def process(
                 return False
             if event.processed_at is not None:
                 return False
-            await HANDLERS[event.event_type](session, event)
+            await HANDLERS[event.event_type](session, event, ctx or JobContext())
             event.processed_at = func.now()
             event.attempts += 1
             event.last_error_type = None

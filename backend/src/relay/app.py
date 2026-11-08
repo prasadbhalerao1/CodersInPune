@@ -12,8 +12,12 @@ from relay.catalog import api as catalog_api
 from relay.config import Settings
 from relay.continuity import api as continuity_api
 from relay.directory import api as directory_api
-from relay.identity import profile
+from relay.identity import members_api, profile
 from relay.identity.tokens import WorkOSTokenVerifier
+from relay.identity.workos_api import WorkOSClient
+from relay.integrations.github import api as github_api
+from relay.integrations.github.client import GitHubClient
+from relay.jobs import outbox
 from relay.jobs.app import create_job_app
 from relay.platform import workspaces
 from relay.policy.permissions import PermissionDenied
@@ -45,22 +49,28 @@ async def _handle_permission_denied(request: Request, exc: Exception) -> JSONRes
 
 def create_app(
     settings: Settings | None = None,
-    jwks_transport: httpx.AsyncBaseTransport | None = None,
+    http_transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastAPI:
-    """Build the API. `jwks_transport` lets tests serve a JWKS without network access."""
+    """Build the API. `http_transport` lets tests stub every outbound HTTP call
+    (WorkOS JWKS/API, GitHub) without network access."""
     resolved = settings or Settings()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(resolved)
-        http = httpx.AsyncClient(transport=jwks_transport, timeout=5.0)
+        http = httpx.AsyncClient(transport=http_transport, timeout=15.0)
         session_factory = create_session_factory(engine)
         app.state.settings = resolved
         app.state.engine = engine
         app.state.session_factory = session_factory
         app.state.token_verifier = WorkOSTokenVerifier(resolved, http)
         # Not opened: the API only defers jobs on its own transaction's connection.
-        app.state.jobs = create_job_app(resolved, session_factory)
+        app.state.http = http
+        app.state.workos = WorkOSClient(resolved, http)
+        app.state.github = GitHubClient(resolved, http)
+        app.state.jobs = create_job_app(
+            resolved, session_factory, outbox.JobContext(http=http, settings=resolved)
+        )
         try:
             yield
         finally:
@@ -77,4 +87,8 @@ def create_app(
     app.include_router(risks_api.router)
     app.include_router(continuity_api.router)
     app.include_router(profile.router)
+    app.include_router(members_api.router)
+    app.include_router(members_api.me)
+    app.include_router(github_api.router)
+    app.include_router(github_api.callback)
     return app

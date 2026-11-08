@@ -8,15 +8,17 @@ bind the tenant. The handler then runs in that same transaction as `relay_app` u
 
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Request
 from sqlalchemy import and_, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay.identity.auth import Identity
 from relay.identity.models import ACTIVE, Membership, UserAccount
+from relay.identity.tokens import VerifiedIdentity
 from relay.shared.db.session import establish_tenant_context, unit_of_work
 from relay.shared.errors import ApiError
 
@@ -31,10 +33,10 @@ class WorkspaceAccess:
     workos_user_id: str
 
 
-async def get_workspace_access(
-    workspace_id: uuid.UUID, identity: Identity, request: Request
+@asynccontextmanager
+async def open_workspace_access(
+    factory: async_sessionmaker[AsyncSession], identity: VerifiedIdentity, workspace_id: uuid.UUID
 ) -> AsyncIterator[WorkspaceAccess]:
-    factory = request.app.state.session_factory
     async with unit_of_work(factory, None, identity.workos_user_id) as session:
         row = (
             await session.execute(
@@ -61,6 +63,15 @@ async def get_workspace_access(
         yield WorkspaceAccess(
             session, workspace_id, user_id, membership_id, role, identity.workos_user_id
         )
+
+
+async def get_workspace_access(
+    workspace_id: uuid.UUID, identity: Identity, request: Request
+) -> AsyncIterator[WorkspaceAccess]:
+    async with open_workspace_access(
+        request.app.state.session_factory, identity, workspace_id
+    ) as access:
+        yield access
 
 
 CurrentWorkspace = Annotated[WorkspaceAccess, Depends(get_workspace_access)]

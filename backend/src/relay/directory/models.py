@@ -13,6 +13,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Text,
     UniqueConstraint,
     func,
@@ -31,6 +32,13 @@ class Person(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
         CheckConstraint("char_length(display_name) BETWEEN 1 AND 200", name="display_name_length"),
+        Index(
+            "uq_person_tenant_id_github_login",
+            "tenant_id",
+            "github_login",
+            unique=True,
+            postgresql_where=text("github_login IS NOT NULL"),
+        ),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
         {"schema": SCHEMA},
     )
@@ -40,6 +48,7 @@ class Person(Base):
     display_name: Mapped[str] = mapped_column(Text)
     email: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
+    github_login: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, server_default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -50,6 +59,13 @@ class Team(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 200", name="name_length"),
+        Index(
+            "uq_team_tenant_id_github_slug",
+            "tenant_id",
+            "github_slug",
+            unique=True,
+            postgresql_where=text("github_slug IS NOT NULL"),
+        ),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
         {"schema": SCHEMA},
     )
@@ -58,6 +74,7 @@ class Team(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
     name: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
+    github_slug: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, server_default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

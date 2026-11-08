@@ -2,9 +2,9 @@
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 
@@ -18,16 +18,27 @@ from relay.shared.errors import ApiError
 Status = Literal["active", "archived"]
 
 
+GitHubLogin = Annotated[
+    str, StringConstraints(strip_whitespace=True, pattern=r"^[A-Za-z0-9-]{1,39}$")
+]
+GitHubTeamSlug = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, pattern=r"^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$"),
+]
+
+
 class PersonIn(StrictInput):
     display_name: Name
     email: Email | None = None
     title: ShortText | None = None
+    github_login: GitHubLogin | None = None
 
 
 class PersonUpdate(StrictInput):
     display_name: Name | None = None
     email: Email | None = None
     title: ShortText | None = None
+    github_login: GitHubLogin | None = None
     status: Status | None = None
 
 
@@ -36,6 +47,7 @@ class PersonView(BaseModel):
     display_name: str
     email: str | None
     title: str | None
+    github_login: str | None
     status: str
     created_at: datetime
 
@@ -43,11 +55,13 @@ class PersonView(BaseModel):
 class TeamIn(StrictInput):
     name: Name
     description: LongText | None = None
+    github_slug: GitHubTeamSlug | None = None
 
 
 class TeamUpdate(StrictInput):
     name: Name | None = None
     description: LongText | None = None
+    github_slug: GitHubTeamSlug | None = None
     status: Status | None = None
 
 
@@ -60,6 +74,7 @@ class TeamView(BaseModel):
     id: uuid.UUID
     name: str
     description: str | None
+    github_slug: str | None
     status: str
     created_at: datetime
     members: list[TeamMemberView] = []
@@ -71,6 +86,7 @@ def _person_view(p: Person) -> PersonView:
         display_name=p.display_name,
         email=p.email,
         title=p.title,
+        github_login=p.github_login,
         status=p.status,
         created_at=p.created_at,
     )
@@ -78,7 +94,12 @@ def _person_view(p: Person) -> PersonView:
 
 def _team_view(t: Team) -> TeamView:
     return TeamView(
-        id=t.id, name=t.name, description=t.description, status=t.status, created_at=t.created_at
+        id=t.id,
+        name=t.name,
+        description=t.description,
+        github_slug=t.github_slug,
+        status=t.status,
+        created_at=t.created_at,
     )
 
 
@@ -107,6 +128,7 @@ async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:
         display_name=data.display_name,
         email=blank_to_none(data.email),
         title=blank_to_none(data.title),
+        github_login=(data.github_login or "").lower() or None,
     )
     access.session.add(person)
     await access.session.flush()
@@ -131,6 +153,8 @@ async def update_person(
         raise ApiError(404, "person_not_found", "Person not found.")
     changed = data.model_dump(exclude_unset=True)
     for field, value in changed.items():
+        if field == "github_login":
+            value = value.lower() if value else None
         setattr(person, field, blank_to_none(value) if field in {"email", "title"} else value)
     person.updated_at = func.now()
     await access.session.flush()
@@ -231,6 +255,7 @@ async def create_team(access: WorkspaceAccess, data: TeamIn) -> TeamView:
         tenant_id=access.tenant_id,
         name=data.name,
         description=blank_to_none(data.description),
+        github_slug=(data.github_slug or "").lower() or None,
     )
     access.session.add(team)
     await access.session.flush()
@@ -253,6 +278,8 @@ async def update_team(access: WorkspaceAccess, team_id: uuid.UUID, data: TeamUpd
         raise ApiError(404, "team_not_found", "Team not found.")
     changed = data.model_dump(exclude_unset=True)
     for field, value in changed.items():
+        if field == "github_slug":
+            value = value.lower() if value else None
         setattr(team, field, blank_to_none(value) if field == "description" else value)
     team.updated_at = func.now()
     await access.session.flush()

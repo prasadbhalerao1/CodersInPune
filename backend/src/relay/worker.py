@@ -4,7 +4,10 @@ import asyncio
 import logging
 import sys
 
+import httpx
+
 from relay.config import Settings
+from relay.jobs import outbox
 from relay.jobs.app import create_job_app
 from relay.shared.db import create_engine, create_session_factory
 
@@ -12,11 +15,14 @@ from relay.shared.db import create_engine, create_session_factory
 async def run() -> None:
     settings = Settings()
     engine = create_engine(settings)
-    jobs = create_job_app(settings, create_session_factory(engine))
+    http = httpx.AsyncClient(timeout=15.0)
+    ctx = outbox.JobContext(http=http, settings=settings)
+    jobs = create_job_app(settings, create_session_factory(engine), ctx)
     try:
         async with jobs.open_async():
             await jobs.run_worker_async(concurrency=settings.worker_concurrency)
     finally:
+        await http.aclose()
         await engine.dispose()
 
 

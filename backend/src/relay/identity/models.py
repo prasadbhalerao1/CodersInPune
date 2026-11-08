@@ -92,3 +92,36 @@ class WorkspaceCreationRequest(Base):
         ForeignKey("platform.tenant.id", deferrable=True, initially="DEFERRED")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Invitation(Base):
+    """Invitation bound to a normalised email; accepting requires that verified email."""
+
+    __tablename__ = "invitation"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("email = lower(email) AND email LIKE '%_@_%'", name="email"),
+        CheckConstraint(_in("role", ROLES), name="role"),
+        CheckConstraint("status IN ('pending', 'accepted', 'revoked')", name="status"),
+        Index(
+            "uq_invitation_pending_email",
+            "tenant_id",
+            "email",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    email: Mapped[str] = mapped_column(Text)
+    role: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, server_default="pending")
+    workspace_name: Mapped[str] = mapped_column(Text)
+    workos_invitation_id: Mapped[str | None] = mapped_column(Text)
+    invited_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

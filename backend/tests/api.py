@@ -1,7 +1,7 @@
 """Shared API test harness: real app, real PostgreSQL as relay_app, simulated JWKS only."""
 
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
@@ -53,9 +53,19 @@ class Api:
 
 
 @asynccontextmanager
-async def make_api(**settings: object) -> AsyncIterator[Api]:
+async def make_api(
+    fake: Callable[[httpx.Request], httpx.Response] | None = None, **settings: object
+) -> AsyncIterator[Api]:
+    """`fake` answers every outbound request except the WorkOS JWKS (served here)."""
     key = SigningKey(kid="key-1")
-    app = create_app(make_settings(**settings), JwksServer(keys=[key]).transport)
+    jwks = JwksServer(keys=[key])
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if request.url.path.startswith("/sso/jwks/"):
+            return jwks.handle(request)
+        return fake(request) if fake else httpx.Response(503)
+
+    app = create_app(make_settings(**settings), httpx.MockTransport(route))
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

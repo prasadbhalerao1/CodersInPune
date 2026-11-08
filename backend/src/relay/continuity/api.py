@@ -10,11 +10,6 @@ router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["continuity"])
 Detail = svc.CaseDetail
 
 
-@router.get("/members")
-async def members(access: CurrentWorkspace) -> list[svc.WorkspaceMemberView]:
-    return await svc.list_members(access)
-
-
 @router.get("/my-work")
 async def my_work(access: CurrentWorkspace) -> svc.MyWorkView:
     return await svc.my_work(access)

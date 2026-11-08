@@ -38,7 +38,7 @@ class JwksServer:
     available: bool = True
     requests: int = 0
 
-    def _handle(self, request: httpx.Request) -> httpx.Response:
+    def handle(self, request: httpx.Request) -> httpx.Response:
         self.requests += 1
         if request.url.path != JWKS_PATH or not self.available:
             return httpx.Response(503)
@@ -46,7 +46,7 @@ class JwksServer:
 
     @property
     def transport(self) -> httpx.MockTransport:
-        return httpx.MockTransport(self._handle)
+        return httpx.MockTransport(self.handle)
 
 
 def make_token(

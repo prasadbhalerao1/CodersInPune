@@ -254,7 +254,7 @@ async def test_failed_processing_is_recorded_and_retryable(
     event_id = await outbox_event_id(api, workspace)
     factory = api.app.state.session_factory
 
-    async def broken(_session: AsyncSession, _event: OutboxEvent) -> None:
+    async def broken(_session: AsyncSession, _event: OutboxEvent, _ctx: object) -> None:
         raise ConnectionError("downstream unavailable")
 
     monkeypatch.setitem(outbox.HANDLERS, "workspace.created", broken)

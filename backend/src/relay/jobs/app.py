@@ -5,6 +5,7 @@ import uuid
 import procrastinate
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+import relay.integrations.github.service  # noqa: F401  (registers its job handler)
 from relay.config import Settings
 from relay.jobs import outbox
 
@@ -19,7 +20,9 @@ def libpq_conninfo(database_url: str) -> str:
 
 
 def create_job_app(
-    settings: Settings, session_factory: async_sessionmaker[AsyncSession]
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+    ctx: outbox.JobContext | None = None,
 ) -> procrastinate.App:
     """Same restricted `relay_app` role as the API; jobs never bypass RLS."""
     app = procrastinate.App(
@@ -31,6 +34,6 @@ def create_job_app(
 
     @app.task(name=outbox.PROCESS_TASK, retry=RETRY)
     async def process_outbox_event(tenant_id: str, event_id: str) -> None:
-        await outbox.process(session_factory, uuid.UUID(tenant_id), uuid.UUID(event_id))
+        await outbox.process(session_factory, uuid.UUID(tenant_id), uuid.UUID(event_id), ctx)
 
     return app

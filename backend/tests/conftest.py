@@ -64,7 +64,9 @@ def migrated_database() -> None:
 def clean_tables() -> None:
     with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
         conn.execute(
-            "TRUNCATE continuity.case_approval, continuity.case_readiness_criterion, "
+            "TRUNCATE integrations.ownership_suggestion, integrations.github_repository, "
+            "integrations.github_installation, integrations.github_connect_state, "
+            "identity.invitation, continuity.case_approval, continuity.case_readiness_criterion, "
             "continuity.case_task, continuity.case_scope_item, continuity.continuity_case, "
             "catalog.ownership_assignment_change, catalog.ownership_assignment, "
             "catalog.responsibility, directory.team_member, directory.team, directory.person, "

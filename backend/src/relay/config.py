@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,20 @@ class Settings(BaseSettings):
     jwt_leeway_seconds: int = Field(default=10, ge=0, le=60)
     jwks_cache_seconds: int = Field(default=600, ge=30)
     jwks_refresh_cooldown_seconds: int = Field(default=30, ge=1)
+    # Server-side WorkOS API key: verified user emails and invitation emails. Never sent to
+    # the browser. Without it, invitations cannot be accepted (the email can't be verified).
+    workos_api_key: SecretStr | None = None
+    frontend_base_url: str = "http://localhost:3000"
+    invitation_ttl_days: int = Field(default=7, ge=1, le=30)
+
+    # GitHub App (organisation installation). Private key and client secret stay server-side.
+    github_app_id: str | None = None
+    github_app_slug: str | None = None
+    github_client_id: str | None = None
+    github_client_secret: SecretStr | None = None
+    github_private_key: SecretStr | None = None
+    github_api_base_url: str = "https://api.github.com"
+    github_web_base_url: str = "https://github.com"
 
     @property
     def resolved_workos_issuer(self) -> str:

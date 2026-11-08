@@ -34,6 +34,8 @@ class Permission(StrEnum):
     CASE_READ = "case.read"
     CASE_MANAGE = "case.manage"
     CASE_APPROVE = "case.approve"
+    MEMBER_MANAGE = "member.manage"
+    INTEGRATION_MANAGE = "integration.manage"
 
 
 # Granted to any verified identity, independent of workspace membership.
@@ -54,6 +56,8 @@ _MANAGE: Final = frozenset(
         Permission.RESPONSIBILITY_MANAGE,
         Permission.CASE_MANAGE,
         Permission.CASE_APPROVE,
+        Permission.MEMBER_MANAGE,
+        Permission.INTEGRATION_MANAGE,
     }
 )
 

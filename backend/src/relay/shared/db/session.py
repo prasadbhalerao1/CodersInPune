@@ -23,8 +23,10 @@ from sqlalchemy.orm import Session, SessionTransaction
 
 TENANT_SETTING = "app.tenant_id"
 PRINCIPAL_SETTING = "app.principal"
+PRINCIPAL_EMAIL_SETTING = "app.principal_email"
 _TENANT_INFO_KEY = "relay.tenant_id"
 _PRINCIPAL_INFO_KEY = "relay.principal"
+_PRINCIPAL_EMAIL_INFO_KEY = "relay.principal_email"
 _MAX_PRINCIPAL_LENGTH = 255
 
 
@@ -43,10 +45,12 @@ def _apply_request_context(
 ) -> None:
     tenant_id = session.info.get(_TENANT_INFO_KEY)
     principal = session.info.get(_PRINCIPAL_INFO_KEY)
+    principal_email = session.info.get(_PRINCIPAL_EMAIL_INFO_KEY)
     connection.execute(
         select(
             _set_local(TENANT_SETTING, str(tenant_id) if tenant_id is not None else ""),
             _set_local(PRINCIPAL_SETTING, principal or ""),
+            _set_local(PRINCIPAL_EMAIL_SETTING, principal_email or ""),
         )
     )
 
@@ -81,6 +85,8 @@ async def unit_of_work(
     factory: async_sessionmaker[AsyncSession],
     tenant_id: uuid.UUID | None,
     principal: str | None = None,
+    *,
+    principal_email: str | None = None,
 ) -> AsyncIterator[AsyncSession]:
     """Open a session bound to `tenant_id`/`principal` and run one transaction.
 
@@ -93,6 +99,11 @@ async def unit_of_work(
         not isinstance(principal, str) or not 0 < len(principal) <= _MAX_PRINCIPAL_LENGTH
     ):
         raise ValueError("principal must be a non-empty string of at most 255 characters")
-    info = {_TENANT_INFO_KEY: tenant_id, _PRINCIPAL_INFO_KEY: principal}
+    # `principal_email` must be a server-verified email (WorkOS), never client input.
+    info = {
+        _TENANT_INFO_KEY: tenant_id,
+        _PRINCIPAL_INFO_KEY: principal,
+        _PRINCIPAL_EMAIL_INFO_KEY: principal_email.lower() if principal_email else None,
+    }
     async with factory(info=info) as session, session.begin():
         yield session
