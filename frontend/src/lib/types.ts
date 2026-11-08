@@ -586,3 +586,28 @@ export type CaseKnowledgeItemView = {
     recorded_at: string;
   }[];
 };
+
+export type EmailCategory = "tasks" | "reminders" | "approvals" | "mentions" | "case_updates";
+
+export type PreferenceView = { category: EmailCategory; label: string; enabled: boolean };
+
+export type DeliveryView = {
+  id: string;
+  kind: string;
+  recipient: string;
+  status: "pending" | "sent" | "failed" | "skipped";
+  attempts: number;
+  last_error: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
+export type EmailStatusView = {
+  configured: boolean;
+  sender: string | null;
+  healthy: boolean;
+  sent_24h: number;
+  failed_24h: number;
+  pending: number;
+  recent_failures: DeliveryView[];
+};

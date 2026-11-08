@@ -5,6 +5,8 @@ import { connection } from "next/server";
 
 import type {
   ActivityView,
+  EmailStatusView,
+  PreferenceView,
   CaseKnowledgeItemView,
   KnowledgeOverviewView,
   KnowledgeView,
@@ -156,6 +158,9 @@ export const api = {
     relayFetch<KnowledgeView[]>(`${ws(id)}/responsibilities/${encodeURIComponent(rid)}/knowledge`),
   caseKnowledge: (id: string, caseId: string) =>
     relayFetch<CaseKnowledgeItemView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/knowledge`),
+  notificationPreferences: (id: string) =>
+    relayFetch<PreferenceView[]>(`${ws(id)}/notifications/preferences`),
+  emailStatus: (id: string) => relayFetch<EmailStatusView>(`${ws(id)}/email/status`),
   inbox: (id: string, query?: Query) =>
     relayFetch<InboxView>(withQuery(`${ws(id)}/notifications`, query)),
   auditEvents: (id: string, query?: Query) =>
