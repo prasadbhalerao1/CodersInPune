@@ -628,16 +628,24 @@ async def _matches(access: WorkspaceAccess) -> tuple[dict[str, MatchView], dict[
     return people, teams
 
 
+def _team_by_slug(teams: dict[str, MatchView], slug: str) -> MatchView | None:
+    """Exact `org/team` match, else the team whose slug segment matches (only if unique)."""
+    if slug in teams:
+        return teams[slug]
+    short = slug.rsplit("/", 1)[-1]
+    candidates = [m for key, m in teams.items() if key.rsplit("/", 1)[-1] == short]
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def _match(
     s: OwnershipSuggestion, people: dict[str, MatchView], teams: dict[str, MatchView]
 ) -> MatchView | None:
     if s.handle_type == "user":
         return people.get(s.handle.lstrip("@"))
     if s.handle_type == "team":
-        full = s.handle.lstrip("@")  # org/team-slug
-        return teams.get(full) or teams.get(full.rsplit("/", 1)[-1])
+        return _team_by_slug(teams, s.handle.lstrip("@"))
     slug = catalog_owner_slug(s.handle)
-    return teams.get(slug) or people.get(slug)
+    return _team_by_slug(teams, slug) or people.get(slug)
 
 
 async def list_suggestions(
