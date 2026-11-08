@@ -2,3 +2,6 @@ pnpm-lock.yaml
 .next
 node_modules
 next-env.d.ts
+e2e/.auth
+test-results
+playwright-report

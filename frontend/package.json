@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test --project=public",
-    "e2e:login": "playwright test --project=login",
+    "e2e:login": "node e2e/login-chrome.mjs",
     "e2e:smoke": "playwright test --project=smoke"
   },
   "dependencies": {

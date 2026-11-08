@@ -45,9 +45,13 @@ test("add people and a responsibility with an owner, and see the risk", async ({
     .click();
   await page.waitForURL(/\/responsibilities\/[0-9a-f-]{36}$/);
 
-  await page.getByLabel("Person or team").selectOption({ label: names.leaving });
-  await page.getByLabel("Role").selectOption("primary");
-  await submitAndSettle(page, "Assign");
+  const assign = page
+    .locator("form")
+    .filter({ has: page.getByRole("button", { name: "Assign", exact: true }) });
+  await assign.getByLabel("Person or team").selectOption({ label: names.leaving });
+  await assign.getByLabel("Role").selectOption("primary");
+  await assign.getByRole("button", { name: "Assign", exact: true }).click();
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText(names.leaving).first()).toBeVisible();
 
   await page.goto(`${base}/risks`);
@@ -63,7 +67,7 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
 
   await page.getByLabel("Add responsibility").selectOption({ label: names.duty });
   await submitAndSettle(page, "Add");
-  await page.getByLabel("Recipient").selectOption({ label: names.joining });
+  await page.getByLabel("Recipient", { exact: true }).selectOption({ label: names.joining });
   await submitAndSettle(page, "Save");
 
   await page.getByLabel("New task").fill("Walk through the runbook");
@@ -74,18 +78,21 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await page.waitForLoadState("networkidle");
   await submitAndSettle(page, "Execute handover");
 
-  await page.getByLabel("Status for Walk through the runbook").selectOption("done");
-  await submitAndSettle(page, "Set");
-  for (const select of await page.getByLabel(/^Status for /).all()) {
-    if (
-      (await select.inputValue()) !== "met" &&
-      (await select.locator("option[value=met]").count())
-    ) {
-      await select.selectOption("met");
-    }
+  // Complete the task (the checkbox button), then meet every readiness check.
+  await page.getByRole("button", { name: "Complete Walk through the runbook" }).click();
+  await expect(page.getByRole("button", { name: "Reopen Walk through the runbook" })).toBeVisible();
+  const checks = page.getByLabel(/^Status for /);
+  for (let i = 0; i < (await checks.count()); i++) {
+    const form = page.locator("form").filter({ has: checks.nth(i) });
+    await checks.nth(i).selectOption("met");
+    await form.getByRole("button", { name: "Set" }).click();
+    await page.waitForLoadState("networkidle");
   }
+  await expect(page.getByRole("status")).toContainText("Readiness is complete");
+  await page.getByRole("button", { name: "Complete case" }).click();
+  await expect(page.getByRole("status")).toContainText("Completed", { timeout: 15_000 });
   await page.goto(caseUrl);
-  await expect(page.getByText(/applied|In progress/i).first()).toBeVisible();
+  await expect(page.getByText("Case completed").first()).toBeVisible();
 
   await page.goto(`${base}/responsibilities`);
   const row = page.getByRole("row", { name: new RegExp(names.duty) });
@@ -93,7 +100,9 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
 });
 
 test("another workspace cannot be reached", async ({ page }) => {
-  const response = await page.goto("/w/00000000-0000-7000-8000-000000000000");
-  expect(response?.status()).toBe(404);
+  // Streamed pages send their status before notFound() runs, so assert what renders.
+  await page.goto("/w/00000000-0000-7000-8000-000000000000");
+  await expect(page.getByText("you don't have access to it")).toBeVisible();
   await expect(page.getByText(names.duty)).toHaveCount(0);
+  await expect(page.getByText(names.workspace)).toHaveCount(0);
 });
