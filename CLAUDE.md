@@ -55,6 +55,16 @@ section there; don't re-derive decisions. Record any deviation as an ADR in `doc
     job's tenant context as `relay_app`. Procrastinate's schema is vendored per version
     (`migrations/sql/`); upgrading it needs a migration.
 
+## Naming and code conventions
+- Backend request bodies: `<Thing>In` / `<Thing>Update`, subclassing `StrictInput` (unknown fields
+  rejected). Responses: `<Thing>View` (list rows may be `<Thing>Summary`, full records `<Thing>Detail`).
+- Services: `relay/<module>/service.py` (verb-first: `create_x`, `list_x`, `update_x`); thin
+  routers in `relay/<module>/api.py`; ORM models in `models.py`. No raw SQL strings in application
+  code: use SQLAlchemy expressions (`select`, `func.*`). Raw DDL belongs only in migrations.
+- Frontend types in `src/lib/types.ts` mirror backend `*View` names and snake_case fields exactly.
+  Server actions are `<verb><Thing>Action`; API calls go through `api.*` in `src/lib/relay-api.ts`.
+- Timestamps are timezone-aware ISO 8601 (`AwareDatetime`); ranges are half-open `[from, to)`.
+
 ## Windows note
 psycopg async needs a selector event loop on Windows; `relay/__main__.py`, `migrations/env.py`
 and `tests/conftest.py` already handle it. Start the API with `uv run relay-api`, not bare
