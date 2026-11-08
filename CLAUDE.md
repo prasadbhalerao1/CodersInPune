@@ -20,9 +20,12 @@ section there; don't re-derive decisions. Record any deviation as an ADR in `doc
 - Frontend (in `frontend/`): `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm format` · `pnpm build`
 
 ## Non-negotiable guardrails
-1. Tenant comes only from authenticated membership on the server, never from client input.
-2. Tenant data is accessed only through `unit_of_work(factory, tenant_id)`; it applies
-   `set_config('app.tenant_id', …, true)` per transaction. Never use session-level `SET`.
+1. Identity comes only from a verified WorkOS access token (`Identity` dependency). Tenant
+   comes only from an active Relay membership (`CurrentWorkspace` dependency), never from
+   client input. Authentication, membership resolution and authorization stay separate.
+2. Tenant data is accessed only through `unit_of_work(factory, tenant_id, principal)`; it
+   applies `set_config('app.tenant_id' / 'app.principal', …, true)` per transaction. HTTP
+   handlers get tenant sessions from `CurrentWorkspace` only. Never use session-level `SET`.
    Raw `engine.connect()` is for non-tenant operations only (e.g. readiness).
 3. Every tenant table: `tenant_id NOT NULL`, `UNIQUE (tenant_id, id)`, all other unique keys
    start with `tenant_id`, references are composite `(tenant_id, x_id)` FKs, and
