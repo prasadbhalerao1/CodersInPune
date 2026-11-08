@@ -4,10 +4,12 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 from fastapi import FastAPI
 from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert
 
 from relay.app import create_app
 from relay.identity.models import Membership, UserAccount
@@ -58,3 +60,41 @@ async def make_api(**settings: object) -> AsyncIterator[Api]:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             yield Api(app, client, key)
+
+
+OWNER = "user_owner"
+
+
+async def add_member(api: Api, tenant: uuid.UUID, sub: str, role: str) -> None:
+    """Simulates an admin adding a member (no member-management API yet)."""
+    async with unit_of_work(api.app.state.session_factory, tenant, sub) as session:
+        user_id = (
+            await session.execute(
+                insert(UserAccount)
+                .values(workos_user_id=sub)
+                .on_conflict_do_update(
+                    index_elements=["workos_user_id"], set_={"workos_user_id": sub}
+                )
+                .returning(UserAccount.id)
+            )
+        ).scalar_one()
+        session.add(Membership(tenant_id=tenant, user_id=user_id, role=role, status="active"))
+
+
+class Ws:
+    def __init__(self, api: Api, workspace: uuid.UUID, sub: str = OWNER) -> None:
+        self.api, self.id, self.sub = api, workspace, sub
+
+    async def call(self, method: str, path: str, expected: int = 200, **kwargs: Any) -> Any:
+        response = await self.api.client.request(
+            method, f"/workspaces/{self.id}{path}", headers=self.api.as_user(self.sub), **kwargs
+        )
+        assert response.status_code == expected, response.text
+        return response.json() if response.content else None
+
+    async def person(self, name: str) -> str:
+        return str((await self.call("POST", "/people", 201, json={"display_name": name}))["id"])
+
+    async def responsibility(self, name: str, criticality: str = "standard") -> str:
+        body = {"name": name, "criticality": criticality}
+        return str((await self.call("POST", "/responsibilities", 201, json=body))["id"])

@@ -3,21 +3,18 @@
 Real FastAPI app + PostgreSQL as relay_app; tokens are real RS256 JWTs (JWKS simulated).
 """
 
-import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
 import psycopg
 import pytest
 from sqlalchemy import update
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 
 from relay.catalog import service as catalog_service
 from relay.catalog.models import OwnershipAssignmentChange
-from relay.identity.models import Membership, UserAccount
 from relay.shared.db import unit_of_work
-from tests.api import Api, make_api
+from tests.api import Api, Ws, add_member, make_api
 from tests.db import count_rows
 
 pytestmark = pytest.mark.anyio
@@ -32,43 +29,9 @@ async def api() -> AsyncIterator[Api]:
         yield a
 
 
-class Ws:
-    def __init__(self, api: Api, workspace: uuid.UUID, sub: str = OWNER) -> None:
-        self.api, self.id, self.sub = api, workspace, sub
-
-    async def call(self, method: str, path: str, expected: int = 200, **kwargs: Any) -> Any:
-        response = await self.api.client.request(
-            method, f"/workspaces/{self.id}{path}", headers=self.api.as_user(self.sub), **kwargs
-        )
-        assert response.status_code == expected, response.text
-        return response.json() if response.content else None
-
-    async def person(self, name: str) -> str:
-        return str((await self.call("POST", "/people", 201, json={"display_name": name}))["id"])
-
-    async def responsibility(self, name: str, criticality: str = "standard") -> str:
-        body = {"name": name, "criticality": criticality}
-        return str((await self.call("POST", "/responsibilities", 201, json=body))["id"])
-
-
 @pytest.fixture
 async def ws(api: Api) -> Ws:
     return Ws(api, await api.create_workspace(OWNER, "Acme"))
-
-
-async def add_member(api: Api, tenant: uuid.UUID, sub: str, role: str) -> None:
-    async with unit_of_work(api.app.state.session_factory, tenant, sub) as session:
-        user_id = (
-            await session.execute(
-                insert(UserAccount)
-                .values(workos_user_id=sub)
-                .on_conflict_do_update(
-                    index_elements=["workos_user_id"], set_={"workos_user_id": sub}
-                )
-                .returning(UserAccount.id)
-            )
-        ).scalar_one()
-        session.add(Membership(tenant_id=tenant, user_id=user_id, role=role, status="active"))
 
 
 # CRUD, search, archive

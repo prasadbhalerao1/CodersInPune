@@ -163,3 +163,10 @@ def test_models_match_migrations() -> None:
             assert compare_metadata(context, Base.metadata) == []
     finally:
         engine.dispose()
+
+
+def test_check_constraint_names_are_not_double_prefixed(catalog: psycopg.Connection) -> None:
+    doubled = catalog.execute(
+        "SELECT conname FROM pg_constraint WHERE contype = 'c' AND conname ~ '^ck_.*_ck_'"
+    ).fetchall()
+    assert doubled == [], "use op.f('ck_...') for explicit CHECK names in migrations"

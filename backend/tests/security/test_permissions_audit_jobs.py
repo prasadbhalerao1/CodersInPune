@@ -12,12 +12,10 @@ import psycopg
 import pytest
 from sqlalchemy import ColumnElement, delete, select, text, update
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit.models import AuditEvent
-from relay.identity.models import Membership, UserAccount
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.jobs import outbox
 from relay.jobs.app import create_job_app
@@ -30,7 +28,7 @@ from relay.policy.permissions import (
     visible,
 )
 from relay.shared.db import unit_of_work
-from tests.api import Api, make_api
+from tests.api import Api, add_member, make_api
 from tests.conftest import make_settings
 from tests.db import OWNER_URL, count_rows, libpq_url
 
@@ -41,22 +39,6 @@ pytestmark = pytest.mark.anyio
 async def api() -> AsyncIterator[Api]:
     async with make_api() as a:
         yield a
-
-
-async def add_member(api: Api, tenant: uuid.UUID, sub: str, role: str) -> None:
-    """Simulates an admin adding a member (no member-management API yet)."""
-    async with unit_of_work(api.app.state.session_factory, tenant, sub) as session:
-        user_id = (
-            await session.execute(
-                insert(UserAccount)
-                .values(workos_user_id=sub)
-                .on_conflict_do_update(
-                    index_elements=["workos_user_id"], set_={"workos_user_id": sub}
-                )
-                .returning(UserAccount.id)
-            )
-        ).scalar_one()
-        session.add(Membership(tenant_id=tenant, user_id=user_id, role=role, status="active"))
 
 
 async def outbox_event_id(api: Api, tenant: uuid.UUID) -> uuid.UUID:
