@@ -3,7 +3,12 @@ import "server-only";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 
 import type {
+  CaseDetail,
+  CaseSummary,
   ChangeView,
+  HistoryView,
+  WorkspaceMemberView,
+  MyWorkView,
   OverviewView,
   PersonView,
   ResponsibilityDetail,
@@ -91,6 +96,15 @@ export const api = {
     relayFetch<PersonView[]>(withQuery(`${ws(id)}/people`, query)),
   listTeams: (id: string, query?: Query) =>
     relayFetch<TeamView[]>(withQuery(`${ws(id)}/teams`, query)),
+
+  members: (id: string) => relayFetch<WorkspaceMemberView[]>(`${ws(id)}/members`),
+  myWork: (id: string) => relayFetch<MyWorkView>(`${ws(id)}/my-work`),
+  listCases: (id: string, query?: Query) =>
+    relayFetch<CaseSummary[]>(withQuery(`${ws(id)}/cases`, query)),
+  getCase: (id: string, caseId: string) =>
+    relayFetch<CaseDetail>(`${ws(id)}/cases/${encodeURIComponent(caseId)}`),
+  caseHistory: (id: string, caseId: string) =>
+    relayFetch<HistoryView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/history`),
 
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

@@ -7,11 +7,13 @@ import { cn } from "@/lib/utils";
 
 const LIVE = [
   { label: "Overview", path: "" },
+  { label: "My Work", path: "/my-work" },
+  { label: "Cases", path: "/cases" },
   { label: "Responsibilities", path: "/responsibilities" },
   { label: "Risks", path: "/risks" },
   { label: "People & Teams", path: "/people" },
 ] as const;
-const LATER = ["My Work", "Cases", "Knowledge", "Insights"] as const;
+const LATER = ["Knowledge", "Insights"] as const;
 
 export function SidebarNav() {
   const { workspaceId } = useParams<{ workspaceId?: string }>();

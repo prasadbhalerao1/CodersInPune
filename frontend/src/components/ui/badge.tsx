@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { Criticality, Role, Severity } from "@/lib/types";
+import type { CaseStatus, Criticality, Role, Severity } from "@/lib/types";
 
 // Colour carries meaning only: red = act now, amber = attention, neutral otherwise.
 const TONES = {
@@ -54,8 +54,28 @@ export const ROLE_LABEL: Record<Role, string> = {
   primary: "Primary",
   co_owner: "Co-owner",
   backup: "Backup",
+  temporary: "Covering",
 };
 
 export function RoleBadge({ value }: { value: Role }) {
-  return <Badge tone={value === "primary" ? "neutral" : "muted"}>{ROLE_LABEL[value]}</Badge>;
+  const tone = value === "primary" ? "neutral" : value === "temporary" ? "warning" : "muted";
+  return <Badge tone={tone}>{ROLE_LABEL[value]}</Badge>;
+}
+
+const STATUS: Record<CaseStatus, { label: string; tone: Tone; dot: string }> = {
+  draft: { label: "Draft", tone: "muted", dot: "bg-muted-foreground/50" },
+  planning: { label: "Planning", tone: "neutral", dot: "bg-amber-500" },
+  executing: { label: "In progress", tone: "neutral", dot: "bg-sky-600" },
+  completed: { label: "Completed", tone: "neutral", dot: "bg-emerald-600" },
+  cancelled: { label: "Cancelled", tone: "muted", dot: "bg-muted-foreground/40" },
+};
+
+export function CaseStatusBadge({ value }: { value: CaseStatus }) {
+  const s = STATUS[value];
+  return (
+    <Badge tone={s.tone} className="gap-1.5">
+      <span aria-hidden className={cn("size-1.5 rounded-full", s.dot)} />
+      {s.label}
+    </Badge>
+  );
 }
