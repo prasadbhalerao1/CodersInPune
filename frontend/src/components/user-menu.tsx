@@ -1,8 +1,11 @@
 import { withAuth } from "@workos-inc/authkit-nextjs";
+import { connection } from "next/server";
 
 import { signOutAction } from "@/app/actions";
 
 export async function UserMenu() {
+  // withAuth reads the clock for token expiry; mark the render as request-time first.
+  await connection();
   const { user } = await withAuth();
   if (!user) {
     return (

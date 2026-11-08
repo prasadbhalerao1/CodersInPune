@@ -1,6 +1,7 @@
 import "server-only";
 
 import { withAuth } from "@workos-inc/authkit-nextjs";
+import { connection } from "next/server";
 
 import type {
   IntegrationView,
@@ -52,6 +53,8 @@ function withQuery(path: string, query?: Query): string {
 }
 
 export async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Every Relay call is per-user data; render at request time (withAuth reads the clock).
+  await connection();
   const { accessToken } = await withAuth({ ensureSignedIn: true });
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${accessToken}`);
