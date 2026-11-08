@@ -12,7 +12,8 @@ from urllib.parse import parse_qs, urlparse
 import psycopg
 import pytest
 
-from relay.integrations.github.parsing import parse_catalog_info, parse_codeowners
+from relay.integrations.github.parsing import OwnerEvidence, parse_catalog_info, parse_codeowners
+from relay.integrations.github.service import _proposals
 from relay.jobs import outbox
 from tests.api import OWNER, Api, Ws, add_member, make_api
 from tests.db import INSPECTOR_URL, count_rows
@@ -412,3 +413,14 @@ def test_parsers() -> None:
     )
     assert [c.handle for c in catalog] == ["group:default/payments"]
     assert parse_catalog_info("not: [valid") == []
+
+
+def test_sole_maintainer_is_proposed_as_primary_only_without_other_evidence() -> None:
+    def maintainer(handle: str) -> OwnerEvidence:
+        return OwnerEvidence(handle, "user", "maintainer", "collaborator role: admin", False)
+
+    assert _proposals([maintainer("ada")])["ada"][1] == "primary"
+    two = _proposals([maintainer("ada"), maintainer("bob")])
+    assert {two["ada"][1], two["bob"][1]} == {"backup"}
+    scoped = OwnerEvidence("carol", "user", "codeowners", "/docs/ @carol", False)
+    assert _proposals([maintainer("ada"), scoped])["ada"][1] == "backup"

@@ -12,6 +12,7 @@ Suggestions never change ownership by themselves. Approving one goes through the
 service (authorize + valid-time history + audit) and refuses to replace a primary owner.
 """
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -56,6 +57,8 @@ SYNC_EVENT = "github.sync_requested"
 STATE_TTL = timedelta(minutes=15)
 CODEOWNERS_PATHS = (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS")
 CATALOG_PATHS = ("catalog-info.yaml", "catalog-info.yml")
+# Concurrent repositories per sync; well inside GitHub's secondary rate limits.
+FETCH_CONCURRENCY = 8
 
 
 # ---------------------------------------------------------------- schemas
@@ -418,8 +421,12 @@ def _proposals(
     by_handle: dict[str, list[OwnerEvidence]] = defaultdict(list)
     for e in evidence:
         by_handle[e.handle].append(e)
-    primary = next((e.handle for e in evidence if e.source == "catalog_info"), None) or next(
-        (e.handle for e in evidence if e.source == "codeowners" and e.repo_wide), None
+    maintainers = {e.handle for e in evidence if e.source == "maintainer"}
+    primary = (
+        next((e.handle for e in evidence if e.source == "catalog_info"), None)
+        or next((e.handle for e in evidence if e.source == "codeowners" and e.repo_wide), None)
+        # No declared owner: a sole maintainer is the only defensible primary.
+        or (next(iter(maintainers)) if len(maintainers) == 1 and len(by_handle) == 1 else None)
     )
     result: dict[str, tuple[str, str, str, list[dict[str, Any]]]] = {}
     for handle, items in by_handle.items():
@@ -444,28 +451,37 @@ def _proposals(
     return result
 
 
-async def _sync_repository(
-    session: AsyncSession, github: GitHubClient, token: str, repo: GitHubRepository
-) -> bool:
+async def _fetch_evidence(github: GitHubClient, token: str, full_name: str) -> list[OwnerEvidence]:
+    """HTTP only (no session), so repositories can be fetched concurrently."""
+    paths = (*CODEOWNERS_PATHS, *CATALOG_PATHS)
+    contents, maintainers = await asyncio.gather(
+        asyncio.gather(*(github.file(token, full_name, path) for path in paths)),
+        github.maintainers(token, full_name),
+    )
+    found = dict(zip(paths, contents, strict=True))
     evidence: list[OwnerEvidence] = []
-    try:
-        for path in CODEOWNERS_PATHS:
-            content = await github.file(token, repo.full_name, path)
-            if content is not None:
-                evidence += parse_codeowners(content, path)
-                break
-        for path in CATALOG_PATHS:
-            content = await github.file(token, repo.full_name, path)
-            if content is not None:
-                evidence += parse_catalog_info(content)
-                break
-        for handle, role in await github.maintainers(token, repo.full_name):
-            evidence.append(
-                OwnerEvidence(handle, "user", "maintainer", f"collaborator role: {role}", False)
-            )
-    except GitHubError as exc:
-        repo.sync_error = f"Could not read ownership files: {exc}"[:300]
+    for path in CODEOWNERS_PATHS:  # first match wins, in GitHub's precedence order
+        if (content := found[path]) is not None:
+            evidence += parse_codeowners(content, path)
+            break
+    for path in CATALOG_PATHS:
+        if (content := found[path]) is not None:
+            evidence += parse_catalog_info(content)
+            break
+    evidence += [
+        OwnerEvidence(handle, "user", "maintainer", f"collaborator role: {role}", False)
+        for handle, role in maintainers
+    ]
+    return evidence
+
+
+async def _apply_evidence(
+    session: AsyncSession, repo: GitHubRepository, fetched: list[OwnerEvidence] | GitHubError
+) -> bool:
+    if isinstance(fetched, GitHubError):
+        repo.sync_error = f"Could not read ownership files: {fetched}"[:300]
         return False
+    evidence = fetched
     repo.sync_error, repo.last_synced_at = None, func.now()
     proposals = _proposals(evidence)
     existing = {
@@ -588,8 +604,19 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
             )
         )
     )
-    for repo in targets:
-        ok = await _sync_repository(session, github, token, repo) and ok
+    limit = asyncio.Semaphore(FETCH_CONCURRENCY)
+
+    async def fetch(full_name: str) -> list[OwnerEvidence] | GitHubError:
+        async with limit:
+            try:
+                return await _fetch_evidence(github, token, full_name)
+            except GitHubError as exc:
+                return exc
+
+    # Reads run concurrently; writes stay sequential on the job's single session.
+    fetched = await asyncio.gather(*(fetch(repo.full_name) for repo in targets))
+    for repo, result in zip(targets, fetched, strict=True):
+        ok = await _apply_evidence(session, repo, result) and ok
     installation.status = "active"
     installation.last_synced_at = func.now()
     installation.last_sync_status = "ok" if ok else "partial"
