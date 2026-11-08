@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from relay import health
 from relay.audit import service as audit
 from relay.catalog import api as catalog_api
+from relay.catalog import assets_api
 from relay.config import Settings
 from relay.continuity import api as continuity_api
 from relay.directory import api as directory_api
@@ -83,6 +84,7 @@ def create_app(
     app.include_router(health.router)
     app.include_router(workspaces.router)
     app.include_router(catalog_api.router)
+    app.include_router(assets_api.router)
     app.include_router(directory_api.router)
     app.include_router(risks_api.router)
     app.include_router(continuity_api.router)

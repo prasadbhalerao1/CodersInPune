@@ -1,4 +1,4 @@
-"""People and teams directory: list, create, update, archive."""
+"""People, teams and departments directory: list, create, update, archive."""
 
 import uuid
 from datetime import datetime
@@ -7,9 +7,10 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, StringConstraints
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 
 from relay.audit import service as audit
-from relay.directory.models import Person, Team, TeamMember
+from relay.directory.models import Department, Person, Team, TeamMember
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
 from relay.shared.api_types import Email, LongText, Name, ShortText, StrictInput, blank_to_none
@@ -27,11 +28,33 @@ GitHubTeamSlug = Annotated[
 ]
 
 
+class DepartmentIn(StrictInput):
+    name: Name
+    description: LongText | None = None
+
+
+class DepartmentUpdate(StrictInput):
+    name: Name | None = None
+    description: LongText | None = None
+    status: Status | None = None
+
+
+class DepartmentView(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str | None
+    status: str
+    people_count: int
+    team_count: int
+    created_at: datetime
+
+
 class PersonIn(StrictInput):
     display_name: Name
     email: Email | None = None
     title: ShortText | None = None
     github_login: GitHubLogin | None = None
+    department_id: uuid.UUID | None = None
 
 
 class PersonUpdate(StrictInput):
@@ -39,6 +62,7 @@ class PersonUpdate(StrictInput):
     email: Email | None = None
     title: ShortText | None = None
     github_login: GitHubLogin | None = None
+    department_id: uuid.UUID | None = None
     status: Status | None = None
 
 
@@ -48,6 +72,8 @@ class PersonView(BaseModel):
     email: str | None
     title: str | None
     github_login: str | None
+    department_id: uuid.UUID | None
+    department_name: str | None
     status: str
     created_at: datetime
 
@@ -56,12 +82,14 @@ class TeamIn(StrictInput):
     name: Name
     description: LongText | None = None
     github_slug: GitHubTeamSlug | None = None
+    department_id: uuid.UUID | None = None
 
 
 class TeamUpdate(StrictInput):
     name: Name | None = None
     description: LongText | None = None
     github_slug: GitHubTeamSlug | None = None
+    department_id: uuid.UUID | None = None
     status: Status | None = None
 
 
@@ -75,29 +103,35 @@ class TeamView(BaseModel):
     name: str
     description: str | None
     github_slug: str | None
+    department_id: uuid.UUID | None
+    department_name: str | None
     status: str
     created_at: datetime
     members: list[TeamMemberView] = []
 
 
-def _person_view(p: Person) -> PersonView:
+def _person_view(p: Person, departments: dict[uuid.UUID, str]) -> PersonView:
     return PersonView(
         id=p.id,
         display_name=p.display_name,
         email=p.email,
         title=p.title,
         github_login=p.github_login,
+        department_id=p.department_id,
+        department_name=departments.get(p.department_id) if p.department_id else None,
         status=p.status,
         created_at=p.created_at,
     )
 
 
-def _team_view(t: Team) -> TeamView:
+def _team_view(t: Team, departments: dict[uuid.UUID, str]) -> TeamView:
     return TeamView(
         id=t.id,
         name=t.name,
         description=t.description,
         github_slug=t.github_slug,
+        department_id=t.department_id,
+        department_name=departments.get(t.department_id) if t.department_id else None,
         status=t.status,
         created_at=t.created_at,
     )
@@ -107,10 +141,43 @@ def _pattern(q: str) -> str:
     return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
 
+async def department_names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
+    rows = await access.session.execute(
+        select(Department.id, Department.name).where(
+            visible(access, Permission.DIRECTORY_READ, Department.tenant_id)
+        )
+    )
+    return {key: value for key, value in rows}
+
+
+async def _require_department(access: WorkspaceAccess, department_id: uuid.UUID | None) -> None:
+    if department_id is None:
+        return
+    status = await access.session.scalar(
+        select(Department.status).where(
+            Department.id == department_id,
+            visible(access, Permission.DIRECTORY_READ, Department.tenant_id),
+        )
+    )
+    if status is None:
+        raise ApiError(422, "department_not_found", "That department does not exist.")
+    if status != "active":
+        raise ApiError(422, "department_archived", "Archived departments cannot be assigned.")
+
+
+# ---------------------------------------------------------------- people
+
+
 async def list_people(
-    access: WorkspaceAccess, *, q: str | None = None, include_archived: bool = False
+    access: WorkspaceAccess,
+    *,
+    q: str | None = None,
+    include_archived: bool = False,
+    department_id: uuid.UUID | None = None,
 ) -> list[PersonView]:
     stmt = select(Person).where(visible(access, Permission.DIRECTORY_READ, Person.tenant_id))
+    if department_id:
+        stmt = stmt.where(Person.department_id == department_id)
     if not include_archived:
         stmt = stmt.where(Person.status == "active")
     if q:
@@ -118,13 +185,16 @@ async def list_people(
             or_(Person.display_name.ilike(_pattern(q)), Person.email.ilike(_pattern(q)))
         )
     rows = await access.session.scalars(stmt.order_by(Person.display_name, Person.id).limit(500))
-    return [_person_view(p) for p in rows]
+    departments = await department_names(access)
+    return [_person_view(p, departments) for p in rows]
 
 
 async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:
     authorize(access, Permission.DIRECTORY_MANAGE)
+    await _require_department(access, data.department_id)
     person = Person(
         tenant_id=access.tenant_id,
+        department_id=data.department_id,
         display_name=data.display_name,
         email=blank_to_none(data.email),
         title=blank_to_none(data.title),
@@ -141,7 +211,7 @@ async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:
         target_type="person",
         target_id=person.id,
     )
-    return _person_view(person)
+    return _person_view(person, await department_names(access))
 
 
 async def update_person(
@@ -152,6 +222,7 @@ async def update_person(
     if person is None:
         raise ApiError(404, "person_not_found", "Person not found.")
     changed = data.model_dump(exclude_unset=True)
+    await _require_department(access, changed.get("department_id"))
     for field, value in changed.items():
         if field == "github_login":
             value = value.lower() if value else None
@@ -168,19 +239,30 @@ async def update_person(
         target_id=person.id,
         details={"fields": ",".join(sorted(changed))},
     )
-    return _person_view(person)
+    return _person_view(person, await department_names(access))
+
+
+# ---------------------------------------------------------------- teams
 
 
 async def list_teams(
-    access: WorkspaceAccess, *, q: str | None = None, include_archived: bool = False
+    access: WorkspaceAccess,
+    *,
+    q: str | None = None,
+    include_archived: bool = False,
+    department_id: uuid.UUID | None = None,
 ) -> list[TeamView]:
     stmt = select(Team).where(visible(access, Permission.DIRECTORY_READ, Team.tenant_id))
+    if department_id:
+        stmt = stmt.where(Team.department_id == department_id)
     if not include_archived:
         stmt = stmt.where(Team.status == "active")
     if q:
         stmt = stmt.where(Team.name.ilike(_pattern(q)))
+    departments = await department_names(access)
     teams = [
-        _team_view(t) for t in await access.session.scalars(stmt.order_by(Team.name).limit(500))
+        _team_view(t, departments)
+        for t in await access.session.scalars(stmt.order_by(Team.name).limit(500))
     ]
     members = await access.session.execute(
         select(TeamMember.team_id, Person.id, Person.display_name)
@@ -251,8 +333,10 @@ async def remove_team_member(
 
 async def create_team(access: WorkspaceAccess, data: TeamIn) -> TeamView:
     authorize(access, Permission.DIRECTORY_MANAGE)
+    await _require_department(access, data.department_id)
     team = Team(
         tenant_id=access.tenant_id,
+        department_id=data.department_id,
         name=data.name,
         description=blank_to_none(data.description),
         github_slug=(data.github_slug or "").lower() or None,
@@ -268,7 +352,7 @@ async def create_team(access: WorkspaceAccess, data: TeamIn) -> TeamView:
         target_type="team",
         target_id=team.id,
     )
-    return _team_view(team)
+    return _team_view(team, await department_names(access))
 
 
 async def update_team(access: WorkspaceAccess, team_id: uuid.UUID, data: TeamUpdate) -> TeamView:
@@ -277,6 +361,7 @@ async def update_team(access: WorkspaceAccess, team_id: uuid.UUID, data: TeamUpd
     if team is None:
         raise ApiError(404, "team_not_found", "Team not found.")
     changed = data.model_dump(exclude_unset=True)
+    await _require_department(access, changed.get("department_id"))
     for field, value in changed.items():
         if field == "github_slug":
             value = value.lower() if value else None
@@ -293,4 +378,108 @@ async def update_team(access: WorkspaceAccess, team_id: uuid.UUID, data: TeamUpd
         target_id=team.id,
         details={"fields": ",".join(sorted(changed))},
     )
-    return _team_view(team)
+    return _team_view(team, await department_names(access))
+
+
+# ---------------------------------------------------------------- departments
+
+
+async def list_departments(
+    access: WorkspaceAccess, *, include_archived: bool = False
+) -> list[DepartmentView]:
+    authorize(access, Permission.DIRECTORY_READ)
+    stmt = select(Department).where(
+        visible(access, Permission.DIRECTORY_READ, Department.tenant_id)
+    )
+    if not include_archived:
+        stmt = stmt.where(Department.status == "active")
+    departments = list(await access.session.scalars(stmt.order_by(Department.name)))
+    counts: dict[str, dict[uuid.UUID, int]] = {}
+    for label, model in (("people", Person), ("teams", Team)):
+        rows = await access.session.execute(
+            select(model.department_id, func.count())
+            .where(
+                visible(access, Permission.DIRECTORY_READ, model.tenant_id),
+                model.department_id.is_not(None),
+                model.status == "active",
+            )
+            .group_by(model.department_id)
+        )
+        counts[label] = {dept: n for dept, n in rows if dept is not None}
+    return [
+        DepartmentView(
+            id=d.id,
+            name=d.name,
+            description=d.description,
+            status=d.status,
+            people_count=counts["people"].get(d.id, 0),
+            team_count=counts["teams"].get(d.id, 0),
+            created_at=d.created_at,
+        )
+        for d in departments
+    ]
+
+
+async def _flush_department(access: WorkspaceAccess) -> None:
+    try:
+        async with access.session.begin_nested():
+            await access.session.flush()
+    except IntegrityError as exc:
+        raise ApiError(409, "department_exists", "A department with that name exists.") from exc
+
+
+async def _department_view(access: WorkspaceAccess, department_id: uuid.UUID) -> DepartmentView:
+    views = await list_departments(access, include_archived=True)
+    return next(d for d in views if d.id == department_id)
+
+
+async def create_department(access: WorkspaceAccess, data: DepartmentIn) -> DepartmentView:
+    authorize(access, Permission.DIRECTORY_MANAGE)
+    department = Department(
+        id=uuid.uuid7(),
+        tenant_id=access.tenant_id,
+        name=data.name,
+        description=blank_to_none(data.description),
+    )
+    access.session.add(department)
+    await _flush_department(access)
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="department.created",
+        actor_user_id=access.user_id,
+        target_type="department",
+        target_id=department.id,
+    )
+    return await _department_view(access, department.id)
+
+
+async def update_department(
+    access: WorkspaceAccess, department_id: uuid.UUID, data: DepartmentUpdate
+) -> DepartmentView:
+    authorize(access, Permission.DIRECTORY_MANAGE)
+    department = await access.session.scalar(
+        select(Department)
+        .where(
+            Department.id == department_id,
+            visible(access, Permission.DIRECTORY_READ, Department.tenant_id),
+        )
+        .with_for_update()
+    )
+    if department is None:
+        raise ApiError(404, "department_not_found", "Department not found.")
+    changed = data.model_dump(exclude_unset=True)
+    for field, value in changed.items():
+        setattr(department, field, blank_to_none(value) if field == "description" else value)
+    department.updated_at = func.now()
+    await _flush_department(access)
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="department.updated",
+        actor_user_id=access.user_id,
+        target_type="department",
+        target_id=department.id,
+        details={"fields": ",".join(sorted(changed))},
+    )
+    return await _department_view(access, department.id)

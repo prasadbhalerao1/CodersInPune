@@ -139,3 +139,69 @@ class OwnershipAssignmentChange(Base):
     reason: Mapped[str | None] = mapped_column(Text)
     changed_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+ASSET_TYPES: Final = (
+    "repository",
+    "service",
+    "project",
+    "process",
+    "vendor",
+    "document_collection",
+    "other",
+)
+
+
+class Asset(Base):
+    """Something a responsibility stewards. Assets have no owners of their own (D1)."""
+
+    __tablename__ = "asset"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 200", name="name_length"),
+        CheckConstraint(_in("asset_type", ASSET_TYPES), name="asset_type"),
+        CheckConstraint("status IN ('active', 'archived')", name="status"),
+        CheckConstraint("url IS NULL OR url ~ '^https?://'", name="url_scheme"),
+        Index(None, "tenant_id", "status"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    name: Mapped[str] = mapped_column(Text)
+    asset_type: Mapped[str] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, server_default="active")
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ResponsibilityAsset(Base):
+    __tablename__ = "responsibility_asset"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "responsibility_id", "asset_id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "responsibility_id"],
+            ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
+            name="fk_responsibility_asset_responsibility",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "asset_id"],
+            ["catalog.asset.tenant_id", "catalog.asset.id"],
+            name="fk_responsibility_asset_asset",
+        ),
+        CheckConstraint("relationship IN ('stewards', 'uses')", name="relationship"),
+        Index(None, "tenant_id", "asset_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    responsibility_id: Mapped[uuid.UUID]
+    asset_id: Mapped[uuid.UUID]
+    relationship: Mapped[str] = mapped_column(Text, server_default="stewards")
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

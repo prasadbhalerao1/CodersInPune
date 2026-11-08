@@ -17,9 +17,15 @@ async def list_responsibilities(
     criticality: svc.Criticality | None = None,
     status: svc.ResponsibilityStatus | None = "active",
     category: str | None = None,
+    department_id: uuid.UUID | None = None,
 ) -> list[svc.ResponsibilitySummary]:
     return await svc.list_responsibilities(
-        access, q=q, criticality=criticality, status=status, category=category
+        access,
+        q=q,
+        criticality=criticality,
+        status=status,
+        category=category,
+        department_id=department_id,
     )
 
 

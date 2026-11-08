@@ -27,6 +27,35 @@ SCHEMA = "directory"
 STATUSES: Final = ("active", "archived")
 
 
+class Department(Base):
+    """A lightweight grouping of people and teams (not an HR org chart)."""
+
+    __tablename__ = "department"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "name"),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 200", name="name_length"),
+        CheckConstraint("status IN ('active', 'archived')", name="status"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, server_default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+def _department_fk(table: str) -> ForeignKeyConstraint:
+    return ForeignKeyConstraint(
+        ["tenant_id", "department_id"],
+        ["directory.department.tenant_id", "directory.department.id"],
+        name=f"fk_{table}_department",
+    )
+
+
 class Person(Base):
     __tablename__ = "person"
     __table_args__ = (
@@ -40,11 +69,14 @@ class Person(Base):
             postgresql_where=text("github_login IS NOT NULL"),
         ),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
+        _department_fk("person"),
+        Index(None, "tenant_id", "department_id"),
         {"schema": SCHEMA},
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    department_id: Mapped[uuid.UUID | None]
     display_name: Mapped[str] = mapped_column(Text)
     email: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
@@ -67,11 +99,14 @@ class Team(Base):
             postgresql_where=text("github_slug IS NOT NULL"),
         ),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
+        _department_fk("team"),
+        Index(None, "tenant_id", "department_id"),
         {"schema": SCHEMA},
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    department_id: Mapped[uuid.UUID | None]
     name: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     github_slug: Mapped[str | None] = mapped_column(Text)

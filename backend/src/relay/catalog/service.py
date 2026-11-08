@@ -18,8 +18,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
-from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange, Responsibility
-from relay.directory.models import Person, Team
+from relay.catalog.models import (
+    Asset,
+    OwnershipAssignment,
+    OwnershipAssignmentChange,
+    Responsibility,
+    ResponsibilityAsset,
+)
+from relay.directory.models import Department, Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
 from relay.shared.api_types import LongText, Name, ShortText, StrictInput, blank_to_none
@@ -95,6 +101,7 @@ class AssigneeView(BaseModel):
     id: uuid.UUID
     name: str
     status: str
+    department_name: str | None = None
 
 
 class AssignmentView(BaseModel):
@@ -132,6 +139,16 @@ class ResponsibilityDetail(BaseModel):
     as_of: datetime
     owners_as_of: list[AssignmentView]
     assignments: list[AssignmentView]
+    assets: list[LinkedAssetView]
+
+
+class LinkedAssetView(BaseModel):
+    id: uuid.UUID
+    name: str
+    asset_type: str
+    url: str | None
+    status: str
+    relationship: str
 
 
 class ChangeView(BaseModel):
@@ -150,13 +167,13 @@ class ChangeView(BaseModel):
 # ---------------------------------------------------------------- helpers
 
 
-def _now() -> datetime:
+def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
 def _aware(value: datetime | None) -> datetime:
     if value is None:
-        return _now()
+        return utcnow()
     if value.tzinfo is None:
         raise ApiError(422, "naive_datetime", "Timestamps must include a timezone offset.")
     return value
@@ -188,11 +205,27 @@ async def assignee_views(
     team_ids = {a.team_id for a in assignments if a.team_id}
     views: dict[uuid.UUID, AssigneeView] = {}
     if person_ids:
-        for p in await session.scalars(select(Person).where(Person.id.in_(person_ids))):
-            views[p.id] = AssigneeView(type="person", id=p.id, name=p.display_name, status=p.status)
+        for p, department in await session.execute(
+            select(Person, Department.name)
+            .outerjoin(Department, Department.id == Person.department_id)
+            .where(Person.id.in_(person_ids))
+        ):
+            views[p.id] = AssigneeView(
+                type="person",
+                id=p.id,
+                name=p.display_name,
+                status=p.status,
+                department_name=department,
+            )
     if team_ids:
-        for t in await session.scalars(select(Team).where(Team.id.in_(team_ids))):
-            views[t.id] = AssigneeView(type="team", id=t.id, name=t.name, status=t.status)
+        for t, department in await session.execute(
+            select(Team, Department.name)
+            .outerjoin(Department, Department.id == Team.department_id)
+            .where(Team.id.in_(team_ids))
+        ):
+            views[t.id] = AssigneeView(
+                type="team", id=t.id, name=t.name, status=t.status, department_name=department
+            )
     return views
 
 
@@ -225,7 +258,9 @@ async def _get_responsibility(
     return responsibility
 
 
-async def _require_active(access: WorkspaceAccess, responsibility_id: uuid.UUID) -> Responsibility:
+async def require_active_responsibility(
+    access: WorkspaceAccess, responsibility_id: uuid.UUID
+) -> Responsibility:
     # Row lock serialises concurrent ownership changes on the same responsibility.
     responsibility = await _get_responsibility(access, responsibility_id, lock=True)
     if responsibility.status != "active":
@@ -267,7 +302,7 @@ def _record_change(
     )
 
 
-def _audit(
+def record_audit(
     access: WorkspaceAccess,
     action: str,
     target_type: str,
@@ -345,10 +380,24 @@ async def list_responsibilities(
     criticality: Criticality | None = None,
     status: ResponsibilityStatus | None = "active",
     category: str | None = None,
+    department_id: uuid.UUID | None = None,
 ) -> list[ResponsibilitySummary]:
+    now = utcnow()
     stmt = select(Responsibility).where(
         visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id)
     )
+    if department_id:
+        # A responsibility belongs to a department through its current owners.
+        owned_in_department = (
+            select(OwnershipAssignment.responsibility_id)
+            .outerjoin(Person, Person.id == OwnershipAssignment.person_id)
+            .outerjoin(Team, Team.id == OwnershipAssignment.team_id)
+            .where(
+                active_at(now),
+                or_(Person.department_id == department_id, Team.department_id == department_id),
+            )
+        )
+        stmt = stmt.where(Responsibility.id.in_(owned_in_department))
     if status:
         stmt = stmt.where(Responsibility.status == status)
     if criticality:
@@ -368,7 +417,6 @@ async def list_responsibilities(
             stmt.order_by(Responsibility.name, Responsibility.id).limit(500)
         )
     )
-    now = _now()
     current = list(
         await access.session.scalars(
             select(OwnershipAssignment).where(
@@ -416,13 +464,22 @@ async def get_responsibility(
         )
     )
     assignees = await assignee_views(access.session, assignments)
-    now = _now()
+    now = utcnow()
 
     def is_active(a: OwnershipAssignment) -> bool:
         return a.valid_from <= at and (a.valid_to is None or a.valid_to > at)
 
     role_order = {"temporary": 0, "primary": 1, "co_owner": 2, "backup": 3}
     owners = sorted((a for a in assignments if is_active(a)), key=lambda a: role_order[a.role])
+    linked = await access.session.execute(
+        select(Asset, ResponsibilityAsset.relationship)
+        .join(ResponsibilityAsset, ResponsibilityAsset.asset_id == Asset.id)
+        .where(
+            ResponsibilityAsset.responsibility_id == r.id,
+            visible(access, Permission.RESPONSIBILITY_READ, Asset.tenant_id),
+        )
+        .order_by(Asset.name)
+    )
     return ResponsibilityDetail(
         id=r.id,
         name=r.name,
@@ -437,6 +494,17 @@ async def get_responsibility(
         as_of=at,
         owners_as_of=[_assignment_view(a, assignees, now) for a in owners],
         assignments=[_assignment_view(a, assignees, now) for a in assignments],
+        assets=[
+            LinkedAssetView(
+                id=a.id,
+                name=a.name,
+                asset_type=a.asset_type,
+                url=a.url,
+                status=a.status,
+                relationship=relationship,
+            )
+            for a, relationship in linked
+        ],
     )
 
 
@@ -455,7 +523,7 @@ async def create_responsibility(
     )
     access.session.add(responsibility)
     await access.session.flush()
-    _audit(
+    record_audit(
         access,
         "responsibility.created",
         "responsibility",
@@ -484,7 +552,7 @@ async def update_responsibility(
         raise ApiError(
             409, "version_conflict", "This responsibility was changed by someone else. Reload."
         )
-    _audit(
+    record_audit(
         access,
         "responsibility.updated",
         "responsibility",
@@ -507,7 +575,7 @@ async def set_responsibility_status(
     r.updated_at = func.now()
     r.version += 1
     await access.session.flush()
-    _audit(
+    record_audit(
         access,
         "responsibility.archived" if status == "archived" else "responsibility.restored",
         "responsibility",
@@ -524,12 +592,12 @@ async def assign_owner(
     access: WorkspaceAccess, responsibility_id: uuid.UUID, data: AssignmentIn
 ) -> ResponsibilityDetail:
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
-    await _require_active(access, responsibility_id)
+    await require_active_responsibility(access, responsibility_id)
     await require_assignee(access, data)
     assignment = await _insert_assignment(
         access, responsibility_id, data.role, data, _aware(data.starts_at), data.reason
     )
-    _audit(
+    record_audit(
         access,
         "ownership.assigned",
         "ownership_assignment",
@@ -547,7 +615,7 @@ async def end_assignment(
     data: EndAssignmentIn,
 ) -> ResponsibilityDetail:
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
-    await _require_active(access, responsibility_id)
+    await require_active_responsibility(access, responsibility_id)
     assignment = await access.session.scalar(
         select(OwnershipAssignment)
         .where(
@@ -559,7 +627,7 @@ async def end_assignment(
     if assignment is None:
         raise ApiError(404, "assignment_not_found", "Assignment not found.")
     await _end(access, assignment, _aware(data.ends_at), data.reason)
-    _audit(
+    record_audit(
         access,
         "ownership.ended",
         "ownership_assignment",
@@ -587,7 +655,7 @@ async def handover(
     assignment `[at, open)`. History is only appended; nothing is deleted or rewritten.
     """
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
-    await _require_active(access, responsibility_id)
+    await require_active_responsibility(access, responsibility_id)
     await require_assignee(access, recipient)
     new_holder = recipient.person_id or recipient.team_id
     active = list(
@@ -633,7 +701,7 @@ async def replace_primary(
         )
     )
     new_primary = await handover(access, responsibility_id, "primary", data, at, data.reason)
-    _audit(
+    record_audit(
         access,
         "ownership.primary_replaced",
         "ownership_assignment",
@@ -655,7 +723,7 @@ async def start_cover(
     """Temporary coverage `[starts_at, ends_at)`. Original owners stay untouched, so normal
     ownership resumes automatically when the range ends — no job or manual restore needed."""
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
-    await _require_active(access, responsibility_id)
+    await require_active_responsibility(access, responsibility_id)
     await require_assignee(access, recipient)
     assignment = OwnershipAssignment(
         id=uuid.uuid7(),
