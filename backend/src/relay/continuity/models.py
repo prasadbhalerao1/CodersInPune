@@ -67,6 +67,7 @@ class ContinuityCase(Base):
         CheckConstraint(
             "case_type = 'transfer' OR affected_person_id IS NOT NULL", name="affected_person"
         ),
+        CheckConstraint("NOT emergency OR emergency_reason IS NOT NULL", name="emergency_reason"),
         Index(None, "tenant_id", "status"),
         {"schema": SCHEMA},
     )
@@ -82,6 +83,8 @@ class ContinuityCase(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     plan_version: Mapped[int] = mapped_column(server_default="1")
+    emergency: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    emergency_reason: Mapped[str | None] = mapped_column(Text)
     initiator_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     coordinator_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -208,3 +211,39 @@ class CaseApproval(Base):
     sod_exception_reason: Mapped[str | None] = mapped_column(Text)
     approver_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CaseComment(Base):
+    """A human note on a case. Append-only: no UPDATE or DELETE grant."""
+
+    __tablename__ = "case_comment"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_comment_case"),
+        CheckConstraint("char_length(body) BETWEEN 1 AND 5000", name="body_length"),
+        Index(None, "tenant_id", "case_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    case_id: Mapped[uuid.UUID]
+    author_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CaseMention(Base):
+    __tablename__ = "case_mention"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "comment_id", "user_id"),
+        _tenant_fk(["comment_id"], "continuity.case_comment", "fk_case_mention_comment"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    comment_id: Mapped[uuid.UUID]
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

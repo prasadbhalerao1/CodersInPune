@@ -14,10 +14,12 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from typing import Annotated, Any
 
 import httpx
 import procrastinate
+from fastapi import Depends, Request
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -63,7 +65,9 @@ async def emit(
     tenant_id: uuid.UUID,
     event_type: str,
     payload: dict[str, Any],
+    schedule_at: datetime | None = None,
 ) -> uuid.UUID:
+    """`schedule_at` delays processing (e.g. reminders); the row commits with the caller."""
     if event_type not in HANDLERS:
         raise ValueError(f"no handler registered for {event_type!r}")
     event_id = uuid.uuid7()
@@ -74,7 +78,7 @@ async def emit(
     connection = await (await session.connection()).get_raw_connection()
     await (
         jobs.tasks[PROCESS_TASK]
-        .configure(connection=connection.driver_connection)
+        .configure(connection=connection.driver_connection, schedule_at=schedule_at)
         .defer_async(tenant_id=str(tenant_id), event_id=str(event_id))
     )
     return event_id
@@ -145,3 +149,11 @@ async def _record_failure(
                 )
     except Exception:
         logger.exception("could not record failure of outbox event %s", event_id)
+
+
+def _jobs(request: Request) -> procrastinate.App:
+    jobs: procrastinate.App = request.app.state.jobs
+    return jobs
+
+
+Jobs = Annotated[procrastinate.App, Depends(_jobs)]

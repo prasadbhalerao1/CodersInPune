@@ -21,6 +21,7 @@ from relay.integrations.github import api as github_api
 from relay.integrations.github.client import GitHubClient
 from relay.jobs import outbox
 from relay.jobs.app import create_job_app
+from relay.notifications import api as notifications_api
 from relay.platform import workspaces
 from relay.policy.permissions import PermissionDenied
 from relay.risks import api as risks_api
@@ -87,6 +88,7 @@ def create_app(
     app.include_router(catalog_api.router)
     app.include_router(assets_api.router)
     app.include_router(imports_api.router)
+    app.include_router(notifications_api.router)
     app.include_router(directory_api.router)
     app.include_router(risks_api.router)
     app.include_router(continuity_api.router)

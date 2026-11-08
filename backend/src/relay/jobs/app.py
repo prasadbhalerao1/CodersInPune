@@ -5,8 +5,11 @@ import uuid
 import procrastinate
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+# Imported for their side effects: modules register outbox handlers at import time, and
+# relay.models completes the ORM metadata for cross-module foreign keys.
 import relay.integrations.github.service
-import relay.models  # noqa: F401  (complete metadata for cross-module foreign keys)
+import relay.models
+import relay.notifications.service  # noqa: F401
 from relay.config import Settings
 from relay.jobs import outbox
 

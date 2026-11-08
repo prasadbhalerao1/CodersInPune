@@ -11,5 +11,6 @@ import relay.directory.models
 import relay.identity.models
 import relay.integrations.github.models
 import relay.jobs.models
+import relay.notifications.models
 import relay.platform.models
 import relay.risks.models  # noqa: F401

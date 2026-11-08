@@ -20,6 +20,7 @@ import relay.directory.models
 import relay.identity.models
 import relay.integrations.github.models
 import relay.jobs.models
+import relay.notifications.models
 import relay.platform.models
 import relay.risks.models  # noqa: F401
 from relay.shared.db.base import Base
@@ -34,6 +35,7 @@ MANAGED_SCHEMAS = (
     "continuity",
     "integrations",
     "risks",
+    "notifications",
 )
 TENANT_ROOT = ("platform", "tenant")
 # Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.

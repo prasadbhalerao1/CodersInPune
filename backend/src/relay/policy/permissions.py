@@ -34,6 +34,7 @@ class Permission(StrEnum):
     CASE_READ = "case.read"
     CASE_MANAGE = "case.manage"
     CASE_APPROVE = "case.approve"
+    CASE_COMMENT = "case.comment"
     MEMBER_MANAGE = "member.manage"
     INTEGRATION_MANAGE = "integration.manage"
 
@@ -56,6 +57,7 @@ _MANAGE: Final = frozenset(
         Permission.RESPONSIBILITY_MANAGE,
         Permission.CASE_MANAGE,
         Permission.CASE_APPROVE,
+        Permission.CASE_COMMENT,
         Permission.MEMBER_MANAGE,
         Permission.INTEGRATION_MANAGE,
     }
@@ -65,7 +67,7 @@ ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
     "owner": _READ | _MANAGE | {Permission.AUDIT_READ},
     "admin": _READ | _MANAGE | {Permission.AUDIT_READ},
     "auditor": _READ | {Permission.AUDIT_READ},
-    "member": _READ,
+    "member": _READ | {Permission.CASE_COMMENT},
     "guest": _READ,
 }
 

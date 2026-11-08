@@ -19,6 +19,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
+import procrastinate
 from pydantic import AwareDatetime, BaseModel, model_validator
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,7 @@ from relay.continuity.models import (
 from relay.directory.models import Person, Team
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.notifications import service as notifications
 from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import LongText, Name, StrictInput
 from relay.shared.errors import ApiError
@@ -129,6 +131,11 @@ class ExtendIn(StrictInput):
     ends_at: AwareDatetime
 
 
+class EmergencyIn(StrictInput):
+    emergency: bool
+    reason: LongText | None = None
+
+
 # ---------------------------------------------------------------- views
 
 
@@ -207,6 +214,8 @@ class CaseSummary(BaseModel):
     scope_count: int
     open_tasks: int
     overdue_tasks: int
+    emergency: bool
+    emergency_reason: str | None
     updated_at: datetime
 
 
@@ -229,6 +238,7 @@ class CaseDetail(CaseSummary):
 
 
 class MyWorkView(BaseModel):
+    emergencies: list[CaseSummary]
     tasks: list[TaskView]
     approvals: list[CaseSummary]
     attention: list[CaseSummary]
@@ -290,6 +300,31 @@ def _record(
 
 def _plan_changed(case: ContinuityCase) -> None:
     case.plan_version += 1
+
+
+async def _notify_case_update(
+    access: WorkspaceAccess, jobs: procrastinate.App, case: ContinuityCase, detail: str
+) -> None:
+    """Tell the people running the case: coordinator, initiator and task assignees."""
+    assignees = await access.session.scalars(
+        select(CaseTask.assignee_user_id).where(
+            CaseTask.case_id == case.id,
+            CaseTask.status == "open",
+            CaseTask.assignee_user_id.is_not(None),
+        )
+    )
+    recipients = {case.coordinator_user_id, case.initiator_user_id, *(a for a in assignees if a)}
+    await notifications.request(
+        access.session,
+        jobs,
+        tenant_id=access.tenant_id,
+        kind="case_update",
+        case_id=case.id,
+        recipients=sorted(recipients),
+        actor_user_id=access.user_id,
+        detail=detail,
+        dedupe=f"case_update:{case.id}:{detail}:{case.plan_version}",
+    )
 
 
 async def _scope(session: AsyncSession, case_id: uuid.UUID) -> list[CaseScopeItem]:
@@ -508,7 +543,9 @@ async def remove_scope_item(
     return await get_case(access, case_id)
 
 
-async def submit_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
+async def submit_case(
+    access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
+) -> CaseDetail:
     case = await _for_change(access, case_id, ("draft",))
     items = await _scope(access.session, case_id)
     if not items:
@@ -536,10 +573,22 @@ async def submit_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail
     )
     case.status = "planning"
     _record(access, case, "case.submitted", plan_version=case.plan_version)
+    await notifications.request(
+        access.session,
+        jobs,
+        tenant_id=access.tenant_id,
+        kind="approval_requested",
+        case_id=case.id,
+        audience="approvers",
+        actor_user_id=access.user_id,
+        dedupe=f"approval_requested:{case.id}:{case.plan_version}",
+    )
     return await get_case(access, case_id)
 
 
-async def decide(access: WorkspaceAccess, case_id: uuid.UUID, data: DecisionIn) -> CaseDetail:
+async def decide(
+    access: WorkspaceAccess, case_id: uuid.UUID, data: DecisionIn, jobs: procrastinate.App
+) -> CaseDetail:
     authorize(access, Permission.CASE_APPROVE)
     case = await _load(access, case_id, lock=True)
     if case.status != "planning":
@@ -576,10 +625,13 @@ async def decide(access: WorkspaceAccess, case_id: uuid.UUID, data: DecisionIn) 
         plan_version=case.plan_version,
         sod_exception=sod_reason is not None,
     )
+    await _notify_case_update(access, jobs, case, data.decision)
     return await get_case(access, case_id)
 
 
-async def execute_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
+async def execute_case(
+    access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
+) -> CaseDetail:
     """Apply every ownership change in one transaction. Retries are safe: the status guard
     (under the case row lock) lets exactly one execution through."""
     case = await _for_change(access, case_id, ("planning",))
@@ -613,6 +665,7 @@ async def execute_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetai
         item.state = "applied"
     case.status = "executing"
     _record(access, case, "case.executed", effective_at=at.isoformat())
+    await _notify_case_update(access, jobs, case, "executing")
     return await get_case(access, case_id)
 
 
@@ -632,7 +685,9 @@ async def extend_coverage(
     return await get_case(access, case_id)
 
 
-async def complete_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
+async def complete_case(
+    access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
+) -> CaseDetail:
     case = await _for_change(access, case_id, ("executing",))
     criteria = list(
         await access.session.scalars(
@@ -667,17 +722,23 @@ async def complete_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDeta
     case.outcome = "completed_with_exceptions" if exceptions else "completed"
     case.closed_at = func.now()
     _record(access, case, "case.completed", outcome=case.outcome)
+    await _notify_case_update(access, jobs, case, "completed")
     return await get_case(access, case_id)
 
 
-async def cancel_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
+async def cancel_case(
+    access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
+) -> CaseDetail:
     case = await _for_change(access, case_id, EDITABLE)
     case.status, case.outcome, case.closed_at = "cancelled", "cancelled", func.now()
     _record(access, case, "case.cancelled")
+    await _notify_case_update(access, jobs, case, "cancelled")
     return await get_case(access, case_id)
 
 
-async def add_task(access: WorkspaceAccess, case_id: uuid.UUID, data: TaskIn) -> CaseDetail:
+async def add_task(
+    access: WorkspaceAccess, case_id: uuid.UUID, data: TaskIn, jobs: procrastinate.App
+) -> CaseDetail:
     case = await _for_change(access, case_id, OPEN)
     if data.assignee_user_id:
         await _require_member(access, data.assignee_user_id)
@@ -694,6 +755,7 @@ async def add_task(access: WorkspaceAccess, case_id: uuid.UUID, data: TaskIn) ->
     access.session.add(task)
     await access.session.flush()
     _record(access, case, "case.task_added", task_id=str(task.id))
+    await notifications.request_task_notifications(access.session, jobs, task, access.user_id)
     return await get_case(access, case_id)
 
 
@@ -751,6 +813,34 @@ async def update_criterion(
     _record(
         access, case, "case.criterion_updated", criterion_id=str(criterion_id), status=data.status
     )
+    return await get_case(access, case_id)
+
+
+async def set_emergency(
+    access: WorkspaceAccess, case_id: uuid.UUID, data: EmergencyIn, jobs: procrastinate.App
+) -> CaseDetail:
+    """Raises visibility only: approvals, readiness and ownership rules are unchanged."""
+    case = await _for_change(access, case_id, OPEN)
+    if data.emergency and not data.reason:
+        raise ApiError(422, "reason_required", "Say why this case is an emergency.")
+    if case.emergency == data.emergency:
+        raise ApiError(409, "unchanged", "The case already has that emergency status.")
+    case.emergency = data.emergency
+    case.emergency_reason = data.reason if data.emergency else None
+    _record(access, case, "case.emergency_raised" if data.emergency else "case.emergency_cleared")
+    if data.emergency:
+        await notifications.request(
+            access.session,
+            jobs,
+            tenant_id=access.tenant_id,
+            kind="case_update",
+            case_id=case.id,
+            audience="approvers",
+            recipients=[case.coordinator_user_id],
+            actor_user_id=access.user_id,
+            detail="emergency",
+            dedupe=f"emergency:{case.id}:{uuid.uuid7()}",
+        )
     return await get_case(access, case_id)
 
 
@@ -821,7 +911,9 @@ def _allowed_actions(access: WorkspaceAccess, case: ContinuityCase, approved: bo
         if case.case_type == "coverage":
             actions.append("extend")
     if manage and case.status in OPEN:
-        actions += ["add_task", "add_criterion"]
+        actions += ["add_task", "add_criterion", "set_emergency"]
+    if role_allows(access.role, Permission.CASE_COMMENT):
+        actions.append("comment")
     return actions
 
 
@@ -866,6 +958,8 @@ async def _summaries(access: WorkspaceAccess, cases: list[ContinuityCase]) -> li
             overdue_tasks=sum(
                 1 for t in tasks if t.case_id == c.id and t.due_at and t.due_at < now
             ),
+            emergency=c.emergency,
+            emergency_reason=c.emergency_reason,
             updated_at=c.updated_at,
         )
         for c in cases
@@ -882,7 +976,11 @@ async def list_cases(access: WorkspaceAccess, *, status: str | None = None) -> l
     elif status == "closed":
         stmt = stmt.where(ContinuityCase.status.in_(("completed", "cancelled")))
     cases = list(
-        await access.session.scalars(stmt.order_by(ContinuityCase.updated_at.desc()).limit(200))
+        await access.session.scalars(
+            stmt.order_by(ContinuityCase.emergency.desc(), ContinuityCase.updated_at.desc()).limit(
+                200
+            )
+        )
     )
     return await _summaries(access, cases)
 
@@ -1086,7 +1184,11 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
     attention = [
         c for c in open_cases if c.coordinator_user_id == access.user_id and c not in pending
     ]
+    emergencies = sorted(
+        (c for c in open_cases if c.emergency), key=lambda c: c.updated_at, reverse=True
+    )
     return MyWorkView(
+        emergencies=await _summaries(access, emergencies),
         tasks=[_task_view(t, names, now) for t in tasks],
         approvals=await _summaries(access, pending),
         attention=await _summaries(access, attention),
