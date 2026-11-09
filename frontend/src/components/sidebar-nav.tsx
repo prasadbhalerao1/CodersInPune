@@ -14,6 +14,7 @@ const LIVE = [
   { label: "Assets", path: "/assets" },
   { label: "Knowledge", path: "/knowledge" },
   { label: "Risks", path: "/risks" },
+  { label: "Insights", path: "/insights" },
   { label: "People & Teams", path: "/people" },
 ] as const;
 const SETTINGS = [
@@ -22,7 +23,6 @@ const SETTINGS = [
   { label: "Import", path: "/import" },
   { label: "Audit log", path: "/audit" },
 ] as const;
-const LATER = ["Insights"] as const;
 
 export function SidebarNav() {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
@@ -82,21 +82,6 @@ export function SidebarNav() {
               </li>
             );
           })}
-        </ul>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-1 px-2 text-xs font-medium">Coming later</p>
-        <ul>
-          {LATER.map((label) => (
-            <li key={label}>
-              <span
-                aria-disabled="true"
-                className="text-muted-foreground/70 block cursor-not-allowed px-2 py-1.5"
-              >
-                {label}
-              </span>
-            </li>
-          ))}
         </ul>
       </div>
       <Link

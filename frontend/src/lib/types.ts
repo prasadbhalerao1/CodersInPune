@@ -697,3 +697,55 @@ export type NotionIntegrationView = {
   connections: NotionConnectionView[];
   sources: NotionSourceView[];
 };
+
+export type DebtItem = {
+  label: string;
+  detail: string | null;
+  kind: "responsibility" | "case" | "person";
+  id: string;
+  points: number;
+};
+
+export type DebtComponent = {
+  key: string;
+  label: string;
+  rule: string;
+  count: number;
+  points: number;
+  items: DebtItem[];
+};
+
+export type InsightsView = {
+  generated_at: string;
+  filters: { department_id: string | null; criticality: string | null };
+  departments: { id: string; name: string }[];
+  coverage: {
+    responsibilities: number;
+    with_primary: number;
+    with_backup: number;
+    critical: number;
+    critical_with_backup: number;
+    archived_owner_assignments: number;
+    single_person_dependencies: number;
+  };
+  knowledge: {
+    responsibilities_with_knowledge: number;
+    responsibilities_missing_knowledge: number;
+    responsibilities_only_stale: number;
+    stale_items: number;
+    imported_needing_review: number;
+    review_interval_days: number;
+  };
+  operations: {
+    open_cases: number;
+    emergency_cases: number;
+    overdue_tasks: number;
+    overdue_cases: number;
+    closed_last_90_days: number;
+    median_days_to_close: number | null;
+    risks_resolved_last_30_days: number;
+    accepted_risks: number;
+  };
+  continuity_debt: number;
+  debt: DebtComponent[];
+};
