@@ -38,6 +38,7 @@ class Permission(StrEnum):
     KNOWLEDGE_WRITE = "knowledge.write"
     MEMBER_MANAGE = "member.manage"
     INTEGRATION_MANAGE = "integration.manage"
+    INSIGHTS_READ = "insights.read"
 
 
 # Granted to any verified identity, independent of workspace membership.
@@ -66,9 +67,9 @@ _MANAGE: Final = frozenset(
 )
 
 ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
-    "owner": _READ | _MANAGE | {Permission.AUDIT_READ},
-    "admin": _READ | _MANAGE | {Permission.AUDIT_READ},
-    "auditor": _READ | {Permission.AUDIT_READ},
+    "owner": _READ | _MANAGE | {Permission.AUDIT_READ, Permission.INSIGHTS_READ},
+    "admin": _READ | _MANAGE | {Permission.AUDIT_READ, Permission.INSIGHTS_READ},
+    "auditor": _READ | {Permission.AUDIT_READ, Permission.INSIGHTS_READ},
     "member": _READ | {Permission.CASE_COMMENT, Permission.KNOWLEDGE_WRITE},
     "guest": _READ,
 }

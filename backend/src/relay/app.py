@@ -17,6 +17,7 @@ from relay.identity import members_api, profile
 from relay.identity.tokens import WorkOSTokenVerifier
 from relay.identity.workos_api import WorkOSClient
 from relay.imports import api as imports_api
+from relay.insights import api as insights_api
 from relay.integrations.github import api as github_api
 from relay.integrations.github.client import GitHubClient
 from relay.integrations.linear import api as linear_api
@@ -109,4 +110,5 @@ def create_app(
     app.include_router(linear_api.callback)
     app.include_router(notion_api.router)
     app.include_router(notion_api.callback)
+    app.include_router(insights_api.router)
     return app
