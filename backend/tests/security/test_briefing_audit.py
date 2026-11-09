@@ -150,6 +150,14 @@ async def test_audit_log_filters_labels_and_permissions(api: Api, ws: Ws) -> Non
     older = await ws.call("GET", "/audit-events", params={"before": events[-1]["occurred_at"]})
     assert all(e["occurred_at"] < events[-1]["occurred_at"] for e in older)
     await ws.call("GET", "/audit-events", 422, params={"category": "a' OR 1=1"})
+    by_action = await ws.call("GET", "/audit-events", params={"action": "created"})
+    assert {e["action"] for e in by_action} >= {"responsibility.created", "asset.created"}
+    assert all("created" in e["action"] for e in by_action)
+    newest = events[0]["occurred_at"]
+    recent = await ws.call("GET", "/audit-events", params={"after": newest})
+    assert all(e["occurred_at"] >= newest for e in recent)
+    assert recent
+    await ws.call("GET", "/audit-events", 422, params={"action": "%"})
 
     await add_member(api, ws.id, "user_member", "member")
     await Ws(api, ws.id, "user_member").call("GET", "/audit-events", 403)

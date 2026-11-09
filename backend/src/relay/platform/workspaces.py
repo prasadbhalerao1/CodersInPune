@@ -210,6 +210,8 @@ async def list_audit_events(
     target_type: Annotated[str | None, Query(pattern=r"^[a-z_]{1,40}$")] = None,
     target_id: uuid.UUID | None = None,
     before: AwareDatetime | None = None,
+    after: AwareDatetime | None = None,
+    action: Annotated[str | None, Query(pattern=r"^[a-z_.]{1,60}$")] = None,
 ) -> list[audit.AuditEventView]:
     return await audit.list_events(
         access,
@@ -219,4 +221,6 @@ async def list_audit_events(
         target_type=target_type,
         target_id=target_id,
         before=before,
+        after=after,
+        action=action,
     )

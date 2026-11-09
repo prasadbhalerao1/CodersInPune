@@ -52,15 +52,40 @@ function Target({ event, workspaceId }: { event: AuditEventView; workspaceId: st
   );
 }
 
+const ENTITIES: [string, string][] = [
+  ["responsibility", "Responsibility"],
+  ["continuity_case", "Continuity case"],
+  ["asset", "Asset"],
+  ["person", "Person"],
+  ["team", "Team"],
+  ["department", "Department"],
+  ["membership", "Member"],
+  ["invitation", "Invitation"],
+  ["workspace_policy", "Policy"],
+  ["automation_rule", "Automation"],
+  ["github_installation", "GitHub"],
+  ["linear_connection", "Linear"],
+  ["notion_connection", "Notion"],
+];
+
 export default async function AuditPage({
   params,
   searchParams,
 }: PageProps<"/w/[workspaceId]/audit">) {
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const pick = (key: string) => (typeof query[key] === "string" ? query[key] : undefined);
+  const since = pick("since");
+  const action =
+    pick("action")
+      ?.trim()
+      .toLowerCase()
+      .replace(/[^a-z_.]/g, "") || undefined;
   const filters = {
     category: pick("category"),
     actor_user_id: pick("actor"),
+    target_type: pick("entity"),
+    action,
+    after: since && /^\d{4}-\d{2}-\d{2}$/.test(since) ? `${since}T00:00:00Z` : undefined,
     before: pick("before"),
     limit: String(PAGE),
   };
@@ -71,9 +96,13 @@ export default async function AuditPage({
   if (!events.ok) return <ApiErrorNotice error={events.error} />;
   const base = `/w/${workspaceId}/audit`;
   const keep = new URLSearchParams(
-    Object.entries({ category: filters.category, actor: filters.actor_user_id }).filter(
-      (e): e is [string, string] => Boolean(e[1]),
-    ),
+    Object.entries({
+      category: filters.category,
+      actor: filters.actor_user_id,
+      entity: filters.target_type,
+      action,
+      since,
+    }).filter((e): e is [string, string] => Boolean(e[1])),
   );
   const last = events.data.at(-1);
   const older = last
@@ -117,10 +146,45 @@ export default async function AuditPage({
               ))}
             </select>
           ) : null}
+          <select
+            name="entity"
+            defaultValue={filters.target_type ?? ""}
+            aria-label="Entity"
+            className={`${inputClass} w-44`}
+          >
+            <option value="">Any record</option>
+            {ENTITIES.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <input
+            name="action"
+            defaultValue={action ?? ""}
+            placeholder="Action, e.g. approved"
+            aria-label="Action contains"
+            className={`${inputClass} w-48`}
+          />
+          <label className="text-muted-foreground flex items-center gap-2 text-sm">
+            Since
+            <input
+              type="date"
+              name="since"
+              defaultValue={since ?? ""}
+              aria-label="Since date"
+              className={`${inputClass} w-40`}
+            />
+          </label>
           <button type="submit" className={buttonVariants({ variant: "outline" })}>
             Apply
           </button>
-          {filters.category || filters.actor_user_id || filters.before ? (
+          {filters.category ||
+          filters.actor_user_id ||
+          filters.before ||
+          filters.target_type ||
+          action ||
+          since ? (
             <Link href={base} className={buttonVariants({ variant: "ghost" })}>
               Latest
             </Link>
@@ -128,7 +192,10 @@ export default async function AuditPage({
         </form>
 
         {events.data.length === 0 ? (
-          <EmptyState title="No matching activity" description="Try another category or person." />
+          <EmptyState
+            title="No matching activity"
+            description="Try another category, person, record type, action or date."
+          />
         ) : (
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">

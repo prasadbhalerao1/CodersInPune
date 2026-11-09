@@ -89,6 +89,8 @@ async def list_events(
     target_type: str | None = None,
     target_id: uuid.UUID | None = None,
     before: datetime | None = None,
+    after: datetime | None = None,
+    action: str | None = None,
 ) -> list[AuditEventView]:
     """Newest first. `category` is an action prefix such as "case" or "ownership";
     `before` pages backwards. Metadata holds identifiers and enums only (never content)."""
@@ -106,6 +108,10 @@ async def list_events(
         stmt = stmt.where(AuditEvent.target_id == target_id)
     if before:
         stmt = stmt.where(AuditEvent.occurred_at < before)
+    if after:
+        stmt = stmt.where(AuditEvent.occurred_at >= after)
+    if action:  # action names are identifiers, never content
+        stmt = stmt.where(AuditEvent.action.contains(action, autoescape=True))
     events = list(
         await access.session.scalars(
             stmt.order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc()).limit(limit)
