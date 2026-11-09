@@ -187,6 +187,22 @@ test("operations: an automation alerts the inbox and records its run", async ({ 
   await expect(ran.getByRole("cell", { name: "Schedule" }).first()).toBeVisible();
 });
 
+test("the shell names the workspace and navigates on a phone", async ({ page }) => {
+  await page.goto(base);
+  const sidebar = page.getByRole("complementary", { name: "Primary" });
+  await expect(sidebar.getByText(names.workspace)).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(base);
+  await expect(sidebar).toBeHidden();
+  await page.locator("summary:visible").filter({ hasText: names.workspace }).click();
+  await page
+    .getByRole("navigation", { name: "Workspace" })
+    .getByRole("link", { name: "Cases" })
+    .click();
+  await page.waitForURL(/\/cases$/);
+});
+
 test("another workspace cannot be reached", async ({ page }) => {
   // Streamed pages send their status before notFound() runs, so assert what renders.
   await page.goto("/w/00000000-0000-7000-8000-000000000000");

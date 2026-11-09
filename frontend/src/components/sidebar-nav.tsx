@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
+import { useWorkspaceContext } from "@/components/workspace-context";
+import type { WorkspaceRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const LIVE = [
+const ADMIN_ROLES: readonly WorkspaceRole[] = ["owner", "admin"];
+const LIVE: readonly { label: string; path: string; roles?: readonly WorkspaceRole[] }[] = [
   { label: "Overview", path: "" },
   { label: "My Work", path: "/my-work" },
   { label: "Inbox", path: "/inbox" },
@@ -14,21 +17,26 @@ const LIVE = [
   { label: "Assets", path: "/assets" },
   { label: "Knowledge", path: "/knowledge" },
   { label: "Risks", path: "/risks" },
-  { label: "Insights", path: "/insights" },
+  { label: "Insights", path: "/insights", roles: [...ADMIN_ROLES, "auditor"] },
   { label: "People & Teams", path: "/people" },
-] as const;
-const SETTINGS = [
+];
+const SETTINGS: readonly { label: string; path: string; roles?: readonly WorkspaceRole[] }[] = [
   { label: "Members", path: "/members" },
-  { label: "Integrations", path: "/integrations" },
-  { label: "Automations", path: "/automations" },
-  { label: "Import", path: "/import" },
+  { label: "Integrations", path: "/integrations", roles: ADMIN_ROLES },
+  { label: "Automations", path: "/automations", roles: ADMIN_ROLES },
+  { label: "Import", path: "/import", roles: ADMIN_ROLES },
   { label: "Settings", path: "/settings" },
-  { label: "Audit log", path: "/audit" },
-] as const;
+  { label: "Audit log", path: "/audit", roles: [...ADMIN_ROLES, "auditor"] },
+];
 
 export function SidebarNav() {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
   const pathname = usePathname();
+  const context = useWorkspaceContext();
+  // Until the role is known, hide role-restricted links rather than flash them.
+  const allowed = (roles?: readonly WorkspaceRole[]) =>
+    !roles ||
+    (context !== null && context.workspaceId === workspaceId && roles.includes(context.role));
   if (!workspaceId) {
     return (
       <nav className="p-3 text-sm">
@@ -42,7 +50,7 @@ export function SidebarNav() {
   return (
     <nav aria-label="Workspace" className="flex flex-1 flex-col gap-6 p-3 text-sm">
       <ul className="flex flex-col gap-0.5">
-        {LIVE.map(({ label, path }) => {
+        {LIVE.filter((item) => allowed(item.roles)).map(({ label, path }) => {
           const href = base + path;
           const active = path ? pathname.startsWith(href) : pathname === base;
           return (
@@ -64,7 +72,7 @@ export function SidebarNav() {
       <div>
         <p className="text-muted-foreground mb-1 px-2 text-xs font-medium">Workspace</p>
         <ul className="flex flex-col gap-0.5">
-          {SETTINGS.map(({ label, path }) => {
+          {SETTINGS.filter((item) => allowed(item.roles)).map(({ label, path }) => {
             const href = base + path;
             const active = pathname.startsWith(href);
             return (
