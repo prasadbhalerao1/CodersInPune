@@ -235,7 +235,7 @@ class KnowledgeItem(Base):
         CheckConstraint("url IS NULL OR url ~ '^https?://'", name="url"),
         CheckConstraint("body IS NOT NULL OR url IS NOT NULL", name="has_content"),
         CheckConstraint("visibility IN ('workspace', 'managers')", name="visibility"),
-        CheckConstraint("origin IN ('person', 'notion')", name="origin"),
+        CheckConstraint("origin IN ('person', 'notion', 'ai')", name="origin"),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
         Index(None, "tenant_id", "responsibility_id"),
         Index("ix_knowledge_item_search", "search", postgresql_using="gin"),

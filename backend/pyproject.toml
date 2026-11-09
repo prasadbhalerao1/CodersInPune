@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.28.1",
     "procrastinate==3.10.0",
     "psycopg[binary]>=3.3.8",
+    "pydantic-ai-slim[google,groq,openai]==2.66.0",
     "pydantic-settings>=2.16.2",
     "pyjwt[crypto]>=2.15.1",
     "pyyaml>=6",

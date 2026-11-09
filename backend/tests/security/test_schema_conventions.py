@@ -21,6 +21,7 @@ import relay.directory.models
 import relay.governance.models
 import relay.identity.models
 import relay.integrations.github.models
+import relay.intelligence.models
 import relay.integrations.linear.models
 import relay.integrations.notion.models
 import relay.jobs.models
@@ -42,6 +43,7 @@ MANAGED_SCHEMAS = (
     "notifications",
     "governance",
     "automation",
+    "intelligence",
 )
 TENANT_ROOT = ("platform", "tenant")
 # Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.

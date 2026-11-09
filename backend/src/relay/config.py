@@ -77,6 +77,20 @@ class Settings(BaseSettings):
     notion_client_secret: SecretStr | None = None
     notion_api_url: str = "https://api.notion.com/v1"
     notion_page_limit: int = Field(default=500, ge=1, le=5000)
+    # AI model providers, tried in order (e.g. "gemini,groq,ollama"); empty = AI off.
+    # "fake" is a deterministic test model (local/test only).
+    llm_providers: str | None = None
+    gemini_key_1: SecretStr | None = None
+    gemini_key_2: SecretStr | None = None
+    gemini_key_3: SecretStr | None = None
+    gemini_key_4: SecretStr | None = None
+    gemini_model: str = "gemini-2.5-flash"
+    groq_api_key: SecretStr | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
+    ollama_url: str = "http://127.0.0.1:11434/v1"
+    ollama_model: str | None = None
+    llm_timeout_seconds: float = Field(default=90.0, ge=5, le=900)
+    ai_monthly_token_budget: int = Field(default=2_000_000, ge=0)
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
     worker_shutdown_seconds: float = Field(default=30.0, ge=0, le=600)
@@ -126,9 +140,30 @@ class Settings(BaseSettings):
                 problems.append(
                     "RELAY_INTEGRATION_ENCRYPTION_KEY is required when Linear or Notion is set"
                 )
+        providers = self.llm_provider_list
+        if "gemini" in providers and not self.gemini_keys:
+            problems.append("AI: set RELAY_GEMINI_KEY_1 (to _4) when gemini is a provider")
+        if "groq" in providers and self.groq_api_key is None:
+            problems.append("AI: set RELAY_GROQ_API_KEY when groq is a provider")
+        if "ollama" in providers and not self.ollama_model:
+            problems.append("AI: set RELAY_OLLAMA_MODEL when ollama is a provider")
+        unknown = set(providers) - {"gemini", "groq", "ollama", "fake"}
+        if unknown:
+            problems.append(f"AI: unknown provider(s) {', '.join(sorted(unknown))}")
+        if "fake" in providers and self.environment in ("staging", "production"):
+            problems.append("AI: the fake provider is for local/test only")
         if problems:
             raise ValueError("Invalid Relay configuration: " + "; ".join(problems))
         return self
+
+    @property
+    def llm_provider_list(self) -> list[str]:
+        return [p.strip().lower() for p in (self.llm_providers or "").split(",") if p.strip()]
+
+    @property
+    def gemini_keys(self) -> list[SecretStr]:
+        keys = (self.gemini_key_1, self.gemini_key_2, self.gemini_key_3, self.gemini_key_4)
+        return [k for k in keys if k is not None]
 
     @property
     def resolved_workos_issuer(self) -> str:
