@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/page";
-import { Badge, CriticalityBadge } from "@/components/ui/badge";
+import { Badge, CriticalityBadge, SeverityBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
 
@@ -23,6 +23,15 @@ export default async function AssetPage({
   const a = asset.data;
   const manage = canManage(workspace.data);
   const unowned = a.responsibilities.filter((r) => !r.primary_owner);
+  // Assets have no owners of their own: risk reaches them through their stewards.
+  const contexts = await Promise.all(
+    a.responsibilities
+      .slice(0, 12)
+      .map((r) => attempt(api.responsibilityContext(workspaceId, r.id)).then((c) => ({ r, c }))),
+  );
+  const risks = contexts.flatMap(({ r, c }) =>
+    c.ok ? c.data.risks.map((risk) => ({ ...risk, responsibility: r.name })) : [],
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -125,6 +134,40 @@ export default async function AssetPage({
             </ul>
           )}
         </Section>
+        {a.responsibilities.length ? (
+          <Section
+            title="Risks through its stewards"
+            description="Continuity gaps on the responsibilities that look after this asset."
+          >
+            {risks.length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border px-4 py-3 text-sm">
+                No open risks on its stewards.
+              </p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {risks.map((risk) => (
+                  <li key={risk.key}>
+                    <Link
+                      href={`/w/${workspaceId}/risks/${encodeURIComponent(risk.key)}`}
+                      className="hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm"
+                    >
+                      <SeverityBadge value={risk.severity} />
+                      <span className="min-w-0 flex-1 truncate">
+                        {risk.title}
+                        <span className="text-muted-foreground"> · {risk.responsibility}</span>
+                      </span>
+                      {risk.status !== "open" ? (
+                        <span className="text-muted-foreground text-xs capitalize">
+                          {risk.status}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+        ) : null}
       </div>
     </div>
   );
