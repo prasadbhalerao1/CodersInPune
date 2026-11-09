@@ -338,6 +338,19 @@ export type MyWorkView = {
   tasks: TaskView[];
   approvals: CaseSummary[];
   attention: CaseSummary[];
+  mentions: {
+    notification_id: string;
+    case_id: string;
+    case_title: string;
+    actor_name: string | null;
+    created_at: string;
+  }[];
+  reviews: {
+    knowledge_id: string;
+    title: string;
+    responsibility_id: string;
+    responsibility_name: string;
+  }[];
 };
 
 export type DepartmentView = {

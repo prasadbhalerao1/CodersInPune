@@ -309,6 +309,16 @@ async def responsibility_knowledge(
     )
 
 
+async def responsibility_knowledge_by_author(
+    access: WorkspaceAccess, user_id: uuid.UUID
+) -> list[KnowledgeView]:
+    """Active knowledge a member wrote (for their own review queue in My Work)."""
+    authorize(access, Permission.RESPONSIBILITY_READ)
+    return await _items(
+        access, KnowledgeItem.author_user_id == user_id, KnowledgeItem.status == "active"
+    )
+
+
 async def knowledge_overview(
     access: WorkspaceAccess, *, q: str | None = None, freshness: Freshness | None = None
 ) -> KnowledgeOverviewView:

@@ -237,11 +237,28 @@ class CaseDetail(CaseSummary):
     approvals: list[ApprovalView]
 
 
+class MentionView(BaseModel):
+    notification_id: uuid.UUID
+    case_id: uuid.UUID
+    case_title: str
+    actor_name: str | None
+    created_at: datetime
+
+
+class ReviewView(BaseModel):
+    knowledge_id: uuid.UUID
+    title: str
+    responsibility_id: uuid.UUID
+    responsibility_name: str
+
+
 class MyWorkView(BaseModel):
     emergencies: list[CaseSummary]
     tasks: list[TaskView]
     approvals: list[CaseSummary]
     attention: list[CaseSummary]
+    mentions: list[MentionView] = []
+    reviews: list[ReviewView] = []
 
 
 # ---------------------------------------------------------------- helpers
@@ -1187,9 +1204,50 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
     emergencies = sorted(
         (c for c in open_cases if c.emergency), key=lambda c: c.updated_at, reverse=True
     )
+    # Unread mentions of me, and knowledge I wrote that is due for review.
+    from relay.catalog import knowledge  # local: knowledge imports continuity models
+    from relay.notifications.models import Notification
+
+    mentions = await access.session.execute(
+        select(Notification, ContinuityCase.title)
+        .join(ContinuityCase, ContinuityCase.id == Notification.case_id)
+        .where(
+            visible(access, Permission.CASE_READ, Notification.tenant_id),
+            Notification.recipient_user_id == access.user_id,
+            Notification.kind == "mentioned",
+            Notification.read_at.is_(None),
+        )
+        .order_by(Notification.created_at.desc())
+        .limit(20)
+    )
+    stale = [
+        k
+        for k in await knowledge.responsibility_knowledge_by_author(access, access.user_id)
+        if k.freshness == "stale"
+    ]
     return MyWorkView(
         emergencies=await _summaries(access, emergencies),
         tasks=[_task_view(t, names, now) for t in tasks],
         approvals=await _summaries(access, pending),
         attention=await _summaries(access, attention),
+        mentions=[
+            MentionView(
+                notification_id=n.id,
+                case_id=n.case_id,
+                case_title=title,
+                actor_name=names.get(n.actor_user_id) if n.actor_user_id else None,
+                created_at=n.created_at,
+            )
+            for n, title in mentions
+            if n.case_id is not None
+        ],
+        reviews=[
+            ReviewView(
+                knowledge_id=k.id,
+                title=k.title,
+                responsibility_id=k.responsibility_id,
+                responsibility_name=k.responsibility_name,
+            )
+            for k in stale[:20]
+        ],
     )

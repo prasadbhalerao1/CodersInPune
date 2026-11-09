@@ -13,10 +13,26 @@ import { completeFollowUpAction } from "../automations/actions";
 
 const FILTERS = [
   { key: "all", label: "All" },
-  { key: "tasks", label: "My tasks" },
+  { key: "today", label: "Today" },
+  { key: "upcoming", label: "Upcoming" },
+  { key: "overdue", label: "Overdue" },
   { key: "approvals", label: "Approvals" },
+  { key: "mentions", label: "Mentions" },
+  { key: "reviews", label: "Knowledge reviews" },
   { key: "cases", label: "My cases" },
 ] as const;
+
+type Filter = (typeof FILTERS)[number]["key"];
+
+/** Which due-date bucket a task falls in, relative to the end of today. */
+function bucket(dueAt: string | null, now: Date): "overdue" | "today" | "upcoming" {
+  if (!dueAt) return "upcoming";
+  const due = new Date(dueAt);
+  if (due < now) return "overdue";
+  const endOfDay = new Date(now);
+  endOfDay.setHours(23, 59, 59, 999);
+  return due <= endOfDay ? "today" : "upcoming";
+}
 
 export default async function MyWorkPage({
   params,
@@ -30,10 +46,21 @@ export default async function MyWorkPage({
   ]);
   if (!work.ok) return <ApiErrorNotice error={work.error} />;
   const myFollowUps = followUps.ok ? followUps.data : [];
-  const { emergencies, tasks, approvals, attention } = work.data;
+  const { emergencies, approvals, attention, mentions, reviews } = work.data;
+  const now = new Date();
   const base = `/w/${workspaceId}`;
-  const show = (key: (typeof FILTERS)[number]["key"]) => filter === "all" || filter === key;
-  const empty = tasks.length + approvals.length + attention.length + myFollowUps.length === 0;
+  const show = (key: Filter) => filter === "all" || filter === key;
+  const taskFilter = ["today", "upcoming", "overdue"].includes(filter);
+  const tasks = work.data.tasks.filter((t) => !taskFilter || bucket(t.due_at, now) === filter);
+  const showTasks = filter === "all" || taskFilter;
+  const empty =
+    work.data.tasks.length +
+      approvals.length +
+      attention.length +
+      myFollowUps.length +
+      mentions.length +
+      reviews.length ===
+    0;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -59,7 +86,7 @@ export default async function MyWorkPage({
         {empty ? (
           <EmptyState
             title="You're all caught up"
-            description="Tasks assigned to you, approvals you can give and cases you coordinate appear here."
+            description="Tasks assigned to you, approvals you can give, mentions, knowledge due for review, automation follow-ups and cases you coordinate appear here."
           />
         ) : null}
         {emergencies.length > 0 ? (
@@ -90,7 +117,7 @@ export default async function MyWorkPage({
             </ul>
           </section>
         ) : null}
-        {show("tasks") && tasks.length > 0 ? (
+        {showTasks && tasks.length > 0 ? (
           <Section title="Tasks assigned to me" description="Complete them from the case.">
             <ul className="divide-y rounded-lg border">
               {tasks.map((t) => (
@@ -112,7 +139,7 @@ export default async function MyWorkPage({
             </ul>
           </Section>
         ) : null}
-        {show("tasks") && myFollowUps.length > 0 ? (
+        {(filter === "all" || filter === "upcoming") && myFollowUps.length > 0 ? (
           <Section
             title="Follow-ups from automations"
             description="Fix the gap, then mark it done. A new follow-up opens if the gap remains."
@@ -138,6 +165,53 @@ export default async function MyWorkPage({
                       Done
                     </SubmitButton>
                   </ActionForm>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+        {showTasks && filter !== "all" && tasks.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No tasks {filter === "today" ? "due today" : filter}.
+          </p>
+        ) : null}
+        {show("mentions") && mentions.length > 0 ? (
+          <Section title="Mentions" description="Unread comments that mention you.">
+            <ul className="divide-y rounded-lg border">
+              {mentions.map((m) => (
+                <li key={m.notification_id}>
+                  <Link
+                    href={`${base}/cases/${m.case_id}`}
+                    className="hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      <span className="font-medium">{m.actor_name ?? "Someone"}</span> mentioned you
+                      in {m.case_title}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {formatDateTime(m.created_at)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+        {show("reviews") && reviews.length > 0 ? (
+          <Section
+            title="Knowledge to review"
+            description="Knowledge you wrote that is past the review interval. Confirm it's still accurate or update it."
+          >
+            <ul className="divide-y rounded-lg border">
+              {reviews.map((r) => (
+                <li key={r.knowledge_id}>
+                  <Link
+                    href={`${base}/responsibilities/${r.responsibility_id}`}
+                    className="hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-medium">{r.title}</span>
+                    <span className="text-muted-foreground text-xs">{r.responsibility_name}</span>
+                  </Link>
                 </li>
               ))}
             </ul>

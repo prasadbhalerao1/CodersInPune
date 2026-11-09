@@ -211,3 +211,41 @@ async def test_notifications_are_async_idempotent_and_private(api: Api, ws: Ws) 
         if n["task_title"] == "Quick check"
     ]
     assert kinds == ["task_assigned"]
+
+
+async def test_my_work_lists_unread_mentions_and_my_stale_knowledge(api: Api, ws: Ws) -> None:
+    case = await draft_transfer(ws, "Mentions")
+    ids = await user_ids(ws)
+    await ws.call(
+        "POST",
+        f"/cases/{case['id']}/comments",
+        201,
+        json={"body": "@Admin please check", "mention_user_ids": [ids["admin"]]},
+    )
+    await deliver(api, ws.id)
+    admin = Ws(api, ws.id, "user_admin")
+    work = await admin.call("GET", "/my-work")
+    assert [(m["case_title"], m["actor_name"] is not None) for m in work["mentions"]] == [
+        ("Mentions", True)
+    ]
+    await admin.call("POST", "/notifications/read", 204, json={})
+    assert (await admin.call("GET", "/my-work"))["mentions"] == []  # read: gone
+
+    rid = await ws.responsibility("Docs duty")
+    item = await admin.call(
+        "POST",
+        f"/responsibilities/{rid}/knowledge",
+        201,
+        json={"kind": "note", "title": "Old note", "body": "x"},
+    )
+    assert (await admin.call("GET", "/my-work"))["reviews"] == []  # fresh
+    with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
+        conn.execute(
+            "UPDATE catalog.knowledge_item SET last_reviewed_at = now() - interval '200 days' "
+            "WHERE id = %s",
+            (item["id"],),
+        )
+        conn.commit()
+    [review] = (await admin.call("GET", "/my-work"))["reviews"]
+    assert (review["title"], review["responsibility_id"]) == ("Old note", rid)
+    assert (await ws.call("GET", "/my-work"))["reviews"] == []  # only the author's
