@@ -40,7 +40,13 @@ from relay.intelligence.models import (
     Proposal,
 )
 from relay.intelligence.registry import ANALYSIS_STEPS, capability
-from relay.intelligence.validate import ValidClaim, audience_of, valid_refs, validate_claims
+from relay.intelligence.validate import (
+    ValidClaim,
+    audience_of,
+    normalise,
+    valid_refs,
+    validate_claims,
+)
 from relay.jobs import outbox
 from relay.jobs.models import OutboxEvent
 from relay.policy.permissions import Permission, authorize
@@ -394,7 +400,7 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         try:
             result = await gateway_for(ctx.settings).run(
                 instructions=caps.instructions(name),
-                prompt=caps.prompt(pool, audience, str(run.checkpoint.get("brief", ""))),
+                prompt=caps.prompt(pool, audience, await _brief(session, run)),
                 output_type=kind.output_type,
                 tools=[caps.TOOLS[t] for t in spec.tools],
                 deps=pool,
@@ -441,7 +447,11 @@ async def _store_analysis(
     pool: Pool,
     ids: dict[str, uuid.UUID],
 ) -> dict[str, int]:
-    outcome = validate_claims(pool, output.claims[: caps.MAX_CLAIMS])
+    existing = {
+        normalise(t)
+        for t in await session.scalars(select(Claim.text).where(Claim.run_id == run.id))
+    }
+    outcome = validate_claims(pool, output.claims[: caps.MAX_CLAIMS], existing)
     store_claims(session, run, name, outcome.claims, ids)
     counts = await store_proposals(
         session, run, name, output.proposals[: caps.MAX_PROPOSALS], pool, ids
@@ -467,6 +477,22 @@ class StepKind:
 ANALYSIS_KIND = StepKind(caps.AnalysisOutput, _store_analysis)
 # Other capabilities (interviews, capsules) register their own kinds at import time.
 STEP_KINDS: dict[str, StepKind] = {}
+
+
+async def _brief(session: AsyncSession, run: AgentRun) -> str:
+    """Extra context: what earlier steps already recorded, so the model adds, not repeats."""
+    known = list(
+        await session.scalars(
+            select(Claim.text).where(Claim.run_id == run.id).order_by(Claim.created_at).limit(40)
+        )
+    )
+    brief = str(run.checkpoint.get("brief", ""))
+    if known:
+        lines = [f"- {t[:200]}" for t in known]
+        brief = "\n".join(
+            [brief, "Already recorded (do not repeat these; add only new, cited points):", *lines]
+        )
+    return brief
 
 
 def _mark_failed(run: AgentRun, name: str, code: str | None = None) -> None:

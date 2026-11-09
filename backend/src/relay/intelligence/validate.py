@@ -10,6 +10,7 @@
   makes the whole claim managers-only.
 """
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -55,6 +56,19 @@ class Outcome:
     rejected: Counter[str] = field(default_factory=Counter)
 
 
+_INLINE_REFS = re.compile(r"\s*[\[(]\s*(E\d+(?:\s*,\s*E\d+)*)\s*[\])]", re.IGNORECASE)
+
+
+def _split_refs(text: str) -> tuple[str, list[str]]:
+    """Models often cite inline ("… [E2]"); move those refs out of the prose."""
+    found = [r.strip().upper() for m in _INLINE_REFS.findall(text) for r in m.split(",")]
+    return " ".join(_INLINE_REFS.sub("", text).split()), found
+
+
+def normalise(text: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+
+
 def _parse_when(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -74,12 +88,16 @@ def audience_of(pool: Pool, refs: list[str]) -> str:
     )
 
 
-def validate_claims(pool: Pool, drafts: list[ClaimDraft]) -> Outcome:
+def validate_claims(
+    pool: Pool, drafts: list[ClaimDraft], existing: set[str] | None = None
+) -> Outcome:
+    """`existing`: normalised texts already recorded in this run (not repeated)."""
     out = Outcome()
-    seen: set[tuple[str, str]] = set()
+    seen = set(existing or ())
     for d in drafts:
-        text = " ".join(d.text.split())[:600]
-        refs = list(dict.fromkeys(r.strip().upper() for r in d.evidence if r.strip()))
+        text, inline = _split_refs(d.text)
+        text = text[:600]
+        refs = list(dict.fromkeys([*(r.strip().upper() for r in d.evidence if r.strip()), *inline]))
         if not text:
             out.rejected["empty"] += 1
             continue
@@ -92,7 +110,7 @@ def validate_claims(pool: Pool, drafts: list[ClaimDraft]) -> Outcome:
         if d.kind == "conflict" and len(refs) < 2:
             out.rejected["conflict_needs_two_sources"] += 1
             continue
-        key = (d.kind, text.lower())
+        key = normalise(text)
         if key in seen:
             out.rejected["duplicate"] += 1
             continue
