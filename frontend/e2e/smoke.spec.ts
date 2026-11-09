@@ -9,6 +9,9 @@ const names = {
   leaving: `Lena ${stamp}`,
   joining: `Jo ${stamp}`,
   duty: `Payments on-call ${stamp}`,
+  dept: `Finance ${stamp}`,
+  team: `Billing ${stamp}`,
+  orphan: `Vendor portal ${stamp}`,
 };
 
 async function submitAndSettle(page: Page, button: string) {
@@ -132,6 +135,56 @@ test("insights, automations, policies and integrations render for an owner", asy
     await page.goto(`${base}/integrations/${provider}`);
     await expect(page.getByRole("navigation", { name: "Integrations" })).toBeVisible();
   }
+});
+
+test("catalogue: departments, teams and an unowned responsibility", async ({ page }) => {
+  await page.goto(`${base}/people`);
+  await page.getByLabel("Department name").fill(names.dept);
+  await submitAndSettle(page, "Add");
+  await expect(page.getByRole("link", { name: new RegExp(names.dept) }).first()).toBeVisible();
+
+  await page.getByLabel("Team name").fill(names.team);
+  await submitAndSettle(page, "Add team");
+  await expect(page.getByText(names.team, { exact: true }).first()).toBeVisible();
+
+  await page.goto(`${base}/responsibilities/new`);
+  await page.getByLabel("Name").fill(names.orphan);
+  await page
+    .getByRole("button", { name: /create|save/i })
+    .first()
+    .click();
+  await page.waitForURL(/\/responsibilities\/[0-9a-f-]{36}$/);
+  await page.goto(`${base}/responsibilities`);
+  await expect(page.getByRole("row", { name: new RegExp(names.orphan) })).toBeVisible();
+});
+
+test("operations: an automation alerts the inbox and records its run", async ({ page }) => {
+  await page.goto(`${base}/automations`);
+  const rule = page
+    .getByRole("listitem")
+    .filter({ hasText: "Responsibility without a primary owner" });
+  await rule.getByLabel("Enabled").check();
+  await rule.getByRole("button", { name: "Save", exact: true }).click();
+  await page.waitForLoadState("networkidle");
+
+  // The run happens in the background worker; wait for its alert to reach the inbox.
+  await expect(async () => {
+    await page.goto(`${base}/inbox`);
+    await expect(page.getByText("Responsibility has no primary owner").first()).toBeVisible({
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 45_000 });
+  await page.getByText("Responsibility has no primary owner").first().click();
+  await page.waitForURL(/\/responsibilities\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { name: names.orphan })).toBeVisible();
+
+  await page.goto(`${base}/automations`);
+  const ran = page
+    .getByRole("listitem")
+    .filter({ hasText: "Responsibility without a primary owner" });
+  await expect(ran.getByText("Last run OK")).toBeVisible();
+  await ran.getByText(/Execution history/).click();
+  await expect(ran.getByRole("cell", { name: "Schedule" }).first()).toBeVisible();
 });
 
 test("another workspace cannot be reached", async ({ page }) => {
