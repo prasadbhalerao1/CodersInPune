@@ -21,6 +21,16 @@ const CASE_UPDATE: Record<string, string> = {
   completed: "completed the case",
   cancelled: "cancelled the case",
   emergency: "marked the case as an emergency",
+  reopened: "reopened the case",
+  declined: "declined a responsibility in the case",
+};
+
+// Scheduled reminders: no actor is involved.
+const CASE_REMINDER: Record<string, string> = {
+  approval_due: "Approval is due within a day",
+  case_due: "The case is due within a day",
+  coverage_ending: "Coverage ends within a day",
+  blocker_escalated: "A blocker has gone unresolved and was escalated",
 };
 
 const AUTOMATION: Record<string, string> = {
@@ -49,6 +59,7 @@ function message(n: NotificationView): string {
     case "mentioned":
       return `${who} mentioned you`;
     case "case_update":
+      if (n.detail && n.detail in CASE_REMINDER) return CASE_REMINDER[n.detail];
       return `${who} ${CASE_UPDATE[n.detail ?? ""] ?? "updated the case"}`;
     case "automation":
       return AUTOMATION[n.detail ?? ""] ?? "Automation alert";

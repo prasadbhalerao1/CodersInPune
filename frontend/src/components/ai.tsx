@@ -1,3 +1,4 @@
+import { RunProgress } from "@/components/run-progress";
 import { formatDateTime } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import type { ClaimKind, ClaimType, Confidence, EvidenceView, RunView } from "@/lib/types";
@@ -137,16 +138,20 @@ export function explainRunError(code: string | null): string | null {
 
 export function RunSummary({ run }: { run: RunView }) {
   const active = run.state === "running" || run.state === "queued";
+  if (active) {
+    return (
+      <RunProgress
+        steps={run.steps}
+        step={run.step}
+        queued={run.state === "queued"}
+        startedAt={run.created_at}
+      />
+    );
+  }
   return (
     <div className="flex flex-col gap-1 text-sm">
       <p className="flex flex-wrap items-center gap-2">
         <RunStateBadge state={run.state} />
-        {active && run.steps.length ? (
-          <span className="text-muted-foreground">
-            Step {Math.min(run.step + 1, run.steps.length)} of {run.steps.length}:{" "}
-            {run.steps[Math.min(run.step, run.steps.length - 1)]?.replaceAll("_", " ")}
-          </span>
-        ) : null}
         <span className="text-muted-foreground text-xs">{formatDateTime(run.created_at)}</span>
       </p>
       <p className="text-muted-foreground text-xs tabular-nums">

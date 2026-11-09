@@ -80,17 +80,35 @@ export function Field({
 }
 
 // datetime-local has no timezone; send the browser's interpretation as an ISO instant.
-export function DateTimeInput({ id, name }: { id: string; name: string }) {
-  const [iso, setIso] = useState("");
+/** Local date-time picker that submits ISO 8601 (UTC). An empty value submits "". */
+export function DateTimeInput({
+  id,
+  name,
+  defaultValue,
+}: {
+  id: string;
+  name: string;
+  defaultValue?: string | null;
+}) {
+  const [iso, setIso] = useState(defaultValue ?? "");
+  const local = defaultValue ? toLocalInput(defaultValue) : undefined;
   return (
     <>
       <input
         id={id}
         type="datetime-local"
         className={inputClass}
+        defaultValue={local}
+        suppressHydrationWarning // the server renders in its own time zone
         onChange={(e) => setIso(e.target.value ? new Date(e.target.value).toISOString() : "")}
       />
       <input type="hidden" name={name} value={iso} />
     </>
   );
+}
+
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

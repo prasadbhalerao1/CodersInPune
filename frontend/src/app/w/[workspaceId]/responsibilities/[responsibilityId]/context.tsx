@@ -2,9 +2,15 @@ import Link from "next/link";
 
 import { formatDateTime, Section } from "@/components/page";
 import { Badge, CaseStatusBadge, EmergencyBadge, SeverityBadge } from "@/components/ui/badge";
-import type { ResponsibilityContextView } from "@/lib/types";
+import type { CaseType, ResponsibilityContextView } from "@/lib/types";
 
-const CASE_TYPE = { transfer: "Transfer", coverage: "Temporary coverage", departure: "Departure" };
+const CASE_TYPE: Record<CaseType, string> = {
+  transfer: "Transfer",
+  coverage: "Temporary coverage",
+  departure: "Departure",
+  onboarding: "Onboarding",
+  project_handover: "Project handover",
+};
 
 /** A small, consistent label for where a piece of information comes from. */
 export function Provenance({ kind }: { kind: "risk" | "evidence" | "suggestion" }) {

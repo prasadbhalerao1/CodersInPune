@@ -16,7 +16,7 @@ import type { CaseType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { createCaseAction } from "../actions";
-import { CASE_TYPES } from "../labels";
+import { CASE_TYPES, PRIORITY_LABEL } from "../labels";
 
 export const metadata: Metadata = { title: "New case" };
 
@@ -35,7 +35,7 @@ export default async function NewCasePage({
     return (
       <div className="flex flex-1 flex-col">
         <PageHeader title="New case" />
-        <div className="grid max-w-4xl gap-4 p-6 md:grid-cols-3">
+        <div className="grid max-w-5xl gap-4 p-6 md:grid-cols-3">
           {(Object.keys(CASE_TYPES) as CaseType[]).map((t) => (
             <Link
               key={t}
@@ -51,9 +51,23 @@ export default async function NewCasePage({
     );
   }
 
-  const needsPerson = type !== "transfer";
-  const people = needsPerson ? await attempt(api.listPeople(workspaceId)) : null;
-  if (people && !people.ok) return <ApiErrorNotice error={people.error} />;
+  const needsPerson = type === "coverage" || type === "departure" || type === "onboarding";
+  const showPerson = needsPerson || type === "project_handover";
+  const [people, members, assets] = await Promise.all([
+    showPerson ? attempt(api.listPeople(workspaceId)) : null,
+    attempt(api.members(workspaceId)),
+    type === "project_handover" ? attempt(api.assets(workspaceId, { status: "active" })) : null,
+  ]);
+  for (const r of [people, members, assets]) {
+    if (r && !r.ok) return <ApiErrorNotice error={r.error} />;
+  }
+  const personLabel = {
+    coverage: "Who is away",
+    departure: "Who is leaving",
+    onboarding: "Who is joining (or taking on new work)",
+    project_handover: "Outgoing project lead (optional)",
+    transfer: "",
+  }[type];
 
   return (
     <div className="flex flex-1 flex-col">
@@ -71,16 +85,28 @@ export default async function NewCasePage({
               placeholder={type === "coverage" ? "Asha on leave" : "Platform handover"}
             />
           </Field>
+          {assets?.ok ? (
+            <Field label="Project" htmlFor="project">
+              <select id="project" name="project_asset_id" defaultValue="" className={inputClass}>
+                <option value="">No project asset (add responsibilities by hand)</option>
+                {assets.data.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} · {a.asset_type.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
           {people?.ok ? (
-            <Field label={type === "coverage" ? "Who is away" : "Who is leaving"} htmlFor="person">
+            <Field label={personLabel} htmlFor="person">
               <select
                 id="person"
                 name="affected_person_id"
-                required
+                required={needsPerson}
                 defaultValue=""
                 className={inputClass}
               >
-                <option value="" disabled>
+                <option value="" disabled={needsPerson}>
                   {people.data.length ? "Choose a person…" : "Add people first"}
                 </option>
                 {people.data.map((p) => (
@@ -104,6 +130,49 @@ export default async function NewCasePage({
               </Field>
             ) : null}
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Priority" htmlFor="priority">
+              <select id="priority" name="priority" defaultValue="normal" className={inputClass}>
+                {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Case due (optional)" htmlFor="due">
+              <DateTimeInput id="due" name="due_at" />
+            </Field>
+            <Field label="Accountable manager (optional)" htmlFor="accountable">
+              <select
+                id="accountable"
+                name="accountable_manager_user_id"
+                defaultValue=""
+                className={inputClass}
+              >
+                <option value="">Not set</option>
+                {members?.ok
+                  ? members.data
+                      .filter((m) => m.status === "active")
+                      .map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.name}
+                        </option>
+                      ))
+                  : null}
+              </select>
+            </Field>
+            <Field label="Time zone" htmlFor="tz">
+              <input
+                id="tz"
+                name="time_zone"
+                defaultValue="UTC"
+                maxLength={64}
+                placeholder="e.g. Asia/Kolkata"
+                className={inputClass}
+              />
+            </Field>
+          </div>
           <Field label="Reason (optional)" htmlFor="reason">
             <textarea
               id="reason"
@@ -113,12 +182,38 @@ export default async function NewCasePage({
               className={`${inputClass} h-auto py-2`}
             />
           </Field>
-          {needsPerson ? (
+          {type === "coverage" || type === "departure" ? (
             <p className="text-muted-foreground text-xs">
               Relay will add every responsibility this person currently owns. You choose a recipient
               for each.
             </p>
+          ) : type === "onboarding" ? (
+            <p className="text-muted-foreground text-xs">
+              Add the responsibilities they will take on; each is planned with them as the
+              recipient, plus access and readiness checks.
+            </p>
+          ) : type === "project_handover" ? (
+            <p className="text-muted-foreground text-xs">
+              Relay adds the responsibilities that steward the project. Decisions, open work and
+              knowledge come with them in the case analysis and handover capsule.
+            </p>
           ) : null}
+          <details className="text-sm">
+            <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
+              A similar case is already open?
+            </summary>
+            <Field
+              label="Why a separate case is needed (only if Relay reports a similar open case)"
+              htmlFor="dup"
+            >
+              <input
+                id="dup"
+                name="duplicate_override_reason"
+                maxLength={4000}
+                className={inputClass}
+              />
+            </Field>
+          </details>
           <div className="flex gap-2">
             <SubmitButton>Create case</SubmitButton>
             <Link href={base} className="text-muted-foreground self-center text-sm hover:underline">

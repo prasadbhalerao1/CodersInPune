@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page";
-import { cn } from "@/lib/utils";
+
+import { CaseTabs } from "./workflow";
 
 const TABS = [
   { key: "analysis", label: "Analysis", path: "/analysis" },
@@ -38,23 +39,7 @@ export function CaseAiHeader({
         }
         actions={actions}
       />
-      <nav aria-label="Case intelligence" className="flex gap-1 border-b px-6 py-2 text-sm">
-        {TABS.map((t) => (
-          <Link
-            key={t.key}
-            href={`${base}${t.path}`}
-            aria-current={t.key === current ? "page" : undefined}
-            className={cn(
-              "rounded-md px-2.5 py-1",
-              t.key === current
-                ? "bg-foreground/[0.06] font-medium"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <CaseTabs workspaceId={workspaceId} caseId={caseId} current={current} />
     </>
   );
 }

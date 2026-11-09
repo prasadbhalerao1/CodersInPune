@@ -1,82 +1,73 @@
 import Link from "next/link";
+
+import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
-import { ActionForm, SubmitButton } from "@/components/action-form";
-import { formatDateTime, PageHeader } from "@/components/page";
+import { PageHeader } from "@/components/page";
 import { CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { CaseDetail } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 import { addCommentAction, caseCommandAction } from "../actions";
-import { CASE_TYPES } from "../labels";
 import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
 import { CommentComposer } from "./comment-composer";
+import { ImpactPanel } from "./impact";
 import { KnowledgeHandover } from "./knowledge-handover";
 import { Blockers, OwnershipPlan } from "./ownership-plan";
 import { ApprovalPanel, ReadinessSection, ScopeSection, TasksSection } from "./sections";
+import {
+  BlockersPanel,
+  CASE_TABS,
+  CaseDetailsForm,
+  CaseFacts,
+  CaseProgress,
+  CaseTabs,
+  type CaseTab,
+  DeclinePanel,
+  DuplicateNotice,
+  nextStep,
+  PeoplePanel,
+  SplitPanel,
+  StatusControls,
+  StatusHistory,
+} from "./workflow";
 
-const STEPS = [
-  { status: "draft", label: "Scope" },
-  { status: "planning", label: "Plan & approve" },
-  { status: "executing", label: "Hand over" },
-  { status: "completed", label: "Complete" },
-] as const;
+const isTab = (value: unknown): value is CaseTab =>
+  typeof value === "string" && CASE_TABS.some(([tab]) => tab === value);
 
-function nextStep(c: CaseDetail): string {
-  switch (c.status) {
-    case "draft":
-      return "Choose a recipient (or record an exception) for every responsibility, then submit.";
-    case "planning":
-      return c.approved
-        ? "Approved. Execute to apply the ownership changes."
-        : "Waiting for approval of the current plan.";
-    case "executing":
-      return c.readiness_met < c.readiness_total
-        ? `Readiness ${c.readiness_met}/${c.readiness_total}. Resolve the remaining checks, then complete.`
-        : "Readiness is complete. Complete the case to close it.";
-    case "completed":
-      return c.outcome === "completed_with_exceptions"
-        ? "Completed with recorded exceptions."
-        : "Completed.";
-    case "cancelled":
-      return "Cancelled. No ownership was changed.";
-  }
-}
-
-export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/cases/[caseId]">) {
-  const { workspaceId, caseId } = await params;
-  const [detail, activity, people, teams, members, responsibilities, knowledge] = await Promise.all(
-    [
-      attempt(api.getCase(workspaceId, caseId)),
-      attempt(api.caseActivity(workspaceId, caseId)),
-      attempt(api.listPeople(workspaceId)),
-      attempt(api.listTeams(workspaceId)),
-      attempt(api.members(workspaceId)),
-      attempt(api.listResponsibilities(workspaceId)),
-      attempt(api.caseKnowledge(workspaceId, caseId)),
-    ],
-  );
+export default async function CasePage({
+  params,
+  searchParams,
+}: PageProps<"/w/[workspaceId]/cases/[caseId]">) {
+  const [{ workspaceId, caseId }, query] = await Promise.all([params, searchParams]);
+  const tab: CaseTab = isTab(query.tab) ? query.tab : "overview";
+  // Each tab loads only what it shows.
+  const needs = {
+    people: tab === "overview" || tab === "people",
+    members: ["overview", "tasks", "people", "activity"].includes(tab),
+  };
+  const [detail, people, teams, members, responsibilities] = await Promise.all([
+    attempt(api.getCase(workspaceId, caseId)),
+    needs.people ? attempt(api.listPeople(workspaceId)) : null,
+    tab === "overview" ? attempt(api.listTeams(workspaceId)) : null,
+    needs.members ? attempt(api.members(workspaceId)) : null,
+    tab === "overview" ? attempt(api.listResponsibilities(workspaceId)) : null,
+  ]);
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
-  if (!activity.ok) return <ApiErrorNotice error={activity.error} />;
-  if (!people.ok) return <ApiErrorNotice error={people.error} />;
-  if (!teams.ok) return <ApiErrorNotice error={teams.error} />;
-  if (!members.ok) return <ApiErrorNotice error={members.error} />;
-  if (!responsibilities.ok) return <ApiErrorNotice error={responsibilities.error} />;
-
+  for (const r of [people, teams, members, responsibilities]) {
+    if (r && !r.ok) return <ApiErrorNotice error={r.error} />;
+  }
   const c = detail.data;
+  const ctx = { workspaceId, caseId, detail: c };
   const can = (action: CaseDetail["allowed_actions"][number]) => c.allowed_actions.includes(action);
   const command = (name: "submit" | "execute" | "complete" | "cancel") =>
     caseCommandAction.bind(null, workspaceId, caseId, name);
-  const reached = STEPS.findIndex((s) => s.status === c.status);
-  const ctx = { workspaceId, caseId, detail: c };
-  const briefing =
-    c.case_type === "coverage" && (c.status === "executing" || c.status === "completed")
-      ? await attempt(api.caseBriefing(workspaceId, caseId))
-      : null;
-  const mentionable = members.data
-    .filter((m) => m.status === "active")
-    .map((m) => ({ user_id: m.user_id, name: m.name }));
+  const memberList = members?.ok ? members.data : [];
+  const openBlockers = c.blockers.filter((b) => !b.resolved_at).length;
+  const sodOnComplete =
+    c.critical &&
+    can("complete") &&
+    c.approvals.some((a) => a.current && a.decision === "approved");
 
   return (
     <div className="flex flex-1 flex-col">
@@ -112,7 +103,7 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
                 </SubmitButton>
               </ActionForm>
             ) : null}
-            {can("complete") ? (
+            {can("complete") && !sodOnComplete ? (
               <ActionForm action={command("complete")}>
                 <SubmitButton size="sm" pendingLabel="Completing…">
                   {c.case_type === "coverage" && c.ends_at && new Date(c.ends_at) > new Date()
@@ -125,130 +116,188 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
         }
       />
       <EmergencyBanner detail={c} />
-      <div className="border-b px-6 py-3">
-        <ol className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs" aria-label="Progress">
-          {STEPS.map((step, i) => {
-            const done = c.status === "completed" || (reached >= 0 && i < reached);
-            const current = i === reached && c.status !== "completed";
-            return (
-              <li
-                key={step.status}
-                className={cn(
-                  "flex items-center gap-2",
-                  !done && !current && "text-muted-foreground",
-                )}
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    "grid size-5 place-items-center rounded-full border text-[10px] font-medium",
-                    done && "bg-foreground text-background border-foreground",
-                    current && "border-foreground",
-                  )}
-                >
-                  {done ? "✓" : i + 1}
-                </span>
-                <span className={current ? "font-medium" : undefined}>{step.label}</span>
-              </li>
-            );
-          })}
-        </ol>
-        <p className="text-muted-foreground mt-2 text-sm" role="status">
+      <div className="flex flex-col gap-2 px-6 pt-3">
+        <CaseProgress detail={c} />
+        <p className="text-muted-foreground text-sm" role="status">
           {nextStep(c)}
         </p>
         <Blockers detail={c} />
-        {briefing?.ok ? (
-          <p className="mt-2 text-sm">
-            <Link
-              href={`/w/${workspaceId}/cases/${caseId}/briefing`}
-              className="font-medium underline-offset-2 hover:underline"
-            >
-              {c.status === "completed"
-                ? "Open the return briefing →"
-                : "Review the return briefing before cover ends →"}
-            </Link>
-          </p>
-        ) : null}
-        <nav aria-label="Case intelligence" className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {[
-            ["analysis", "Analysis"],
-            ["interview", "Interview"],
-            ["capsules", "Handover capsules"],
-          ].map(([path, label]) => (
-            <Link
-              key={path}
-              href={`/w/${workspaceId}/cases/${caseId}/${path}`}
-              className="font-medium underline-offset-2 hover:underline"
-            >
-              {label} →
-            </Link>
-          ))}
-        </nav>
       </div>
+      <CaseTabs
+        workspaceId={workspaceId}
+        caseId={caseId}
+        current={tab}
+        counts={{
+          tasks: c.tasks.filter((t) => t.status === "open").length,
+          overview: openBlockers,
+          approvals: c.status === "planning" || c.status === "awaiting_review" ? 1 : 0,
+        }}
+      />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-8">
-          <OwnershipPlan workspaceId={workspaceId} detail={c} />
-          <ScopeSection
-            {...ctx}
-            people={people.data}
-            teams={teams.data}
-            responsibilities={responsibilities.data}
-          />
-          <TasksSection {...ctx} members={members.data} />
-          <ReadinessSection {...ctx} />
-          {knowledge.ok ? (
-            <KnowledgeHandover
-              workspaceId={workspaceId}
-              caseId={caseId}
-              entries={knowledge.data}
-              canRecord={c.allowed_actions.includes("add_task")}
-            />
+          {tab === "overview" ? (
+            <>
+              <DuplicateNotice detail={c} workspaceId={workspaceId} />
+              <DeclinePanel {...ctx} />
+              <StatusControls {...ctx} />
+              {sodOnComplete ? (
+                <ActionForm action={command("complete")} className="rounded-lg border p-4 text-sm">
+                  <p className="font-medium">Verify and complete</p>
+                  <p className="text-muted-foreground text-xs">
+                    This case includes critical responsibilities: the verifier should be someone who
+                    neither started nor approved it. If that isn&apos;t possible, record why.
+                  </p>
+                  <input
+                    name="sod_exception_reason"
+                    maxLength={4000}
+                    placeholder="Exception reason (only if you started or approved this case)"
+                    aria-label="Separation-of-duties exception"
+                    className={inputClass}
+                  />
+                  <SubmitButton size="sm" pendingLabel="Completing…">
+                    Complete case
+                  </SubmitButton>
+                </ActionForm>
+              ) : null}
+              <BlockersPanel {...ctx} members={memberList} />
+              <OwnershipPlan workspaceId={workspaceId} detail={c} />
+              <ScopeSection
+                {...ctx}
+                people={people?.ok ? people.data : []}
+                teams={teams?.ok ? teams.data : []}
+                responsibilities={responsibilities?.ok ? responsibilities.data : []}
+              />
+              <SplitPanel {...ctx} />
+            </>
           ) : null}
-          {briefing?.ok ? <BriefingSection briefing={briefing.data} /> : null}
-          <ActivityPanel
-            activity={activity.data}
-            composer={
-              c.allowed_actions.includes("comment") ? (
-                <CommentComposer
-                  action={addCommentAction.bind(null, workspaceId, caseId)}
-                  members={mentionable}
-                />
-              ) : undefined
-            }
-          />
+          {tab === "impact" ? <ImpactTab {...ctx} /> : null}
+          {tab === "knowledge" ? <KnowledgeTab {...ctx} /> : null}
+          {tab === "tasks" ? (
+            <>
+              <TasksSection {...ctx} members={memberList} />
+              <ReadinessSection {...ctx} />
+            </>
+          ) : null}
+          {tab === "people" ? (
+            <PeopleTab {...ctx} members={memberList} people={people?.ok ? people.data : []} />
+          ) : null}
+          {tab === "approvals" ? <ApprovalPanel {...ctx} /> : null}
+          {tab === "activity" ? (
+            <>
+              <StatusHistory detail={c} />
+              <ActivityTab {...ctx} members={memberList} />
+            </>
+          ) : null}
         </div>
         <aside className="flex flex-col gap-6">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
-            <dt className="text-muted-foreground">Case type</dt>
-            <dd>{CASE_TYPES[c.case_type].label}</dd>
-            {c.affected_person_name ? (
-              <>
-                <dt className="text-muted-foreground">Person</dt>
-                <dd>{c.affected_person_name}</dd>
-              </>
-            ) : null}
-            <dt className="text-muted-foreground">
-              {c.case_type === "coverage" ? "From" : "Effective"}
-            </dt>
-            <dd>{formatDateTime(c.starts_at)}</dd>
-            {c.ends_at ? (
-              <>
-                <dt className="text-muted-foreground">Until</dt>
-                <dd>{formatDateTime(c.ends_at)}</dd>
-              </>
-            ) : null}
-            <dt className="text-muted-foreground">Coordinator</dt>
-            <dd>{c.coordinator_name ?? "—"}</dd>
-            <dt className="text-muted-foreground">Plan version</dt>
-            <dd className="tabular-nums">v{c.plan_version}</dd>
-          </dl>
+          <CaseFacts detail={c} workspaceId={workspaceId} />
           {c.reason ? (
             <p className="text-muted-foreground text-sm whitespace-pre-line">{c.reason}</p>
           ) : null}
-          <ApprovalPanel {...ctx} />
-          <EmergencyControl {...ctx} />
+          {tab === "overview" ? (
+            <>
+              <CaseDetailsForm {...ctx} members={memberList} />
+              <EmergencyControl {...ctx} />
+            </>
+          ) : null}
+          {tab !== "approvals" && (can("decide") || c.approval_due_at) ? (
+            <p className="text-sm">
+              <Link
+                href={`/w/${workspaceId}/cases/${caseId}?tab=approvals`}
+                className="font-medium underline-offset-2 hover:underline"
+              >
+                {can("decide") ? "Review the plan for approval →" : "Approvals →"}
+              </Link>
+            </p>
+          ) : null}
         </aside>
       </div>
     </div>
+  );
+}
+
+type Ctx = { workspaceId: string; caseId: string; detail: CaseDetail };
+
+async function ImpactTab({ workspaceId, caseId }: Ctx) {
+  const impact = await attempt(api.caseImpact(workspaceId, caseId));
+  if (!impact.ok) return <ApiErrorNotice error={impact.error} />;
+  return <ImpactPanel workspaceId={workspaceId} impact={impact.data} />;
+}
+
+async function KnowledgeTab({ workspaceId, caseId, detail: c }: Ctx) {
+  const knowledge = await attempt(api.caseKnowledge(workspaceId, caseId));
+  if (!knowledge.ok) return <ApiErrorNotice error={knowledge.error} />;
+  const briefing =
+    c.case_type === "coverage" && (c.status === "executing" || c.status === "completed")
+      ? await attempt(api.caseBriefing(workspaceId, caseId))
+      : null;
+  return (
+    <>
+      <KnowledgeHandover
+        workspaceId={workspaceId}
+        caseId={caseId}
+        entries={knowledge.data}
+        canRecord={c.allowed_actions.includes("add_task")}
+      />
+      {briefing?.ok ? <BriefingSection briefing={briefing.data} /> : null}
+      <p className="text-muted-foreground text-sm">
+        Gaps only the person handing over can fill go in the{" "}
+        <Link
+          href={`/w/${workspaceId}/cases/${caseId}/interview`}
+          className="text-foreground font-medium underline-offset-2 hover:underline"
+        >
+          interview
+        </Link>
+        ; the recipient&apos;s view of everything is the{" "}
+        <Link
+          href={`/w/${workspaceId}/cases/${caseId}/capsules`}
+          className="text-foreground font-medium underline-offset-2 hover:underline"
+        >
+          handover capsule
+        </Link>
+        .
+      </p>
+    </>
+  );
+}
+
+async function PeopleTab({
+  members,
+  people,
+  ...ctx
+}: Ctx & {
+  members: Awaited<ReturnType<typeof api.members>>;
+  people: Awaited<ReturnType<typeof api.listPeople>>;
+}) {
+  const participants = await attempt(api.caseParticipants(ctx.workspaceId, ctx.caseId));
+  if (!participants.ok) return <ApiErrorNotice error={participants.error} />;
+  return (
+    <PeoplePanel {...ctx} participants={participants.data} members={members} people={people} />
+  );
+}
+
+async function ActivityTab({
+  workspaceId,
+  caseId,
+  detail: c,
+  members,
+}: Ctx & { members: Awaited<ReturnType<typeof api.members>> }) {
+  const activity = await attempt(api.caseActivity(workspaceId, caseId));
+  if (!activity.ok) return <ApiErrorNotice error={activity.error} />;
+  const mentionable = members
+    .filter((m) => m.status === "active")
+    .map((m) => ({ user_id: m.user_id, name: m.name }));
+  return (
+    <ActivityPanel
+      activity={activity.data}
+      composer={
+        c.allowed_actions.includes("comment") ? (
+          <CommentComposer
+            action={addCommentAction.bind(null, workspaceId, caseId)}
+            members={mentionable}
+          />
+        ) : undefined
+      }
+    />
   );
 }

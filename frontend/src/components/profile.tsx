@@ -10,10 +10,16 @@ import {
   RoleBadge,
   SeverityBadge,
 } from "@/components/ui/badge";
-import type { CaseStatus, ProfileRef, ProfileView, Role } from "@/lib/types";
+import type { CaseStatus, CaseType, ProfileRef, ProfileView, Role } from "@/lib/types";
 
 const KIND_LABEL = { person: "Person", team: "Team", department: "Department" } as const;
-const CASE_TYPE = { transfer: "Transfer", coverage: "Temporary coverage", departure: "Departure" };
+const CASE_TYPE: Record<CaseType, string> = {
+  transfer: "Transfer",
+  coverage: "Temporary coverage",
+  departure: "Departure",
+  onboarding: "Onboarding",
+  project_handover: "Project handover",
+};
 
 function RefList({
   refs,

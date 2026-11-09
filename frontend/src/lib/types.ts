@@ -146,8 +146,21 @@ export type OverviewView = {
   recent_changes: RecentChangeView[];
 };
 
-export type CaseType = "transfer" | "coverage" | "departure";
-export type CaseStatus = "draft" | "planning" | "executing" | "completed" | "cancelled";
+export type CaseType = "transfer" | "coverage" | "departure" | "onboarding" | "project_handover";
+export type CaseStatus =
+  | "draft"
+  | "investigating"
+  | "awaiting_input"
+  | "planning"
+  | "awaiting_review"
+  | "ready_for_transfer"
+  | "executing"
+  | "verification"
+  | "blocked"
+  | "reopened"
+  | "completed"
+  | "cancelled";
+export type CasePriority = "low" | "normal" | "high" | "urgent";
 
 export type CaseSummary = {
   id: string;
@@ -164,6 +177,10 @@ export type CaseSummary = {
   emergency: boolean;
   emergency_reason: string | null;
   updated_at: string;
+  priority: CasePriority;
+  due_at: string | null;
+  overdue: boolean;
+  parent_case_id: string | null;
 };
 
 export type RecipientView = { type: "person" | "team"; id: string; name: string };
@@ -179,6 +196,9 @@ export type ScopeItemView = {
   handover_notes: string | null;
   exception_reason: string | null;
   state: "planned" | "applied" | "excepted";
+  decline_reason: string | null;
+  declined_at: string | null;
+  can_decline: boolean;
 };
 
 export type TaskView = {
@@ -229,7 +249,58 @@ export type CaseAction =
   | "add_task"
   | "add_criterion"
   | "set_emergency"
+  | "add_blocker"
+  | "update"
+  | "transition"
+  | "reopen"
+  | "split"
   | "comment";
+
+export type BlockerView = {
+  id: string;
+  description: string;
+  owner_user_id: string | null;
+  owner_name: string | null;
+  escalate_at: string;
+  escalation_due: boolean;
+  escalated_at: string | null;
+  resolution: string | null;
+  resolved_by_name: string | null;
+  resolved_at: string | null;
+  created_by_name: string | null;
+  created_at: string;
+};
+
+export type StatusChangeView = {
+  from_status: CaseStatus | null;
+  to_status: CaseStatus;
+  reason: string | null;
+  outcome: string | null;
+  closed_at: string | null;
+  actor_name: string | null;
+  changed_at: string;
+};
+
+export type CaseLink = { id: string; title: string; case_type: CaseType; status: CaseStatus };
+
+export type ParticipantView = {
+  key: string;
+  kind: "user" | "person";
+  subject_id: string;
+  name: string;
+  roles: string[];
+  why: string[];
+  participant_ids: string[];
+};
+
+export type SavedPage = "cases" | "responsibilities" | "assets" | "knowledge";
+export type SavedViewView = {
+  id: string;
+  page: SavedPage;
+  name: string;
+  query: string;
+  created_at: string;
+};
 
 export type CaseDetail = CaseSummary & {
   reason: string | null;
@@ -247,6 +318,24 @@ export type CaseDetail = CaseSummary & {
   tasks: TaskView[];
   criteria: CriterionView[];
   approvals: ApprovalView[];
+  time_zone: string;
+  accountable_manager_user_id: string | null;
+  accountable_manager_name: string | null;
+  delegate_approver_user_id: string | null;
+  delegate_approver_name: string | null;
+  approval_due_at: string | null;
+  approval_overdue: boolean;
+  project_asset_id: string | null;
+  project_asset_name: string | null;
+  reopen_count: number;
+  blocked_from: CaseStatus | null;
+  duplicate_override_reason: string | null;
+  transitions: CaseStatus[];
+  blockers: BlockerView[];
+  status_history: StatusChangeView[];
+  duplicates: CaseLink[];
+  parent: CaseLink | null;
+  children: CaseLink[];
 };
 
 export type HistoryView = {
@@ -1135,3 +1224,25 @@ export type AiAdminView = {
   tokens_this_month: number;
   capabilities: CapabilityView[];
 };
+
+export type SourceStatus = {
+  source: "GitHub" | "Linear" | "Notion";
+  state: "connected" | "partial" | "not_connected";
+};
+
+export type ImpactItem = {
+  scope_item_id: string;
+  responsibility_id: string;
+  responsibility_name: string;
+  criticality: Criticality;
+  role: Role;
+  current_owner_name: string | null;
+  recipient_name: string | null;
+  state: ScopeItemView["state"];
+  assets: { id: string; name: string; asset_type: string; status: string }[];
+  evidence: ResponsibilityContextView["evidence"];
+  risks: ResponsibilityContextView["risks"];
+  knowledge: { total: number; stale: number };
+};
+
+export type ImpactView = { items: ImpactItem[]; sources: SourceStatus[] };

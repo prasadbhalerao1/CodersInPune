@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, status
 
-from relay.continuity import briefing, collaboration, workflow
+from relay.continuity import briefing, collaboration, impact, workflow
 from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
@@ -236,3 +236,8 @@ async def save_view(
 @router.delete("/saved-views/{view_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_view(access: CurrentWorkspace, view_id: uuid.UUID) -> None:
     await workflow.delete_view(access, view_id)
+
+
+@router.get("/cases/{case_id}/impact")
+async def case_impact(access: CurrentWorkspace, case_id: uuid.UUID) -> impact.ImpactView:
+    return await impact.case_impact(access, case_id)

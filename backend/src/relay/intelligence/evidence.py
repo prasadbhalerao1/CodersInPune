@@ -20,6 +20,7 @@ from sqlalchemy import and_, or_, select
 from relay.catalog import knowledge as catalog_knowledge
 from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
 from relay.continuity import service as continuity
+from relay.continuity.impact import source_status
 from relay.continuity.models import (
     CaseApproval,
     CaseComment,
@@ -30,9 +31,9 @@ from relay.continuity.models import (
 )
 from relay.directory.models import Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
-from relay.integrations.github.models import GitHubInstallation, GitHubRepository, GitHubWorkItem
-from relay.integrations.linear.models import LinearConnection, LinearIssue, LinearProject
-from relay.integrations.notion.models import NotionConnection, NotionPage
+from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
+from relay.integrations.linear.models import LinearIssue, LinearProject
+from relay.integrations.notion.models import NotionPage
 from relay.policy.permissions import Permission, visible
 
 EXCERPT_LIMIT = 1200
@@ -394,16 +395,7 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
 
 async def _partial_sources(access: WorkspaceAccess) -> list[str]:
     """Connected tools whose last sync failed or that lost access: evidence may be missing."""
-    session, partial = access.session, []
-    for label, model in (
-        ("GitHub", GitHubInstallation),
-        ("Linear", LinearConnection),
-        ("Notion", NotionConnection),
-    ):
-        rows = (await session.execute(select(model.status, model.last_sync_status))).all()
-        if any(status != "active" or sync in ("error", "partial") for status, sync in rows):
-            partial.append(label)
-    return partial
+    return [s.source for s in await source_status(access) if s.state == "partial"]
 
 
 _ENVELOPE = re.compile(r"</?\s*evidence[^>]*>", re.IGNORECASE)

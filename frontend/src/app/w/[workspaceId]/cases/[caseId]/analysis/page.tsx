@@ -4,6 +4,7 @@ import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
 import { ClaimBadge, ConfidenceNote, EvidenceList, RunSummary } from "@/components/ai";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { PendingRows } from "@/components/run-progress";
 import { EmptyState, formatDateTime, Section } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
@@ -199,7 +200,7 @@ export default async function AnalysisPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <AutoRefresh active={active} />
+      <AutoRefresh active={active} every={1500} />
       <CaseAiHeader
         workspaceId={workspaceId}
         caseId={caseId}
@@ -252,6 +253,9 @@ export default async function AnalysisPage({
             />
           )}
 
+          {active && a.claims.length === 0 ? (
+            <PendingRows rows={4} label="Findings are being prepared" />
+          ) : null}
           <ClaimGroup
             title="Conflicts"
             description="Sources that disagree. A person needs to decide which is right."

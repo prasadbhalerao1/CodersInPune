@@ -4,6 +4,7 @@ import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
 import { EvidenceList, RunSummary } from "@/components/ai";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { PendingRows } from "@/components/run-progress";
 import { EmptyState, formatDateTime } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
@@ -136,7 +137,7 @@ export default async function InterviewPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <AutoRefresh active={active} />
+      <AutoRefresh active={active} every={1500} />
       <CaseAiHeader
         workspaceId={workspaceId}
         caseId={caseId}
@@ -162,7 +163,9 @@ export default async function InterviewPage({
             <RunSummary run={i.run} />
           </div>
         ) : null}
-        {i.questions.length === 0 ? (
+        {active && i.questions.length === 0 ? (
+          <PendingRows rows={3} label="Questions are being prepared" />
+        ) : i.questions.length === 0 ? (
           <EmptyState
             title="No questions yet"
             description={

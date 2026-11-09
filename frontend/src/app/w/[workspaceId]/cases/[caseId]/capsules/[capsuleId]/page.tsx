@@ -5,6 +5,7 @@ import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
 import { ClaimBadge, ConfidenceNote, EvidenceList } from "@/components/ai";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { PendingRows } from "@/components/run-progress";
 import { formatDateTime, PageHeader, Section } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
@@ -82,7 +83,7 @@ export default async function CapsulePage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <AutoRefresh active={c.generating} every={4000} />
+      <AutoRefresh active={c.generating} every={2000} />
       <PageHeader
         title={
           <span className="flex items-center gap-2">
@@ -137,9 +138,17 @@ export default async function CapsulePage({
               </p>
             ) : null}
             {c.generating ? (
-              <p role="status" className="text-muted-foreground text-xs">
-                An AI-written draft is being prepared; it will appear as a new version.
-              </p>
+              <div className="mt-2 flex flex-col gap-2">
+                <p role="status" className="flex items-center gap-2 text-sm">
+                  <span
+                    aria-hidden
+                    className="border-muted-foreground/30 border-t-foreground inline-block size-3.5 animate-spin rounded-full border-2"
+                  />
+                  Writing an AI draft from the cited evidence. It appears here as a new version; the
+                  rule-based version below stays usable meanwhile.
+                </p>
+                <PendingRows rows={2} label="AI draft in progress" />
+              </div>
             ) : null}
             {c.summary ? <p className="mt-1 text-base">{c.summary}</p> : null}
           </div>

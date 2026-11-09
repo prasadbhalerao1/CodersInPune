@@ -33,7 +33,7 @@ export function Section({
   children,
   aside,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string;
   children: ReactNode;
   aside?: ReactNode;

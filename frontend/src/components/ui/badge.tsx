@@ -64,8 +64,15 @@ export function RoleBadge({ value }: { value: Role }) {
 
 const STATUS: Record<CaseStatus, { label: string; tone: Tone; dot: string }> = {
   draft: { label: "Draft", tone: "muted", dot: "bg-muted-foreground/50" },
+  investigating: { label: "Investigating", tone: "muted", dot: "bg-muted-foreground/70" },
+  awaiting_input: { label: "Awaiting input", tone: "warning", dot: "bg-amber-500" },
+  reopened: { label: "Reopened", tone: "neutral", dot: "bg-muted-foreground/70" },
   planning: { label: "Planning", tone: "neutral", dot: "bg-amber-500" },
-  executing: { label: "In progress", tone: "neutral", dot: "bg-sky-600" },
+  awaiting_review: { label: "Awaiting review", tone: "neutral", dot: "bg-amber-500" },
+  ready_for_transfer: { label: "Ready for transfer", tone: "neutral", dot: "bg-sky-600" },
+  executing: { label: "Executing", tone: "neutral", dot: "bg-sky-600" },
+  verification: { label: "Verification", tone: "neutral", dot: "bg-sky-600" },
+  blocked: { label: "Blocked", tone: "danger", dot: "bg-red-600" },
   completed: { label: "Completed", tone: "neutral", dot: "bg-emerald-600" },
   cancelled: { label: "Cancelled", tone: "muted", dot: "bg-muted-foreground/40" },
 };

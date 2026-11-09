@@ -34,6 +34,10 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  ImpactView,
+  ParticipantView,
+  SavedPage,
+  SavedViewView,
   AssetSummary,
   AuditEventView,
   BriefingView,
@@ -195,6 +199,12 @@ export const api = {
     relayFetch<CaseSummary[]>(withQuery(`${ws(id)}/cases`, query)),
   getCase: (id: string, caseId: string) =>
     relayFetch<CaseDetail>(`${ws(id)}/cases/${encodeURIComponent(caseId)}`),
+  caseImpact: (id: string, caseId: string) =>
+    relayFetch<ImpactView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/impact`),
+  caseParticipants: (id: string, caseId: string) =>
+    relayFetch<ParticipantView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/participants`),
+  savedViews: (id: string, page: SavedPage) =>
+    relayFetch<SavedViewView[]>(withQuery(`${ws(id)}/saved-views`, { page })),
   caseHistory: (id: string, caseId: string) =>
     relayFetch<HistoryView[]>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/history`),
   caseActivity: (id: string, caseId: string) =>
