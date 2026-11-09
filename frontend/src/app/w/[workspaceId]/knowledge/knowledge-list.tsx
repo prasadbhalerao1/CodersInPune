@@ -56,6 +56,7 @@ export function KnowledgeList({
             ) : (
               <span className="font-medium">{k.title}</span>
             )}
+            {k.origin === "notion" ? <Badge tone="muted">From Notion</Badge> : null}
             {k.visibility === "managers" ? <Badge tone="neutral">Managers only</Badge> : null}
             <span className="flex-1" />
             <FreshnessBadge item={k} />
@@ -67,7 +68,8 @@ export function KnowledgeList({
           ) : null}
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span>
-              By {k.author_name} · {formatDateTime(k.created_at)}
+              {k.origin === "notion" ? "Synced from Notion, mapped by " : "By "}
+              {k.author_name} · {formatDateTime(k.created_at)}
               {k.last_reviewed_by_name ? ` · last reviewed by ${k.last_reviewed_by_name}` : ""}
             </span>
             {showResponsibility ? (
@@ -86,7 +88,7 @@ export function KnowledgeList({
                 </SubmitButton>
               </ActionForm>
             ) : null}
-            {k.can_edit ? (
+            {k.can_edit && k.origin === "person" ? (
               <ActionForm action={archiveKnowledgeAction.bind(null, workspaceId, k.id)}>
                 <SubmitButton size="sm" variant="ghost" pendingLabel="…">
                   Archive

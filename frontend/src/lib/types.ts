@@ -555,8 +555,8 @@ export type KnowledgeView = {
   body: string | null;
   url: string | null;
   visibility: "workspace" | "managers";
-  origin: "person";
-  status: "active" | "archived";
+  origin: "person" | "notion";
+  status: "active" | "archived" | "withdrawn";
   author_name: string;
   created_at: string;
   updated_at: string;
@@ -665,4 +665,35 @@ export type LinearSignalView = {
   project_url: string;
   responsibility_id: string | null;
   evidence: { label: string; url: string }[];
+};
+
+export type NotionConnectionView = {
+  id: string;
+  workspace_name: string;
+  status: "active" | "revoked" | "disconnected";
+  last_synced_at: string | null;
+  last_sync_status: "never" | "queued" | "ok" | "partial" | "error";
+  last_sync_error: string | null;
+  next_reconcile_at: string | null;
+};
+
+export type NotionSourceView = {
+  id: string;
+  kind: "page" | "database";
+  title: string;
+  url: string;
+  last_edited_at: string | null;
+  removed: boolean;
+  responsibility_id: string | null;
+  responsibility_name: string | null;
+  visibility: "workspace" | "managers" | null;
+  imported_pages: number;
+  withdrawn_pages: number;
+  last_imported_at: string | null;
+};
+
+export type NotionIntegrationView = {
+  configured: boolean;
+  connections: NotionConnectionView[];
+  sources: NotionSourceView[];
 };

@@ -8,6 +8,7 @@ import type {
   LinearIdentityView,
   LinearIntegrationView,
   LinearSignalView,
+  NotionIntegrationView,
   EmailStatusView,
   PreferenceView,
   CaseKnowledgeItemView,
@@ -143,6 +144,7 @@ export const api = {
   linear: (id: string) => relayFetch<LinearIntegrationView>(`${ws(id)}/integrations/linear`),
   linearIdentities: (id: string) =>
     relayFetch<LinearIdentityView[]>(`${ws(id)}/integrations/linear/identities`),
+  notion: (id: string) => relayFetch<NotionIntegrationView>(`${ws(id)}/integrations/notion`),
   linearSignals: (id: string) =>
     relayFetch<LinearSignalView[]>(`${ws(id)}/integrations/linear/signals`),
   githubSuggestions: (id: string, status = "open") =>
