@@ -12,7 +12,7 @@
 
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -32,8 +32,9 @@ class ClaimDraft(BaseModel):
     evidence: list[str] = Field(
         default_factory=list, description="Evidence refs like E3 that support this claim."
     )
-    when: datetime | None = Field(
-        default=None, description="When a decision was made or a question arose, if known."
+    # A plain string: some providers reject `date-time` formats in output schemas.
+    when: str | None = Field(
+        default=None, description="ISO date (YYYY-MM-DD) of a decision or question, if known."
     )
 
 
@@ -52,6 +53,16 @@ class ValidClaim:
 class Outcome:
     claims: list[ValidClaim] = field(default_factory=list)
     rejected: Counter[str] = field(default_factory=Counter)
+
+
+def _parse_when(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip())
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def audience_of(pool: Pool, refs: list[str]) -> str:
@@ -96,7 +107,8 @@ def validate_claims(pool: Pool, drafts: list[ClaimDraft]) -> Outcome:
                 confidence=d.confidence if refs else "insufficient",
                 audience=audience_of(pool, refs),
                 refs=refs,
-                timeline_at=d.when or (latest if d.kind in ("decision", "question") else None),
+                timeline_at=_parse_when(d.when)
+                or (latest if d.kind in ("decision", "question") else None),
             )
         )
     return out

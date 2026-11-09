@@ -226,7 +226,7 @@ async def _store(
     asked_raw = run.checkpoint.get("asked_user_id")
     asked = uuid.UUID(asked_raw) if asked_raw else None
     added = rejected = 0
-    for q in output.questions:
+    for q in output.questions[: caps.MAX_QUESTIONS]:
         refs = valid_refs(pool, q.evidence)
         if refs is None:
             rejected += 1

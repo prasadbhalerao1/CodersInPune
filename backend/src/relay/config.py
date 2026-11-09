@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     gemini_key_2: SecretStr | None = None
     gemini_key_3: SecretStr | None = None
     gemini_key_4: SecretStr | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"
     groq_api_key: SecretStr | None = None
     groq_model: str = "llama-3.3-70b-versatile"
     ollama_url: str = "http://127.0.0.1:11434/v1"

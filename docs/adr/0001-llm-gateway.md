@@ -12,7 +12,9 @@ deterministic model for CI. D6 already fixes PydanticAI as the agent library beh
 ## Decision
 - `relay.intelligence.llm.Gateway` implements `LLMPort` over PydanticAI. Providers are tried
   in the order of `RELAY_LLM_PROVIDERS` (`gemini`, `groq`, `ollama`; `fake` for local/test).
-- Gemini keys are `RELAY_GEMINI_KEY_1` … `RELAY_GEMINI_KEY_4`. A key that returns a quota or
+- Gemini keys are `RELAY_GEMINI_KEY_1` … `RELAY_GEMINI_KEY_4`; default model `gemini-3.5-flash-lite`
+  (fast enough for the step time limits; `RELAY_GEMINI_MODEL` overrides). Output schemas avoid
+  `maxItems` and `date-time` formats, which Gemini rejects; sizes are capped in code. A key that returns a quota or
   rate-limit error (429) cools down for 60 s and the next key is tried; an auth failure cools
   it for an hour; 5xx/connection errors move on; any other 4xx stops (it would fail anywhere).
   When every key is cooling down, the next provider is tried.

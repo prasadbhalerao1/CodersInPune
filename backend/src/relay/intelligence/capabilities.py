@@ -26,6 +26,10 @@ Rules you must follow:
 """
 
 
+# List sizes are capped in code, not in the schema: some providers reject `maxItems`.
+MAX_CLAIMS, MAX_PROPOSALS, MAX_QUESTIONS, MAX_SECTIONS, MAX_POINTS = 40, 15, 12, 8, 20
+
+
 class ProposalDraft(BaseModel):
     type: Literal[
         "knowledge_draft",
@@ -42,8 +46,8 @@ class ProposalDraft(BaseModel):
 
 
 class AnalysisOutput(BaseModel):
-    claims: list[ClaimDraft] = Field(default_factory=list, max_length=40)
-    proposals: list[ProposalDraft] = Field(default_factory=list, max_length=15)
+    claims: list[ClaimDraft] = Field(default_factory=list)
+    proposals: list[ProposalDraft] = Field(default_factory=list)
 
 
 class QuestionDraft(BaseModel):
@@ -56,17 +60,17 @@ class QuestionDraft(BaseModel):
 
 
 class InterviewOutput(BaseModel):
-    questions: list[QuestionDraft] = Field(default_factory=list, max_length=12)
+    questions: list[QuestionDraft] = Field(default_factory=list)
 
 
 class CapsuleSection(BaseModel):
     heading: str = Field(max_length=120)
-    points: list[ClaimDraft] = Field(default_factory=list, max_length=20)
+    points: list[ClaimDraft] = Field(default_factory=list)
 
 
 class CapsuleOutput(BaseModel):
     summary: str = Field(max_length=1200, description="Two to four sentences for the recipient.")
-    sections: list[CapsuleSection] = Field(default_factory=list, max_length=8)
+    sections: list[CapsuleSection] = Field(default_factory=list)
 
 
 FOCUS: dict[str, str] = {

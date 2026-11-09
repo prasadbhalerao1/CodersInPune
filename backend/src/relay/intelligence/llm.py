@@ -10,6 +10,7 @@ can never change anything: its output is validated and becomes claims or proposa
 """
 
 import asyncio
+import os
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -32,6 +33,9 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import UsageLimits
 
 from relay.config import Settings
+
+# Relay logs no prompts; keep PydanticAI's console banner out of API and worker logs.
+os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
 # USD per million tokens (input, output). Unknown models cost 0 (reported, not enforced).
 PRICES: dict[str, tuple[Decimal, Decimal]] = {

@@ -383,8 +383,8 @@ async def _store(
     if capsule is None or capsule.status != "draft":
         return {"skipped": 1}  # approved meanwhile: never replace approved content silently
     sections, kept, rejected = [], 0, 0
-    for s in output.sections:
-        outcome = validate_claims(pool, s.points)
+    for s in output.sections[: caps.MAX_SECTIONS]:
+        outcome = validate_claims(pool, s.points[: caps.MAX_POINTS])
         rejected += sum(outcome.rejected.values())
         points = [
             {

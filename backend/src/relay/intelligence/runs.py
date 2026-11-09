@@ -441,9 +441,11 @@ async def _store_analysis(
     pool: Pool,
     ids: dict[str, uuid.UUID],
 ) -> dict[str, int]:
-    outcome = validate_claims(pool, output.claims)
+    outcome = validate_claims(pool, output.claims[: caps.MAX_CLAIMS])
     store_claims(session, run, name, outcome.claims, ids)
-    counts = await store_proposals(session, run, name, output.proposals, pool, ids)
+    counts = await store_proposals(
+        session, run, name, output.proposals[: caps.MAX_PROPOSALS], pool, ids
+    )
     if outcome.rejected.get("unknown_citation"):
         run.checkpoint = {**run.checkpoint, "suspicious": True}
     return {
