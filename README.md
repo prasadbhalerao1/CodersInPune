@@ -2,6 +2,12 @@
 
 Organisational continuity platform. Planning docs: `docs/blueprint/`. Conventions: `CLAUDE.md`.
 
+## Deploying
+
+Production runs as one Docker Compose stack (Postgres, migrations, API, worker, web):
+see [deploy/README.md](deploy/README.md) and the variable reference in
+[deploy/.env.production.example](deploy/.env.production.example).
+
 ## Prerequisites
 
 Docker (with Compose), [uv](https://docs.astral.sh/uv/), Node.js 22+ and pnpm 10.
@@ -84,5 +90,15 @@ cd frontend && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
 
 Backend tests need the compose database running. They rebuild the `relay_test` schema from
 migrations (downgrade to base, then upgrade to head) and run as the restricted `relay_app` role.
+
+End-to-end tests (Playwright) run against a production build (`pnpm build && pnpm start`,
+with the API and worker running):
+
+```bash
+cd frontend
+pnpm exec playwright test --project=public   # CI-safe, no account needed
+pnpm e2e:login                                # once: sign in with real Chrome, saves e2e/.auth
+pnpm exec playwright test --project=smoke     # real WorkOS account journeys
+```
 
 To reset the local database completely: `docker compose down -v`.
