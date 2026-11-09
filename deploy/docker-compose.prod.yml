@@ -1,0 +1,91 @@
+# Relay production stack (single host). See deploy/README.md.
+#
+#   cp deploy/.env.production.example deploy/.env.production   # fill in, never commit
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.production up -d --build
+#
+# Order: db (healthy) -> migrate (runs to completion) -> api + worker -> web.
+# Put a TLS-terminating reverse proxy (Caddy, nginx, a load balancer) in front of `web`.
+# Only `web` is published; the API is reachable from the web container only.
+name: relay
+
+x-backend: &backend
+  build: ../backend
+  image: relay-backend:${RELAY_VERSION:-latest}
+  restart: unless-stopped
+  env_file: .env.production
+  environment:
+    RELAY_DATABASE_URL: postgresql+psycopg://relay_app:${RELAY_APP_DB_PASSWORD}@db:5432/relay
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: postgres
+      RELAY_OWNER_DB_PASSWORD: ${RELAY_OWNER_DB_PASSWORD:?set RELAY_OWNER_DB_PASSWORD}
+      RELAY_APP_DB_PASSWORD: ${RELAY_APP_DB_PASSWORD:?set RELAY_APP_DB_PASSWORD}
+    volumes:
+      - relay-db:/var/lib/postgresql
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d relay"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 60s
+
+  migrate:
+    build: ../backend
+    image: relay-backend:${RELAY_VERSION:-latest}
+    env_file: .env.production
+    environment:
+      RELAY_DATABASE_URL: postgresql+psycopg://relay_app:${RELAY_APP_DB_PASSWORD}@db:5432/relay
+      RELAY_MIGRATION_DATABASE_URL: postgresql+psycopg://relay_owner:${RELAY_OWNER_DB_PASSWORD}@db:5432/relay
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    command: ["relay-api"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    stop_grace_period: 30s
+
+  worker:
+    <<: *backend
+    command: ["relay-worker"]
+    healthcheck:
+      disable: true
+    # Must exceed RELAY_WORKER_SHUTDOWN_SECONDS so running jobs can finish.
+    stop_grace_period: 45s
+
+  web:
+    build:
+      context: ../frontend
+      args:
+        NEXT_PUBLIC_WORKOS_REDIRECT_URI: ${NEXT_PUBLIC_WORKOS_REDIRECT_URI:?set NEXT_PUBLIC_WORKOS_REDIRECT_URI}
+    image: relay-web:${RELAY_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      RELAY_API_URL: http://api:8000
+    ports:
+      - "${RELAY_WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  relay-db:

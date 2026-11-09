@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -72,6 +72,50 @@ class Settings(BaseSettings):
     notion_page_limit: int = Field(default=500, ge=1, le=5000)
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
+    worker_shutdown_seconds: float = Field(default=30.0, ge=0, le=600)
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value: Any) -> Any:
+        # `RELAY_X=` (as in .env.example) means "not configured", not an empty secret.
+        return None if value == "" else value
+
+    @model_validator(mode="after")
+    def _deployable(self) -> Settings:
+        """Fail fast on misconfiguration instead of half-working in production.
+
+        Partial integration configuration is an error in every environment (it would show
+        as "configured" and then fail at runtime); staging and production also require
+        HTTPS links, the WorkOS API key and a non-local database.
+        """
+        problems: list[str] = []
+        pairs = {
+            "Linear": (self.linear_client_id, self.linear_client_secret),
+            "Notion": (self.notion_client_id, self.notion_client_secret),
+        }
+        for name, (client_id, secret) in pairs.items():
+            if bool(client_id) != bool(secret):
+                problems.append(f"{name}: set both the client ID and the client secret")
+        if self.resend_api_key and not self.email_from:
+            problems.append("Email: RELAY_EMAIL_FROM is required when RELAY_RESEND_API_KEY is set")
+        github = (self.github_app_id, self.github_private_key, self.github_client_secret)
+        if any(github) and not all(github):
+            problems.append(
+                "GitHub: set RELAY_GITHUB_APP_ID, RELAY_GITHUB_PRIVATE_KEY and "
+                "RELAY_GITHUB_CLIENT_SECRET together"
+            )
+        if self.environment in ("staging", "production"):
+            if not self.frontend_base_url.startswith("https://"):
+                problems.append("RELAY_FRONTEND_BASE_URL must use https:// outside local/test")
+            if self.workos_api_key is None:
+                problems.append("RELAY_WORKOS_API_KEY is required outside local/test")
+            if any(pair[0] for pair in pairs.values()) and not self.integration_encryption_key:
+                problems.append(
+                    "RELAY_INTEGRATION_ENCRYPTION_KEY is required when Linear or Notion is set"
+                )
+        if problems:
+            raise ValueError("Invalid Relay configuration: " + "; ".join(problems))
+        return self
 
     @property
     def resolved_workos_issuer(self) -> str:

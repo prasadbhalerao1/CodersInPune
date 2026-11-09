@@ -20,7 +20,13 @@ async def run() -> None:
     jobs = create_job_app(settings, create_session_factory(engine), ctx)
     try:
         async with jobs.open_async():
-            await jobs.run_worker_async(concurrency=settings.worker_concurrency)
+            # SIGTERM/SIGINT stop fetching new jobs; running jobs get the grace period,
+            # after which they are cancelled and retried by the outbox (idempotent handlers).
+            await jobs.run_worker_async(
+                concurrency=settings.worker_concurrency,
+                shutdown_graceful_timeout=settings.worker_shutdown_seconds,
+                install_signal_handlers=True,
+            )
     finally:
         await http.aclose()
         await engine.dispose()

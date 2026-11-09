@@ -15,7 +15,13 @@ from relay.config import Settings
 def main() -> None:
     settings = Settings()
     config = uvicorn.Config(
-        "relay.app:create_app", factory=True, host=settings.api_host, port=settings.api_port
+        "relay.app:create_app",
+        factory=True,
+        host=settings.api_host,
+        port=settings.api_port,
+        # SIGTERM: stop accepting connections, let in-flight requests finish.
+        timeout_graceful_shutdown=20,
+        server_header=False,
     )
     server = uvicorn.Server(config)
     loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
