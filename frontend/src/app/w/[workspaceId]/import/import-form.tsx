@@ -176,7 +176,7 @@ export function ImportForm({ workspaceId }: { workspaceId: string }) {
               are never changed and existing owners are never replaced.
             </p>
           ) : null}
-          <div className="overflow-hidden rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-left text-xs">
                 <tr>

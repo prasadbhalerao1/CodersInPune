@@ -140,30 +140,32 @@ function Rule({
           <summary className="text-muted-foreground hover:text-foreground cursor-pointer select-none">
             Execution history ({rule.runs.length})
           </summary>
-          <table className="mt-2 w-full text-left">
-            <thead className="text-muted-foreground">
-              <tr>
-                <th className="py-1 font-normal">Started</th>
-                <th className="py-1 font-normal">Trigger</th>
-                <th className="py-1 font-normal">Result</th>
-                <th className="py-1 text-right font-normal">Matched</th>
-                <th className="py-1 text-right font-normal">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rule.runs.map((run) => (
-                <tr key={run.id} className="border-t">
-                  <td className="py-1">{formatDateTime(run.started_at)}</td>
-                  <td className="py-1 capitalize">{run.trigger}</td>
-                  <td className={cn("py-1", run.status === "failed" && "text-red-700")}>
-                    {run.status === "ok" ? "OK" : "Failed"}
-                  </td>
-                  <td className="py-1 text-right tabular-nums">{run.matched}</td>
-                  <td className="py-1 text-right tabular-nums">{run.actions}</td>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="text-muted-foreground">
+                <tr>
+                  <th className="py-1 font-normal">Started</th>
+                  <th className="py-1 font-normal">Trigger</th>
+                  <th className="py-1 font-normal">Result</th>
+                  <th className="py-1 text-right font-normal">Matched</th>
+                  <th className="py-1 text-right font-normal">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rule.runs.map((run) => (
+                  <tr key={run.id} className="border-t">
+                    <td className="py-1">{formatDateTime(run.started_at)}</td>
+                    <td className="py-1 capitalize">{run.trigger}</td>
+                    <td className={cn("py-1", run.status === "failed" && "text-red-700")}>
+                      {run.status === "ok" ? "OK" : "Failed"}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">{run.matched}</td>
+                    <td className="py-1 text-right tabular-nums">{run.actions}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </details>
       ) : null}
     </li>
