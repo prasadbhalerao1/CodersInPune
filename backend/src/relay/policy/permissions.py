@@ -41,6 +41,10 @@ class Permission(StrEnum):
     INSIGHTS_READ = "insights.read"
     POLICY_MANAGE = "policy.manage"
     AUTOMATION_MANAGE = "automation.manage"
+    AI_READ = "ai.read"
+    AI_RUN = "ai.run"
+    AI_REVIEW = "ai.review"
+    AI_ADMIN = "ai.admin"
 
 
 # Granted to any verified identity, independent of workspace membership.
@@ -67,14 +71,22 @@ _MANAGE: Final = frozenset(
         Permission.INTEGRATION_MANAGE,
         Permission.POLICY_MANAGE,
         Permission.AUTOMATION_MANAGE,
+        Permission.AI_RUN,
+        Permission.AI_REVIEW,
+        Permission.AI_ADMIN,
     }
 )
 
 ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
-    "owner": _READ | _MANAGE | {Permission.AUDIT_READ, Permission.INSIGHTS_READ},
-    "admin": _READ | _MANAGE | {Permission.AUDIT_READ, Permission.INSIGHTS_READ},
-    "auditor": _READ | {Permission.AUDIT_READ, Permission.INSIGHTS_READ},
-    "member": _READ | {Permission.CASE_COMMENT, Permission.KNOWLEDGE_WRITE},
+    "owner": _READ
+    | _MANAGE
+    | {Permission.AUDIT_READ, Permission.INSIGHTS_READ, Permission.AI_READ},
+    "admin": _READ
+    | _MANAGE
+    | {Permission.AUDIT_READ, Permission.INSIGHTS_READ, Permission.AI_READ},
+    "auditor": _READ | {Permission.AUDIT_READ, Permission.INSIGHTS_READ, Permission.AI_READ},
+    # Members read AI output limited to workspace-audience evidence (D2).
+    "member": _READ | {Permission.CASE_COMMENT, Permission.KNOWLEDGE_WRITE, Permission.AI_READ},
     "guest": _READ,
 }
 
