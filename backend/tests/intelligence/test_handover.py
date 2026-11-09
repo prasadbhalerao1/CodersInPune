@@ -44,7 +44,7 @@ def link_member_to_affected_person(ws: Ws) -> None:
 
 async def member_id(ws: Ws) -> str:
     members = await ws.call("GET", "/members")
-    return next(m["user_id"] for m in members if m["role"] == "member")
+    return str(next(m["user_id"] for m in members if m["role"] == "member"))
 
 
 async def test_interview_capsule_approval_and_acknowledgement(
