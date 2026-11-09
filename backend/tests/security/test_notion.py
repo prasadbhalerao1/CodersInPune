@@ -326,3 +326,41 @@ async def test_preview_shows_what_mapping_would_import(api: Api, ws: Ws, ext: Fa
     await Ws(api, ws.id, "user_member").call(
         "GET", f"/integrations/notion/sources/{found['Procedures']['id']}/preview", 403
     )
+
+
+async def test_expiring_notion_tokens_are_refreshed_not_reported_revoked(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    ext.notion_expires_in = 60  # inside the refresh margin
+    await connect(api, ws, ext)
+    assert any(t.endswith("+r") for t in ext.notion_tokens)  # refreshed before syncing
+    [connection] = (await ws.call("GET", "/integrations/notion"))["connections"]
+    assert (connection["status"], connection["last_sync_status"]) == ("active", "ok")
+
+    ext.notion_expires_in = 86400  # next refresh grants a long-lived token
+    await ws.call("POST", f"/integrations/notion/connections/{connection['id']}/sync", 202)
+    await run(api, ws.id)  # still near expiry: refreshed up front once more
+
+    ext.notion_tokens.clear()  # access token rejected early; refresh token still valid
+    await ws.call("POST", f"/integrations/notion/connections/{connection['id']}/sync", 202)
+    await run(api, ws.id)  # 401 -> refresh -> requeued with the new token
+    with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
+        requeued = conn.execute(
+            "SELECT id FROM platform.outbox_event WHERE processed_at IS NULL "
+            "AND payload->>'after_refresh' = 'true'"
+        ).fetchall()
+    assert requeued
+    ctx = outbox.JobContext(
+        http=api.app.state.http, settings=api.app.state.settings, jobs=api.app.state.jobs
+    )
+    for (event_id,) in requeued:
+        await outbox.process(api.app.state.session_factory, ws.id, event_id, ctx)
+    [after] = (await ws.call("GET", "/integrations/notion"))["connections"]
+    assert (after["status"], after["last_sync_status"]) == ("active", "ok")
+
+    ext.notion_tokens.clear()
+    ext.notion_refresh.clear()  # revoked in Notion: the refresh fails too
+    await ws.call("POST", f"/integrations/notion/connections/{connection['id']}/sync", 202)
+    await run(api, ws.id)
+    [revoked] = (await ws.call("GET", "/integrations/notion"))["connections"]
+    assert revoked["status"] == "revoked"
