@@ -43,10 +43,7 @@ test("add people and a responsibility with an owner, and see the risk", async ({
 
   await page.goto(`${base}/responsibilities/new`);
   await page.getByLabel("Name").fill(names.duty);
-  await page
-    .getByRole("button", { name: /create|save/i })
-    .first()
-    .click();
+  await page.getByRole("button", { name: "Create responsibility", exact: true }).click();
   await page.waitForURL(/\/responsibilities\/[0-9a-f-]{36}$/);
 
   const assign = page
@@ -116,6 +113,80 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await expect(row).toContainText(names.joining);
 });
 
+test("temporary coverage: plan, cover, briefing, early return", async ({ page }) => {
+  const local = (d: Date) =>
+    new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  await page.goto(`${base}/cases/new?type=coverage`);
+  await page.getByLabel("Title").fill(`Leave ${stamp}`);
+  await page.getByLabel("Who is away").selectOption({ label: names.joining });
+  await page.locator("#starts").fill(local(new Date(Date.now() - 60_000)));
+  await page.locator("#ends").fill(local(new Date(Date.now() + 7 * 86_400_000)));
+  await submitAndSettle(page, "Create case");
+  await page.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
+  const caseUrl = page.url();
+
+  // The ownership plan explains who owns it now and what happens during and after cover.
+  const plan = page
+    .getByRole("region", { name: "Ownership plan" })
+    .or(page.locator("section").filter({ hasText: "Ownership plan" }));
+  await expect(plan.first()).toContainText("Nobody covers yet");
+  await page.getByLabel("Covered by", { exact: true }).selectOption({ label: names.leaving });
+  await submitAndSettle(page, "Save");
+  await expect(plan.first()).toContainText("back in charge");
+
+  await submitAndSettle(page, "Submit for approval");
+  await page.getByRole("button", { name: /^Approve v\d+$/ }).click();
+  await page.waitForLoadState("networkidle");
+  await submitAndSettle(page, "Execute handover");
+  await expect(plan.first()).toContainText("covering until");
+
+  await page.getByRole("link", { name: /review the return briefing/i }).click();
+  await page.waitForURL(/\/briefing$/);
+  await expect(page.getByText("Cover is still running").first()).toBeVisible();
+  await expect(page.getByText("What was covered").first()).toBeVisible();
+  await expect(page.getByText(names.duty).first()).toBeVisible();
+
+  await page.goto(caseUrl);
+  const checks = page.getByLabel(/^Status for /);
+  await expect(checks.first()).toBeVisible();
+  for (let i = 0; i < (await checks.count()); i++) {
+    const form = page.locator("form").filter({ has: checks.nth(i) });
+    await checks.nth(i).selectOption("met");
+    await form.getByRole("button", { name: "Set" }).click();
+    await page.waitForLoadState("networkidle");
+  }
+  await page.getByRole("button", { name: "End coverage early" }).click();
+  await expect(page.getByRole("status").first()).toContainText("Completed", { timeout: 15_000 });
+  await page.goto(`${base}/responsibilities`);
+  await expect(page.getByRole("row", { name: new RegExp(names.duty) })).toContainText(
+    names.joining,
+  );
+});
+
+test("command menu: search, open, and quick-create a person", async ({ page }) => {
+  await page.goto(base);
+  await page.waitForLoadState("networkidle"); // the shortcut is wired after hydration
+  await page.keyboard.press("Control+k");
+  const menu = page.getByRole("dialog", { name: "Search and commands" });
+  await expect(menu).toBeVisible();
+  await menu.getByRole("combobox").fill(names.duty.slice(0, 12));
+  // The responsibility and its risk both match; responsibilities are listed first.
+  await expect(menu.getByRole("option").first()).toContainText(names.duty);
+  await expect(menu.getByText("Risks", { exact: true })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await page.waitForURL(/\/responsibilities\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { name: names.duty })).toBeVisible();
+
+  await page.keyboard.press("Control+k");
+  await menu.getByRole("combobox").fill("add person");
+  await menu.getByRole("option", { name: "Add person" }).click();
+  await menu.getByLabel("Name").fill(`Quinn ${stamp}`);
+  await menu.getByRole("button", { name: "Create" }).click();
+  await page.waitForURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page.getByText(`Quinn ${stamp}`).first()).toBeVisible();
+  await expect(page.getByText("No ownership roles")).toBeVisible();
+});
+
 test("insights, automations, policies and integrations render for an owner", async ({ page }) => {
   await page.goto(`${base}/insights`);
   await expect(page.getByText("Continuity Debt").first()).toBeVisible();
@@ -149,10 +220,7 @@ test("catalogue: departments, teams and an unowned responsibility", async ({ pag
 
   await page.goto(`${base}/responsibilities/new`);
   await page.getByLabel("Name").fill(names.orphan);
-  await page
-    .getByRole("button", { name: /create|save/i })
-    .first()
-    .click();
+  await page.getByRole("button", { name: "Create responsibility", exact: true }).click();
   await page.waitForURL(/\/responsibilities\/[0-9a-f-]{36}$/);
   await page.goto(`${base}/responsibilities`);
   await expect(page.getByRole("row", { name: new RegExp(names.orphan) })).toBeVisible();
