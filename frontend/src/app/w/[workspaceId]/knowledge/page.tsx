@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
@@ -10,6 +11,8 @@ import { api, canManage } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
 
 import { AddKnowledgeForm, KnowledgeList } from "./knowledge-list";
+
+export const metadata: Metadata = { title: "Knowledge" };
 
 export default async function KnowledgePage({
   params,

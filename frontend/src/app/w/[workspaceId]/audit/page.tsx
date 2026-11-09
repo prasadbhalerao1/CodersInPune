@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
@@ -8,6 +9,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { AuditEventView } from "@/lib/types";
+
+export const metadata: Metadata = { title: "Audit log" };
 
 const CATEGORIES = [
   { value: "responsibility", label: "Responsibilities" },

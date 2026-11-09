@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
@@ -10,6 +11,8 @@ import { api, canManage } from "@/lib/relay-api";
 
 import { createAssetAction } from "./actions";
 import { ASSET_TYPE_LABEL, ASSET_TYPES } from "./labels";
+
+export const metadata: Metadata = { title: "Assets" };
 
 export default async function AssetsPage({
   params,

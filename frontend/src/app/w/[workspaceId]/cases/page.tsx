@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
@@ -9,6 +10,8 @@ import { api, canManage } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
 
 import { CASE_TYPES } from "./labels";
+
+export const metadata: Metadata = { title: "Continuity cases" };
 
 export default async function CasesPage({
   params,

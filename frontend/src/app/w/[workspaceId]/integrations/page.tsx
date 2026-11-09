@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, SubmitButton } from "@/components/action-form";
@@ -19,6 +20,8 @@ import {
   setRepositorySelectedAction,
   syncInstallationAction,
 } from "./actions";
+
+export const metadata: Metadata = { title: "Integrations" };
 
 const SYNC_LABEL: Record<
   InstallationView["last_sync_status"],

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
@@ -11,6 +12,8 @@ import { cn } from "@/lib/utils";
 
 import { SettingsNav } from "../settings/settings-nav";
 import { runAutomationAction, updateAutomationAction } from "./actions";
+
+export const metadata: Metadata = { title: "Automations" };
 
 const STATUS = {
   never: { label: "Not run yet", tone: "muted" },

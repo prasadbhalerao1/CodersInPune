@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/page";
@@ -16,6 +17,8 @@ import {
   linkProjectAction,
   syncLinearAction,
 } from "./actions";
+
+export const metadata: Metadata = { title: "Linear" };
 
 const SYNC: Record<string, { label: string; tone: "neutral" | "muted" | "warning" | "danger" }> = {
   never: { label: "Not synced", tone: "muted" },

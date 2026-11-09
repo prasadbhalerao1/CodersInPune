@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { formatDateTime, PageHeader, Section } from "@/components/page";
@@ -7,6 +8,8 @@ import { api, canManage } from "@/lib/relay-api";
 
 import { SettingsNav } from "../settings-nav";
 import { retryEmailAction, savePreferencesAction } from "./actions";
+
+export const metadata: Metadata = { title: "Notifications" };
 
 const ERROR_HELP: Record<string, string> = {
   timeout: "The provider didn't answer in time. Retrying usually works.",

@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Relay",
+  title: { default: "Relay", template: "%s · Relay" },
   description: "Organisational continuity platform",
 };
 

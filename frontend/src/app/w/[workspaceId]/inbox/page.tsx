@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, SubmitButton } from "@/components/action-form";
@@ -10,6 +11,8 @@ import type { NotificationView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { markAllReadAction, openNotificationAction } from "./actions";
+
+export const metadata: Metadata = { title: "Inbox" };
 
 const CASE_UPDATE: Record<string, string> = {
   approved: "approved the plan",

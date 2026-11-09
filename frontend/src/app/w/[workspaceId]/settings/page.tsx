@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { formatDateTime, PageHeader, Section } from "@/components/page";
@@ -7,6 +8,8 @@ import { cn } from "@/lib/utils";
 
 import { updatePolicyAction } from "../automations/actions";
 import { SettingsNav } from "./settings-nav";
+
+export const metadata: Metadata = { title: "Settings" };
 
 export default async function PoliciesPage({ params }: PageProps<"/w/[workspaceId]/settings">) {
   const { workspaceId } = await params;

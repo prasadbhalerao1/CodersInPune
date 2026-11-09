@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import {
@@ -16,6 +17,8 @@ import { cn } from "@/lib/utils";
 
 import { createCaseAction } from "../actions";
 import { CASE_TYPES } from "../labels";
+
+export const metadata: Metadata = { title: "New case" };
 
 const isCaseType = (value: unknown): value is CaseType =>
   typeof value === "string" && value in CASE_TYPES;

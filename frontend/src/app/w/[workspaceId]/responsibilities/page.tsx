@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
@@ -7,6 +8,8 @@ import { Badge, CriticalityBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
+
+export const metadata: Metadata = { title: "Responsibilities" };
 
 export default async function ResponsibilitiesPage({
   params,

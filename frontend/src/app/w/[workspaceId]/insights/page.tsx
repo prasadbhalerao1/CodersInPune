@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
@@ -8,6 +9,8 @@ import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { DebtItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Insights" };
 
 const CRITICALITY = ["critical", "high", "standard", "low"] as const;
 

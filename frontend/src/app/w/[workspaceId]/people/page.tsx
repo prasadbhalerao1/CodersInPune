@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
@@ -19,6 +20,8 @@ import {
   setDepartmentStatusAction,
   setPersonStatusAction,
 } from "../actions";
+
+export const metadata: Metadata = { title: "People & Teams" };
 
 function DepartmentSelect({
   departments,

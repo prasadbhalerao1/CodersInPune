@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
@@ -6,6 +7,8 @@ import { RiskStatusBadge, SeverityBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Risks" };
 
 const TABS = [
   { value: "active", label: "Open" },

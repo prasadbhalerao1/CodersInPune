@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { formatDateTime, PageHeader, Section } from "@/components/page";
@@ -7,6 +8,8 @@ import { api, canManage, isOwner } from "@/lib/relay-api";
 import type { WorkspaceRole } from "@/lib/types";
 
 import { inviteMemberAction, revokeInvitationAction, updateMemberAction } from "./actions";
+
+export const metadata: Metadata = { title: "Members" };
 
 const ROLES: { value: WorkspaceRole; label: string; hint: string }[] = [
   { value: "owner", label: "Owner", hint: "Everything, including other owners" },

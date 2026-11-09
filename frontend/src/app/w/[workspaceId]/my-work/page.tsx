@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, SubmitButton } from "@/components/action-form";
@@ -10,6 +11,8 @@ import type { CaseSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { completeFollowUpAction } from "../automations/actions";
+
+export const metadata: Metadata = { title: "My Work" };
 
 const FILTERS = [
   { key: "all", label: "All" },

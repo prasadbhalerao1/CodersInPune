@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
@@ -18,6 +19,8 @@ import {
   mapNotionSourceAction,
   syncNotionAction,
 } from "./actions";
+
+export const metadata: Metadata = { title: "Notion" };
 
 const SYNC: Record<string, { label: string; tone: "neutral" | "muted" | "warning" | "danger" }> = {
   never: { label: "Not synced", tone: "muted" },
