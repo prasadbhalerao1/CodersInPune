@@ -122,6 +122,9 @@ def _readable(access: WorkspaceAccess) -> ColumnElement[bool]:
     )
 
 
+readable = _readable  # shared with global search: one visibility rule
+
+
 async def _names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
     rows = await access.session.execute(
         select(Membership.user_id, Membership.display_name, Membership.email).where(

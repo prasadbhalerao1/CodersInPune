@@ -31,6 +31,7 @@ from relay.notifications import api as notifications_api
 from relay.platform import workspaces
 from relay.policy.permissions import PermissionDenied
 from relay.risks import api as risks_api
+from relay.search import api as search_api
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 from relay.shared.errors import api_error_response, register_error_handlers
 
@@ -113,4 +114,5 @@ def create_app(
     app.include_router(notion_api.callback)
     app.include_router(insights_api.router)
     app.include_router(automation_api.router)
+    app.include_router(search_api.router)
     return app

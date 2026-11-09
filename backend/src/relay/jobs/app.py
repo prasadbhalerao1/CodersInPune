@@ -57,14 +57,22 @@ def create_job_app(
         await relay.integrations.github.webhooks.reconcile(session_factory, app)
 
     @app.periodic(cron="*/5 * * * *")
-    @app.task(name="relay.retry_stalled_jobs", queueing_lock="retry_stalled_jobs")
-    async def retry_stalled_jobs(timestamp: int) -> None:
+    @app.task(
+        name="relay.retry_stalled_jobs", queueing_lock="retry_stalled_jobs", pass_context=True
+    )
+    async def retry_stalled_jobs(context: procrastinate.JobContext, timestamp: int) -> None:
         """A worker that died mid-job (crash, OOM, SIGKILL) leaves its job `doing` forever.
-        Requeue jobs whose worker stopped heartbeating; handlers are idempotent."""
+        Requeue jobs whose worker stopped heartbeating; handlers are idempotent.
+
+        Never the jobs of the worker running this task: after a long pause (e.g. the host
+        slept) its own heartbeat can look stale while it is very much alive. Procrastinate
+        prunes dead worker rows itself (`stalled_worker_timeout`)."""
+        own = context.job.worker_id
         stalled = await app.job_manager.get_stalled_jobs(seconds_since_heartbeat=STALLED_AFTER)
         for job in stalled:
+            if job.worker_id == own:
+                continue
             logger.warning("retrying stalled job %s (%s)", job.id, job.task_name)
             await app.job_manager.retry_job(job)
-        await app.job_manager.prune_stalled_workers(seconds_since_heartbeat=STALLED_AFTER)
 
     return app
