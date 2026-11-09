@@ -1,6 +1,6 @@
-"""Continuity cases: transfer, temporary coverage and light departure.
+"""Continuity cases: transfer, coverage, departure, onboarding and project handover.
 
-Lifecycle: draft -> planning -> executing -> completed | cancelled (backend-enforced).
+The status model and its allowed transitions live in `continuity.lifecycle`.
 `plan_version` increments whenever the reviewed scope or plan changes; an approval only
 counts for the version it was given against.
 """
@@ -26,8 +26,25 @@ from sqlalchemy.orm import Mapped, mapped_column
 from relay.shared.db.base import Base
 
 SCHEMA = "continuity"
-CASE_TYPES: Final = ("transfer", "coverage", "departure")
-STATUSES: Final = ("draft", "planning", "executing", "completed", "cancelled")
+CASE_TYPES: Final = ("transfer", "coverage", "departure", "onboarding", "project_handover")
+STATUSES: Final = (
+    "draft",
+    "investigating",
+    "awaiting_input",
+    "planning",
+    "awaiting_review",
+    "ready_for_transfer",
+    "executing",
+    "verification",
+    "blocked",
+    "reopened",
+    "completed",
+    "cancelled",
+)
+CLOSED: Final = ("completed", "cancelled")
+OPEN_STATUSES: Final = tuple(s for s in STATUSES if s not in CLOSED)
+PRIORITIES: Final = ("low", "normal", "high", "urgent")
+PARTICIPANT_ROLES: Final = ("approver", "verifier", "reviewer", "contributor", "observer")
 CRITERION_TYPES: Final = (
     "attestation",
     "task_completed",
@@ -55,6 +72,8 @@ class ContinuityCase(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
         _tenant_fk(["affected_person_id"], "directory.person", "fk_case_affected_person"),
+        _tenant_fk(["parent_case_id"], "continuity.continuity_case", "fk_case_parent_case"),
+        _tenant_fk(["project_asset_id"], "catalog.asset", "fk_case_project_asset"),
         CheckConstraint(_in("case_type", CASE_TYPES), name="case_type"),
         CheckConstraint(_in("status", STATUSES), name="status"),
         CheckConstraint(
@@ -65,10 +84,18 @@ class ContinuityCase(Base):
         CheckConstraint("(case_type = 'coverage') = (ends_at IS NOT NULL)", name="coverage_end"),
         CheckConstraint("ends_at IS NULL OR ends_at > starts_at", name="range"),
         CheckConstraint(
-            "case_type = 'transfer' OR affected_person_id IS NOT NULL", name="affected_person"
+            "case_type IN ('transfer', 'project_handover') OR affected_person_id IS NOT NULL",
+            name="affected_person",
         ),
         CheckConstraint("NOT emergency OR emergency_reason IS NOT NULL", name="emergency_reason"),
+        CheckConstraint(_in("priority", PRIORITIES), name="priority"),
+        CheckConstraint("(status = 'blocked') = (blocked_from IS NOT NULL)", name="blocked_from"),
+        CheckConstraint(
+            "case_type = 'project_handover' OR project_asset_id IS NULL", name="project_asset"
+        ),
+        CheckConstraint("char_length(time_zone) BETWEEN 1 AND 64", name="time_zone_length"),
         Index(None, "tenant_id", "status"),
+        Index(None, "tenant_id", "affected_person_id"),
         {"schema": SCHEMA},
     )
 
@@ -90,6 +117,17 @@ class ContinuityCase(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    priority: Mapped[str] = mapped_column(Text, server_default="normal")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    time_zone: Mapped[str] = mapped_column(Text, server_default="UTC")
+    accountable_manager_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    delegate_approver_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    approval_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    parent_case_id: Mapped[uuid.UUID | None]
+    project_asset_id: Mapped[uuid.UUID | None]
+    duplicate_override_reason: Mapped[str | None] = mapped_column(Text)
+    reopen_count: Mapped[int] = mapped_column(server_default="0")
+    blocked_from: Mapped[str | None] = mapped_column(Text)
 
 
 class CaseScopeItem(Base):
@@ -135,6 +173,9 @@ class CaseScopeItem(Base):
     exception_reason: Mapped[str | None] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text, server_default="planned")
     applied_assignment_id: Mapped[uuid.UUID | None]
+    declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    declined_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    decline_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -289,3 +330,78 @@ class CaseKnowledge(Base):
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class CaseStatusChange(Base):
+    """Append-only status history. A closure that is later reopened keeps its outcome here."""
+
+    __tablename__ = "case_status_change"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_status_change_case"),
+        CheckConstraint(_in("to_status", STATUSES), name="to_status"),
+        Index(None, "tenant_id", "case_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    case_id: Mapped[uuid.UUID]
+    from_status: Mapped[str | None] = mapped_column(Text)
+    to_status: Mapped[str] = mapped_column(Text)
+    reason: Mapped[str | None] = mapped_column(Text)
+    outcome: Mapped[str | None] = mapped_column(Text)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CaseParticipant(Base):
+    """Someone involved in a case beyond the roles the case itself records, and why."""
+
+    __tablename__ = "case_participant"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_participant_case"),
+        _tenant_fk(["person_id"], "directory.person", "fk_case_participant_person"),
+        CheckConstraint(_in("role", PARTICIPANT_ROLES), name="role"),
+        CheckConstraint("num_nonnulls(user_id, person_id) = 1", name="one_subject"),
+        CheckConstraint("char_length(why) BETWEEN 1 AND 500", name="why_length"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    case_id: Mapped[uuid.UUID]
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    person_id: Mapped[uuid.UUID | None]
+    role: Mapped[str] = mapped_column(Text)
+    why: Mapped[str] = mapped_column(Text)
+    added_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CaseBlocker(Base):
+    __tablename__ = "case_blocker"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_blocker_case"),
+        CheckConstraint("char_length(description) BETWEEN 1 AND 1000", name="description_length"),
+        CheckConstraint("(resolved_at IS NULL) = (resolution IS NULL)", name="resolution"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    case_id: Mapped[uuid.UUID]
+    description: Mapped[str] = mapped_column(Text)
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    escalate_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolution: Mapped[str | None] = mapped_column(Text)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

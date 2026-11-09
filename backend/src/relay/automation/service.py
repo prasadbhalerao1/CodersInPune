@@ -35,7 +35,7 @@ from relay.automation.models import (
 )
 from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
 from relay.catalog.service import active_at
-from relay.continuity.models import CaseTask, ContinuityCase
+from relay.continuity.models import OPEN_STATUSES, CaseTask, ContinuityCase
 from relay.directory.models import Person, Team
 from relay.governance import service as governance
 from relay.identity.models import Membership
@@ -53,7 +53,7 @@ EVERY = timedelta(days=1)
 NOTIFY_WINDOW = timedelta(days=7)
 COVER_ENDING = timedelta(days=3)
 ACCEPTANCE_EXPIRING = timedelta(days=7)
-OPEN_CASES = ("draft", "planning", "executing")
+OPEN_CASES = OPEN_STATUSES
 Template = Literal[
     "critical_without_backup",
     "no_primary_owner",

@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from relay.catalog import service as catalog
-from relay.continuity.models import CaseScopeItem, ContinuityCase
+from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, ContinuityCase
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations.github.models import GitHubRepository, GitHubWorkItem, OwnershipSuggestion
 from relay.integrations.linear.models import LinearIssue, LinearProject
@@ -26,7 +26,7 @@ from relay.integrations.notion.models import NotionPage, NotionSource
 from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.risks.models import RiskRecord
 
-OPEN_CASES = ("draft", "planning", "executing")
+OPEN_CASES = OPEN_STATUSES
 RECENT = timedelta(days=30)
 
 

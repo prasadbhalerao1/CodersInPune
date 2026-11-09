@@ -1,9 +1,9 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
-from relay.continuity import briefing, collaboration
+from relay.continuity import briefing, collaboration, workflow
 from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
@@ -19,14 +19,14 @@ async def my_work(access: CurrentWorkspace) -> svc.MyWorkView:
 
 @router.get("/cases")
 async def list_cases(
-    access: CurrentWorkspace, status: Literal["open", "closed"] | None = None
+    access: CurrentWorkspace, filters: Annotated[svc.CaseFilter, Query()]
 ) -> list[svc.CaseSummary]:
-    return await svc.list_cases(access, status=status)
+    return await svc.list_cases(access, filters=filters)
 
 
 @router.post("/cases", status_code=status.HTTP_201_CREATED)
-async def create_case(access: CurrentWorkspace, body: svc.CaseIn) -> Detail:
-    return await svc.create_case(access, body)
+async def create_case(access: CurrentWorkspace, body: svc.CaseIn, jobs: Jobs) -> Detail:
+    return await svc.create_case(access, body, jobs)
 
 
 @router.get("/cases/{case_id}")
@@ -35,8 +35,10 @@ async def get_case(access: CurrentWorkspace, case_id: uuid.UUID) -> Detail:
 
 
 @router.patch("/cases/{case_id}")
-async def update_case(access: CurrentWorkspace, case_id: uuid.UUID, body: svc.CaseUpdate) -> Detail:
-    return await svc.update_case(access, case_id, body)
+async def update_case(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: svc.CaseUpdate, jobs: Jobs
+) -> Detail:
+    return await svc.update_case(access, case_id, body, jobs)
 
 
 @router.get("/cases/{case_id}/history")
@@ -84,8 +86,10 @@ async def extend(access: CurrentWorkspace, case_id: uuid.UUID, body: svc.ExtendI
 
 
 @router.post("/cases/{case_id}/complete")
-async def complete(access: CurrentWorkspace, case_id: uuid.UUID, jobs: Jobs) -> Detail:
-    return await svc.complete_case(access, case_id, jobs)
+async def complete(
+    access: CurrentWorkspace, case_id: uuid.UUID, jobs: Jobs, body: svc.CompleteIn | None = None
+) -> Detail:
+    return await svc.complete_case(access, case_id, jobs, body)
 
 
 @router.post("/cases/{case_id}/cancel")
@@ -145,3 +149,90 @@ async def add_comment(
 @router.get("/cases/{case_id}/briefing")
 async def return_briefing(access: CurrentWorkspace, case_id: uuid.UUID) -> briefing.BriefingView:
     return await briefing.return_briefing(access, case_id)
+
+
+@router.post("/cases/{case_id}/transition")
+async def transition(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: workflow.TransitionIn
+) -> Detail:
+    return await workflow.transition(access, case_id, body)
+
+
+@router.post("/cases/{case_id}/reopen")
+async def reopen(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: workflow.ReasonIn, jobs: Jobs
+) -> Detail:
+    return await workflow.reopen(access, case_id, body, jobs)
+
+
+@router.post("/cases/{case_id}/blockers", status_code=status.HTTP_201_CREATED)
+async def add_blocker(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: workflow.BlockerIn, jobs: Jobs
+) -> Detail:
+    return await workflow.add_blocker(access, case_id, body, jobs)
+
+
+@router.post("/cases/{case_id}/blockers/{blocker_id}/resolve")
+async def resolve_blocker(
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    blocker_id: uuid.UUID,
+    body: workflow.ResolveBlockerIn,
+) -> Detail:
+    return await workflow.resolve_blocker(access, case_id, blocker_id, body)
+
+
+@router.post("/cases/{case_id}/scope/{item_id}/decline")
+async def decline(
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    item_id: uuid.UUID,
+    body: workflow.ReasonIn,
+    jobs: Jobs,
+) -> Detail:
+    return await workflow.decline(access, case_id, item_id, body, jobs)
+
+
+@router.post("/cases/{case_id}/split")
+async def split(access: CurrentWorkspace, case_id: uuid.UUID, body: list[uuid.UUID]) -> Detail:
+    return await workflow.split(access, case_id, body)
+
+
+@router.get("/cases/{case_id}/participants")
+async def participants(
+    access: CurrentWorkspace, case_id: uuid.UUID
+) -> list[workflow.ParticipantView]:
+    return await workflow.participants(access, case_id)
+
+
+@router.post("/cases/{case_id}/participants", status_code=status.HTTP_201_CREATED)
+async def add_participant(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: workflow.ParticipantIn
+) -> list[workflow.ParticipantView]:
+    return await workflow.add_participant(access, case_id, body)
+
+
+@router.delete("/cases/{case_id}/participants/{participant_id}")
+async def remove_participant(
+    access: CurrentWorkspace, case_id: uuid.UUID, participant_id: uuid.UUID
+) -> list[workflow.ParticipantView]:
+    return await workflow.remove_participant(access, case_id, participant_id)
+
+
+@router.get("/saved-views")
+async def saved_views(
+    access: CurrentWorkspace, page: Literal["cases", "responsibilities", "assets", "knowledge"]
+) -> list[workflow.SavedViewView]:
+    return await workflow.saved_views(access, page)
+
+
+@router.post("/saved-views", status_code=status.HTTP_201_CREATED)
+async def save_view(
+    access: CurrentWorkspace, body: workflow.SavedViewIn
+) -> list[workflow.SavedViewView]:
+    return await workflow.save_view(access, body)
+
+
+@router.delete("/saved-views/{view_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_view(access: CurrentWorkspace, view_id: uuid.UUID) -> None:
+    await workflow.delete_view(access, view_id)

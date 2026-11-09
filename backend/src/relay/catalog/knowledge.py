@@ -17,7 +17,7 @@ from sqlalchemy import ColumnElement, and_, case, func, select, true
 
 from relay.catalog import service as catalog
 from relay.catalog.models import KnowledgeItem, Responsibility
-from relay.continuity.models import CaseKnowledge, CaseScopeItem, ContinuityCase
+from relay.continuity.models import OPEN_STATUSES, CaseKnowledge, CaseScopeItem, ContinuityCase
 from relay.governance import service as governance
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
@@ -454,7 +454,7 @@ async def record_handover(
     )
     if case is None:
         raise ApiError(404, "case_not_found", "Case not found.")
-    if case.status not in ("draft", "planning", "executing"):
+    if case.status not in OPEN_STATUSES:
         raise ApiError(409, "invalid_state", "The case is closed.")
     in_scope = await access.session.scalar(
         select(CaseScopeItem.id).where(

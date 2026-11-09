@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Text,
     UniqueConstraint,
     func,
     text,
@@ -37,3 +38,27 @@ class WorkspacePolicy(Base):
     knowledge_review_days: Mapped[int] = mapped_column(Integer, server_default="90")
     updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SavedView(Base):
+    """A person's named filter for a list page; `query` is the page's URL query string."""
+
+    __tablename__ = "saved_view"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "user_id", "page", "name"),
+        CheckConstraint(
+            "page IN ('cases', 'responsibilities', 'assets', 'knowledge')", name="page"
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
+        CheckConstraint("char_length(query) <= 1000", name="query_length"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    page: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    query: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

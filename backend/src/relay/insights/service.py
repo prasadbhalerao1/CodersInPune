@@ -20,7 +20,7 @@ from sqlalchemy import or_, select
 
 from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
 from relay.catalog.service import active_at
-from relay.continuity.models import CaseTask, ContinuityCase
+from relay.continuity.models import OPEN_STATUSES, CaseTask, ContinuityCase
 from relay.directory.models import Department, Person, Team
 from relay.governance import service as governance
 from relay.identity.workspace_access import WorkspaceAccess
@@ -243,7 +243,7 @@ async def insights(
     )
     if department_people is not None:
         cases = [c for c in cases if c.affected_person_id in department_people]
-    open_cases = [c for c in cases if c.status in ("draft", "planning", "executing")]
+    open_cases = [c for c in cases if c.status in OPEN_STATUSES]
     overdue_cases = [c for c in open_cases if c.ends_at is not None and c.ends_at < now]
     closed = [
         c for c in cases if c.closed_at is not None and c.closed_at >= now - timedelta(days=90)

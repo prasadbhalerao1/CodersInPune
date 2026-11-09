@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 
 from relay.catalog.models import OwnershipAssignment, Responsibility
-from relay.continuity.models import CaseScopeItem, ContinuityCase
+from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, ContinuityCase
 from relay.directory.models import Department, Person, Team, TeamMember
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations.github.models import GitHubIdentity
@@ -23,7 +23,7 @@ from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.risks.models import RiskRecord
 from relay.shared.errors import ApiError
 
-OPEN_CASES = ("draft", "planning", "executing")
+OPEN_CASES = OPEN_STATUSES
 
 
 class Ref(BaseModel):

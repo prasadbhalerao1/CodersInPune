@@ -11,7 +11,7 @@ invitation emails only), and notification content is never put in emails or meta
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import procrastinate
@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.catalog.models import Responsibility
-from relay.continuity.models import CaseTask, ContinuityCase
+from relay.continuity.models import OPEN_STATUSES, CaseBlocker, CaseTask, ContinuityCase
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.jobs import outbox
@@ -86,6 +86,7 @@ async def request(
     detail: str | None = None,
     schedule_at: datetime | None = None,
     due_at: datetime | None = None,
+    deadline: str | None = None,
 ) -> None:
     payload: dict[str, Any] = {
         "kind": kind,
@@ -97,6 +98,7 @@ async def request(
         "actor_user_id": str(actor_user_id) if actor_user_id else None,
         "detail": detail,
         "due_at": due_at.isoformat() if due_at else None,
+        "deadline": deadline,
     }
     await outbox.emit(
         session,
@@ -146,6 +148,93 @@ async def request_task_notifications(
     )
 
 
+# Case deadlines a reminder can be about: the case column and what the reminder says.
+CASE_DEADLINES = {
+    "approval_due_at": "approval_due",
+    "due_at": "case_due",
+    "ends_at": "coverage_ending",
+}
+
+
+async def request_case_deadlines(
+    session: AsyncSession, jobs: procrastinate.App, case: ContinuityCase, actor_user_id: uuid.UUID
+) -> None:
+    """(Re)schedule reminders for the case's deadlines. Each is keyed by the deadline value,
+    so after a change the reminders for the old value find it changed and do nothing."""
+    people = [
+        u for u in (case.coordinator_user_id, case.accountable_manager_user_id) if u is not None
+    ]
+    now = datetime.now(UTC)
+    for column, detail in CASE_DEADLINES.items():
+        due: datetime | None = getattr(case, column)
+        if due is None or due <= now:
+            continue
+        approvals = column == "approval_due_at"
+        await request(
+            session,
+            jobs,
+            tenant_id=case.tenant_id,
+            kind="case_update",
+            case_id=case.id,
+            recipients=[
+                *people,
+                *(
+                    [case.delegate_approver_user_id]
+                    if approvals and case.delegate_approver_user_id
+                    else []
+                ),
+            ],
+            audience="approvers" if approvals else None,
+            actor_user_id=actor_user_id,
+            detail=detail,
+            dedupe=f"{detail}:{case.id}:{due.isoformat()}",
+            schedule_at=max(due - DUE_SOON, now),
+            due_at=due,
+            deadline=column,
+        )
+
+
+async def request_blocker_escalation(
+    session: AsyncSession,
+    jobs: procrastinate.App,
+    case: ContinuityCase,
+    blocker: CaseBlocker,
+    actor_user_id: uuid.UUID,
+) -> None:
+    recipients = {case.coordinator_user_id, case.accountable_manager_user_id, blocker.owner_user_id}
+    await request(
+        session,
+        jobs,
+        tenant_id=case.tenant_id,
+        kind="case_update",
+        case_id=case.id,
+        recipients=sorted(r for r in recipients if r is not None),
+        actor_user_id=actor_user_id,
+        detail="blocker_escalated",
+        dedupe=f"blocker_escalated:{blocker.id}",
+        schedule_at=blocker.escalate_at,
+        due_at=blocker.escalate_at,
+        deadline=f"blocker:{blocker.id}",
+    )
+
+
+async def _deadline_still_due(session: AsyncSession, payload: dict[str, Any]) -> bool:
+    case = await session.get(ContinuityCase, uuid.UUID(payload["case_id"]))
+    if case is None or case.status not in OPEN_STATUSES:
+        return False
+    deadline: str = payload["deadline"]
+    if deadline.startswith("blocker:"):
+        blocker = await session.get(CaseBlocker, uuid.UUID(deadline.removeprefix("blocker:")))
+        if blocker is None or blocker.resolved_at is not None:
+            return False
+        blocker.escalated_at = func.now()
+        return True
+    if deadline == "approval_due_at" and case.status not in ("planning", "awaiting_review"):
+        return False
+    due: datetime | None = getattr(case, deadline, None)
+    return due is not None and due.isoformat() == payload["due_at"]
+
+
 async def _active_members(session: AsyncSession) -> dict[uuid.UUID, str]:
     rows = await session.execute(
         select(Membership.user_id, Membership.role).where(Membership.status == "active")
@@ -159,7 +248,7 @@ async def _still_due(session: AsyncSession, payload: dict[str, Any]) -> bool:
     return (
         task is not None
         and case is not None
-        and case.status in ("draft", "planning", "executing")
+        and case.status in OPEN_STATUSES
         and task.status == "open"
         and str(task.assignee_user_id) in payload["recipients"]
         and task.due_at is not None
@@ -172,6 +261,8 @@ async def _deliver(session: AsyncSession, event: OutboxEvent, ctx: outbox.JobCon
     if payload["kind"] in ("task_due_soon", "task_overdue") and not await _still_due(
         session, payload
     ):
+        return
+    if payload.get("deadline") and not await _deadline_still_due(session, payload):
         return
     members = await _active_members(session)
     recipients = {uuid.UUID(r) for r in payload["recipients"]}

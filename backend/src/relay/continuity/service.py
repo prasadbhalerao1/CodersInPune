@@ -1,37 +1,44 @@
-"""Continuity case engine: transfer, temporary coverage and light departure.
+"""Continuity case engine: transfer, coverage, departure, onboarding and project handover.
 
-Lifecycle (backend-enforced, each transition under a row lock on the case):
+Lifecycle: see `continuity.lifecycle` (every status change goes through `lifecycle.move`,
+under a row lock on the case, and is recorded with actor, time and reason).
 
-    draft --submit--> planning --execute--> executing --complete--> completed
-      \\__________cancel_________/
-
-- Scope, recipients and dates may change in draft/planning; each change bumps
-  `plan_version`, so an approval given against an earlier version no longer counts.
+- Scope, recipients and dates may change until execution; each change bumps
+  `plan_version`, so an approval given against an earlier version no longer counts (and a
+  case awaiting review or ready for transfer drops back to planning).
+- Approving the current plan moves the case to ready_for_transfer. Approvers are members
+  with case.approve, or the case's delegated approver.
 - `execute` needs an approval of the current version (critical cases: the approver must
   not be the initiator unless a separation-of-duties exception is recorded). It applies
   every ownership change in one transaction through the catalog's valid-time operations;
   future effective dates simply create future-dated assignments.
-- `complete` needs every mandatory readiness criterion met or waived. Coverage cases
-  completed before their end date end the cover early (early return).
+- `complete` needs every mandatory readiness criterion met or waived; for critical cases
+  the verifier must be neither the initiator nor the approver (or an exception is recorded).
+  Coverage cases completed before their end date end the cover early (early return).
 """
 
 import uuid
 from datetime import UTC, datetime
 from typing import Literal
+from zoneinfo import available_timezones
 
 import procrastinate
 from pydantic import AwareDatetime, BaseModel, model_validator
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
 from relay.audit.models import AuditEvent
 from relay.catalog import service as catalog
-from relay.catalog.models import OwnershipAssignment, Responsibility
+from relay.catalog.models import Asset, OwnershipAssignment, Responsibility, ResponsibilityAsset
+from relay.continuity import lifecycle
 from relay.continuity.models import (
+    OPEN_STATUSES,
     CaseApproval,
+    CaseBlocker,
     CaseReadinessCriterion,
     CaseScopeItem,
+    CaseStatusChange,
     CaseTask,
     ContinuityCase,
 )
@@ -43,7 +50,8 @@ from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import LongText, Name, StrictInput
 from relay.shared.errors import ApiError
 
-CaseType = Literal["transfer", "coverage", "departure"]
+CaseType = Literal["transfer", "coverage", "departure", "onboarding", "project_handover"]
+Priority = Literal["low", "normal", "high", "urgent"]
 CriterionType = Literal[
     "attestation",
     "task_completed",
@@ -52,11 +60,21 @@ CriterionType = Literal[
     "access_confirmed",
     "qa_reviewed",
 ]
-EDITABLE = ("draft", "planning")
-OPEN = ("draft", "planning", "executing")
+EDITABLE = lifecycle.EDITABLE
+OPEN = OPEN_STATUSES
+# Cases that need the person affected; transfers and project handovers may not.
+NEEDS_PERSON = ("coverage", "departure", "onboarding")
 
 
 # ---------------------------------------------------------------- requests
+
+
+def _check_zone(zone: str | None) -> None:
+    if zone is not None and zone not in _ZONES:
+        raise ValueError("unknown time zone")
+
+
+_ZONES = frozenset(available_timezones()) | {"UTC"}
 
 
 class CaseIn(StrictInput):
@@ -66,11 +84,23 @@ class CaseIn(StrictInput):
     affected_person_id: uuid.UUID | None = None
     starts_at: AwareDatetime
     ends_at: AwareDatetime | None = None
+    priority: Priority = "normal"
+    due_at: AwareDatetime | None = None
+    time_zone: str = "UTC"
+    accountable_manager_user_id: uuid.UUID | None = None
+    delegate_approver_user_id: uuid.UUID | None = None
+    approval_due_at: AwareDatetime | None = None
+    project_asset_id: uuid.UUID | None = None
+    # Set when the person creating the case saw a similar open case and proceeds anyway.
+    duplicate_override_reason: LongText | None = None
 
     @model_validator(mode="after")
     def _shape(self) -> CaseIn:
-        if self.case_type != "transfer" and self.affected_person_id is None:
-            raise ValueError("coverage and departure cases need the affected person")
+        _check_zone(self.time_zone)
+        if self.case_type in NEEDS_PERSON and self.affected_person_id is None:
+            raise ValueError("coverage, departure and onboarding cases need the person affected")
+        if self.project_asset_id is not None and self.case_type != "project_handover":
+            raise ValueError("only project handovers link a project asset")
         if (self.case_type == "coverage") != (self.ends_at is not None):
             raise ValueError("coverage cases (and only coverage cases) need an end date")
         if self.ends_at is not None and self.ends_at <= self.starts_at:
@@ -83,6 +113,21 @@ class CaseUpdate(StrictInput):
     reason: LongText | None = None
     starts_at: AwareDatetime | None = None
     ends_at: AwareDatetime | None = None
+    priority: Priority | None = None
+    due_at: AwareDatetime | None = None
+    time_zone: str | None = None
+    accountable_manager_user_id: uuid.UUID | None = None
+    delegate_approver_user_id: uuid.UUID | None = None
+    approval_due_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def _zone(self) -> CaseUpdate:
+        _check_zone(self.time_zone)
+        return self
+
+
+class CompleteIn(StrictInput):
+    sod_exception_reason: LongText | None = None
 
 
 class ScopeItemIn(StrictInput):
@@ -156,6 +201,10 @@ class ScopeItemView(BaseModel):
     handover_notes: str | None
     exception_reason: str | None
     state: str
+    decline_reason: str | None = None
+    declined_at: datetime | None = None
+    # The signed-in user is the incoming person and may decline the assignment.
+    can_decline: bool = False
 
 
 class TaskView(BaseModel):
@@ -217,6 +266,42 @@ class CaseSummary(BaseModel):
     emergency: bool
     emergency_reason: str | None
     updated_at: datetime
+    priority: str = "normal"
+    due_at: datetime | None = None
+    overdue: bool = False
+    parent_case_id: uuid.UUID | None = None
+
+
+class BlockerView(BaseModel):
+    id: uuid.UUID
+    description: str
+    owner_user_id: uuid.UUID | None
+    owner_name: str | None
+    escalate_at: datetime
+    escalation_due: bool
+    escalated_at: datetime | None
+    resolution: str | None
+    resolved_by_name: str | None
+    resolved_at: datetime | None
+    created_by_name: str | None
+    created_at: datetime
+
+
+class StatusChangeView(BaseModel):
+    from_status: str | None
+    to_status: str
+    reason: str | None
+    outcome: str | None
+    closed_at: datetime | None
+    actor_name: str | None
+    changed_at: datetime
+
+
+class CaseLink(BaseModel):
+    id: uuid.UUID
+    title: str
+    case_type: str
+    status: str
 
 
 class CaseDetail(CaseSummary):
@@ -235,6 +320,25 @@ class CaseDetail(CaseSummary):
     tasks: list[TaskView]
     criteria: list[CriterionView]
     approvals: list[ApprovalView]
+    time_zone: str = "UTC"
+    accountable_manager_user_id: uuid.UUID | None = None
+    accountable_manager_name: str | None = None
+    delegate_approver_user_id: uuid.UUID | None = None
+    delegate_approver_name: str | None = None
+    approval_due_at: datetime | None = None
+    approval_overdue: bool = False
+    project_asset_id: uuid.UUID | None = None
+    project_asset_name: str | None = None
+    reopen_count: int = 0
+    blocked_from: str | None = None
+    duplicate_override_reason: str | None = None
+    # Moves a manager may make directly from the current status.
+    transitions: list[str] = []
+    blockers: list[BlockerView] = []
+    status_history: list[StatusChangeView] = []
+    duplicates: list[CaseLink] = []
+    parent: CaseLink | None = None
+    children: list[CaseLink] = []
 
 
 class MentionView(BaseModel):
@@ -315,8 +419,10 @@ def _record(
     )
 
 
-def _plan_changed(case: ContinuityCase) -> None:
+def _plan_changed(access: WorkspaceAccess, case: ContinuityCase) -> None:
     case.plan_version += 1
+    if case.status in ("awaiting_review", "ready_for_transfer"):
+        lifecycle.move(access, case, "planning", "The plan changed after review")
 
 
 async def _notify_case_update(
@@ -370,6 +476,18 @@ async def _current_assignment(
     return await access.session.scalar(stmt.limit(1))
 
 
+async def responsibility_names(
+    access: WorkspaceAccess, ids: list[uuid.UUID]
+) -> dict[uuid.UUID, str]:
+    return dict(
+        (
+            await access.session.execute(
+                select(Responsibility.id, Responsibility.name).where(Responsibility.id.in_(ids))
+            )
+        ).all()
+    )
+
+
 async def _require_member(access: WorkspaceAccess, user_id: uuid.UUID) -> None:
     found = await access.session.scalar(
         select(Membership.id).where(Membership.user_id == user_id, Membership.status == "active")
@@ -385,6 +503,8 @@ def _default_criteria(
 ) -> CaseReadinessCriterion:
     if case.case_type == "coverage":
         kind, title = "access_confirmed", f"Cover has the access needed for “{name}”"
+    elif case.case_type == "onboarding":
+        kind, title = "access_confirmed", f"New owner has the access needed for “{name}”"
     else:
         kind, title = "attestation", f"Recipient confirms the handover of “{name}”"
     return CaseReadinessCriterion(
@@ -399,8 +519,71 @@ def _default_criteria(
 # ---------------------------------------------------------------- commands
 
 
-async def create_case(access: WorkspaceAccess, data: CaseIn) -> CaseDetail:
+async def similar_open_cases(
+    access: WorkspaceAccess,
+    *,
+    affected_person_id: uuid.UUID | None,
+    project_asset_id: uuid.UUID | None,
+    exclude: uuid.UUID | None = None,
+) -> list[ContinuityCase]:
+    """Open cases about the same person or the same project: likely duplicates."""
+    conditions = []
+    if affected_person_id is not None:
+        conditions.append(ContinuityCase.affected_person_id == affected_person_id)
+    if project_asset_id is not None:
+        conditions.append(ContinuityCase.project_asset_id == project_asset_id)
+    if not conditions:
+        return []
+    stmt = select(ContinuityCase).where(
+        visible(access, Permission.CASE_READ, ContinuityCase.tenant_id),
+        ContinuityCase.status.in_(OPEN),
+        or_(*conditions),
+    )
+    if exclude is not None:
+        stmt = stmt.where(ContinuityCase.id != exclude)
+    return list(await access.session.scalars(stmt.order_by(ContinuityCase.created_at).limit(5)))
+
+
+async def _require_active_member(
+    access: WorkspaceAccess, user_id: uuid.UUID | None, what: str
+) -> None:
+    if user_id is None:
+        return
+    found = await access.session.scalar(
+        select(Membership.id).where(Membership.user_id == user_id, Membership.status == "active")
+    )
+    if found is None:
+        raise ApiError(422, "not_a_member", f"The {what} must be an active workspace member.")
+
+
+async def create_case(
+    access: WorkspaceAccess, data: CaseIn, jobs: procrastinate.App | None = None
+) -> CaseDetail:
     authorize(access, Permission.CASE_MANAGE)
+    await _require_active_member(access, data.accountable_manager_user_id, "accountable manager")
+    await _require_active_member(access, data.delegate_approver_user_id, "delegated approver")
+    if data.project_asset_id is not None:
+        asset = await access.session.scalar(
+            select(Asset.id).where(
+                Asset.id == data.project_asset_id,
+                visible(access, Permission.RESPONSIBILITY_READ, Asset.tenant_id),
+                Asset.status == "active",
+            )
+        )
+        if asset is None:
+            raise ApiError(422, "asset_not_found", "That project does not exist.")
+    duplicates = await similar_open_cases(
+        access,
+        affected_person_id=data.affected_person_id,
+        project_asset_id=data.project_asset_id,
+    )
+    if duplicates and not data.duplicate_override_reason:
+        raise ApiError(
+            409,
+            "duplicate_case",
+            f"“{duplicates[0].title}” is already open for the same person or project. "
+            "Open it instead, or say why a separate case is needed.",
+        )
     if data.affected_person_id is not None:
         person = await access.session.scalar(
             select(Person).where(
@@ -414,18 +597,62 @@ async def create_case(access: WorkspaceAccess, data: CaseIn) -> CaseDetail:
         id=uuid.uuid7(),
         tenant_id=access.tenant_id,
         case_type=data.case_type,
+        status="draft",
         title=data.title,
         reason=data.reason or None,
         affected_person_id=data.affected_person_id,
         starts_at=data.starts_at,
         ends_at=data.ends_at,
+        priority=data.priority,
+        due_at=data.due_at,
+        time_zone=data.time_zone,
+        accountable_manager_user_id=data.accountable_manager_user_id,
+        delegate_approver_user_id=data.delegate_approver_user_id,
+        approval_due_at=data.approval_due_at,
+        project_asset_id=data.project_asset_id,
+        duplicate_override_reason=(data.duplicate_override_reason or None) if duplicates else None,
         initiator_user_id=access.user_id,
         coordinator_user_id=access.user_id,
     )
     access.session.add(case)
     await access.session.flush()
-    # Departure/coverage: discover the person's current ownership from the catalogue.
-    if data.affected_person_id is not None:
+    lifecycle.record_created(access, case, "Case created")
+    if data.project_asset_id is not None:
+        # Project handover: the responsibilities stewarding the project, as currently held.
+        stewards = await access.session.scalars(
+            select(OwnershipAssignment)
+            .join(
+                ResponsibilityAsset,
+                ResponsibilityAsset.responsibility_id == OwnershipAssignment.responsibility_id,
+            )
+            .join(Responsibility, Responsibility.id == OwnershipAssignment.responsibility_id)
+            .where(
+                ResponsibilityAsset.asset_id == data.project_asset_id,
+                OwnershipAssignment.role == "primary",
+                Responsibility.status == "active",
+                catalog.active_at(_now()),
+            )
+        )
+        seen: set[uuid.UUID] = set()
+        for a in stewards:
+            if a.responsibility_id in seen:
+                continue
+            seen.add(a.responsibility_id)
+            access.session.add(
+                CaseScopeItem(
+                    tenant_id=access.tenant_id,
+                    case_id=case.id,
+                    responsibility_id=a.responsibility_id,
+                    role="primary",
+                    current_assignment_id=a.id,
+                )
+            )
+    # Departure/coverage (and an outgoing project lead): discover what the person holds.
+    if data.affected_person_id is not None and data.case_type in (
+        "coverage",
+        "departure",
+        "transfer",
+    ):
         roles = (
             ("primary", "co_owner")
             if data.case_type == "coverage"
@@ -451,22 +678,40 @@ async def create_case(access: WorkspaceAccess, data: CaseIn) -> CaseDetail:
             )
             for a in held
         )
-    _record(access, case, "case.created", case_type=data.case_type)
+    _record(access, case, "case.created", case_type=data.case_type, priority=data.priority)
+    if jobs is not None:
+        await notifications.request_case_deadlines(access.session, jobs, case, access.user_id)
     return await get_case(access, case.id)
 
 
-async def update_case(access: WorkspaceAccess, case_id: uuid.UUID, data: CaseUpdate) -> CaseDetail:
-    case = await _for_change(access, case_id, EDITABLE)
+async def update_case(
+    access: WorkspaceAccess,
+    case_id: uuid.UUID,
+    data: CaseUpdate,
+    jobs: procrastinate.App | None = None,
+) -> CaseDetail:
     changes = data.model_dump(exclude_unset=True)
+    # Dates, ownership dates aside, and who is accountable can change until the case closes.
+    plan_fields = {"starts_at", "ends_at"}
+    case = await _for_change(access, case_id, EDITABLE if plan_fields & changes.keys() else OPEN)
+    await _require_active_member(
+        access, changes.get("accountable_manager_user_id"), "accountable manager"
+    )
+    await _require_active_member(
+        access, changes.get("delegate_approver_user_id"), "delegated approver"
+    )
     for field, value in changes.items():
         setattr(case, field, value)
     if case.case_type == "coverage" and (case.ends_at is None or case.ends_at <= case.starts_at):
         raise ApiError(422, "invalid_range", "Coverage must end after it starts.")
     if case.case_type != "coverage" and case.ends_at is not None:
         raise ApiError(422, "invalid_range", "Only coverage cases have an end date.")
-    if {"starts_at", "ends_at"} & changes.keys():
-        _plan_changed(case)
+    if plan_fields & changes.keys():
+        _plan_changed(access, case)
     _record(access, case, "case.updated", fields=",".join(sorted(changes)))
+    if jobs is not None and {"due_at", "approval_due_at", "ends_at"} & changes.keys():
+        # Reminders are keyed by the deadline; ones for an old deadline become no-ops.
+        await notifications.request_case_deadlines(access.session, jobs, case, access.user_id)
     return await get_case(access, case_id)
 
 
@@ -491,8 +736,10 @@ async def add_scope_item(
     )
     if exists:
         raise ApiError(409, "already_in_scope", "That responsibility is already in this case.")
+    onboarding = case.case_type == "onboarding"
+    # Onboarding: the new person receives; whoever holds it now is the outgoing owner.
     current = await _current_assignment(
-        access, data.responsibility_id, data.role, case.affected_person_id
+        access, data.responsibility_id, data.role, None if onboarding else case.affected_person_id
     )
     access.session.add(
         CaseScopeItem(
@@ -501,9 +748,10 @@ async def add_scope_item(
             responsibility_id=data.responsibility_id,
             role=data.role,
             current_assignment_id=current.id if current else None,
+            recipient_person_id=case.affected_person_id if onboarding else None,
         )
     )
-    _plan_changed(case)
+    _plan_changed(access, case)
     _record(access, case, "case.scope_added", responsibility_id=str(data.responsibility_id))
     return await get_case(access, case_id)
 
@@ -525,11 +773,13 @@ async def update_scope_item(
                 access, catalog.Assignee(person_id=person_id, team_id=team_id)
             )
         item.recipient_person_id, item.recipient_team_id = person_id, team_id
+        if person_id or team_id:
+            item.decline_reason = item.declined_at = item.declined_by = None
     if "handover_notes" in changes:
         item.handover_notes = changes["handover_notes"] or None
     if "exception_reason" in changes:
         item.exception_reason = changes["exception_reason"] or None
-    _plan_changed(case)
+    _plan_changed(access, case)
     _record(
         access,
         case,
@@ -555,7 +805,7 @@ async def remove_scope_item(
         update(CaseTask).where(CaseTask.scope_item_id == item_id).values(scope_item_id=None)
     )
     await access.session.delete(item)
-    _plan_changed(case)
+    _plan_changed(access, case)
     _record(access, case, "case.scope_removed", responsibility_id=str(item.responsibility_id))
     return await get_case(access, case_id)
 
@@ -563,7 +813,7 @@ async def remove_scope_item(
 async def submit_case(
     access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
 ) -> CaseDetail:
-    case = await _for_change(access, case_id, ("draft",))
+    case = await _for_change(access, case_id, lifecycle.INTAKE)
     items = await _scope(access.session, case_id)
     if not items:
         raise ApiError(409, "empty_scope", "Add at least one responsibility first.")
@@ -574,21 +824,20 @@ async def submit_case(
         raise ApiError(
             409, "recipients_missing", "Every responsibility needs a recipient or an exception."
         )
-    names = dict(
-        (
-            await access.session.execute(
-                select(Responsibility.id, Responsibility.name).where(
-                    Responsibility.id.in_([i.responsibility_id for i in items])
-                )
+    names = await responsibility_names(access, [i.responsibility_id for i in items])
+    covered = set(
+        await access.session.scalars(
+            select(CaseReadinessCriterion.scope_item_id).where(
+                CaseReadinessCriterion.case_id == case_id
             )
-        ).all()
+        )
     )
     access.session.add_all(
         _default_criteria(case, i, names[i.responsibility_id])
         for i in items
-        if not i.exception_reason
+        if not i.exception_reason and i.id not in covered and i.state == "planned"
     )
-    case.status = "planning"
+    lifecycle.move(access, case, "planning", "Plan submitted for approval")
     _record(access, case, "case.submitted", plan_version=case.plan_version)
     await notifications.request(
         access.session,
@@ -606,10 +855,11 @@ async def submit_case(
 async def decide(
     access: WorkspaceAccess, case_id: uuid.UUID, data: DecisionIn, jobs: procrastinate.App
 ) -> CaseDetail:
-    authorize(access, Permission.CASE_APPROVE)
     case = await _load(access, case_id, lock=True)
-    if case.status != "planning":
-        raise ApiError(409, "invalid_state", "Only cases in planning can be approved.")
+    if case.delegate_approver_user_id != access.user_id:
+        authorize(access, Permission.CASE_APPROVE)
+    if case.status not in lifecycle.APPROVABLE:
+        raise ApiError(409, "invalid_state", "Only plans in planning or review can be decided.")
     sod_reason = None
     if (
         data.decision == "approved"
@@ -642,6 +892,10 @@ async def decide(
         plan_version=case.plan_version,
         sod_exception=sod_reason is not None,
     )
+    if data.decision == "approved":
+        lifecycle.move(access, case, "ready_for_transfer", "Plan approved")
+    elif case.status == "awaiting_review":
+        lifecycle.move(access, case, "planning", "Plan rejected")
     await _notify_case_update(access, jobs, case, data.decision)
     return await get_case(access, case_id)
 
@@ -651,12 +905,14 @@ async def execute_case(
 ) -> CaseDetail:
     """Apply every ownership change in one transaction. Retries are safe: the status guard
     (under the case row lock) lets exactly one execution through."""
-    case = await _for_change(access, case_id, ("planning",))
+    case = await _for_change(access, case_id, lifecycle.EXECUTABLE)
     if not await _current_approval(access.session, case):
         raise ApiError(409, "approval_required", "The current plan needs an approval first.")
     at = max(case.starts_at, _now())
     reason = f"Continuity case: {case.title}"
     for item in await _scope(access.session, case_id):
+        if item.state == "applied":  # already handed over before a reopen
+            continue
         if item.exception_reason:
             item.state = "excepted"
             continue
@@ -680,7 +936,7 @@ async def execute_case(
             )
         item.applied_assignment_id = applied.id
         item.state = "applied"
-    case.status = "executing"
+    lifecycle.move(access, case, "executing", "Ownership changes applied")
     _record(access, case, "case.executed", effective_at=at.isoformat())
     await _notify_case_update(access, jobs, case, "executing")
     return await get_case(access, case_id)
@@ -689,7 +945,7 @@ async def execute_case(
 async def extend_coverage(
     access: WorkspaceAccess, case_id: uuid.UUID, data: ExtendIn
 ) -> CaseDetail:
-    case = await _for_change(access, case_id, ("executing",))
+    case = await _for_change(access, case_id, lifecycle.RUNNING)
     if case.case_type != "coverage" or case.ends_at is None or data.ends_at <= case.ends_at:
         raise ApiError(422, "invalid_extension", "Coverage can only be extended to a later date.")
     for item in await _scope(access.session, case_id):
@@ -703,9 +959,32 @@ async def extend_coverage(
 
 
 async def complete_case(
-    access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
+    access: WorkspaceAccess,
+    case_id: uuid.UUID,
+    jobs: procrastinate.App,
+    data: CompleteIn | None = None,
 ) -> CaseDetail:
-    case = await _for_change(access, case_id, ("executing",))
+    case = await _for_change(access, case_id, lifecycle.RUNNING)
+    sod_reason = data.sod_exception_reason if data else None
+    if await _is_critical(access, case_id):
+        approvers = set(
+            await access.session.scalars(
+                select(CaseApproval.approver_user_id).where(
+                    CaseApproval.case_id == case_id,
+                    CaseApproval.plan_version == case.plan_version,
+                    CaseApproval.decision == "approved",
+                )
+            )
+        )
+        if (access.user_id == case.initiator_user_id or access.user_id in approvers) and (
+            not sod_reason
+        ):
+            raise ApiError(
+                409,
+                "separation_of_duties",
+                "Critical cases need a verifier who neither started nor approved the case, "
+                "or a recorded separation-of-duties exception.",
+            )
     criteria = list(
         await access.session.scalars(
             select(CaseReadinessCriterion).where(CaseReadinessCriterion.case_id == case_id)
@@ -734,11 +1013,12 @@ async def complete_case(
         any(i.state == "excepted" for i in items)
         or any(c.status == "waived" for c in criteria)
         or any(a.sod_exception_reason for a in approvals if a.plan_version == case.plan_version)
+        or bool(sod_reason)
     )
-    case.status = "completed"
+    lifecycle.move(access, case, "completed", sod_reason)
     case.outcome = "completed_with_exceptions" if exceptions else "completed"
     case.closed_at = func.now()
-    _record(access, case, "case.completed", outcome=case.outcome)
+    _record(access, case, "case.completed", outcome=case.outcome, sod_exception=bool(sod_reason))
     await _notify_case_update(access, jobs, case, "completed")
     return await get_case(access, case_id)
 
@@ -746,8 +1026,9 @@ async def complete_case(
 async def cancel_case(
     access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
 ) -> CaseDetail:
-    case = await _for_change(access, case_id, EDITABLE)
-    case.status, case.outcome, case.closed_at = "cancelled", "cancelled", func.now()
+    case = await _for_change(access, case_id, (*EDITABLE, "blocked"))
+    lifecycle.move(access, case, "cancelled")
+    case.outcome, case.closed_at = "cancelled", func.now()
     _record(access, case, "case.cancelled")
     await _notify_case_update(access, jobs, case, "cancelled")
     return await get_case(access, case_id)
@@ -895,6 +1176,25 @@ async def _is_critical(access: WorkspaceAccess, case_id: uuid.UUID) -> bool:
     return found is not None
 
 
+async def my_person_ids(access: WorkspaceAccess) -> set[uuid.UUID]:
+    """Directory people that are the signed-in member (matched by email)."""
+    return set(
+        await access.session.scalars(
+            select(Person.id)
+            .join(Membership, func.lower(Membership.email) == func.lower(Person.email))
+            .where(
+                Membership.user_id == access.user_id,
+                Membership.status == "active",
+                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+            )
+        )
+    )
+
+
+def _link(c: ContinuityCase) -> CaseLink:
+    return CaseLink(id=c.id, title=c.title, case_type=c.case_type, status=c.status)
+
+
 def _task_view(t: CaseTask, names: dict[uuid.UUID, str], now: datetime) -> TaskView:
     return TaskView(
         id=t.id,
@@ -915,20 +1215,29 @@ def _allowed_actions(access: WorkspaceAccess, case: ContinuityCase, approved: bo
     manage = role_allows(access.role, Permission.CASE_MANAGE)
     approve = role_allows(access.role, Permission.CASE_APPROVE)
     actions: list[str] = []
+    approve = approve or case.delegate_approver_user_id == access.user_id
     if manage and case.status in EDITABLE:
-        actions += ["edit", "cancel"]
-    if manage and case.status == "draft":
+        actions.append("edit")
+    if manage and lifecycle.allowed(case, "cancelled"):
+        actions.append("cancel")
+    if manage and case.status in lifecycle.INTAKE:
         actions.append("submit")
-    if approve and case.status == "planning":
+    if approve and case.status in lifecycle.APPROVABLE:
         actions.append("decide")
-    if manage and case.status == "planning" and approved:
+    if manage and case.status in lifecycle.EXECUTABLE and approved:
         actions.append("execute")
-    if manage and case.status == "executing":
+    if manage and case.status in lifecycle.RUNNING:
         actions.append("complete")
         if case.case_type == "coverage":
             actions.append("extend")
     if manage and case.status in OPEN:
-        actions += ["add_task", "add_criterion", "set_emergency"]
+        actions += ["add_task", "add_criterion", "set_emergency", "add_blocker", "update"]
+        if case.status != "blocked":
+            actions.append("transition")
+    if manage and case.status in ("completed", "cancelled"):
+        actions.append("reopen")
+    if manage and case.case_type == "departure" and case.status in EDITABLE:
+        actions.append("split")
     if role_allows(access.role, Permission.CASE_COMMENT):
         actions.append("comment")
     return actions
@@ -978,13 +1287,35 @@ async def _summaries(access: WorkspaceAccess, cases: list[ContinuityCase]) -> li
             emergency=c.emergency,
             emergency_reason=c.emergency_reason,
             updated_at=c.updated_at,
+            priority=c.priority,
+            due_at=c.due_at,
+            overdue=c.status in OPEN
+            and (
+                (c.due_at is not None and c.due_at < now)
+                or any(t.case_id == c.id and t.due_at and t.due_at < now for t in tasks)
+            ),
+            parent_case_id=c.parent_case_id,
         )
         for c in cases
     ]
 
 
-async def list_cases(access: WorkspaceAccess, *, status: str | None = None) -> list[CaseSummary]:
+class CaseFilter(BaseModel):
+    status: str | None = None  # "open", "closed" or a single status
+    priority: Priority | None = None
+    case_type: CaseType | None = None
+    affected_person_id: uuid.UUID | None = None
+    team_id: uuid.UUID | None = None
+    due_before: AwareDatetime | None = None
+    overdue: bool = False
+
+
+async def list_cases(
+    access: WorkspaceAccess, *, status: str | None = None, filters: CaseFilter | None = None
+) -> list[CaseSummary]:
     authorize(access, Permission.CASE_READ)
+    f = filters or CaseFilter(status=status)
+    status = f.status
     stmt = select(ContinuityCase).where(
         visible(access, Permission.CASE_READ, ContinuityCase.tenant_id)
     )
@@ -992,6 +1323,24 @@ async def list_cases(access: WorkspaceAccess, *, status: str | None = None) -> l
         stmt = stmt.where(ContinuityCase.status.in_(OPEN))
     elif status == "closed":
         stmt = stmt.where(ContinuityCase.status.in_(("completed", "cancelled")))
+    elif status:
+        stmt = stmt.where(ContinuityCase.status == status)
+    if f.priority:
+        stmt = stmt.where(ContinuityCase.priority == f.priority)
+    if f.case_type:
+        stmt = stmt.where(ContinuityCase.case_type == f.case_type)
+    if f.affected_person_id:
+        stmt = stmt.where(ContinuityCase.affected_person_id == f.affected_person_id)
+    if f.team_id:
+        from relay.directory.models import TeamMember
+
+        stmt = stmt.where(
+            ContinuityCase.affected_person_id.in_(
+                select(TeamMember.person_id).where(TeamMember.team_id == f.team_id)
+            )
+        )
+    if f.due_before:
+        stmt = stmt.where(ContinuityCase.due_at < f.due_before)
     cases = list(
         await access.session.scalars(
             stmt.order_by(ContinuityCase.emergency.desc(), ContinuityCase.updated_at.desc()).limit(
@@ -999,7 +1348,8 @@ async def list_cases(access: WorkspaceAccess, *, status: str | None = None) -> l
             )
         )
     )
-    return await _summaries(access, cases)
+    summaries = await _summaries(access, cases)
+    return [c for c in summaries if c.overdue] if f.overdue else summaries
 
 
 async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
@@ -1082,6 +1432,46 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
         a = current.get(i.current_assignment_id) if i.current_assignment_id else None
         return holder_views[a.person_id or a.team_id].name if a else None  # type: ignore[index]
 
+    blockers = list(
+        await access.session.scalars(
+            select(CaseBlocker)
+            .where(CaseBlocker.case_id == case_id)
+            .order_by(CaseBlocker.resolved_at.desc().nulls_first(), CaseBlocker.created_at)
+        )
+    )
+    changes = list(
+        await access.session.scalars(
+            select(CaseStatusChange)
+            .where(CaseStatusChange.case_id == case_id)
+            .order_by(CaseStatusChange.changed_at.desc(), CaseStatusChange.id.desc())
+        )
+    )
+    related = {
+        c.id: c
+        for c in await access.session.scalars(
+            select(ContinuityCase).where(
+                (ContinuityCase.parent_case_id == case_id)
+                | (ContinuityCase.id == case.parent_case_id)
+            )
+        )
+    }
+    duplicates = (
+        await similar_open_cases(
+            access,
+            affected_person_id=case.affected_person_id,
+            project_asset_id=case.project_asset_id,
+            exclude=case.id,
+        )
+        if case.status in OPEN
+        else []
+    )
+    project_name = (
+        await access.session.scalar(select(Asset.name).where(Asset.id == case.project_asset_id))
+        if case.project_asset_id
+        else None
+    )
+    mine = await my_person_ids(access)
+    manual = sorted(lifecycle.MANUAL.get(case.status, frozenset()))
     mandatory = [c for c in criteria if c.mandatory]
     return CaseDetail(
         **summary.model_dump(),
@@ -1108,6 +1498,11 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
                 handover_notes=i.handover_notes,
                 exception_reason=i.exception_reason,
                 state=i.state,
+                decline_reason=i.decline_reason,
+                declined_at=i.declined_at,
+                can_decline=i.recipient_person_id in mine
+                and i.state == "planned"
+                and case.status in EDITABLE,
             )
             for i in items
         ],
@@ -1139,6 +1534,58 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
             )
             for a in approvals
         ],
+        time_zone=case.time_zone,
+        accountable_manager_user_id=case.accountable_manager_user_id,
+        accountable_manager_name=names.get(case.accountable_manager_user_id)
+        if case.accountable_manager_user_id
+        else None,
+        delegate_approver_user_id=case.delegate_approver_user_id,
+        delegate_approver_name=names.get(case.delegate_approver_user_id)
+        if case.delegate_approver_user_id
+        else None,
+        approval_due_at=case.approval_due_at,
+        approval_overdue=case.approval_due_at is not None
+        and case.approval_due_at < now
+        and case.status in lifecycle.APPROVABLE
+        and not approved,
+        project_asset_id=case.project_asset_id,
+        project_asset_name=project_name,
+        reopen_count=case.reopen_count,
+        blocked_from=case.blocked_from,
+        duplicate_override_reason=case.duplicate_override_reason,
+        transitions=manual if "transition" in _allowed_actions(access, case, approved) else [],
+        blockers=[
+            BlockerView(
+                id=b.id,
+                description=b.description,
+                owner_user_id=b.owner_user_id,
+                owner_name=names.get(b.owner_user_id) if b.owner_user_id else None,
+                escalate_at=b.escalate_at,
+                escalation_due=b.resolved_at is None and b.escalate_at <= now,
+                escalated_at=b.escalated_at,
+                resolution=b.resolution,
+                resolved_by_name=names.get(b.resolved_by) if b.resolved_by else None,
+                resolved_at=b.resolved_at,
+                created_by_name=names.get(b.created_by),
+                created_at=b.created_at,
+            )
+            for b in blockers
+        ],
+        status_history=[
+            StatusChangeView(
+                from_status=c.from_status,
+                to_status=c.to_status,
+                reason=c.reason,
+                outcome=c.outcome,
+                closed_at=c.closed_at,
+                actor_name=names.get(c.actor_user_id),
+                changed_at=c.changed_at,
+            )
+            for c in changes
+        ],
+        duplicates=[_link(c) for c in duplicates],
+        parent=_link(related[case.parent_case_id]) if case.parent_case_id in related else None,
+        children=[_link(c) for c in related.values() if c.parent_case_id == case.id],
     )
 
 
@@ -1191,13 +1638,14 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
             )
         )
     )
-    pending: list[ContinuityCase] = []
-    if role_allows(access.role, Permission.CASE_APPROVE):
-        pending = [
-            c
-            for c in open_cases
-            if c.status == "planning" and not await _current_approval(access.session, c)
-        ]
+    approver = role_allows(access.role, Permission.CASE_APPROVE)
+    pending = [
+        c
+        for c in open_cases
+        if c.status in lifecycle.APPROVABLE
+        and (approver or c.delegate_approver_user_id == access.user_id)
+        and not await _current_approval(access.session, c)
+    ]
     attention = [
         c for c in open_cases if c.coordinator_user_id == access.user_id and c not in pending
     ]

@@ -184,7 +184,12 @@ async def test_critical_case_requires_separation_of_duties_or_recorded_exception
 
     case = await approve_and_execute(ws, cid, sod_exception_reason="Sole admin during pilot")
     await resolve_readiness(ws, case)
-    done = await ws.call("POST", f"/cases/{cid}/complete")
+    # The verifier is the initiator and approver too: also needs a recorded exception.
+    sod = await ws.call("POST", f"/cases/{cid}/complete", 409)
+    assert sod["code"] == "separation_of_duties"
+    done = await ws.call(
+        "POST", f"/cases/{cid}/complete", json={"sod_exception_reason": "Sole admin"}
+    )
     assert done["outcome"] == "completed_with_exceptions"
 
 
