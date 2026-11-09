@@ -42,6 +42,7 @@ from relay.integrations.linear.models import (
 from relay.jobs import outbox
 from relay.jobs.models import OutboxEvent
 from relay.policy.permissions import Permission, authorize, visible
+from relay.shared import oauth
 from relay.shared import secrets as secret_box
 from relay.shared.api_types import StrictInput
 from relay.shared.errors import ApiError
@@ -209,8 +210,8 @@ async def complete_connect(
             raise ApiError(400, "invalid_state", "This Linear connection link expired or was used.")
         state.used_at = func.now()
         try:
-            token = await linear.exchange_code(data.code)
-            org = await linear.organization(token)
+            grant = await linear.exchange_code(data.code)
+            org = await linear.organization(grant.access_token)
         except LinearError as exc:
             raise ApiError(403, "linear_not_authorized", str(exc)) from exc
         settings = linear.settings
@@ -227,7 +228,7 @@ async def complete_connect(
             )
             access.session.add(connection)
         connection.organization_name, connection.url_key = org.name, org.url_key
-        connection.token_ciphertext = secret_box.encrypt(settings, token)
+        oauth.store(settings, connection, grant)
         connection.status, connection.last_sync_status, connection.last_sync_error = (
             "active",
             "queued",
@@ -262,7 +263,8 @@ async def _connection(access: WorkspaceAccess, ref: uuid.UUID) -> LinearConnecti
 async def disconnect(access: WorkspaceAccess, ref: uuid.UUID) -> None:
     authorize(access, Permission.INTEGRATION_MANAGE)
     connection = await _connection(access, ref)
-    connection.status, connection.token_ciphertext = "disconnected", None  # forget the token
+    connection.status = "disconnected"
+    oauth.forget(connection)  # forget the tokens
     connection.next_reconcile_at = None
     _record(access, "integration.linear_disconnected", connection.id)
 
@@ -284,6 +286,22 @@ async def request_sync(access: WorkspaceAccess, ref: uuid.UUID, jobs: procrastin
 
 
 # ---------------------------------------------------------------- sync
+
+
+async def _refresh(connection: Any, client: LinearClient, settings: Any) -> str | None:
+    """A new access token, or None without a refresh token or when Linear rejects it."""
+    if connection.refresh_token_ciphertext is None:
+        return None
+    try:
+        grant = await client.refresh(
+            secret_box.decrypt(settings, connection.refresh_token_ciphertext)
+        )
+    except LinearError as exc:
+        if exc.transient:
+            raise
+        return None
+    oauth.store(settings, connection, grant)
+    return grant.access_token
 
 
 def _match(identity: LinearIdentity, people: list[Person]) -> None:
@@ -331,6 +349,8 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
             "Reconnect Linear."
         )
         return
+    if oauth.expiring(connection):
+        token = await _refresh(connection, linear, ctx.settings) or token
     since = _now() - timedelta(days=ACTIVITY_DAYS)
     try:
         teams, projects, users, issues = (
@@ -342,6 +362,22 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     except LinearError as exc:
         if exc.transient:
             raise  # retried by the outbox job with backoff
+        if (
+            exc.status == 401
+            and ctx.jobs is not None
+            and not event.payload.get("after_refresh")
+            and await _refresh(connection, linear, ctx.settings)
+        ):
+            # Expired, not revoked: keep the new tokens (commit) and sync again with them.
+            connection.last_sync_status, connection.last_sync_error = "queued", None
+            await outbox.emit(
+                session,
+                ctx.jobs,
+                tenant_id=connection.tenant_id,
+                event_type=SYNC_EVENT,
+                payload={"connection_ref": str(connection.id), "after_refresh": True},
+            )
+            return
         connection.last_sync_status = "error"
         if exc.status == 401:
             connection.status = "revoked"

@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 import httpx
 
 from relay.config import Settings
+from relay.shared.oauth import TokenGrant
 
 NOTION_VERSION = "2022-06-28"
 MAX_DEPTH = 2
@@ -46,7 +47,7 @@ class NotionError(Exception):
 
 @dataclass(frozen=True, slots=True)
 class Grant:
-    token: str
+    token: TokenGrant
     workspace_id: str
     workspace_name: str
 
@@ -120,30 +121,41 @@ class NotionClient:
         )
         return f"{self._s.notion_api_url}/oauth/authorize?{query}"
 
-    async def exchange_code(self, code: str) -> Grant:
+    async def _token(self, payload: dict[str, str]) -> dict[str, object]:
         assert self._s.notion_client_id
         assert self._s.notion_client_secret
         try:
             response = await self._http.post(
                 f"{self._s.notion_api_url}/oauth/token",
-                json={
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": self.redirect_uri,
-                },
+                json=payload,
                 auth=(self._s.notion_client_id, self._s.notion_client_secret.get_secret_value()),
             )
         except httpx.HTTPError as exc:
             raise NotionError(0, "Notion unreachable") from exc
-        body = response.json() if response.status_code == 200 else {}
-        token = body.get("access_token")
-        if not isinstance(token, str):
-            raise NotionError(401, "Notion rejected the authorization code")
+        if response.status_code >= 500 or response.status_code == 429:
+            raise NotionError(response.status_code, "Notion token endpoint unavailable")
+        body: dict[str, object] = response.json() if response.status_code == 200 else {}
+        if TokenGrant.from_response(body) is None:
+            raise NotionError(401, "Notion rejected the token request")
+        return body
+
+    async def exchange_code(self, code: str) -> Grant:
+        body = await self._token(
+            {"grant_type": "authorization_code", "code": code, "redirect_uri": self.redirect_uri}
+        )
+        token = TokenGrant.from_response(body)
+        assert token is not None
         return Grant(
             token=token,
             workspace_id=str(body.get("workspace_id") or body.get("bot_id")),
             workspace_name=str(body.get("workspace_name") or "Notion workspace"),
         )
+
+    async def refresh(self, refresh_token: str) -> TokenGrant:
+        body = await self._token({"grant_type": "refresh_token", "refresh_token": refresh_token})
+        token = TokenGrant.from_response(body)
+        assert token is not None
+        return token
 
     async def _call(
         self, token: str, method: str, path: str, json: dict[str, Any] | None = None

@@ -67,12 +67,17 @@ class FakeExternal:
     resend_requests: int = 0
     # Linear: OAuth codes -> tokens; GraphQL data; revoke by removing the token.
     linear_codes: dict[str, str] = field(default_factory=dict)
+    # Refresh tokens (rotated on use) -> the access token they mint; revoke by clearing.
+    linear_refresh: dict[str, str] = field(default_factory=dict)
+    linear_expires_in: int | None = 86400  # None = long-lived tokens, no refresh token
     linear_tokens: set[str] = field(default_factory=set)
     linear_down: bool = False
     linear_data: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     linear_queries: list[str] = field(default_factory=list)
     # Notion: OAuth codes -> tokens; shared objects (search), blocks per page, database rows.
     notion_codes: dict[str, str] = field(default_factory=dict)
+    notion_refresh: dict[str, str] = field(default_factory=dict)
+    notion_expires_in: int | None = None  # Notion tokens are long-lived unless set
     notion_tokens: set[str] = field(default_factory=set)
     notion_down: bool = False
     notion_shared: list[dict[str, Any]] = field(default_factory=list)
@@ -130,11 +135,21 @@ class FakeExternal:
             return httpx.Response(503)
         if request.url.path == "/oauth/token":
             form = dict(httpx.QueryParams(request.content.decode()))
-            token = self.linear_codes.get(form.get("code", ""))
+            if form.get("grant_type") == "refresh_token":
+                token = self.linear_refresh.pop(form.get("refresh_token", ""), None)
+                if token is not None:
+                    token = f"{token}+r"
+            else:
+                token = self.linear_codes.get(form.get("code", ""))
             if token is None or form.get("client_secret") != "lin-secret":
                 return httpx.Response(400, json={"error": "invalid_grant"})
             self.linear_tokens.add(token)
-            return httpx.Response(200, json={"access_token": token, "token_type": "Bearer"})
+            body: dict[str, Any] = {"access_token": token, "token_type": "Bearer"}
+            if self.linear_expires_in is not None:
+                refresh = f"refresh-{token}"
+                self.linear_refresh[refresh] = token
+                body |= {"refresh_token": refresh, "expires_in": self.linear_expires_in}
+            return httpx.Response(200, json=body)
         token = request.headers.get("authorization", "").removeprefix("Bearer ")
         if token not in self.linear_tokens:
             return httpx.Response(401, json={"errors": [{"message": "auth"}]})
@@ -166,20 +181,27 @@ class FakeExternal:
             return httpx.Response(503)
         if path == "/oauth/token":
             body = json.loads(request.content)
-            token = self.notion_codes.get(body.get("code", ""))
+            if body.get("grant_type") == "refresh_token":
+                token = self.notion_refresh.pop(body.get("refresh_token", ""), None)
+                if token is not None:
+                    token = f"{token}+r"
+            else:
+                token = self.notion_codes.get(body.get("code", ""))
             expected = "Basic " + base64.b64encode(b"notion-client:notion-secret").decode()
             if token is None or request.headers.get("authorization") != expected:
                 return httpx.Response(400, json={"error": "invalid_grant"})
             self.notion_tokens.add(token)
-            return httpx.Response(
-                200,
-                json={
-                    "access_token": token,
-                    "workspace_id": "nws-1",
-                    "workspace_name": "Acme Wiki",
-                    "bot_id": "bot-1",
-                },
-            )
+            grant: dict[str, Any] = {
+                "access_token": token,
+                "workspace_id": "nws-1",
+                "workspace_name": "Acme Wiki",
+                "bot_id": "bot-1",
+            }
+            if self.notion_expires_in is not None:
+                refresh = f"refresh-{token}"
+                self.notion_refresh[refresh] = token
+                grant |= {"refresh_token": refresh, "expires_in": self.notion_expires_in}
+            return httpx.Response(200, json=grant)
         token = request.headers.get("authorization", "").removeprefix("Bearer ")
         if token not in self.notion_tokens:
             return httpx.Response(401, json={"code": "unauthorized"})

@@ -284,7 +284,9 @@ async def test_real_worker_processes_deferred_job_as_app_role(api: Api) -> None:
     async with jobs.open_async():
         await jobs.run_worker_async(wait=False, install_signal_handlers=False)
 
-    assert count_rows("public.procrastinate_jobs", "status = 'succeeded'") == 1
+    # Periodic housekeeping (stalled-job recovery) may also run; count the outbox job.
+    outbox_jobs = "status = 'succeeded' AND task_name = 'relay.process_outbox_event'"
+    assert count_rows("public.procrastinate_jobs", outbox_jobs) == 1
     assert (
         count_rows("platform.outbox_event", "id = %s AND processed_at IS NOT NULL", (event_id,))
         == 1

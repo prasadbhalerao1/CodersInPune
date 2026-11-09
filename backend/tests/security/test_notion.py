@@ -277,6 +277,7 @@ async def test_revoked_failed_disconnected_admin_only_and_isolated(
     assert await run(api, ws.id) == [True]
 
     ext.notion_tokens.clear()
+    ext.notion_refresh.clear()
     await ws.call("POST", f"/integrations/notion/connections/{connection}/sync", 202)
     await run(api, ws.id)
     [revoked] = (await ws.call("GET", "/integrations/notion"))["connections"]

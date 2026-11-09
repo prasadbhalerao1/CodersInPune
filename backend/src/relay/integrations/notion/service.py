@@ -44,6 +44,7 @@ from relay.integrations.notion.models import (
 from relay.jobs import outbox
 from relay.jobs.models import OutboxEvent
 from relay.policy.permissions import Permission, authorize, visible
+from relay.shared import oauth
 from relay.shared import secrets as secret_box
 from relay.shared.api_types import StrictInput
 from relay.shared.errors import ApiError
@@ -209,7 +210,7 @@ async def complete_connect(
             )
             access.session.add(connection)
         connection.workspace_name = grant.workspace_name
-        connection.token_ciphertext = secret_box.encrypt(notion.settings, grant.token)
+        oauth.store(notion.settings, connection, grant.token)
         connection.status, connection.last_sync_error = "active", None
         await access.session.flush()
         await _queue(access.session, jobs, connection)
@@ -232,7 +233,8 @@ async def disconnect(access: WorkspaceAccess, ref: uuid.UUID) -> None:
     """Forget the token. Imported knowledge stays as a snapshot and stops updating."""
     authorize(access, Permission.INTEGRATION_MANAGE)
     connection = await _connection(access, ref)
-    connection.status, connection.token_ciphertext = "disconnected", None
+    connection.status = "disconnected"
+    oauth.forget(connection)
     connection.next_reconcile_at = None
     _record(access, "integration.notion_disconnected", connection.id)
 
@@ -309,6 +311,22 @@ async def map_source(
 
 
 # ---------------------------------------------------------------- sync
+
+
+async def _refresh(connection: Any, client: NotionClient, settings: Any) -> str | None:
+    """A new access token, or None without a refresh token or when Notion rejects it."""
+    if connection.refresh_token_ciphertext is None:
+        return None
+    try:
+        grant = await client.refresh(
+            secret_box.decrypt(settings, connection.refresh_token_ciphertext)
+        )
+    except NotionError as exc:
+        if exc.transient:
+            raise
+        return None
+    oauth.store(settings, connection, grant)
+    return grant.access_token
 
 
 def _body(text: str) -> str | None:
@@ -410,6 +428,8 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
             "Reconnect Notion."
         )
         return
+    if oauth.expiring(connection):
+        token = await _refresh(connection, notion, ctx.settings) or token
     stats = {"imported": 0, "updated": 0, "restored": 0, "withdrawn": 0}
     truncated = False
     try:
@@ -476,6 +496,22 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     except NotionError as exc:
         if exc.transient:
             raise  # retried by the outbox job with backoff
+        if (
+            exc.status == 401
+            and ctx.jobs is not None
+            and not event.payload.get("after_refresh")
+            and await _refresh(connection, notion, ctx.settings)
+        ):
+            # Expired, not revoked: keep the new tokens (commit) and sync again with them.
+            connection.last_sync_status, connection.last_sync_error = "queued", None
+            await outbox.emit(
+                session,
+                ctx.jobs,
+                tenant_id=connection.tenant_id,
+                event_type=SYNC_EVENT,
+                payload={"connection_ref": str(connection.id), "after_refresh": True},
+            )
+            return
         connection.last_sync_status = "error"
         if exc.status == 401:
             connection.status = "revoked"

@@ -65,6 +65,8 @@ class NotionConnection(Base):
     workspace_id: Mapped[str] = mapped_column(Text)
     workspace_name: Mapped[str] = mapped_column(Text)
     token_ciphertext: Mapped[str | None] = mapped_column(Text)
+    refresh_token_ciphertext: Mapped[str | None] = mapped_column(Text)
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text, server_default="active")
     connected_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

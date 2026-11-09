@@ -241,7 +241,8 @@ async def test_revoked_failed_and_disconnected(api: Api, ws: Ws, ext: FakeExtern
     ext.linear_down = False
     assert await run(api, ws.id) == [True]  # the retried attempt succeeds
 
-    ext.linear_tokens.clear()  # access revoked in Linear
+    ext.linear_tokens.clear()  # access revoked in Linear (refresh tokens too)
+    ext.linear_refresh.clear()
     connection = (await ws.call("GET", "/integrations/linear"))["connections"][0]
     await ws.call("POST", f"/integrations/linear/connections/{connection['id']}/sync", 202)
     await run(api, ws.id)
@@ -283,3 +284,46 @@ async def test_not_configured_without_an_encryption_key(ext: FakeExternal) -> No
         ws = Ws(unconfigured, await unconfigured.create_workspace(OWNER, "Acme"))
         assert (await ws.call("GET", "/integrations/linear"))["configured"] is False
         await ws.call("POST", "/integrations/linear/connect", 503)
+
+
+async def test_expired_tokens_are_refreshed_not_reported_revoked(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    await connect(api, ws, ext)
+    assert await run(api, ws.id) == [True]
+    with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
+        stored = conn.execute(
+            "SELECT refresh_token_ciphertext, token_expires_at FROM integrations.linear_connection"
+        ).fetchone()
+    assert stored is not None
+    assert stored[0]
+    assert "refresh-" not in stored[0]  # encrypted at rest
+    assert stored[1] is not None
+
+    ext.linear_tokens.clear()  # the access token expired early; the refresh token is valid
+    connection = (await ws.call("GET", "/integrations/linear"))["connections"][0]
+    await ws.call("POST", f"/integrations/linear/connections/{connection['id']}/sync", 202)
+    await run(api, ws.id)  # 401 -> refresh -> requeued with the new token
+    with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
+        requeued = conn.execute(
+            "SELECT id FROM platform.outbox_event WHERE processed_at IS NULL "
+            "AND payload->>'after_refresh' = 'true'"
+        ).fetchall()
+    ctx = outbox.JobContext(
+        http=api.app.state.http, settings=api.app.state.settings, jobs=api.app.state.jobs
+    )
+    for (event_id,) in requeued:
+        assert await outbox.process(api.app.state.session_factory, ws.id, event_id, ctx)
+    [after] = (await ws.call("GET", "/integrations/linear"))["connections"]
+    assert (after["status"], after["last_sync_status"]) == ("active", "ok")
+
+
+async def test_tokens_close_to_expiry_are_refreshed_before_syncing(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    ext.linear_expires_in = 60  # inside the refresh margin
+    await connect(api, ws, ext)
+    assert await run(api, ws.id) == [True]
+    assert any(t.endswith("+r") for t in ext.linear_tokens)  # refreshed up front
+    [after] = (await ws.call("GET", "/integrations/linear"))["connections"]
+    assert after["last_sync_status"] == "ok"

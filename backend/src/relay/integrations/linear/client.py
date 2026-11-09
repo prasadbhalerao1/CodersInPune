@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 import httpx
 
 from relay.config import Settings
+from relay.shared.oauth import TokenGrant
 
 
 class LinearError(Exception):
@@ -86,25 +87,33 @@ class LinearClient:
         )
         return f"{self._s.linear_oauth_url}?{query}"
 
-    async def exchange_code(self, code: str) -> str:
+    async def _token(self, form: dict[str, str]) -> TokenGrant:
         assert self._s.linear_client_secret is not None
         try:
             response = await self._http.post(
                 self._s.linear_token_url,
                 data={
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": self.redirect_uri,
-                    "client_id": self._s.linear_client_id,
+                    **form,
+                    "client_id": self._s.linear_client_id or "",
                     "client_secret": self._s.linear_client_secret.get_secret_value(),
                 },
             )
         except httpx.HTTPError as exc:
             raise LinearError(0, "Linear unreachable") from exc
-        token = response.json().get("access_token") if response.status_code == 200 else None
-        if not isinstance(token, str):
-            raise LinearError(401, "Linear rejected the authorization code")
-        return token
+        if response.status_code >= 500 or response.status_code == 429:
+            raise LinearError(response.status_code, "Linear token endpoint unavailable")
+        grant = TokenGrant.from_response(response.json()) if response.status_code == 200 else None
+        if grant is None:
+            raise LinearError(401, "Linear rejected the token request")
+        return grant
+
+    async def exchange_code(self, code: str) -> TokenGrant:
+        return await self._token(
+            {"grant_type": "authorization_code", "code": code, "redirect_uri": self.redirect_uri}
+        )
+
+    async def refresh(self, refresh_token: str) -> TokenGrant:
+        return await self._token({"grant_type": "refresh_token", "refresh_token": refresh_token})
 
     async def _query(self, token: str, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         try:
