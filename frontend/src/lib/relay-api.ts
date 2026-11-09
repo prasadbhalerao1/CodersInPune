@@ -16,6 +16,7 @@ import type {
   ResponsibilityContextView,
   SearchView,
   NotionIntegrationView,
+  NotionPreviewView,
   EmailStatusView,
   PreferenceView,
   CaseKnowledgeItemView,
@@ -164,6 +165,10 @@ export const api = {
     ),
   search: (id: string, q: string) => relayFetch<SearchView>(withQuery(`${ws(id)}/search`, { q })),
   policy: (id: string) => relayFetch<PolicyView>(`${ws(id)}/policy`),
+  notionPreview: (id: string, sourceId: string) =>
+    relayFetch<NotionPreviewView>(
+      `${ws(id)}/integrations/notion/sources/${encodeURIComponent(sourceId)}/preview`,
+    ),
   notion: (id: string) => relayFetch<NotionIntegrationView>(`${ws(id)}/integrations/notion`),
   linearSignals: (id: string) =>
     relayFetch<LinearSignalView[]>(`${ws(id)}/integrations/linear/signals`),

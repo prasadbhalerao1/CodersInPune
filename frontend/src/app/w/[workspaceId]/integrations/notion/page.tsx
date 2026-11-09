@@ -38,8 +38,18 @@ export default async function NotionPage({
   const { configured, connections, sources } = notion.data;
   const connected = connections.length > 0;
   const options = responsibilities.ok ? responsibilities.data : [];
-  const mapped = sources.filter((s) => s.responsibility_id);
-  const unmapped = sources.filter((s) => !s.responsibility_id && !s.removed);
+  const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
+  const matching = sources.filter((s) => !q || s.title.toLowerCase().includes(q));
+  const mapped = matching.filter((s) => s.responsibility_id);
+  const unmapped = matching.filter((s) => !s.responsibility_id && !s.removed);
+  const gone = matching.filter((s) => !s.responsibility_id && s.removed);
+  const previewId = typeof query.preview === "string" ? query.preview : null;
+  const previewSource = previewId ? sources.find((s) => s.id === previewId) : undefined;
+  const preview =
+    previewSource && !previewSource.responsibility_id
+      ? await attempt(api.notionPreview(workspaceId, previewSource.id))
+      : null;
+  const here = `/w/${workspaceId}/integrations/notion`;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -181,6 +191,76 @@ export default async function NotionPage({
           </Section>
         ) : null}
 
+        {previewSource && preview ? (
+          <Section
+            title={`Preview: ${previewSource.title}`}
+            description="What importing this source would bring into Knowledge, read live from Notion. Nothing is imported yet."
+            aside={
+              <Link href={here} className="text-muted-foreground text-sm hover:underline">
+                Close
+              </Link>
+            }
+          >
+            {preview.ok ? (
+              <>
+                <ul className="divide-y rounded-lg border">
+                  {preview.data.pages.map((pg) => (
+                    <li key={pg.url} className="flex items-center gap-3 px-4 py-2 text-sm">
+                      <a
+                        href={pg.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="min-w-0 flex-1 truncate hover:underline"
+                      >
+                        {pg.title} ↗
+                      </a>
+                      {pg.already_imported ? (
+                        <Badge tone="muted">Already in Knowledge</Badge>
+                      ) : null}
+                      {pg.last_edited_at ? (
+                        <span className="text-muted-foreground text-xs">
+                          edited {formatDateTime(pg.last_edited_at)}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                  {preview.data.pages.length === 0 ? (
+                    <li className="text-muted-foreground px-4 py-3 text-sm">
+                      No pages to import (empty, archived or not shared).
+                    </li>
+                  ) : null}
+                </ul>
+                {preview.data.more ? (
+                  <p className="text-muted-foreground text-xs">
+                    Showing the first {preview.data.pages.length}; the import includes the rest.
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                  <span className="text-sm font-medium">Import into</span>
+                  <MapForm workspaceId={workspaceId} source={previewSource} options={options} />
+                </div>
+              </>
+            ) : (
+              <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+                {preview.error.message} You can retry, or choose another source.
+              </p>
+            )}
+          </Section>
+        ) : null}
+
+        {connected ? (
+          <form className="flex gap-2" role="search" aria-label="Filter shared sources">
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Filter shared pages and databases"
+              aria-label="Filter shared pages and databases"
+              className={cn(inputClass, "max-w-sm")}
+            />
+            <SubmitFilter />
+          </form>
+        ) : null}
+
         {connected ? (
           <Section
             title="Shared with Relay"
@@ -196,6 +276,12 @@ export default async function NotionPage({
                 {unmapped.map((s) => (
                   <li key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
                     <SourceTitle source={s} />
+                    <Link
+                      href={`${here}?preview=${s.id}`}
+                      className="text-muted-foreground hover:text-foreground text-xs hover:underline"
+                    >
+                      Preview
+                    </Link>
                     <MapForm workspaceId={workspaceId} source={s} options={options} />
                   </li>
                 ))}
@@ -203,8 +289,30 @@ export default async function NotionPage({
             )}
           </Section>
         ) : null}
+        {gone.length ? (
+          <Section
+            title="No longer shared"
+            description="Deleted, archived or unshared in Notion. Anything imported from them was withdrawn from Knowledge."
+          >
+            <ul className="divide-y rounded-lg border">
+              {gone.map((s) => (
+                <li key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
+                  <SourceTitle source={s} />
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function SubmitFilter() {
+  return (
+    <button type="submit" className="hover:bg-muted rounded-md border px-3 text-sm">
+      Filter
+    </button>
   );
 }
 

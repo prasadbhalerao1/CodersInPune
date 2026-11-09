@@ -32,6 +32,13 @@ async def disconnect(access: CurrentWorkspace, ref: uuid.UUID) -> None:
     await svc.disconnect(access, ref)
 
 
+@router.get("/sources/{source_id}/preview", dependencies=[rate_limit("sync", 30, 600)])
+async def preview(
+    access: CurrentWorkspace, source_id: uuid.UUID, request: Request
+) -> svc.SourcePreviewView:
+    return await svc.preview_source(access, source_id, request.app.state.notion)
+
+
 @router.put("/sources/{source_id}/mapping", status_code=204)
 async def map_source(
     access: CurrentWorkspace, source_id: uuid.UUID, body: svc.SourceMappingIn, jobs: Jobs

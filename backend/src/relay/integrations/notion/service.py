@@ -310,6 +310,87 @@ async def map_source(
     )
 
 
+class PreviewPage(BaseModel):
+    title: str
+    url: str
+    last_edited_at: datetime | None
+    already_imported: bool
+
+
+class SourcePreviewView(BaseModel):
+    source_id: uuid.UUID
+    kind: str
+    title: str
+    pages: list[PreviewPage]
+    more: bool
+
+
+async def preview_source(
+    access: WorkspaceAccess, source_id: uuid.UUID, notion: NotionClient
+) -> SourcePreviewView:
+    """What mapping this source would import, read live from Notion (titles only)."""
+    authorize(access, Permission.INTEGRATION_MANAGE)
+    source = await access.session.scalar(
+        select(NotionSource).where(
+            NotionSource.id == source_id, _mine(access, NotionSource.tenant_id)
+        )
+    )
+    if source is None:
+        raise ApiError(404, "source_not_found", "Notion page or database not found.")
+    connection = await access.session.get(NotionConnection, source.connection_ref)
+    if connection is None or connection.status != "active" or connection.token_ciphertext is None:
+        raise ApiError(409, "reconnect_required", "Reconnect Notion to preview.")
+    imported = set(
+        await access.session.scalars(
+            select(NotionPage.notion_id).where(
+                _mine(access, NotionPage.tenant_id), NotionPage.status == "active"
+            )
+        )
+    )
+    limit = 20
+    rows: list[dict[str, Any]]
+    try:
+        token = secret_box.decrypt(notion.settings, connection.token_ciphertext)
+        if source.kind == "page":
+            rows = [
+                {
+                    "id": source.notion_id,
+                    "url": source.url,
+                    "properties": {},
+                    "_title": source.title,
+                    "last_edited_time": source.last_edited_at.isoformat()
+                    if source.last_edited_at
+                    else None,
+                }
+            ]
+        else:
+            rows = await notion.database_pages(token, source.notion_id, limit + 1)
+    except NotionError as exc:
+        if exc.status == 404:
+            raise ApiError(
+                410, "source_gone", "This source is no longer shared with Relay."
+            ) from exc
+        raise ApiError(502, "notion_unavailable", "Notion didn't answer. Try again.") from exc
+    except secret_box.SecretBoxUnavailableError as exc:
+        raise ApiError(409, "reconnect_required", "Reconnect Notion to preview.") from exc
+    live = [r for r in rows if not is_gone(r)]
+    return SourcePreviewView(
+        source_id=source.id,
+        kind=source.kind,
+        title=source.title,
+        pages=[
+            PreviewPage(
+                title=str(r.get("_title") or title_of(r))[:200],
+                url=str(r["url"]),
+                last_edited_at=parse_when(r.get("last_edited_time")),
+                already_imported=str(r["id"]) in imported,
+            )
+            for r in live[:limit]
+        ],
+        more=len(live) > limit,
+    )
+
+
 # ---------------------------------------------------------------- sync
 
 

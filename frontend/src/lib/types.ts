@@ -910,3 +910,11 @@ export type ResponsibilityContextView = {
   }[];
   suggestions: { source: "GitHub"; label: string; reason: string; url: string }[];
 };
+
+export type NotionPreviewView = {
+  source_id: string;
+  kind: "page" | "database";
+  title: string;
+  pages: { title: string; url: string; last_edited_at: string | null; already_imported: boolean }[];
+  more: boolean;
+};

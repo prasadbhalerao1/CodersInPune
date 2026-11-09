@@ -300,3 +300,29 @@ async def test_not_configured_without_an_encryption_key(ext: FakeExternal) -> No
         ws = Ws(unconfigured, await unconfigured.create_workspace(OWNER, "Acme"))
         assert (await ws.call("GET", "/integrations/notion"))["configured"] is False
         await ws.call("POST", "/integrations/notion/connect", 503)
+
+
+async def test_preview_shows_what_mapping_would_import(api: Api, ws: Ws, ext: FakeExternal) -> None:
+    await connect(api, ws, ext)
+    found = await sources(ws)
+    preview = await ws.call(
+        "GET", f"/integrations/notion/sources/{found['Procedures']['id']}/preview"
+    )
+    assert [p["title"] for p in preview["pages"]] == ["Rotate keys", "Restore backups"]
+    assert not any(p["already_imported"] for p in preview["pages"])
+    assert count_rows("catalog.knowledge_item") == 0  # previewing imports nothing
+
+    rid = await responsibility(ws)
+    await map_source(ws, found["Procedures"], rid, "workspace")
+    await run(api, ws.id)
+    again = await ws.call(
+        "GET", f"/integrations/notion/sources/{found['Procedures']['id']}/preview"
+    )
+    assert all(p["already_imported"] for p in again["pages"])
+
+    ext.notion_rows.pop("db-procs")  # unshared in Notion
+    await ws.call("GET", f"/integrations/notion/sources/{found['Procedures']['id']}/preview", 410)
+    await add_member(api, ws.id, "user_member", "member")
+    await Ws(api, ws.id, "user_member").call(
+        "GET", f"/integrations/notion/sources/{found['Procedures']['id']}/preview", 403
+    )
