@@ -478,3 +478,17 @@ export function CommandTrigger() {
     </div>
   );
 }
+
+/** Phone top bar: the sidebar (and its trigger) is hidden below md. */
+export function MobileSearchButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_MENU))}
+      aria-label="Search or create"
+      className="text-muted-foreground hover:text-foreground grid size-12 shrink-0 place-items-center border-l"
+    >
+      ⌕
+    </button>
+  );
+}
