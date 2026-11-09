@@ -327,3 +327,32 @@ async def test_tokens_close_to_expiry_are_refreshed_before_syncing(
     assert any(t.endswith("+r") for t in ext.linear_tokens)  # refreshed up front
     [after] = (await ws.call("GET", "/integrations/linear"))["connections"]
     assert after["last_sync_status"] == "ok"
+
+
+async def test_responsibility_context_separates_evidence_risks_and_cases(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    await connect(api, ws, ext)
+    await run(api, ws.id)
+    project = (await ws.call("GET", "/integrations/linear"))["projects"][0]
+    rid = await ws.responsibility("Checkout", "critical")
+    await ws.call(
+        "POST",
+        f"/integrations/linear/projects/{project['id']}/link",
+        204,
+        json={"action": "link", "responsibility_id": rid},
+    )
+    await ws.call("GET", "/risks")  # materialise risk signals
+    context = await ws.call("GET", f"/responsibilities/{rid}/context")
+    [evidence] = context["evidence"]
+    assert (evidence["source"], evidence["label"]) == ("Linear", "Checkout v2")
+    assert "open issues" in evidence["detail"]
+    assert {r["title"] for r in context["risks"]} >= {"No primary owner", "No backup"}
+    assert context["cases"] == []
+    assert context["suggestions"] == []
+
+    await add_member(api, ws.id, "user_member", "member")
+    member = await Ws(api, ws.id, "user_member").call("GET", f"/responsibilities/{rid}/context")
+    assert [e["label"] for e in member["evidence"]] == ["Checkout v2"]  # linked = catalogue fact
+    other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
+    await other.call("GET", f"/responsibilities/{rid}/context", 404)

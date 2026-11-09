@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, status
 from pydantic import AwareDatetime
 
+from relay.catalog import context
 from relay.catalog import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 
@@ -85,3 +86,10 @@ async def replace_primary(
 @router.get("/{responsibility_id}/history")
 async def history(access: CurrentWorkspace, responsibility_id: uuid.UUID) -> list[svc.ChangeView]:
     return await svc.ownership_history(access, responsibility_id)
+
+
+@router.get("/{responsibility_id}/context")
+async def responsibility_context(
+    access: CurrentWorkspace, responsibility_id: uuid.UUID
+) -> context.ResponsibilityContextView:
+    return await context.responsibility_context(access, responsibility_id)

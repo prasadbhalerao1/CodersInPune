@@ -13,6 +13,7 @@ import type {
   InsightsView,
   PolicyView,
   ProfileView,
+  ResponsibilityContextView,
   SearchView,
   NotionIntegrationView,
   EmailStatusView,
@@ -157,6 +158,10 @@ export const api = {
     relayFetch<FollowUpView[]>(withQuery(`${ws(id)}/follow-ups`, { mine: String(mine) })),
   profile: (id: string, kind: "people" | "teams" | "departments", ref: string) =>
     relayFetch<ProfileView>(`${ws(id)}/${kind}/${encodeURIComponent(ref)}/profile`),
+  responsibilityContext: (id: string, rid: string) =>
+    relayFetch<ResponsibilityContextView>(
+      `${ws(id)}/responsibilities/${encodeURIComponent(rid)}/context`,
+    ),
   search: (id: string, q: string) => relayFetch<SearchView>(withQuery(`${ws(id)}/search`, { q })),
   policy: (id: string) => relayFetch<PolicyView>(`${ws(id)}/policy`),
   notion: (id: string) => relayFetch<NotionIntegrationView>(`${ws(id)}/integrations/notion`),

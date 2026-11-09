@@ -885,3 +885,28 @@ export type ProfileView = {
   identities: { provider: string; handle: string }[];
   continuity_debt: number | null;
 };
+
+export type ResponsibilityContextView = {
+  risks: {
+    key: string;
+    title: string;
+    severity: Severity;
+    status: string;
+    accepted_until: string | null;
+  }[];
+  cases: {
+    id: string;
+    title: string;
+    case_type: CaseType;
+    status: CaseStatus;
+    emergency: boolean;
+    recipient_planned: boolean;
+  }[];
+  evidence: {
+    source: "GitHub" | "Linear" | "Notion";
+    label: string;
+    url: string;
+    detail: string | null;
+  }[];
+  suggestions: { source: "GitHub"; label: string; reason: string; url: string }[];
+};

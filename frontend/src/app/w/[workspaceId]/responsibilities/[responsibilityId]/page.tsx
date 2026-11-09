@@ -24,6 +24,7 @@ import {
   replacePrimaryAction,
   setResponsibilityStatusAction,
 } from "../../actions";
+import { ContinuityContext } from "./context";
 
 export default async function ResponsibilityPage({
   params,
@@ -31,15 +32,18 @@ export default async function ResponsibilityPage({
 }: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]">) {
   const [{ workspaceId, responsibilityId }, query] = await Promise.all([params, searchParams]);
   const asOf = typeof query.as_of === "string" ? query.as_of : undefined;
-  const [workspace, detail, history, people, teams, assets, knowledge] = await Promise.all([
-    attempt(api.getWorkspace(workspaceId)),
-    attempt(api.getResponsibility(workspaceId, responsibilityId, asOf)),
-    attempt(api.responsibilityHistory(workspaceId, responsibilityId)),
-    attempt(api.listPeople(workspaceId)),
-    attempt(api.listTeams(workspaceId)),
-    attempt(api.assets(workspaceId)),
-    attempt(api.responsibilityKnowledge(workspaceId, responsibilityId)),
-  ]);
+  const [workspace, detail, history, people, teams, assets, knowledge, context] = await Promise.all(
+    [
+      attempt(api.getWorkspace(workspaceId)),
+      attempt(api.getResponsibility(workspaceId, responsibilityId, asOf)),
+      attempt(api.responsibilityHistory(workspaceId, responsibilityId)),
+      attempt(api.listPeople(workspaceId)),
+      attempt(api.listTeams(workspaceId)),
+      attempt(api.assets(workspaceId)),
+      attempt(api.responsibilityKnowledge(workspaceId, responsibilityId)),
+      attempt(api.responsibilityContext(workspaceId, responsibilityId)),
+    ],
+  );
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
   if (!history.ok) return <ApiErrorNotice error={history.error} />;
@@ -123,6 +127,10 @@ export default async function ResponsibilityPage({
               }
             />
           </Section>
+
+          {context.ok && !asOf ? (
+            <ContinuityContext workspaceId={workspaceId} context={context.data} />
+          ) : null}
 
           <section id="knowledge" className="scroll-mt-6">
             <Section
