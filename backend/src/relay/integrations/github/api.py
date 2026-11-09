@@ -7,6 +7,7 @@ from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.integrations.github import review, webhooks
 from relay.integrations.github import service as svc
+from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/integrations/github", tags=["github"])
 callback = APIRouter(prefix="/integrations/github", tags=["github"])
@@ -19,12 +20,12 @@ async def overview(access: CurrentWorkspace, request: Request) -> svc.Integratio
     return await svc.get_integration(access, configured=request.app.state.github.configured)
 
 
-@router.post("/connect")
+@router.post("/connect", dependencies=[rate_limit("oauth", 20, 600)])
 async def connect(access: CurrentWorkspace, request: Request) -> svc.ConnectView:
     return await svc.start_connect(access, request.app.state.github)
 
 
-@router.post("/installations/{installation_ref}/sync")
+@router.post("/installations/{installation_ref}/sync", dependencies=[rate_limit("sync", 30, 600)])
 async def sync(
     access: CurrentWorkspace, installation_ref: uuid.UUID, request: Request
 ) -> svc.IntegrationView:
@@ -57,7 +58,7 @@ async def decide(
     return await svc.decide_suggestion(access, suggestion_id, body)
 
 
-@callback.post("/complete")
+@callback.post("/complete", dependencies=[rate_limit("oauth", 20, 600)])
 async def complete(
     body: svc.CompleteConnectIn, identity: Identity, request: Request
 ) -> dict[str, uuid.UUID]:

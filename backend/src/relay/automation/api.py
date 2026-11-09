@@ -6,6 +6,7 @@ from relay.automation import service as svc
 from relay.governance import service as governance
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
+from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["automation"])
 
@@ -22,12 +23,20 @@ async def update(
     return await svc.update_rule(access, template, body, jobs)
 
 
-@router.post("/automations/{template}/run", status_code=202)
+@router.post(
+    "/automations/{template}/run",
+    status_code=202,
+    dependencies=[rate_limit("automation_run", 30, 600)],
+)
 async def run(access: CurrentWorkspace, template: str, jobs: Jobs) -> None:
     await svc.run_rule(access, template, jobs)
 
 
-@router.post("/automations/{template}/retry", status_code=202)
+@router.post(
+    "/automations/{template}/retry",
+    status_code=202,
+    dependencies=[rate_limit("automation_run", 30, 600)],
+)
 async def retry(access: CurrentWorkspace, template: str, jobs: Jobs) -> None:
     await svc.run_rule(access, template, jobs, retry=True)
 

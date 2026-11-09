@@ -6,6 +6,7 @@ from relay.identity import members as svc
 from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.notifications.email_provider import email_configured
+from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["members"])
 me = APIRouter(prefix="/me", tags=["members"])
@@ -30,7 +31,11 @@ async def list_invitations(access: CurrentWorkspace) -> list[svc.InvitationView]
     return await svc.list_invitations(access)
 
 
-@router.post("/invitations", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invitations",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[rate_limit("invite", 30, 3600)],
+)
 async def invite(
     access: CurrentWorkspace, body: svc.InvitationIn, request: Request
 ) -> svc.InvitationView:
@@ -57,7 +62,7 @@ async def my_invitations(identity: Identity, request: Request) -> list[svc.MyInv
     return await svc.my_invitations(state.session_factory, identity, state.workos)
 
 
-@me.post("/invitations/{invitation_id}/accept")
+@me.post("/invitations/{invitation_id}/accept", dependencies=[rate_limit("invite_accept", 20, 600)])
 async def accept(
     identity: Identity, invitation_id: uuid.UUID, request: Request
 ) -> dict[str, uuid.UUID]:

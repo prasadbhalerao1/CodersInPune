@@ -6,6 +6,7 @@ from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.integrations.notion import service as svc
 from relay.jobs.outbox import Jobs
+from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/integrations/notion", tags=["notion"])
 callback = APIRouter(prefix="/integrations/notion", tags=["notion"])
@@ -16,12 +17,12 @@ async def overview(access: CurrentWorkspace, request: Request) -> svc.NotionInte
     return await svc.get_integration(access, configured=request.app.state.notion.configured)
 
 
-@router.post("/connect")
+@router.post("/connect", dependencies=[rate_limit("oauth", 20, 600)])
 async def connect(access: CurrentWorkspace, request: Request) -> svc.ConnectView:
     return await svc.start_connect(access, request.app.state.notion)
 
 
-@router.post("/connections/{ref}/sync", status_code=202)
+@router.post("/connections/{ref}/sync", status_code=202, dependencies=[rate_limit("sync", 30, 600)])
 async def sync(access: CurrentWorkspace, ref: uuid.UUID, jobs: Jobs) -> None:
     await svc.request_sync(access, ref, jobs)
 
@@ -38,7 +39,7 @@ async def map_source(
     await svc.map_source(access, source_id, body, jobs)
 
 
-@callback.post("/complete")
+@callback.post("/complete", dependencies=[rate_limit("oauth", 20, 600)])
 async def complete(
     body: svc.CompleteConnectIn, identity: Identity, request: Request, jobs: Jobs
 ) -> dict[str, uuid.UUID]:

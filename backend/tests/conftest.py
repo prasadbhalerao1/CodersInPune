@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from relay.config import Settings
+from relay.shared import rate_limit
 from relay.shared.db import create_engine, create_session_factory
 from tests.db import APP_ROLE, APP_URL, OWNER_URL, libpq_url
 from tests.tokens import CLIENT_ID
@@ -103,3 +104,8 @@ async def engine(settings: Settings) -> AsyncIterator[AsyncEngine]:
 @pytest.fixture
 def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     return create_session_factory(engine)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits() -> None:
+    rate_limit.reset()  # limits are per process; tests share one

@@ -6,6 +6,7 @@ from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
 from relay.notifications import email
 from relay.notifications import service as svc
+from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/notifications", tags=["notifications"])
 admin = APIRouter(prefix="/workspaces/{workspace_id}/email", tags=["email"])
@@ -38,6 +39,6 @@ async def email_status(access: CurrentWorkspace, request: Request) -> email.Emai
     return await email.email_status(access, request.app.state.settings)
 
 
-@admin.post("/deliveries/{delivery_id}/retry")
+@admin.post("/deliveries/{delivery_id}/retry", dependencies=[rate_limit("email_retry", 30, 600)])
 async def retry(access: CurrentWorkspace, delivery_id: uuid.UUID, jobs: Jobs) -> email.DeliveryView:
     return await email.retry_delivery(access, delivery_id, jobs)

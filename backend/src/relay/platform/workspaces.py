@@ -22,6 +22,7 @@ from relay.policy.permissions import Permission, authorize, authorize_principal
 from relay.shared.api_types import StrictInput
 from relay.shared.db.session import unit_of_work
 from relay.shared.errors import ApiError
+from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -167,7 +168,9 @@ async def list_my_workspaces(identity: Identity, request: Request) -> list[Works
         return [WorkspaceView(id=r[0], name=r[1], role=r[2]) for r in rows]
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", status_code=status.HTTP_201_CREATED, dependencies=[rate_limit("workspace_create", 10, 3600)]
+)
 async def create_my_workspace(
     body: WorkspaceIn,
     identity: Identity,
