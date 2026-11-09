@@ -1,5 +1,6 @@
 "use server";
 
+import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 
 import { api, RelayApiError } from "@/lib/relay-api";
@@ -25,6 +26,13 @@ export async function createWorkspaceAction(
       return { error: "Your session could not be verified. Sign out and sign in again." };
     }
     return { error: "The workspace could not be created. Please try again." };
+  }
+  // The new membership has no display profile yet (it is copied at sign-in); copy it now
+  // so teammates see a name instead of "Member". Display-only; never blocks creation.
+  const { user } = await withAuth();
+  if (user) {
+    const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
+    await api.syncMyProfile(displayName, user.email).catch(() => undefined);
   }
   redirect(`/w/${workspaceId}`);
 }

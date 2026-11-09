@@ -115,6 +115,12 @@ export const api = {
       headers: { "Idempotency-Key": idempotencyKey },
     }),
 
+  syncMyProfile: (displayName: string | undefined, email: string | undefined) =>
+    relayFetch<void>("/me/profile", {
+      method: "PUT",
+      body: JSON.stringify({ display_name: displayName, email }),
+    }),
+
   overview: (id: string) => relayFetch<OverviewView>(`${ws(id)}/overview`),
   risks: (id: string, status: "active" | "accepted" | "all" = "active") =>
     relayFetch<RiskView[]>(withQuery(`${ws(id)}/risks`, { status })),
