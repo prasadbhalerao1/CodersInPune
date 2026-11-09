@@ -119,7 +119,7 @@ export default async function NewCasePage({
           <div className="flex gap-2">
             <SubmitButton>Create case</SubmitButton>
             <Link href={base} className="text-muted-foreground self-center text-sm hover:underline">
-              Change playbook
+              Change case type
             </Link>
           </div>
         </ActionForm>

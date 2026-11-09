@@ -204,7 +204,7 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
         </div>
         <aside className="flex flex-col gap-6">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
-            <dt className="text-muted-foreground">Playbook</dt>
+            <dt className="text-muted-foreground">Case type</dt>
             <dd>{CASE_TYPES[c.case_type].label}</dd>
             {c.affected_person_name ? (
               <>

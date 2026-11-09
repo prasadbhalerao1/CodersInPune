@@ -54,7 +54,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   primary: "Primary",
   co_owner: "Co-owner",
   backup: "Backup",
-  temporary: "Covering",
+  temporary: "Temporary",
 };
 
 export function RoleBadge({ value }: { value: Role }) {
