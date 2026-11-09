@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
@@ -14,6 +14,7 @@ export async function markAllReadAction(workspaceId: string): Promise<ActionStat
     throw error;
   }
   revalidatePath(`/w/${workspaceId}`, "layout");
+  refresh(); // re-render the current route; data is never cached
   return {};
 }
 
@@ -30,5 +31,6 @@ export async function openNotificationAction(
     throw error;
   }
   revalidatePath(`/w/${workspaceId}`, "layout");
+  refresh(); // re-render the current route; data is never cached
   redirect(`/w/${workspaceId}/${target}`);
 }

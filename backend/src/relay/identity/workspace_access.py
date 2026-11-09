@@ -74,4 +74,7 @@ async def get_workspace_access(
         yield access
 
 
-CurrentWorkspace = Annotated[WorkspaceAccess, Depends(get_workspace_access)]
+# scope="function": the transaction commits when the endpoint returns, *before* the
+# response is sent. With the default request scope a client could see 2xx and refetch
+# before the commit (stale reads), and a failed commit would still have answered 2xx.
+CurrentWorkspace = Annotated[WorkspaceAccess, Depends(get_workspace_access, scope="function")]

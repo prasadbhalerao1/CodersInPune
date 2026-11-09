@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
@@ -17,6 +17,7 @@ async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise
   }
   revalidatePath(`/w/${workspaceId}/integrations`, "layout");
   revalidatePath(`/w/${workspaceId}/knowledge`);
+  refresh(); // re-render the current route; data is never cached
   return {};
 }
 

@@ -35,11 +35,7 @@ test("add people and a responsibility with an owner, and see the risk", async ({
   for (const person of [names.leaving, names.joining]) {
     await page.getByLabel("Name", { exact: true }).fill(person);
     await submitAndSettle(page, "Add person");
-    // Saved server-side; reload if the post-action refresh hasn't painted yet.
-    await expect(async () => {
-      if (!(await page.getByText(person, { exact: true }).isVisible())) await page.reload();
-      await expect(page.getByText(person, { exact: true })).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 15000 });
+    await expect(page.getByText(person, { exact: true })).toBeVisible();
   }
 
   await page.goto(`${base}/responsibilities/new`);
@@ -120,10 +116,10 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
 test("insights, automations, policies and integrations render for an owner", async ({ page }) => {
   await page.goto(`${base}/insights`);
   await expect(page.getByText("Continuity Debt").first()).toBeVisible();
-  await expect(page.getByText("Open ownership risks")).toBeVisible();
+  await expect(page.getByText("Open ownership risks").first()).toBeVisible();
 
   await page.goto(`${base}/automations`);
-  await expect(page.getByText("Critical responsibility without a backup")).toBeVisible();
+  await expect(page.getByText("Critical responsibility without a backup").first()).toBeVisible();
 
   await page.goto(`${base}/settings`);
   const days = page.getByLabel("Knowledge review interval (days)");

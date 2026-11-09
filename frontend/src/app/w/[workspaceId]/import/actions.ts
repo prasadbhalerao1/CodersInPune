@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 
 import { api, RelayApiError } from "@/lib/relay-api";
 import type { ImportKind, ImportResultView } from "@/lib/types";
@@ -27,7 +27,10 @@ export async function importCsvAction(
       kind,
       csv,
     });
-    if (step === "commit") revalidatePath(`/w/${workspaceId}`, "layout");
+    if (step === "commit") {
+      revalidatePath(`/w/${workspaceId}`, "layout");
+      refresh();
+    }
     return { result };
   } catch (error) {
     if (error instanceof RelayApiError) return { error: error.message };
