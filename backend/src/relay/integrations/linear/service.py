@@ -138,6 +138,11 @@ def _mine(access: WorkspaceAccess, tenant_column: Any) -> Any:
     return visible(access, Permission.INTEGRATION_MANAGE, tenant_column)
 
 
+def _is_app_user(user: dict[str, Any]) -> bool:
+    email = str(user.get("email") or "").lower()
+    return email.endswith("@linear.linear.app") or email.endswith(".linear.app")
+
+
 def _issue_link(issue: LinearIssue) -> dict[str, str]:
     return {"label": f"{issue.identifier} {issue.title}", "url": issue.url}
 
@@ -436,7 +441,9 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
                 "linear_id": u["id"],
                 "name": u.get("displayName") or u["name"],
                 "email": (u.get("email") or "").lower() or None,
-                "active": bool(u.get("active", True)),
+                # Linear's own app/system users (e.g. "linear") are not people: keep them
+                # out of identity review.
+                "active": bool(u.get("active", True)) and not _is_app_user(u),
             }
             for u in users
         ],

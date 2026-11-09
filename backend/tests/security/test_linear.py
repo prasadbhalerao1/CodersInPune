@@ -43,6 +43,13 @@ def ext() -> FakeExternal:
                     "active": True,
                 },
                 {
+                    "id": "lu-app",
+                    "name": "linear",
+                    "displayName": "linear",
+                    "email": "linear-1234@linear.linear.app",
+                    "active": True,
+                },
+                {
                     "id": "lu-cy",
                     "name": "Cy",
                     "displayName": "cy",
@@ -192,6 +199,7 @@ async def test_identities_are_suggested_never_linked_automatically(
     assert identities["bea"]["suggested_person"]["id"] == bea["id"]
     assert identities["bea"]["person"] is None
     assert identities["cy"]["link_status"] == "unmatched"
+    assert identities["linear"]["active"] is False  # Linear's system user is not a person
 
     path = "/integrations/linear/identities/{}/decision"
     await ws.call(
