@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 import { decideIdentityAction } from "../../actions";
 import { GitHubTabs } from "../tabs";
+import { IntegrationsNav } from "../../integrations-nav";
 
 const FILTERS = [
   { key: "review", label: "Needs review" },
@@ -116,7 +117,8 @@ export default async function IdentitiesPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="GitHub" />
+      <PageHeader title="Integrations" />
+      <IntegrationsNav workspaceId={workspaceId} current="github" />
       <GitHubTabs workspaceId={workspaceId} current="identities" />
       <div className="flex max-w-5xl flex-col gap-4 p-6">
         <p className="text-muted-foreground max-w-prose text-sm">

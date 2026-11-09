@@ -5,6 +5,9 @@ import { connection } from "next/server";
 
 import type {
   ActivityView,
+  LinearIdentityView,
+  LinearIntegrationView,
+  LinearSignalView,
   EmailStatusView,
   PreferenceView,
   CaseKnowledgeItemView,
@@ -137,6 +140,11 @@ export const api = {
     relayFetch<IdentityView[]>(withQuery(`${ws(id)}/integrations/github/identities`, { status })),
   githubTeams: (id: string) => relayFetch<GitHubTeamView[]>(`${ws(id)}/integrations/github/teams`),
   githubSignals: (id: string) => relayFetch<SignalView[]>(`${ws(id)}/integrations/github/signals`),
+  linear: (id: string) => relayFetch<LinearIntegrationView>(`${ws(id)}/integrations/linear`),
+  linearIdentities: (id: string) =>
+    relayFetch<LinearIdentityView[]>(`${ws(id)}/integrations/linear/identities`),
+  linearSignals: (id: string) =>
+    relayFetch<LinearSignalView[]>(`${ws(id)}/integrations/linear/signals`),
   githubSuggestions: (id: string, status = "open") =>
     relayFetch<SuggestionView[]>(
       withQuery(`${ws(id)}/integrations/github/suggestions`, { status }),

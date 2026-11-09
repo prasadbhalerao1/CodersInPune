@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { decideSuggestionAction } from "../../actions";
 import { GitHubTabs } from "../tabs";
 import { BULK_FORM, BulkBar } from "./bulk-bar";
+import { IntegrationsNav } from "../../integrations-nav";
 
 const TABS = ["open", "deferred", "dismissed", "approved"] as const;
 const SOURCE: Record<string, string> = {
@@ -39,7 +40,8 @@ export default async function SuggestionsPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="GitHub" />
+      <PageHeader title="Integrations" />
+      <IntegrationsNav workspaceId={workspaceId} current="github" />
       <GitHubTabs workspaceId={workspaceId} current="suggestions" />
       <div className="flex flex-col gap-4 p-6">
         <p className="text-muted-foreground max-w-prose text-sm">

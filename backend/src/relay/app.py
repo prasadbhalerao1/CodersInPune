@@ -19,6 +19,8 @@ from relay.identity.workos_api import WorkOSClient
 from relay.imports import api as imports_api
 from relay.integrations.github import api as github_api
 from relay.integrations.github.client import GitHubClient
+from relay.integrations.linear import api as linear_api
+from relay.integrations.linear.client import LinearClient
 from relay.jobs import outbox
 from relay.jobs.app import create_job_app
 from relay.notifications import api as notifications_api
@@ -71,6 +73,7 @@ def create_app(
         app.state.http = http
         app.state.workos = WorkOSClient(resolved, http)
         app.state.github = GitHubClient(resolved, http)
+        app.state.linear = LinearClient(resolved, http)
         app.state.jobs = create_job_app(
             resolved, session_factory, outbox.JobContext(http=http, settings=resolved)
         )
@@ -99,4 +102,6 @@ def create_app(
     app.include_router(members_api.me)
     app.include_router(github_api.router)
     app.include_router(github_api.callback)
+    app.include_router(linear_api.router)
+    app.include_router(linear_api.callback)
     return app

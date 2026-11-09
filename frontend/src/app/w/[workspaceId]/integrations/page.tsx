@@ -10,6 +10,7 @@ import { api } from "@/lib/relay-api";
 import type { InstallationView } from "@/lib/types";
 
 import { GitHubTabs } from "./github/tabs";
+import { IntegrationsNav } from "./integrations-nav";
 import {
   connectGitHubAction,
   disconnectInstallationAction,
@@ -47,7 +48,8 @@ export default async function IntegrationsPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="GitHub" />
+      <PageHeader title="Integrations" />
+      <IntegrationsNav workspaceId={workspaceId} current="github" />
       {connected.length ? (
         <GitHubTabs
           workspaceId={workspaceId}

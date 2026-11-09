@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     resend_api_base_url: str = "https://api.resend.com"
     email_from: str | None = None  # e.g. "Relay <notifications@mail.example.com>"
     email_reply_to: str | None = None
+    # Fernet key for integration credentials stored at rest (Linear, Notion tokens).
+    integration_encryption_key: SecretStr | None = None
+    # Linear OAuth app (read scope). Redirect URI: {frontend}/integrations/linear/callback
+    linear_client_id: str | None = None
+    linear_client_secret: SecretStr | None = None
+    linear_api_url: str = "https://api.linear.app/graphql"
+    linear_oauth_url: str = "https://linear.app/oauth/authorize"
+    linear_token_url: str = "https://api.linear.app/oauth/token"  # noqa: S105  (a URL)
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
 

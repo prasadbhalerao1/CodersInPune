@@ -611,3 +611,58 @@ export type EmailStatusView = {
   pending: number;
   recent_failures: DeliveryView[];
 };
+
+export type LinearConnectionView = {
+  id: string;
+  organization_name: string;
+  url_key: string | null;
+  status: "active" | "revoked" | "disconnected";
+  last_synced_at: string | null;
+  last_sync_status: "never" | "queued" | "ok" | "partial" | "error";
+  last_sync_error: string | null;
+  next_reconcile_at: string | null;
+};
+
+export type LinearProjectView = {
+  id: string;
+  name: string;
+  state: string | null;
+  url: string;
+  lead: string | null;
+  open_issues: number;
+  recent_issues: number;
+  responsibility_id: string | null;
+  responsibility_name: string | null;
+};
+
+export type LinearIntegrationView = {
+  configured: boolean;
+  connections: LinearConnectionView[];
+  teams: { id: string; key: string; name: string }[];
+  projects: LinearProjectView[];
+  identities_to_review: number;
+};
+
+export type LinearIdentityView = {
+  id: string;
+  name: string;
+  email: string | null;
+  active: boolean;
+  link_status: "unmatched" | "suggested" | "linked" | "dismissed";
+  person: PersonRef | null;
+  suggested_person: PersonRef | null;
+  match_reason: string | null;
+  recent_issues: number;
+};
+
+export type LinearSignalView = {
+  key: string;
+  kind: "unowned_important" | "active_uncovered" | "owner_absent";
+  severity: Severity;
+  title: string;
+  explanation: string;
+  project: string;
+  project_url: string;
+  responsibility_id: string | null;
+  evidence: { label: string; url: string }[];
+};

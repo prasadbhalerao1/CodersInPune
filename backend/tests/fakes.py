@@ -65,6 +65,12 @@ class FakeExternal:
     emails: list[dict[str, Any]] = field(default_factory=list)  # accepted messages
     resend_keys: dict[str, str] = field(default_factory=dict)  # idempotency key -> id
     resend_requests: int = 0
+    # Linear: OAuth codes -> tokens; GraphQL data; revoke by removing the token.
+    linear_codes: dict[str, str] = field(default_factory=dict)
+    linear_tokens: set[str] = field(default_factory=set)
+    linear_down: bool = False
+    linear_data: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    linear_queries: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.private_key_pem, self._public_key = _private_key_pem()
@@ -94,6 +100,8 @@ class FakeExternal:
             return self._workos(method, path, request)
         if host == "api.resend.com":
             return self._resend(request)
+        if host == "api.linear.app":
+            return self._linear(request)
         if self.github_down:
             return httpx.Response(502)
         if host == "github.com" and path == "/login/oauth/access_token":
@@ -106,6 +114,41 @@ class FakeExternal:
         if host == "api.github.com":
             return self._github(method, path, request)
         return httpx.Response(404)
+
+    def _linear(self, request: httpx.Request) -> httpx.Response:
+        if self.linear_down:
+            return httpx.Response(503)
+        if request.url.path == "/oauth/token":
+            form = dict(httpx.QueryParams(request.content.decode()))
+            token = self.linear_codes.get(form.get("code", ""))
+            if token is None or form.get("client_secret") != "lin-secret":
+                return httpx.Response(400, json={"error": "invalid_grant"})
+            self.linear_tokens.add(token)
+            return httpx.Response(200, json={"access_token": token, "token_type": "Bearer"})
+        token = request.headers.get("authorization", "").removeprefix("Bearer ")
+        if token not in self.linear_tokens:
+            return httpx.Response(401, json={"errors": [{"message": "auth"}]})
+        body = json.loads(request.content)
+        query = body["query"]
+        self.linear_queries.append(query)
+        if "organization" in query:
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "organization": {"id": "org-1", "name": "Acme Linear", "urlKey": "acme"}
+                    }
+                },
+            )
+        for key in ("teams", "projects", "users", "issues"):
+            if f"{key}(" in query:
+                nodes = self.linear_data.get(key, [])
+                if key == "issues":
+                    since = body["variables"]["since"]
+                    nodes = [n for n in nodes if n["updatedAt"] > since]
+                page = {"nodes": nodes, "pageInfo": {"hasNextPage": False, "endCursor": None}}
+                return httpx.Response(200, json={"data": {key: page}})
+        return httpx.Response(400)
 
     def _resend(self, request: httpx.Request) -> httpx.Response:
         if request.headers.get("authorization") != "Bearer re_test_key":
@@ -246,4 +289,35 @@ def pull(
         "updated_at": updated,
         "closed_at": merged,
         "merged_at": merged,
+    }
+
+
+def linear_issue(
+    identifier: str,
+    *,
+    project: str | None = "proj-1",
+    assignee: str | None = "lu-bea",
+    priority: int = 3,
+    state: str = "started",
+    updated: str = "2026-11-05T10:00:00.000Z",
+) -> dict[str, Any]:
+    """A Linear issue node (with a description field Relay must never request)."""
+    return {
+        "id": f"iss-{identifier}",
+        "identifier": identifier,
+        "title": f"Work {identifier}",
+        "description": "SECRET DESCRIPTION",
+        "priority": priority,
+        "url": f"https://linear.app/acme/issue/{identifier}",
+        "createdAt": "2026-10-01T10:00:00.000Z",
+        "updatedAt": updated,
+        "completedAt": None,
+        "canceledAt": None,
+        "state": {"type": state, "name": state.title()},
+        "assignee": {"id": assignee} if assignee else None,
+        "creator": {"id": "lu-bea"},
+        "team": {"id": "team-1"},
+        "project": {"id": project} if project else None,
+        "parent": None,
+        "labels": {"nodes": [{"name": "backend"}]},
     }

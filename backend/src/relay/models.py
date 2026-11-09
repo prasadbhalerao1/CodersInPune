@@ -10,6 +10,7 @@ import relay.continuity.models
 import relay.directory.models
 import relay.identity.models
 import relay.integrations.github.models
+import relay.integrations.linear.models
 import relay.jobs.models
 import relay.notifications.models
 import relay.platform.models
