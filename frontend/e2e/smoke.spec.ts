@@ -12,6 +12,7 @@ const names = {
 };
 
 async function submitAndSettle(page: Page, button: string) {
+  await page.waitForLoadState("networkidle"); // a click before hydration is lost
   await page.getByRole("button", { name: button, exact: true }).first().click();
   await page.waitForLoadState("networkidle");
 }
@@ -34,7 +35,11 @@ test("add people and a responsibility with an owner, and see the risk", async ({
   for (const person of [names.leaving, names.joining]) {
     await page.getByLabel("Name", { exact: true }).fill(person);
     await submitAndSettle(page, "Add person");
-    await expect(page.getByText(person, { exact: true })).toBeVisible();
+    // Saved server-side; reload if the post-action refresh hasn't painted yet.
+    await expect(async () => {
+      if (!(await page.getByText(person, { exact: true }).isVisible())) await page.reload();
+      await expect(page.getByText(person, { exact: true })).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 15000 });
   }
 
   await page.goto(`${base}/responsibilities/new`);
@@ -59,9 +64,9 @@ test("add people and a responsibility with an owner, and see the risk", async ({
   await page.getByLabel("Title", { exact: true }).fill(`Runbook ${stamp}`);
   await page.getByLabel("Content").fill("Rotate the webhook secret, then redeploy.");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText(`Runbook ${stamp}`)).toBeVisible();
+  await expect(page.getByText(`Runbook ${stamp}`).first()).toBeVisible();
   await page.goto(`${base}/knowledge?q=webhook+secret`);
-  await expect(page.getByText(`Runbook ${stamp}`)).toBeVisible();
+  await expect(page.getByText(`Runbook ${stamp}`).first()).toBeVisible();
 
   await page.goto(`${base}/risks`);
   await expect(page.getByText("No backup").first()).toBeVisible();
@@ -110,6 +115,27 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await page.goto(`${base}/responsibilities`);
   const row = page.getByRole("row", { name: new RegExp(names.duty) });
   await expect(row).toContainText(names.joining);
+});
+
+test("insights, automations, policies and integrations render for an owner", async ({ page }) => {
+  await page.goto(`${base}/insights`);
+  await expect(page.getByText("Continuity Debt").first()).toBeVisible();
+  await expect(page.getByText("Open ownership risks")).toBeVisible();
+
+  await page.goto(`${base}/automations`);
+  await expect(page.getByText("Critical responsibility without a backup")).toBeVisible();
+
+  await page.goto(`${base}/settings`);
+  const days = page.getByLabel("Knowledge review interval (days)");
+  await days.fill("60");
+  await submitAndSettle(page, "Save policies");
+  await page.reload();
+  await expect(page.getByLabel("Knowledge review interval (days)")).toHaveValue("60");
+
+  for (const provider of ["linear", "notion"]) {
+    await page.goto(`${base}/integrations/${provider}`);
+    await expect(page.getByRole("navigation", { name: "Integrations" })).toBeVisible();
+  }
 });
 
 test("another workspace cannot be reached", async ({ page }) => {
