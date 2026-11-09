@@ -1,4 +1,5 @@
 import { signOutAction } from "@/app/actions";
+import { RetryButton } from "@/components/retry-button";
 import type { RelayApiError } from "@/lib/relay-api";
 
 const MESSAGES: Record<string, string> = {
@@ -23,7 +24,21 @@ export function ApiErrorNotice({ error }: { error: RelayApiError }) {
             Sign out and sign in again
           </button>
         </form>
-      ) : null}
+      ) : error.status === 403 ? (
+        <p className="text-muted-foreground mt-2">
+          Ask an owner or admin of this workspace if you need access.{" "}
+          <a href="/workspaces" className="underline">
+            Your workspaces
+          </a>
+        </p>
+      ) : (
+        <p className="text-muted-foreground mt-2">
+          {error.status >= 500 || error.status === 429
+            ? "This is usually temporary. Nothing was changed. "
+            : ""}
+          <RetryButton />
+        </p>
+      )}
     </div>
   );
 }
