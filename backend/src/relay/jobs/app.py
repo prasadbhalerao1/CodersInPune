@@ -1,6 +1,7 @@
 """Procrastinate application. Execution mechanism only; the outbox is the source of truth."""
 
 import dataclasses
+import logging
 import uuid
 
 import procrastinate
@@ -22,6 +23,9 @@ from relay.jobs import outbox
 # job is `failed` and can be retried manually (`procrastinate ... retry`); the outbox row
 # stays unprocessed, so no work is lost.
 RETRY = procrastinate.RetryStrategy(max_attempts=5, exponential_wait=2)
+# Workers heartbeat every 10 s; one silent for this long is gone.
+STALLED_AFTER = 120.0
+logger = logging.getLogger(__name__)
 
 
 def libpq_conninfo(database_url: str) -> str:
@@ -51,5 +55,16 @@ def create_job_app(
     @app.task(name="relay.github_reconcile", queueing_lock="github_reconcile")
     async def github_reconcile(timestamp: int) -> None:
         await relay.integrations.github.webhooks.reconcile(session_factory, app)
+
+    @app.periodic(cron="*/5 * * * *")
+    @app.task(name="relay.retry_stalled_jobs", queueing_lock="retry_stalled_jobs")
+    async def retry_stalled_jobs(timestamp: int) -> None:
+        """A worker that died mid-job (crash, OOM, SIGKILL) leaves its job `doing` forever.
+        Requeue jobs whose worker stopped heartbeating; handlers are idempotent."""
+        stalled = await app.job_manager.get_stalled_jobs(seconds_since_heartbeat=STALLED_AFTER)
+        for job in stalled:
+            logger.warning("retrying stalled job %s (%s)", job.id, job.task_name)
+            await app.job_manager.retry_job(job)
+        await app.job_manager.prune_stalled_workers(seconds_since_heartbeat=STALLED_AFTER)
 
     return app
