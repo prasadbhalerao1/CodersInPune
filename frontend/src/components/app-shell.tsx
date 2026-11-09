@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
+import { CommandMenu, CommandTrigger } from "@/components/command-menu";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { WorkspaceHeading } from "@/components/workspace-heading";
 import { UserMenu } from "@/components/user-menu";
@@ -17,6 +18,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <WorkspaceHeading />
           </Suspense>
         </div>
+        <Suspense fallback={null}>
+          <CommandTrigger />
+        </Suspense>
         <Suspense fallback={<div className="flex-1" />}>
           <SidebarNav />
         </Suspense>
@@ -27,6 +31,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+      <Suspense fallback={null}>
+        <CommandMenu />
+      </Suspense>
     </div>
   );
 }

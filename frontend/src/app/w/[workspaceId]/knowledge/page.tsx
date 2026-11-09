@@ -6,10 +6,10 @@ import { EmptyState, PageHeader, Section } from "@/components/page";
 import { CriticalityBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
-import { api } from "@/lib/relay-api";
+import { api, canManage } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
 
-import { KnowledgeList } from "./knowledge-list";
+import { AddKnowledgeForm, KnowledgeList } from "./knowledge-list";
 
 export default async function KnowledgePage({
   params,
@@ -18,9 +18,12 @@ export default async function KnowledgePage({
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const q = typeof query.q === "string" ? query.q : undefined;
   const freshness = query.freshness === "stale" ? "stale" : undefined;
-  const [overview, workspace] = await Promise.all([
+  const adding = query.add === "1";
+  const target = typeof query.responsibility === "string" ? query.responsibility : undefined;
+  const [overview, workspace, responsibilities] = await Promise.all([
     attempt(api.knowledge(workspaceId, { q, freshness })),
     attempt(api.getWorkspace(workspaceId)),
+    adding ? attempt(api.listResponsibilities(workspaceId)) : null,
   ]);
   if (!overview.ok) return <ApiErrorNotice error={overview.error} />;
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
@@ -33,6 +36,45 @@ export default async function KnowledgePage({
       <PageHeader title="Knowledge" />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-4">
+          {adding && canWrite ? (
+            <Section
+              title="Add knowledge"
+              description="Knowledge always belongs to a responsibility. Choose which one."
+            >
+              <form className="flex flex-wrap gap-2" aria-label="Choose responsibility">
+                <input type="hidden" name="add" value="1" />
+                <select
+                  name="responsibility"
+                  defaultValue={target ?? ""}
+                  required
+                  aria-label="Responsibility"
+                  className={cn(inputClass, "max-w-sm")}
+                >
+                  <option value="" disabled>
+                    Choose a responsibility…
+                  </option>
+                  {(responsibilities?.ok ? responsibilities.data : [])
+                    .filter((r) => r.status === "active")
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                </select>
+                <button type="submit" className={buttonVariants({ variant: "outline" })}>
+                  Continue
+                </button>
+              </form>
+              {target ? (
+                <AddKnowledgeForm
+                  workspaceId={workspaceId}
+                  responsibilityId={target}
+                  canRestrict={canManage(workspace.data)}
+                  open
+                />
+              ) : null}
+            </Section>
+          ) : null}
           <form role="search" className="flex gap-2">
             <input
               name="q"

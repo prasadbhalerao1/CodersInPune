@@ -808,3 +808,16 @@ export type PolicyView = {
   updated_by_name: string | null;
   updated_at: string | null;
 };
+
+export type SearchKind =
+  "responsibility" | "person" | "team" | "department" | "asset" | "case" | "knowledge" | "risk";
+
+export type SearchHit = {
+  kind: SearchKind;
+  id: string;
+  title: string;
+  detail: string | null;
+  status: string | null;
+};
+
+export type SearchView = { query: string; hits: SearchHit[] };

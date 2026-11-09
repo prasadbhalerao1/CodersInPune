@@ -106,13 +106,15 @@ export function AddKnowledgeForm({
   workspaceId,
   responsibilityId,
   canRestrict,
+  open = false,
 }: {
   workspaceId: string;
   responsibilityId: string;
   canRestrict: boolean;
+  open?: boolean;
 }) {
   return (
-    <details className="group rounded-lg border">
+    <details className="group rounded-lg border" open={open}>
       <summary className="text-muted-foreground hover:text-foreground cursor-pointer list-none px-4 py-2.5 text-sm select-none">
         + Add knowledge
       </summary>
