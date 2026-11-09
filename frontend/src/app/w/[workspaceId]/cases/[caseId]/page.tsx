@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { formatDateTime, PageHeader } from "@/components/page";
@@ -12,6 +13,7 @@ import { CASE_TYPES } from "../labels";
 import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
 import { CommentComposer } from "./comment-composer";
 import { KnowledgeHandover } from "./knowledge-handover";
+import { Blockers, OwnershipPlan } from "./ownership-plan";
 import { ApprovalPanel, ReadinessSection, ScopeSection, TasksSection } from "./sections";
 
 const STEPS = [
@@ -154,9 +156,23 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
         <p className="text-muted-foreground mt-2 text-sm" role="status">
           {nextStep(c)}
         </p>
+        <Blockers detail={c} />
+        {briefing?.ok ? (
+          <p className="mt-2 text-sm">
+            <Link
+              href={`/w/${workspaceId}/cases/${caseId}/briefing`}
+              className="font-medium underline-offset-2 hover:underline"
+            >
+              {c.status === "completed"
+                ? "Open the return briefing →"
+                : "Review the return briefing before cover ends →"}
+            </Link>
+          </p>
+        ) : null}
       </div>
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-8">
+          <OwnershipPlan workspaceId={workspaceId} detail={c} />
           <ScopeSection
             {...ctx}
             people={people.data}
@@ -170,10 +186,7 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
               workspaceId={workspaceId}
               caseId={caseId}
               entries={knowledge.data}
-              canRecord={
-                c.allowed_actions.includes("add_task") &&
-                (c.case_type === "transfer" || c.case_type === "departure")
-              }
+              canRecord={c.allowed_actions.includes("add_task")}
             />
           ) : null}
           {briefing?.ok ? <BriefingSection briefing={briefing.data} /> : null}

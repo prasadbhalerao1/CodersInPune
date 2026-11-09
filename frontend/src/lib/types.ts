@@ -487,6 +487,15 @@ export type BriefingView = {
     completed_at: string | null;
   }[];
   notes: ActivityView[];
+  knowledge: {
+    responsibility_name: string;
+    outcome: "handed_over" | "missing";
+    title: string | null;
+    url: string | null;
+    note: string | null;
+    recorded_at: string;
+  }[];
+  exceptions: number;
 };
 
 export type AuditEventView = {

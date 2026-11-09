@@ -2,7 +2,6 @@ import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
 import { formatDateTime, Section } from "@/components/page";
 import { Badge, CriticalityBadge, ROLE_LABEL } from "@/components/ui/badge";
 import type { ActivityView, BriefingView, CaseDetail } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 import { setEmergencyAction } from "../actions";
 
@@ -224,22 +223,81 @@ export function BriefingSection({ briefing }: { briefing: BriefingView }) {
             </ul>
           )}
         </div>
+        <div className="grid gap-4 px-4 py-3 sm:grid-cols-2">
+          <div>
+            <p className="text-muted-foreground mb-2 text-xs font-medium">
+              Still open ({briefing.tasks.length - done})
+            </p>
+            {briefing.tasks.length === done ? (
+              <p className="text-muted-foreground text-xs">Nothing outstanding.</p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs">
+                {briefing.tasks
+                  .filter((t) => t.status !== "done")
+                  .map((t, i) => (
+                    <li key={i} className="font-medium">
+                      ○ {t.title}
+                      {t.assignee_name ? ` · ${t.assignee_name}` : ""}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="text-muted-foreground mb-2 text-xs font-medium">Done ({done})</p>
+            {done === 0 ? (
+              <p className="text-muted-foreground text-xs">No tasks completed.</p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-xs">
+                {briefing.tasks
+                  .filter((t) => t.status === "done")
+                  .map((t, i) => (
+                    <li key={i}>
+                      ✓ {t.title}
+                      {t.assignee_name ? ` · ${t.assignee_name}` : ""}
+                      {t.completed_at ? ` · ${formatDateTime(t.completed_at)}` : ""}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        </div>
         <div className="px-4 py-3">
           <p className="text-muted-foreground mb-2 text-xs font-medium">
-            Work ({done}/{briefing.tasks.length} tasks done)
+            Knowledge ({briefing.knowledge.filter((k) => k.outcome === "handed_over").length} handed
+            over, {briefing.knowledge.filter((k) => k.outcome === "missing").length} missing)
           </p>
-          {briefing.tasks.length === 0 ? (
-            <p className="text-muted-foreground text-xs">No tasks on this case.</p>
+          {briefing.knowledge.length === 0 ? (
+            <p className="text-muted-foreground text-xs">No knowledge handover was recorded.</p>
           ) : (
             <ul className="flex flex-col gap-1 text-xs">
-              {briefing.tasks.map((t, i) => (
-                <li key={i} className={cn(t.status !== "done" && "font-medium")}>
-                  {t.status === "done" ? "✓" : "○"} {t.title}
-                  {t.assignee_name ? ` · ${t.assignee_name}` : ""}
+              {briefing.knowledge.map((k, i) => (
+                <li key={i}>
+                  {k.outcome === "handed_over" ? "✓ Handed over" : "! Missing"} ·{" "}
+                  {k.responsibility_name}
+                  {k.title ? (
+                    k.url ? (
+                      <>
+                        {": "}
+                        <a href={k.url} target="_blank" rel="noreferrer" className="underline">
+                          {k.title}
+                        </a>
+                      </>
+                    ) : (
+                      `: ${k.title}`
+                    )
+                  ) : null}
+                  {k.note ? <span className="text-muted-foreground"> · {k.note}</span> : null}
                 </li>
               ))}
             </ul>
           )}
+          {briefing.exceptions ? (
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
+              {briefing.exceptions} responsibilit{briefing.exceptions === 1 ? "y was" : "ies were"}{" "}
+              not covered (recorded exception).
+            </p>
+          ) : null}
         </div>
         {briefing.notes.length > 0 ? (
           <div className="px-4 py-3">

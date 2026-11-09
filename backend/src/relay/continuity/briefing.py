@@ -10,13 +10,19 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, select
 
 from relay.audit.models import AuditEvent
 from relay.catalog import service as catalog
-from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange, Responsibility
+from relay.catalog.knowledge import readable as knowledge_readable
+from relay.catalog.models import (
+    KnowledgeItem,
+    OwnershipAssignment,
+    OwnershipAssignmentChange,
+    Responsibility,
+)
 from relay.continuity.collaboration import ActivityView, case_activity
-from relay.continuity.models import CaseScopeItem, CaseTask, ContinuityCase
+from relay.continuity.models import CaseKnowledge, CaseScopeItem, CaseTask, ContinuityCase
 from relay.directory.models import Person
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
@@ -61,6 +67,15 @@ class BriefingTaskView(BaseModel):
     completed_at: datetime | None
 
 
+class BriefingKnowledgeView(BaseModel):
+    responsibility_name: str
+    outcome: str  # handed_over | missing
+    title: str | None
+    url: str | None
+    note: str | None
+    recorded_at: datetime
+
+
 class BriefingView(BaseModel):
     case_id: uuid.UUID
     title: str
@@ -73,6 +88,8 @@ class BriefingView(BaseModel):
     responsibility_events: list[BriefingEventView]
     tasks: list[BriefingTaskView]
     notes: list[ActivityView]
+    knowledge: list[BriefingKnowledgeView] = []
+    exceptions: int = 0
 
 
 async def return_briefing(access: WorkspaceAccess, case_id: uuid.UUID) -> BriefingView:
@@ -197,7 +214,35 @@ async def return_briefing(access: WorkspaceAccess, case_id: uuid.UUID) -> Briefi
         for a in await case_activity(access, case.id)
         if a.kind == "comment" and start <= a.occurred_at <= end
     ]
+    knowledge_rows = await access.session.execute(
+        select(CaseKnowledge, KnowledgeItem)
+        .outerjoin(
+            KnowledgeItem,
+            and_(KnowledgeItem.id == CaseKnowledge.knowledge_item_id, knowledge_readable(access)),
+        )
+        .where(
+            visible(access, Permission.CASE_READ, CaseKnowledge.tenant_id),
+            CaseKnowledge.case_id == case.id,
+        )
+        .order_by(CaseKnowledge.recorded_at)
+    )
+    knowledge = [
+        BriefingKnowledgeView(
+            responsibility_name=responsibilities[k.responsibility_id].name
+            if k.responsibility_id in responsibilities
+            else "Restricted responsibility",
+            outcome=k.outcome,
+            # Managers-only items are not shown by title to people who can't read them.
+            title=item.title if item is not None and item.status == "active" else None,
+            url=item.url if item is not None and item.status == "active" else None,
+            note=k.note,
+            recorded_at=k.recorded_at,
+        )
+        for k, item in knowledge_rows
+    ]
     return BriefingView(
+        knowledge=knowledge,
+        exceptions=sum(1 for i in briefing_items if i.exception_reason),
         case_id=case.id,
         title=case.title,
         person_name=person.display_name if person else None,

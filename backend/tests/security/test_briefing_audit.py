@@ -68,6 +68,28 @@ async def test_return_briefing_reports_cover_changes_work_notes_and_restoration(
         json={"version": detail["version"], "description": "PCI"},
     )
 
+    runbook = await ws.call(
+        "POST",
+        f"/responsibilities/{rid}/knowledge",
+        201,
+        json={"kind": "procedure", "title": "Pager runbook", "body": "Steps"},
+    )
+    await ws.call(
+        "POST",
+        f"/cases/{case['id']}/knowledge",
+        201,
+        json={
+            "responsibility_id": rid,
+            "outcome": "handed_over",
+            "knowledge_item_id": runbook["id"],
+        },
+    )
+    await ws.call(
+        "POST",
+        f"/cases/{case['id']}/knowledge",
+        201,
+        json={"responsibility_id": rid, "outcome": "missing", "note": "No vendor contacts"},
+    )
     during = await ws.call("GET", f"/cases/{case['id']}/briefing")
     assert during["person_name"] == "Arjun"
     assert during["returned"] is False
@@ -82,6 +104,11 @@ async def test_return_briefing_reports_cover_changes_work_notes_and_restoration(
     assert "responsibility.updated" in [e["action"] for e in during["responsibility_events"]]
     assert [t["title"] for t in during["tasks"]] == ["Review alerts"]
     assert [n["body"] for n in during["notes"]] == ["Rotated the API key"]
+    assert [(k["outcome"], k["title"], k["note"]) for k in during["knowledge"]] == [
+        ("handed_over", "Pager runbook", None),
+        ("missing", None, "No vendor contacts"),
+    ]
+    assert during["exceptions"] == 0
 
     for criterion in executed["criteria"]:
         await ws.call(
