@@ -9,6 +9,8 @@ import { api } from "@/lib/relay-api";
 import type { NotionSourceView, ResponsibilitySummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { DataScope } from "@/components/data-scope";
+
 import { IntegrationsNav } from "../integrations-nav";
 import {
   connectNotionAction,
@@ -303,6 +305,17 @@ export default async function NotionPage({
             </ul>
           </Section>
         ) : null}
+        <DataScope
+          reads={[
+            "Titles and last-edited times of pages and databases shared with Relay",
+            "Text of the pages an admin maps to a responsibility (imported into Knowledge)",
+          ]}
+          never={[
+            "Pages that are shared but not mapped (titles only)",
+            "Comments, images, files or pages not shared with Relay",
+            "Nothing is written to Notion",
+          ]}
+        />
       </div>
     </div>
   );

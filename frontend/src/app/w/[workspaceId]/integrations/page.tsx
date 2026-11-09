@@ -10,6 +10,8 @@ import { api } from "@/lib/relay-api";
 import type { InstallationView } from "@/lib/types";
 
 import { GitHubTabs } from "./github/tabs";
+import { DataScope } from "@/components/data-scope";
+
 import { IntegrationsNav } from "./integrations-nav";
 import {
   connectGitHubAction,
@@ -206,6 +208,18 @@ export default async function IntegrationsPage({
             </ul>
           </Section>
         ) : null}
+        <DataScope
+          reads={[
+            "Repository metadata, CODEOWNERS and collaborators of repositories you select",
+            "Organisation teams and members (with the Members permission)",
+            "Pull request and issue metadata: titles, people, dates (with the matching permissions)",
+          ]}
+          never={[
+            "Source code, pull request bodies, review comments or diffs",
+            "Anything in repositories you did not select",
+            "Nothing is written to GitHub",
+          ]}
+        />
       </div>
     </div>
   );

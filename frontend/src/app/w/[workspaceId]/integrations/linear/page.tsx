@@ -6,6 +6,8 @@ import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
 
+import { DataScope } from "@/components/data-scope";
+
 import { IntegrationsNav } from "../integrations-nav";
 import {
   connectLinearAction,
@@ -327,6 +329,13 @@ export default async function LinearPage({
             </ul>
           </Section>
         ) : null}
+        <DataScope
+          reads={[
+            "Teams, projects and people",
+            "Issue metadata: identifier, title, state, priority, assignee, dates",
+          ]}
+          never={["Issue descriptions or comments", "Nothing is written to Linear"]}
+        />
       </div>
     </div>
   );
