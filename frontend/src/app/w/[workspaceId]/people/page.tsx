@@ -143,6 +143,13 @@ export default async function PeoplePage({
                 >
                   Responsibilities owned here
                 </Link>
+                {" · "}
+                <Link
+                  href={`/w/${workspaceId}/departments/${current.id}`}
+                  className="text-foreground underline"
+                >
+                  Department overview
+                </Link>
               </span>
               <ActionForm
                 action={setDepartmentStatusAction.bind(null, workspaceId, current.id, "archived")}
@@ -228,7 +235,12 @@ export default async function PeoplePage({
                 {people.data.map((p) => (
                   <li key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                     <span className="min-w-0 flex-1">
-                      <span className="font-medium">{p.display_name}</span>
+                      <Link
+                        href={`/w/${workspaceId}/people/${p.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {p.display_name}
+                      </Link>
                       {p.status === "archived" ? (
                         <Badge tone="muted" className="ml-2">
                           Archived
@@ -341,7 +353,12 @@ export default async function PeoplePage({
                     <li key={t.id} className="rounded-lg border p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-medium">{t.name}</p>
+                          <Link
+                            href={`/w/${workspaceId}/teams/${t.id}`}
+                            className="text-sm font-medium hover:underline"
+                          >
+                            {t.name}
+                          </Link>
                           <p className="text-muted-foreground text-xs">
                             {[t.department_name, t.description].filter(Boolean).join(" · ") ||
                               "No department"}

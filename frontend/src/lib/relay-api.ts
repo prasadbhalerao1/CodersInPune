@@ -12,6 +12,7 @@ import type {
   FollowUpView,
   InsightsView,
   PolicyView,
+  ProfileView,
   SearchView,
   NotionIntegrationView,
   EmailStatusView,
@@ -154,6 +155,8 @@ export const api = {
   automations: (id: string) => relayFetch<AutomationRuleView[]>(`${ws(id)}/automations`),
   followUps: (id: string, mine = true) =>
     relayFetch<FollowUpView[]>(withQuery(`${ws(id)}/follow-ups`, { mine: String(mine) })),
+  profile: (id: string, kind: "people" | "teams" | "departments", ref: string) =>
+    relayFetch<ProfileView>(`${ws(id)}/${kind}/${encodeURIComponent(ref)}/profile`),
   search: (id: string, q: string) => relayFetch<SearchView>(withQuery(`${ws(id)}/search`, { q })),
   policy: (id: string) => relayFetch<PolicyView>(`${ws(id)}/policy`),
   notion: (id: string) => relayFetch<NotionIntegrationView>(`${ws(id)}/integrations/notion`),

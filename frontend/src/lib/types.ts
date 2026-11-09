@@ -821,3 +821,45 @@ export type SearchHit = {
 };
 
 export type SearchView = { query: string; hits: SearchHit[] };
+
+export type ProfileRef = { id: string; name: string; detail: string | null };
+export type ProfileView = {
+  kind: "person" | "team" | "department";
+  id: string;
+  name: string;
+  status: string;
+  description: string | null;
+  email: string | null;
+  title: string | null;
+  department: ProfileRef | null;
+  teams: ProfileRef[];
+  members: ProfileRef[];
+  people: ProfileRef[];
+  roles: {
+    responsibility_id: string;
+    responsibility_name: string;
+    criticality: Criticality;
+    role: string;
+    holder: string;
+    valid_from: string;
+    valid_to: string | null;
+    state: "current" | "scheduled";
+  }[];
+  risks: {
+    key: string;
+    title: string;
+    severity: Severity;
+    status: string;
+    subject: string | null;
+  }[];
+  cases: {
+    id: string;
+    title: string;
+    case_type: CaseType;
+    status: string;
+    emergency: boolean;
+    relation: string;
+  }[];
+  identities: { provider: string; handle: string }[];
+  continuity_debt: number | null;
+};

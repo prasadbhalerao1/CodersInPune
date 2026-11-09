@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import APIRouter, status
 
+from relay.directory import profiles
 from relay.directory import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 
@@ -83,3 +84,20 @@ async def update_department(
     access: CurrentWorkspace, department_id: uuid.UUID, body: svc.DepartmentUpdate
 ) -> svc.DepartmentView:
     return await svc.update_department(access, department_id, body)
+
+
+@router.get("/people/{person_id}/profile")
+async def person_profile(access: CurrentWorkspace, person_id: uuid.UUID) -> profiles.ProfileView:
+    return await profiles.person_profile(access, person_id)
+
+
+@router.get("/teams/{team_id}/profile")
+async def team_profile(access: CurrentWorkspace, team_id: uuid.UUID) -> profiles.ProfileView:
+    return await profiles.team_profile(access, team_id)
+
+
+@router.get("/departments/{department_id}/profile")
+async def department_profile(
+    access: CurrentWorkspace, department_id: uuid.UUID
+) -> profiles.ProfileView:
+    return await profiles.department_profile(access, department_id)
