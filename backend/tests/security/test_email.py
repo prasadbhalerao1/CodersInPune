@@ -271,3 +271,21 @@ async def test_status_is_admin_only_and_isolated(api: Api, ws: Ws) -> None:
     other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
     assert (await other.call("GET", "/email/status"))["recent_failures"] == []
     await other.call("POST", f"/email/deliveries/{uuid.uuid4()}/retry", 404)
+
+
+async def test_admins_can_send_a_test_email_to_themselves_only(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    result = await ws.call("POST", "/email/test")
+    assert result["sent"] is True
+    assert result["error"] is None
+    [message] = [m for m in ext.emails if m["subject"] == "Relay test email"]
+    assert message["to"] == [result["to"]]  # the caller's own address
+    status = await ws.call("GET", "/email/status")
+    assert status["provider"] == "Resend"
+
+    ext.resend_script = ["422"]
+    failed = await ws.call("POST", "/email/test")
+    assert (failed["sent"], failed["error"]) == (False, "rejected_422_validation_error")
+
+    await Ws(api, ws.id, "user_member").call("POST", "/email/test", 403)

@@ -629,6 +629,7 @@ export type DeliveryView = {
 
 export type EmailStatusView = {
   configured: boolean;
+  provider: string | null;
   sender: string | null;
   healthy: boolean;
   sent_24h: number;

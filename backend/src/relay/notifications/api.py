@@ -42,3 +42,8 @@ async def email_status(access: CurrentWorkspace, request: Request) -> email.Emai
 @admin.post("/deliveries/{delivery_id}/retry", dependencies=[rate_limit("email_retry", 30, 600)])
 async def retry(access: CurrentWorkspace, delivery_id: uuid.UUID, jobs: Jobs) -> email.DeliveryView:
     return await email.retry_delivery(access, delivery_id, jobs)
+
+
+@admin.post("/test", dependencies=[rate_limit("email_test", 5, 600)])
+async def send_test(access: CurrentWorkspace, request: Request) -> email.TestEmailView:
+    return await email.send_test_email(access, request.app.state.settings, request.app.state.http)

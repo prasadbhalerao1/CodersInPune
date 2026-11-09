@@ -41,3 +41,16 @@ export async function retryEmailAction(
     api.send(workspaceId, "POST", `/email/deliveries/${deliveryId}/retry`),
   );
 }
+
+export type TestEmailResult = { sent: boolean; to?: string; error?: string | null };
+
+export async function sendTestEmailAction(workspaceId: string): Promise<TestEmailResult> {
+  try {
+    const result = await api.send<TestEmailResult>(workspaceId, "POST", "/email/test");
+    revalidatePath(`/w/${workspaceId}/settings`, "layout");
+    return result;
+  } catch (error) {
+    if (error instanceof RelayApiError) return { sent: false, error: error.message };
+    throw error;
+  }
+}

@@ -86,7 +86,9 @@ def make_settings(**overrides: Any) -> Settings:
         "environment": "test",
         "workos_client_id": CLIENT_ID,
     }
-    return Settings(**{**defaults, **overrides})
+    # Never read backend/.env: a developer's real provider credentials (SMTP, OAuth apps)
+    # must not leak into tests.
+    return Settings(_env_file=None, **{**defaults, **overrides})
 
 
 @pytest.fixture

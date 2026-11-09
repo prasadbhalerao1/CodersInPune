@@ -18,6 +18,7 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import httpx
 import procrastinate
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -92,6 +93,7 @@ class DeliveryView(BaseModel):
 
 class EmailStatusView(BaseModel):
     configured: bool
+    provider: str | None = None
     sender: str | None
     healthy: bool
     sent_24h: int
@@ -387,6 +389,7 @@ async def email_status(access: WorkspaceAccess, settings: Settings) -> EmailStat
     configured = email_configured(settings)
     return EmailStatusView(
         configured=configured,
+        provider=("SMTP" if settings.smtp_host else "Resend") if configured else None,
         sender=settings.email_from if configured else None,
         healthy=configured and failed == 0,
         sent_24h=sent,
@@ -429,3 +432,56 @@ async def retry_delivery(
         target_id=delivery.id,
     )
     return _delivery_view(delivery)
+
+
+class TestEmailView(BaseModel):
+    sent: bool
+    to: str
+    error: str | None
+
+
+async def send_test_email(
+    access: WorkspaceAccess, settings: Settings, http: httpx.AsyncClient
+) -> TestEmailView:
+    """Send one email to the caller's own address through the configured provider.
+
+    Only ever to the requesting admin (never an arbitrary address), rate limited, audited.
+    The result is reported directly; nothing is queued or retried.
+    """
+    authorize(access, Permission.MEMBER_MANAGE)
+    provider = provider_for(settings, http)
+    if provider is None:
+        raise ApiError(409, "email_not_configured", "Email isn't configured on this server.")
+    to = await access.session.scalar(
+        select(Membership.email).where(
+            Membership.user_id == access.user_id,
+            visible(access, Permission.MEMBER_MANAGE, Membership.tenant_id),
+        )
+    )
+    if not to:
+        raise ApiError(
+            422, "email_unknown", "Relay doesn't know your email yet. Sign out and in again."
+        )
+    error: str | None = None
+    try:
+        await provider.send(
+            EmailMessage(
+                to=to,
+                subject="Relay test email",
+                html="<p>Email from Relay works. Notifications will be delivered here.</p>",
+                text="Email from Relay works. Notifications will be delivered here.",
+                idempotency_key=f"relay-test-{uuid.uuid7()}",
+            )
+        )
+    except EmailSendError as exc:
+        error = exc.code
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="email.test_sent" if error is None else "email.test_failed",
+        actor_user_id=access.user_id,
+        target_type="membership",
+        target_id=access.membership_id,
+        details={"error": error},
+    )
+    return TestEmailView(sent=error is None, to=to, error=error)

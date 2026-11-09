@@ -7,6 +7,7 @@ import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
 
 import { SettingsNav } from "../settings-nav";
+import { TestEmailButton } from "./test-email";
 import { retryEmailAction, savePreferencesAction } from "./actions";
 
 export const metadata: Metadata = { title: "Notifications" };
@@ -96,14 +97,19 @@ export default async function NotificationSettingsPage({
                   ) : null}
                 </p>
                 {status.data.configured ? (
-                  <p className="text-muted-foreground mt-2 text-xs tabular-nums">
-                    {status.data.sent_24h} sent · {status.data.failed_24h} failed in the last 24
-                    hours · {status.data.pending} waiting
-                  </p>
+                  <>
+                    <p className="text-muted-foreground mt-2 text-xs tabular-nums">
+                      {status.data.provider ? `Via ${status.data.provider} · ` : ""}
+                      {status.data.sent_24h} sent · {status.data.failed_24h} failed in the last 24
+                      hours · {status.data.pending} waiting
+                    </p>
+                    <TestEmailButton workspaceId={workspaceId} />
+                  </>
                 ) : (
                   <p className="text-muted-foreground mt-2 text-xs">
-                    Set RELAY_RESEND_API_KEY and RELAY_EMAIL_FROM on the server to turn on email.
-                    Until then, notifications are in-app only and invitations use WorkOS.
+                    Set RELAY_SMTP_HOST (or RELAY_RESEND_API_KEY) and RELAY_EMAIL_FROM on the server
+                    to turn on email. Until then, notifications are in-app only and invitations use
+                    WorkOS.
                   </p>
                 )}
               </div>
