@@ -116,7 +116,12 @@ export default async function LinearPage({
                     </ActionForm>
                   ) : null}
                   <ActionForm action={disconnectLinearAction.bind(null, workspaceId, c.id)}>
-                    <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                    <SubmitButton
+                      size="sm"
+                      variant="ghost"
+                      pendingLabel="…"
+                      confirm="Disconnect Linear? Relay forgets the access token; synced data stays but stops updating."
+                    >
                       Disconnect
                     </SubmitButton>
                   </ActionForm>

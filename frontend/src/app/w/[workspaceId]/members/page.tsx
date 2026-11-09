@@ -84,7 +84,12 @@ export default async function MembersPage({ params }: PageProps<"/w/[workspaceId
                   )}
                   {i.email_sent ? null : <Badge tone="muted">Email not sent</Badge>}
                   <ActionForm action={revokeInvitationAction.bind(null, workspaceId, i.id)}>
-                    <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                    <SubmitButton
+                      size="sm"
+                      variant="ghost"
+                      pendingLabel="…"
+                      confirm="Revoke this invitation? The link stops working."
+                    >
                       Revoke
                     </SubmitButton>
                   </ActionForm>

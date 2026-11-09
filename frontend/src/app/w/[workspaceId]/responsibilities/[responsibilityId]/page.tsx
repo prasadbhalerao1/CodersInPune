@@ -356,7 +356,12 @@ function OwnerList({
           </span>
           {endAction ? (
             <ActionForm action={endAction(o.id)}>
-              <SubmitButton variant="ghost" size="sm" pendingLabel="Ending…">
+              <SubmitButton
+                variant="ghost"
+                size="sm"
+                pendingLabel="Ending…"
+                confirm="End this assignment now? It is kept in the ownership history."
+              >
                 End
               </SubmitButton>
             </ActionForm>

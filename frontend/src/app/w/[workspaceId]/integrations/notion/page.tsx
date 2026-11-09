@@ -113,7 +113,12 @@ export default async function NotionPage({
                     </ActionForm>
                   ) : null}
                   <ActionForm action={disconnectNotionAction.bind(null, workspaceId, c.id)}>
-                    <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                    <SubmitButton
+                      size="sm"
+                      variant="ghost"
+                      pendingLabel="…"
+                      confirm="Disconnect Notion? Relay forgets the access token; imported knowledge stays but stops updating."
+                    >
                       Disconnect
                     </SubmitButton>
                   </ActionForm>
@@ -161,7 +166,12 @@ export default async function NotionPage({
                     {s.visibility === "managers" ? "managers only" : "whole workspace"}
                   </span>
                   <ActionForm action={mapNotionSourceAction.bind(null, workspaceId, s.id, true)}>
-                    <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                    <SubmitButton
+                      size="sm"
+                      variant="ghost"
+                      pendingLabel="…"
+                      confirm="Stop importing this source? Its pages are withdrawn from Knowledge."
+                    >
                       Stop importing
                     </SubmitButton>
                   </ActionForm>

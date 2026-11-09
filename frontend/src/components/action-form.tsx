@@ -37,15 +37,24 @@ export function SubmitButton({
   pendingLabel,
   variant,
   size,
+  confirm,
 }: {
   children: ReactNode;
   pendingLabel?: string;
   variant?: "default" | "outline" | "ghost" | "destructive";
   size?: "default" | "sm";
+  /** Ask before submitting (irreversible or disruptive actions). */
+  confirm?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} variant={variant} size={size}>
+    <Button
+      type="submit"
+      disabled={pending}
+      variant={variant}
+      size={size}
+      onClick={confirm ? (event) => window.confirm(confirm) || event.preventDefault() : undefined}
+    >
       {pending ? (pendingLabel ?? "Saving…") : children}
     </Button>
   );

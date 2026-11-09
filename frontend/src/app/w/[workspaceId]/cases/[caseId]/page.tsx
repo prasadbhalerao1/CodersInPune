@@ -86,7 +86,12 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
             <CaseStatusBadge value={c.status} />
             {can("cancel") ? (
               <ActionForm action={command("cancel")}>
-                <SubmitButton variant="ghost" size="sm" pendingLabel="…">
+                <SubmitButton
+                  variant="ghost"
+                  size="sm"
+                  pendingLabel="…"
+                  confirm="Cancel this case? Planned ownership changes won't be applied."
+                >
                   Cancel case
                 </SubmitButton>
               </ActionForm>

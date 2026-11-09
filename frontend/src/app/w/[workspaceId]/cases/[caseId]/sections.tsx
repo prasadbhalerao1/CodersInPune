@@ -153,7 +153,12 @@ export function ScopeSection({
               ) : null}
               {editable(c) ? (
                 <ActionForm action={removeScopeAction.bind(null, workspaceId, caseId, item.id)}>
-                  <SubmitButton size="sm" variant="ghost" pendingLabel="Removing…">
+                  <SubmitButton
+                    size="sm"
+                    variant="ghost"
+                    pendingLabel="Removing…"
+                    confirm="Remove this responsibility from the case?"
+                  >
                     Remove from scope
                   </SubmitButton>
                 </ActionForm>

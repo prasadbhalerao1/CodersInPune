@@ -147,7 +147,12 @@ export default async function PeoplePage({
               <ActionForm
                 action={setDepartmentStatusAction.bind(null, workspaceId, current.id, "archived")}
               >
-                <SubmitButton variant="ghost" size="sm" pendingLabel="…">
+                <SubmitButton
+                  variant="ghost"
+                  size="sm"
+                  pendingLabel="…"
+                  confirm="Archive this department? People and teams keep their history."
+                >
                   Archive department
                 </SubmitButton>
               </ActionForm>

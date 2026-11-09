@@ -128,7 +128,12 @@ export default async function IntegrationsPage({
                     </SubmitButton>
                   </ActionForm>
                   <ActionForm action={disconnectInstallationAction.bind(null, workspaceId, i.id)}>
-                    <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                    <SubmitButton
+                      size="sm"
+                      variant="ghost"
+                      pendingLabel="…"
+                      confirm="Disconnect this GitHub installation?"
+                    >
                       Disconnect
                     </SubmitButton>
                   </ActionForm>
