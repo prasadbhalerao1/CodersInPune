@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     resend_api_base_url: str = "https://api.resend.com"
     email_from: str | None = None  # e.g. "Relay <notifications@mail.example.com>"
     email_reply_to: str | None = None
+    # Email via SMTP (takes precedence over Resend when set). Gmail: smtp.gmail.com, 587,
+    # starttls, your address as username and a Google app password (not your password).
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
     # Fernet key for integration credentials stored at rest (Linear, Notion tokens).
     integration_encryption_key: SecretStr | None = None
     # Linear OAuth app (read scope). Redirect URI: {frontend}/integrations/linear/callback
@@ -98,6 +105,12 @@ class Settings(BaseSettings):
                 problems.append(f"{name}: set both the client ID and the client secret")
         if self.resend_api_key and not self.email_from:
             problems.append("Email: RELAY_EMAIL_FROM is required when RELAY_RESEND_API_KEY is set")
+        if self.smtp_host and not self.email_from:
+            problems.append("Email: RELAY_EMAIL_FROM is required when RELAY_SMTP_HOST is set")
+        if bool(self.smtp_username) != bool(self.smtp_password):
+            problems.append("Email: set both RELAY_SMTP_USERNAME and RELAY_SMTP_PASSWORD")
+        if self.environment in ("staging", "production") and self.smtp_security == "none":
+            problems.append("Email: RELAY_SMTP_SECURITY=none is not allowed outside local/test")
         github = (self.github_app_id, self.github_private_key, self.github_client_secret)
         if any(github) and not all(github):
             problems.append(
