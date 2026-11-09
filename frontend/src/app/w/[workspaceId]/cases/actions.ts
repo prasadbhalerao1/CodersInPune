@@ -316,22 +316,118 @@ export async function addTaskAction(
   return mutate(workspaceId, () =>
     api.send(workspaceId, "POST", casePath(caseId, "/tasks"), {
       title: text(fd, "title"),
-      assignee_user_id: optional(fd, "assignee_user_id"),
+      ...assignee(fd),
       due_at: optional(fd, "due_at"),
       scope_item_id: optional(fd, "scope_item_id"),
+      priority: optional(fd, "priority"),
+      depends_on: fd.getAll("depends_on").map(String).filter(Boolean),
     }),
   );
+}
+
+/** "user:<id>" or "team:<id>" from one assignee select; "" leaves it unassigned. */
+function assignee(fd: FormData) {
+  const [kind, id] = text(fd, "assignee").split(":");
+  return {
+    assignee_user_id: kind === "user" ? id : null,
+    assignee_team_id: kind === "team" ? id : null,
+  };
 }
 
 export async function setTaskStatusAction(
   workspaceId: string,
   caseId: string,
   taskId: string,
-  status: "open" | "done",
+  status: "open" | "done" | "cancelled",
+  _state: ActionState,
+  fd?: FormData,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PATCH", casePath(caseId, `/tasks/${taskId}`), {
+      status,
+      completion_note: fd ? optional(fd, "completion_note") : undefined,
+      completion_url: fd ? optional(fd, "completion_url") : undefined,
+      reason: fd ? optional(fd, "reason") : undefined,
+    }),
+  );
+}
+
+export async function changeTaskAction(
+  workspaceId: string,
+  caseId: string,
+  taskId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", casePath(caseId, `/tasks/${taskId}/change`), {
+      ...assignee(fd),
+      due_at: optional(fd, "due_at") ?? null,
+      priority: optional(fd, "priority"),
+      reason: optional(fd, "reason"),
+    }),
+  );
+}
+
+export async function taskMessageAction(
+  workspaceId: string,
+  caseId: string,
+  taskId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const body = text(fd, "body");
+  if (!body) return { error: "Write something first." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", casePath(caseId, `/tasks/${taskId}/messages`), {
+      body,
+      kind: text(fd, "kind") === "clarification" ? "clarification" : "comment",
+      ask_user_id: optional(fd, "ask_user_id"),
+    }),
+  );
+}
+
+export async function bulkTasksAction(
+  workspaceId: string,
+  caseId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const ids = fd.getAll("task").map(String);
+  if (!ids.length) return { error: "Select tasks first." };
+  let skipped = 0;
+  const result = await mutate(workspaceId, async () => {
+    const r = await api.send<{ done: string[]; skipped: Record<string, string> }>(
+      workspaceId,
+      "POST",
+      casePath(caseId, "/tasks/bulk"),
+      {
+        task_ids: ids,
+        action: text(fd, "action") === "reassign" ? "reassign" : "complete",
+        assignee_user_id: optional(fd, "bulk_assignee"),
+        reason: optional(fd, "reason"),
+      },
+    );
+    skipped = Object.keys(r.skipped).length;
+  });
+  if (result.error) return result;
+  return skipped
+    ? { error: `${skipped} task(s) were left alone: they wait on other tasks or are closed.` }
+    : {};
+}
+
+export async function setStepAction(
+  workspaceId: string,
+  caseId: string,
+  criterionId: string,
+  index: number,
+  done: boolean,
   _state: ActionState,
 ): Promise<ActionState> {
   return mutate(workspaceId, () =>
-    api.send(workspaceId, "PATCH", casePath(caseId, `/tasks/${taskId}`), { status }),
+    api.send(workspaceId, "PATCH", casePath(caseId, `/criteria/${criterionId}/steps/${index}`), {
+      done,
+    }),
   );
 }
 
@@ -346,6 +442,13 @@ export async function addCriterionAction(
       criterion_type: text(fd, "criterion_type"),
       title: text(fd, "title"),
       mandatory: fd.get("mandatory") === "on",
+      checklist:
+        text(fd, "criterion_type") === "rehearsal"
+          ? text(fd, "checklist")
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+          : [],
     }),
   );
 }

@@ -213,6 +213,44 @@ export type TaskView = {
   status: "open" | "done" | "cancelled";
   overdue: boolean;
   completed_at: string | null;
+  priority: CasePriority;
+  assignee_team_id: string | null;
+  assignee_team_name: string | null;
+  depends_on: string[];
+  blocked_by: string[];
+  needs_input_from_user_id: string | null;
+  needs_input_from_name: string | null;
+  completion_note: string | null;
+  completion_url: string | null;
+  external_provider: "github" | "linear" | null;
+  external_url: string | null;
+  sync_status: "not_mirrored" | "pending" | "synced" | "error" | "unlinked";
+  case_title: string | null;
+};
+
+export type TaskEventView = {
+  kind:
+    | "comment"
+    | "clarification_requested"
+    | "clarification_answered"
+    | "reassigned"
+    | "due_changed"
+    | "completed"
+    | "reopened"
+    | "cancelled";
+  body: string | null;
+  detail: Record<string, string | null>;
+  actor_name: string | null;
+  created_at: string;
+};
+
+export type TaskDetail = { task: TaskView; events: TaskEventView[]; can_answer: boolean };
+
+export type ChecklistStep = {
+  step: string;
+  done: boolean;
+  done_by: string | null;
+  done_at: string | null;
 };
 
 export type CriterionView = {
@@ -221,9 +259,10 @@ export type CriterionView = {
   criterion_type: string;
   title: string;
   mandatory: boolean;
-  status: "pending" | "met" | "blocked" | "waived";
+  status: "pending" | "met" | "blocked" | "waived" | "needs_review" | "unable_to_assess";
   note: string | null;
   resolved_at: string | null;
+  checklist: ChecklistStep[];
 };
 
 export type ApprovalView = {
@@ -313,6 +352,7 @@ export type CaseDetail = CaseSummary & {
   readiness_met: number;
   readiness_total: number;
   readiness_blocked: number;
+  readiness_reasons: string[];
   allowed_actions: CaseAction[];
   scope: ScopeItemView[];
   tasks: TaskView[];
@@ -427,6 +467,8 @@ export type MyWorkView = {
   tasks: TaskView[];
   approvals: CaseSummary[];
   attention: CaseSummary[];
+  needs_input: TaskView[];
+  completed: TaskView[];
   mentions: {
     notification_id: string;
     case_id: string;

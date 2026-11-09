@@ -14,14 +14,17 @@ export function ActionForm({
   action,
   children,
   className,
+  id,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   children: ReactNode;
   className?: string;
+  /** Lets inputs elsewhere on the page join this form via their `form` attribute. */
+  id?: string;
 }) {
   const [state, formAction] = useActionState(action, {});
   return (
-    <form action={formAction} className={cn("flex flex-col gap-3", className)}>
+    <form id={id} action={formAction} className={cn("flex flex-col gap-3", className)}>
       {children}
       {state.error ? (
         <p role="alert" className="text-destructive text-sm">

@@ -23,7 +23,7 @@ from typing import Literal
 from zoneinfo import available_timezones
 
 import procrastinate
-from pydantic import AwareDatetime, BaseModel, model_validator
+from pydantic import AwareDatetime, BaseModel, HttpUrl, model_validator
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +33,7 @@ from relay.catalog import service as catalog
 from relay.catalog.models import Asset, OwnershipAssignment, Responsibility, ResponsibilityAsset
 from relay.continuity import lifecycle
 from relay.continuity.models import (
+    EXPLAINED,
     OPEN_STATUSES,
     CaseApproval,
     CaseBlocker,
@@ -40,6 +41,8 @@ from relay.continuity.models import (
     CaseScopeItem,
     CaseStatusChange,
     CaseTask,
+    CaseTaskDependency,
+    CaseTaskEvent,
     ContinuityCase,
 )
 from relay.directory.models import Person, Team
@@ -59,7 +62,9 @@ CriterionType = Literal[
     "supervised_demo",
     "access_confirmed",
     "qa_reviewed",
+    "rehearsal",
 ]
+CriterionStatus = Literal["pending", "met", "blocked", "waived", "needs_review", "unable_to_assess"]
 EDITABLE = lifecycle.EDITABLE
 OPEN = OPEN_STATUSES
 # Cases that need the person affected; transfers and project handovers may not.
@@ -146,12 +151,19 @@ class TaskIn(StrictInput):
     title: Name
     description: LongText | None = None
     assignee_user_id: uuid.UUID | None = None
+    assignee_team_id: uuid.UUID | None = None
     due_at: AwareDatetime | None = None
     scope_item_id: uuid.UUID | None = None
+    priority: Priority = "normal"
+    depends_on: list[uuid.UUID] = []
 
 
 class TaskUpdate(StrictInput):
     status: Literal["open", "done", "cancelled"]
+    # Completion evidence: what was done and, optionally, where to see it.
+    completion_note: LongText | None = None
+    completion_url: HttpUrl | None = None
+    reason: LongText | None = None
 
 
 class CriterionIn(StrictInput):
@@ -159,10 +171,12 @@ class CriterionIn(StrictInput):
     title: Name
     mandatory: bool = True
     scope_item_id: uuid.UUID | None = None
+    # Rehearsal steps, done under supervision; nothing is executed by Relay.
+    checklist: list[Name] = []
 
 
 class CriterionUpdate(StrictInput):
-    status: Literal["pending", "met", "blocked", "waived"]
+    status: CriterionStatus
     note: LongText | None = None
 
 
@@ -219,6 +233,27 @@ class TaskView(BaseModel):
     status: str
     overdue: bool
     completed_at: datetime | None
+    priority: str = "normal"
+    assignee_team_id: uuid.UUID | None = None
+    assignee_team_name: str | None = None
+    depends_on: list[uuid.UUID] = []
+    # Titles of open tasks this one waits for: it can't be completed until they are.
+    blocked_by: list[str] = []
+    needs_input_from_user_id: uuid.UUID | None = None
+    needs_input_from_name: str | None = None
+    completion_note: str | None = None
+    completion_url: str | None = None
+    external_provider: str | None = None
+    external_url: str | None = None
+    sync_status: str = "not_mirrored"
+    case_title: str | None = None
+
+
+class ChecklistStep(BaseModel):
+    step: str
+    done: bool = False
+    done_by: str | None = None
+    done_at: datetime | None = None
 
 
 class CriterionView(BaseModel):
@@ -230,6 +265,7 @@ class CriterionView(BaseModel):
     status: str
     note: str | None
     resolved_at: datetime | None
+    checklist: list[ChecklistStep] = []
 
 
 class ApprovalView(BaseModel):
@@ -315,6 +351,8 @@ class CaseDetail(CaseSummary):
     readiness_met: int
     readiness_total: int
     readiness_blocked: int
+    # Why readiness is blocked or uncertain, in plain words; empty when nothing is in the way.
+    readiness_reasons: list[str] = []
     allowed_actions: list[str]
     scope: list[ScopeItemView]
     tasks: list[TaskView]
@@ -363,6 +401,9 @@ class MyWorkView(BaseModel):
     attention: list[CaseSummary]
     mentions: list[MentionView] = []
     reviews: list[ReviewView] = []
+    # Tasks where someone asked me a question, and my recently completed tasks.
+    needs_input: list[TaskView] = []
+    completed: list[TaskView] = []
 
 
 # ---------------------------------------------------------------- helpers
@@ -1038,8 +1079,22 @@ async def add_task(
     access: WorkspaceAccess, case_id: uuid.UUID, data: TaskIn, jobs: procrastinate.App
 ) -> CaseDetail:
     case = await _for_change(access, case_id, OPEN)
+    if data.assignee_user_id and data.assignee_team_id:
+        raise ApiError(422, "one_assignee", "Assign a member or a team, not both.")
     if data.assignee_user_id:
         await _require_member(access, data.assignee_user_id)
+    if data.assignee_team_id:
+        await catalog.require_assignee(access, catalog.Assignee(team_id=data.assignee_team_id))
+    if data.depends_on:
+        found = set(
+            await access.session.scalars(
+                select(CaseTask.id).where(
+                    CaseTask.id.in_(data.depends_on), CaseTask.case_id == case_id
+                )
+            )
+        )
+        if found != set(data.depends_on):
+            raise ApiError(422, "dependency_not_found", "Dependencies must be tasks in this case.")
     task = CaseTask(
         tenant_id=access.tenant_id,
         case_id=case_id,
@@ -1047,11 +1102,17 @@ async def add_task(
         title=data.title,
         description=data.description or None,
         assignee_user_id=data.assignee_user_id,
+        assignee_team_id=data.assignee_team_id,
         due_at=data.due_at,
+        priority=data.priority,
         created_by=access.user_id,
     )
     access.session.add(task)
     await access.session.flush()
+    access.session.add_all(
+        CaseTaskDependency(tenant_id=access.tenant_id, task_id=task.id, depends_on_task_id=d)
+        for d in set(data.depends_on)
+    )
     _record(access, case, "case.task_added", task_id=str(task.id))
     await notifications.request_task_notifications(access.session, jobs, task, access.user_id)
     return await get_case(access, case_id)
@@ -1070,9 +1131,36 @@ async def update_task(
         authorize(access, Permission.CASE_MANAGE)
     if case.status not in OPEN:
         raise ApiError(409, "invalid_state", "The case is closed.")
+    if data.status == task.status:
+        raise ApiError(409, "unchanged", f"The task is already {task.status}.")
+    if data.status == "done":
+        waiting = await open_dependencies(access.session, [task.id])
+        if waiting.get(task.id):
+            raise ApiError(
+                409,
+                "dependencies_open",
+                "Finish what this task depends on first: " + ", ".join(waiting[task.id]) + ".",
+            )
+    if data.status != "done" and task.status == "done" and not data.reason:
+        raise ApiError(422, "reason_required", "Say why a completed task is reopened or cancelled.")
     task.status = data.status
     task.completed_at = func.now() if data.status == "done" else None
     task.completed_by = access.user_id if data.status == "done" else None
+    if data.status == "done":
+        task.completion_note = data.completion_note or None
+        task.completion_url = str(data.completion_url) if data.completion_url else None
+        task.needs_input_from_user_id = None
+    kind = {"done": "completed", "open": "reopened", "cancelled": "cancelled"}[data.status]
+    access.session.add(
+        CaseTaskEvent(
+            tenant_id=access.tenant_id,
+            task_id=task.id,
+            kind=kind,
+            body=data.reason or data.completion_note or None,
+            detail={"url": str(data.completion_url)} if data.completion_url else {},
+            actor_user_id=access.user_id,
+        )
+    )
     _record(access, case, "case.task_updated", task_id=str(task_id), status=data.status)
     return await get_case(access, case_id)
 
@@ -1089,8 +1177,11 @@ async def add_criterion(
             criterion_type=data.criterion_type,
             title=data.title,
             mandatory=data.mandatory,
+            checklist=[{"step": step, "done": False} for step in data.checklist],
         )
     )
+    if data.criterion_type == "rehearsal" and not data.checklist:
+        raise ApiError(422, "checklist_required", "A rehearsal needs at least one step.")
     _record(access, case, "case.criterion_added", criterion_type=data.criterion_type)
     return await get_case(access, case_id)
 
@@ -1104,6 +1195,16 @@ async def update_criterion(
         raise ApiError(404, "criterion_not_found", "Readiness check not found.")
     if data.status == "waived" and not data.note:
         raise ApiError(422, "waiver_reason_required", "Waiving a readiness check needs a reason.")
+    if data.status in EXPLAINED and not data.note:
+        raise ApiError(
+            422, "explanation_required", "Say why this check is blocked or can't be assessed."
+        )
+    if (
+        data.status == "met"
+        and criterion.criterion_type == "rehearsal"
+        and not all(step.get("done") for step in criterion.checklist)
+    ):
+        raise ApiError(409, "rehearsal_incomplete", "Finish every rehearsal step first.")
     criterion.status = data.status
     criterion.note = data.note or None
     criterion.resolved_by = access.user_id if data.status in ("met", "waived") else None
@@ -1191,8 +1292,106 @@ async def my_person_ids(access: WorkspaceAccess) -> set[uuid.UUID]:
     )
 
 
+async def is_scope_recipient(access: WorkspaceAccess, scope_item_id: uuid.UUID | None) -> bool:
+    if scope_item_id is None:
+        return False
+    person = await access.session.scalar(
+        select(CaseScopeItem.recipient_person_id).where(CaseScopeItem.id == scope_item_id)
+    )
+    return person is not None and person in await my_person_ids(access)
+
+
 def _link(c: ContinuityCase) -> CaseLink:
     return CaseLink(id=c.id, title=c.title, case_type=c.case_type, status=c.status)
+
+
+async def open_dependencies(
+    session: AsyncSession, task_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[str]]:
+    """For each task, the titles of open tasks it still waits for."""
+    rows = await session.execute(
+        select(CaseTaskDependency.task_id, CaseTask.title)
+        .join(CaseTask, CaseTask.id == CaseTaskDependency.depends_on_task_id)
+        .where(CaseTaskDependency.task_id.in_(task_ids), CaseTask.status == "open")
+        .order_by(CaseTask.title)
+    )
+    waiting: dict[uuid.UUID, list[str]] = {}
+    for task_id, title in rows:
+        waiting.setdefault(task_id, []).append(title)
+    return waiting
+
+
+async def task_views(
+    access: WorkspaceAccess,
+    tasks: list[CaseTask],
+    names: dict[uuid.UUID, str],
+    *,
+    case_titles: dict[uuid.UUID, str] | None = None,
+) -> list[TaskView]:
+    ids = [t.id for t in tasks]
+    deps: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for task_id, dep in await access.session.execute(
+        select(CaseTaskDependency.task_id, CaseTaskDependency.depends_on_task_id).where(
+            CaseTaskDependency.task_id.in_(ids)
+        )
+    ):
+        deps.setdefault(task_id, []).append(dep)
+    waiting = await open_dependencies(access.session, ids)
+    teams = dict(
+        (
+            await access.session.execute(
+                select(Team.id, Team.name).where(
+                    Team.id.in_([t.assignee_team_id for t in tasks if t.assignee_team_id])
+                )
+            )
+        ).all()
+    )
+    now = _now()
+    views = []
+    for t in tasks:
+        view = _task_view(t, names, now)
+        view.priority = t.priority
+        view.assignee_team_id = t.assignee_team_id
+        view.assignee_team_name = teams.get(t.assignee_team_id) if t.assignee_team_id else None
+        view.depends_on = deps.get(t.id, [])
+        view.blocked_by = waiting.get(t.id, []) if t.status == "open" else []
+        view.needs_input_from_user_id = t.needs_input_from_user_id
+        view.needs_input_from_name = (
+            names.get(t.needs_input_from_user_id) if t.needs_input_from_user_id else None
+        )
+        view.completion_note = t.completion_note
+        view.completion_url = t.completion_url
+        view.external_provider = t.external_provider
+        view.external_url = t.external_url
+        view.sync_status = t.sync_status
+        view.case_title = case_titles.get(t.case_id) if case_titles else None
+        views.append(view)
+    return views
+
+
+def readiness_reasons(criteria: list[CaseReadinessCriterion], tasks: list[TaskView]) -> list[str]:
+    """Plain-language reasons readiness is blocked or uncertain."""
+    reasons = []
+    for c in criteria:
+        if c.status == "blocked":
+            reasons.append(f"“{c.title}” is blocked: {c.note}")
+        elif c.status == "needs_review":
+            reasons.append(f"“{c.title}” needs a person to review it: {c.note}")
+        elif c.status == "unable_to_assess":
+            reasons.append(f"“{c.title}” can't be assessed: {c.note}")
+        elif c.mandatory and c.status == "pending":
+            if c.criterion_type == "rehearsal" and c.checklist:
+                done = sum(1 for s in c.checklist if s.get("done"))
+                reasons.append(f"“{c.title}”: rehearsal {done}/{len(c.checklist)} steps done")
+            else:
+                reasons.append(f"“{c.title}” is still pending")
+    waiting = [t for t in tasks if t.status == "open" and t.blocked_by]
+    if waiting:
+        reasons.append(f"{len(waiting)} task(s) are waiting on other tasks")
+    asked = [t for t in tasks if t.status == "open" and t.needs_input_from_name]
+    for t in asked:
+        reasons.append(f"“{t.title}” is waiting for input from {t.needs_input_from_name}")
+    return reasons
 
 
 def _task_view(t: CaseTask, names: dict[uuid.UUID, str], now: datetime) -> TaskView:
@@ -1471,6 +1670,7 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
         else None
     )
     mine = await my_person_ids(access)
+    task_list = await task_views(access, tasks, names)
     manual = sorted(lifecycle.MANUAL.get(case.status, frozenset()))
     mandatory = [c for c in criteria if c.mandatory]
     return CaseDetail(
@@ -1484,7 +1684,8 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
         approved=approved,
         readiness_met=sum(1 for c in mandatory if c.status in ("met", "waived")),
         readiness_total=len(mandatory),
-        readiness_blocked=sum(1 for c in criteria if c.status == "blocked"),
+        readiness_blocked=sum(1 for c in criteria if c.status in EXPLAINED),
+        readiness_reasons=readiness_reasons(criteria, task_list),
         allowed_actions=_allowed_actions(access, case, approved),
         scope=[
             ScopeItemView(
@@ -1506,7 +1707,7 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
             )
             for i in items
         ],
-        tasks=[_task_view(t, names, now) for t in tasks],
+        tasks=task_list,
         criteria=[
             CriterionView(
                 id=c.id,
@@ -1517,6 +1718,7 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
                 status=c.status,
                 note=c.note,
                 resolved_at=c.resolved_at,
+                checklist=[ChecklistStep.model_validate(step) for step in c.checklist],
             )
             for c in criteria
         ],
@@ -1616,20 +1818,48 @@ async def case_history(access: WorkspaceAccess, case_id: uuid.UUID) -> list[Hist
 async def my_work(access: WorkspaceAccess) -> MyWorkView:
     authorize(access, Permission.CASE_READ)
     names = await _member_names(access)
-    now = _now()
-    tasks = list(
-        await access.session.scalars(
-            select(CaseTask)
+    from relay.directory.models import TeamMember
+
+    my_teams = select(TeamMember.team_id).where(
+        TeamMember.person_id.in_(await my_person_ids(access))
+    )
+    mine = (CaseTask.assignee_user_id == access.user_id) | CaseTask.assignee_team_id.in_(my_teams)
+    in_open_case = (
+        select(CaseTask, ContinuityCase.title)
+        .join(ContinuityCase, ContinuityCase.id == CaseTask.case_id)
+        .where(
+            visible(access, Permission.CASE_READ, CaseTask.tenant_id),
+            ContinuityCase.status.in_(OPEN),
+            CaseTask.status == "open",
+        )
+    )
+    rows = (
+        await access.session.execute(
+            in_open_case.where(mine).order_by(
+                CaseTask.due_at.asc().nulls_last(), CaseTask.created_at
+            )
+        )
+    ).all()
+    asked = (
+        await access.session.execute(
+            in_open_case.where(CaseTask.needs_input_from_user_id == access.user_id)
+        )
+    ).all()
+    done = (
+        await access.session.execute(
+            select(CaseTask, ContinuityCase.title)
             .join(ContinuityCase, ContinuityCase.id == CaseTask.case_id)
             .where(
                 visible(access, Permission.CASE_READ, CaseTask.tenant_id),
-                CaseTask.assignee_user_id == access.user_id,
-                CaseTask.status == "open",
-                ContinuityCase.status.in_(OPEN),
+                CaseTask.completed_by == access.user_id,
+                CaseTask.status == "done",
             )
-            .order_by(CaseTask.due_at.asc().nulls_last(), CaseTask.created_at)
+            .order_by(CaseTask.completed_at.desc())
+            .limit(25)
         )
-    )
+    ).all()
+    titles = {t.case_id: title for t, title in [*rows, *asked, *done]}
+    tasks = [t for t, _ in rows]
     open_cases = list(
         await access.session.scalars(
             select(ContinuityCase).where(
@@ -1675,7 +1905,9 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
     ]
     return MyWorkView(
         emergencies=await _summaries(access, emergencies),
-        tasks=[_task_view(t, names, now) for t in tasks],
+        tasks=await task_views(access, tasks, names, case_titles=titles),
+        needs_input=await task_views(access, [t for t, _ in asked], names, case_titles=titles),
+        completed=await task_views(access, [t for t, _ in done], names, case_titles=titles),
         approvals=await _summaries(access, pending),
         attention=await _summaries(access, attention),
         mentions=[

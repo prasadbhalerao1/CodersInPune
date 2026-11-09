@@ -23,6 +23,7 @@ const CASE_UPDATE: Record<string, string> = {
   emergency: "marked the case as an emergency",
   reopened: "reopened the case",
   declined: "declined a responsibility in the case",
+  clarification: "asked you to clarify a task",
 };
 
 // Scheduled reminders: no actor is involved.

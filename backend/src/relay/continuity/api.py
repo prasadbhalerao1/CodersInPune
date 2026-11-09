@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, status
 
-from relay.continuity import briefing, collaboration, impact, workflow
+from relay.continuity import briefing, collaboration, impact, tasks, workflow
 from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
@@ -241,3 +241,50 @@ async def delete_view(access: CurrentWorkspace, view_id: uuid.UUID) -> None:
 @router.get("/cases/{case_id}/impact")
 async def case_impact(access: CurrentWorkspace, case_id: uuid.UUID) -> impact.ImpactView:
     return await impact.case_impact(access, case_id)
+
+
+@router.get("/cases/{case_id}/tasks/{task_id}")
+async def task_detail(
+    access: CurrentWorkspace, case_id: uuid.UUID, task_id: uuid.UUID
+) -> tasks.TaskDetail:
+    return await tasks.task_detail(access, case_id, task_id)
+
+
+@router.post("/cases/{case_id}/tasks/{task_id}/change")
+async def change_task(
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    task_id: uuid.UUID,
+    body: tasks.TaskChange,
+    jobs: Jobs,
+) -> tasks.TaskDetail:
+    return await tasks.change_task(access, case_id, task_id, body, jobs)
+
+
+@router.post("/cases/{case_id}/tasks/{task_id}/messages", status_code=status.HTTP_201_CREATED)
+async def task_message(
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    task_id: uuid.UUID,
+    body: tasks.TaskMessageIn,
+    jobs: Jobs,
+) -> tasks.TaskDetail:
+    return await tasks.post_message(access, case_id, task_id, body, jobs)
+
+
+@router.post("/cases/{case_id}/tasks/bulk")
+async def bulk_tasks(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: tasks.BulkIn
+) -> tasks.BulkResult:
+    return await tasks.bulk(access, case_id, body)
+
+
+@router.patch("/cases/{case_id}/criteria/{criterion_id}/steps/{index}")
+async def set_step(
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    criterion_id: uuid.UUID,
+    index: int,
+    body: tasks.StepIn,
+) -> Detail:
+    return await tasks.set_step(access, case_id, criterion_id, index, body)

@@ -243,3 +243,122 @@ async def test_incoming_owner_declines_and_delegate_approves(api: Api, ws: Ws) -
     people = await ws.call("GET", f"/cases/{cid}/participants")
     roles = {p["name"]: p["roles"] for p in people}
     assert "approver" in roles[decided["delegate_approver_name"]]
+
+
+async def test_task_coordination_and_readiness(api: Api, ws: Ws) -> None:
+    await add_member(api, ws.id, "user_member", "member")
+    member = Ws(api, ws.id, "user_member")
+    member_id = next(
+        m["user_id"] for m in await ws.call("GET", "/members") if m["role"] == "member"
+    )
+    old, new = await ws.person("Old"), await ws.person("New")
+    rid = await owned(ws, "Ledger", old)
+    case = await ws.call(
+        "POST", "/cases", 201, json={"case_type": "transfer", "title": "Ledger", "starts_at": iso()}
+    )
+    cid = case["id"]
+    case = await ws.call(
+        "POST", f"/cases/{cid}/tasks", 201, json={"title": "Export runbook", "priority": "high"}
+    )
+    first = case["tasks"][0]["id"]
+    case = await ws.call(
+        "POST",
+        f"/cases/{cid}/tasks",
+        201,
+        json={"title": "Review runbook", "depends_on": [first], "assignee_user_id": member_id},
+    )
+    second = next(t for t in case["tasks"] if t["id"] != first)
+    assert second["blocked_by"] == ["Export runbook"]
+    blocked = await member.call(
+        "PATCH", f"/cases/{cid}/tasks/{second['id']}", 409, json={"status": "done"}
+    )
+    assert blocked["code"] == "dependencies_open"
+
+    # A clarification waits on the person asked; their reply answers it.
+    await ws.call(
+        "POST",
+        f"/cases/{cid}/tasks/{second['id']}/messages",
+        201,
+        json={"kind": "clarification", "body": "Which environment?"},
+    )
+    work = await member.call("GET", "/my-work")
+    assert [t["title"] for t in work["needs_input"]] == ["Review runbook"]
+    reply = await member.call(
+        "POST", f"/cases/{cid}/tasks/{second['id']}/messages", 201, json={"body": "Production"}
+    )
+    assert reply["task"]["needs_input_from_user_id"] is None
+    assert [e["kind"] for e in reply["events"]] == [
+        "clarification_requested",
+        "clarification_answered",
+    ]
+
+    # Reassigning an assigned task needs a reason and is kept in the task history.
+    await ws.call(
+        "POST", f"/cases/{cid}/tasks/{second['id']}/change", 422, json={"assignee_user_id": None}
+    )
+    moved = await ws.call(
+        "POST",
+        f"/cases/{cid}/tasks/{second['id']}/change",
+        json={"assignee_user_id": None, "due_at": iso(timedelta(days=2)), "reason": "On leave"},
+    )
+    assert [e["kind"] for e in moved["events"]][-2:] == ["reassigned", "due_changed"]
+
+    # Bulk completion skips tasks still waiting on others.
+    result = await ws.call(
+        "POST",
+        f"/cases/{cid}/tasks/bulk",
+        json={"task_ids": [second["id"]], "action": "complete"},
+    )
+    assert result["done"] == []
+    assert "Export runbook" in result["skipped"][second["id"]]
+    await ws.call(
+        "PATCH",
+        f"/cases/{cid}/tasks/{first}",
+        json={
+            "status": "done",
+            "completion_note": "Exported",
+            "completion_url": "https://x.test/r",
+        },
+    )
+    result = await ws.call(
+        "POST", f"/cases/{cid}/tasks/bulk", json={"task_ids": [second["id"]], "action": "complete"}
+    )
+    assert result["done"] == [second["id"]]
+    await ws.call("PATCH", f"/cases/{cid}/tasks/{first}", 422, json={"status": "open"})
+
+    # Readiness: uncertain states need a reason; a rehearsal needs every step confirmed.
+    case = await ws.call("POST", f"/cases/{cid}/scope", 201, json={"responsibility_id": rid})
+    await ws.call(
+        "PATCH", f"/cases/{cid}/scope/{case['scope'][0]['id']}", json={"recipient_person_id": new}
+    )
+    case = await ws.call(
+        "POST",
+        f"/cases/{cid}/criteria",
+        201,
+        json={
+            "criterion_type": "rehearsal",
+            "title": "Month-end close rehearsal",
+            "checklist": ["Run reconciliation", "Post journal"],
+        },
+    )
+    rehearsal = next(c for c in case["criteria"] if c["criterion_type"] == "rehearsal")
+    await ws.call("PATCH", f"/cases/{cid}/criteria/{rehearsal['id']}", 409, json={"status": "met"})
+    await ws.call(
+        "PATCH", f"/cases/{cid}/criteria/{rehearsal['id']}", 422, json={"status": "needs_review"}
+    )
+    case = await ws.call(
+        "PATCH",
+        f"/cases/{cid}/criteria/{rehearsal['id']}",
+        json={"status": "unable_to_assess", "note": "Close only runs monthly"},
+    )
+    assert any("can't be assessed" in r for r in case["readiness_reasons"])
+    for i in range(2):
+        case = await ws.call(
+            "PATCH", f"/cases/{cid}/criteria/{rehearsal['id']}/steps/{i}", json={"done": True}
+        )
+    case = await ws.call(
+        "PATCH", f"/cases/{cid}/criteria/{rehearsal['id']}", json={"status": "met"}
+    )
+    step = next(c for c in case["criteria"] if c["id"] == rehearsal["id"])["checklist"][0]
+    assert step["done"]
+    assert step["done_by"]

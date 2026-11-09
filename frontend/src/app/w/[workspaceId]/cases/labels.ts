@@ -55,4 +55,5 @@ export const CRITERION_LABEL: Record<string, string> = {
   supervised_demo: "Supervised demo",
   access_confirmed: "Access confirmed",
   qa_reviewed: "Q&A reviewed",
+  rehearsal: "Rehearsal",
 };

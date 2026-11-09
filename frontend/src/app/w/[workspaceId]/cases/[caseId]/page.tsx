@@ -14,7 +14,8 @@ import { CommentComposer } from "./comment-composer";
 import { ImpactPanel } from "./impact";
 import { KnowledgeHandover } from "./knowledge-handover";
 import { Blockers, OwnershipPlan } from "./ownership-plan";
-import { ApprovalPanel, ReadinessSection, ScopeSection, TasksSection } from "./sections";
+import { ApprovalPanel, ScopeSection } from "./sections";
+import { ReadinessSection, TasksSection } from "./tasks";
 import {
   BlockersPanel,
   CASE_TABS,
@@ -49,7 +50,7 @@ export default async function CasePage({
   const [detail, people, teams, members, responsibilities] = await Promise.all([
     attempt(api.getCase(workspaceId, caseId)),
     needs.people ? attempt(api.listPeople(workspaceId)) : null,
-    tab === "overview" ? attempt(api.listTeams(workspaceId)) : null,
+    tab === "overview" || tab === "tasks" ? attempt(api.listTeams(workspaceId)) : null,
     needs.members ? attempt(api.members(workspaceId)) : null,
     tab === "overview" ? attempt(api.listResponsibilities(workspaceId)) : null,
   ]);
@@ -174,7 +175,7 @@ export default async function CasePage({
           {tab === "knowledge" ? <KnowledgeTab {...ctx} /> : null}
           {tab === "tasks" ? (
             <>
-              <TasksSection {...ctx} members={memberList} />
+              <TasksSection {...ctx} members={memberList} teams={teams?.ok ? teams.data : []} />
               <ReadinessSection {...ctx} />
             </>
           ) : null}

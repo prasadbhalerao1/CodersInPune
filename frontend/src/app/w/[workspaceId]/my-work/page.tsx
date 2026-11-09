@@ -7,7 +7,7 @@ import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/pa
 import { Badge, CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
-import type { CaseSummary } from "@/lib/types";
+import type { CaseSummary, TaskView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { completeFollowUpAction } from "../automations/actions";
@@ -19,10 +19,13 @@ const FILTERS = [
   { key: "today", label: "Today" },
   { key: "upcoming", label: "Upcoming" },
   { key: "overdue", label: "Overdue" },
+  { key: "input", label: "Needs my input" },
+  { key: "blocked", label: "Blocked" },
   { key: "approvals", label: "Approvals" },
   { key: "mentions", label: "Mentions" },
   { key: "reviews", label: "Knowledge reviews" },
   { key: "cases", label: "My cases" },
+  { key: "done", label: "Completed" },
 ] as const;
 
 type Filter = (typeof FILTERS)[number]["key"];
@@ -35,6 +38,45 @@ function bucket(dueAt: string | null, now: Date): "overdue" | "today" | "upcomin
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
   return due <= endOfDay ? "today" : "upcoming";
+}
+
+function TaskRows({ tasks, base }: { tasks: TaskView[]; base: string }) {
+  return (
+    <ul className="divide-y rounded-lg border">
+      {tasks.map((t) => (
+        <li key={t.id}>
+          <Link
+            href={`${base}/cases/${t.case_id}/tasks/${t.id}`}
+            className="hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">{t.title}</span>
+              {t.case_title ? (
+                <span className="text-muted-foreground block truncate text-xs">
+                  {t.case_title}
+                  {t.assignee_team_name ? ` · team ${t.assignee_team_name}` : ""}
+                </span>
+              ) : null}
+            </span>
+            {t.blocked_by.length && t.status === "open" ? (
+              <Badge tone="muted">Waits for {t.blocked_by.join(", ")}</Badge>
+            ) : null}
+            {t.needs_input_from_name && t.status === "open" ? (
+              <Badge tone="warning">Asked {t.needs_input_from_name}</Badge>
+            ) : null}
+            {t.overdue ? <Badge tone="danger">Overdue</Badge> : null}
+            {t.status === "done" && t.completed_at ? (
+              <span className="text-muted-foreground text-xs">
+                Done {formatDateTime(t.completed_at)}
+              </span>
+            ) : t.due_at ? (
+              <span className="text-muted-foreground text-xs">Due {formatDateTime(t.due_at)}</span>
+            ) : null}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export default async function MyWorkPage({
@@ -55,6 +97,8 @@ export default async function MyWorkPage({
   const show = (key: Filter) => filter === "all" || filter === key;
   const taskFilter = ["today", "upcoming", "overdue"].includes(filter);
   const tasks = work.data.tasks.filter((t) => !taskFilter || bucket(t.due_at, now) === filter);
+  const blocked = work.data.tasks.filter((t) => t.blocked_by.length > 0);
+  const { needs_input: asked, completed } = work.data;
   const showTasks = filter === "all" || taskFilter;
   const empty =
     work.data.tasks.length +
@@ -62,7 +106,8 @@ export default async function MyWorkPage({
       attention.length +
       myFollowUps.length +
       mentions.length +
-      reviews.length ===
+      reviews.length +
+      asked.length ===
     0;
 
   return (
@@ -120,27 +165,54 @@ export default async function MyWorkPage({
             </ul>
           </section>
         ) : null}
-        {showTasks && tasks.length > 0 ? (
-          <Section title="Tasks assigned to me" description="Complete them from the case.">
-            <ul className="divide-y rounded-lg border">
-              {tasks.map((t) => (
-                <li key={t.id}>
-                  <Link
-                    href={`${base}/cases/${t.case_id}`}
-                    className="hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-medium">{t.title}</span>
-                    {t.overdue ? <Badge tone="danger">Overdue</Badge> : null}
-                    {t.due_at ? (
-                      <span className="text-muted-foreground text-xs">
-                        Due {formatDateTime(t.due_at)}
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+        {(filter === "all" || filter === "input") && asked.length > 0 ? (
+          <Section
+            title="Needs my input"
+            description="Someone asked you a question on these tasks. Your reply answers it."
+          >
+            <TaskRows tasks={asked} base={base} />
           </Section>
+        ) : null}
+        {showTasks && tasks.length > 0 ? (
+          <Section
+            title="Tasks assigned to me"
+            description="Assigned to you or to one of your teams."
+          >
+            <TaskRows tasks={tasks} base={base} />
+          </Section>
+        ) : null}
+        {filter === "blocked" ? (
+          blocked.length ? (
+            <Section
+              title="Blocked"
+              description="Your tasks that wait on other tasks before they can be completed."
+            >
+              <TaskRows tasks={blocked} base={base} />
+            </Section>
+          ) : (
+            <EmptyState
+              title="Nothing blocked"
+              description="None of your open tasks waits on another task."
+            />
+          )
+        ) : null}
+        {filter === "input" && asked.length === 0 ? (
+          <EmptyState
+            title="No open questions"
+            description="Nobody is waiting on an answer from you."
+          />
+        ) : null}
+        {filter === "done" ? (
+          completed.length ? (
+            <Section title="Completed" description="Tasks you completed most recently.">
+              <TaskRows tasks={completed} base={base} />
+            </Section>
+          ) : (
+            <EmptyState
+              title="Nothing completed yet"
+              description="Tasks you complete appear here."
+            />
+          )
         ) : null}
         {(filter === "all" || filter === "upcoming") && myFollowUps.length > 0 ? (
           <Section

@@ -7,7 +7,7 @@ counts for the version it was given against.
 
 import uuid
 from datetime import datetime
-from typing import Final
+from typing import Any, Final
 
 from sqlalchemy import (
     Boolean,
@@ -21,6 +21,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from relay.shared.db.base import Base
@@ -52,7 +53,29 @@ CRITERION_TYPES: Final = (
     "supervised_demo",
     "access_confirmed",
     "qa_reviewed",
+    "rehearsal",
 )
+CRITERION_STATUSES: Final = (
+    "pending",
+    "met",
+    "blocked",
+    "waived",
+    "needs_review",
+    "unable_to_assess",
+)
+# Readiness states that must say why.
+EXPLAINED: Final = ("blocked", "needs_review", "unable_to_assess")
+TASK_EVENTS: Final = (
+    "comment",
+    "clarification_requested",
+    "clarification_answered",
+    "reassigned",
+    "due_changed",
+    "completed",
+    "reopened",
+    "cancelled",
+)
+SYNC_STATUSES: Final = ("not_mirrored", "pending", "synced", "error", "unlinked")
 _UUIDV7 = text("uuidv7()")
 _USER = "identity.user_account.id"
 
@@ -185,8 +208,24 @@ class CaseTask(Base):
         UniqueConstraint("tenant_id", "id"),
         _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_task_case"),
         _tenant_fk(["scope_item_id"], "continuity.case_scope_item", "fk_case_task_scope_item"),
+        _tenant_fk(["assignee_team_id"], "directory.team", "fk_case_task_assignee_team"),
         CheckConstraint("status IN ('open', 'done', 'cancelled')", name="status"),
         CheckConstraint("char_length(title) BETWEEN 1 AND 200", name="title_length"),
+        CheckConstraint(_in("priority", PRIORITIES), name="priority"),
+        CheckConstraint(_in("sync_status", SYNC_STATUSES), name="sync_status"),
+        CheckConstraint(
+            "external_provider IS NULL OR external_provider IN ('github', 'linear')",
+            name="external_provider",
+        ),
+        CheckConstraint(
+            "completion_url IS NULL OR completion_url ~ '^https?://'", name="completion_url_scheme"
+        ),
+        CheckConstraint(
+            "external_url IS NULL OR external_url ~ '^https?://'", name="external_url_scheme"
+        ),
+        CheckConstraint(
+            "num_nonnulls(assignee_user_id, assignee_team_id) <= 1", name="one_assignee"
+        ),
         Index(None, "tenant_id", "assignee_user_id"),
         {"schema": SCHEMA},
     )
@@ -204,6 +243,59 @@ class CaseTask(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    priority: Mapped[str] = mapped_column(Text, server_default="normal")
+    assignee_team_id: Mapped[uuid.UUID | None]
+    # An open clarification: the member who has been asked and not yet answered.
+    needs_input_from_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    completion_note: Mapped[str | None] = mapped_column(Text)
+    completion_url: Mapped[str | None] = mapped_column(Text)
+    # External mirror (created by an approved M10 workflow; never by Relay on its own).
+    external_provider: Mapped[str | None] = mapped_column(Text)
+    external_id: Mapped[str | None] = mapped_column(Text)
+    external_url: Mapped[str | None] = mapped_column(Text)
+    sync_status: Mapped[str] = mapped_column(Text, server_default="not_mirrored")
+
+
+class CaseTaskDependency(Base):
+    __tablename__ = "case_task_dependency"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "task_id", "depends_on_task_id"),
+        _tenant_fk(["task_id"], "continuity.case_task", "fk_case_task_dependency_task"),
+        _tenant_fk(
+            ["depends_on_task_id"], "continuity.case_task", "fk_case_task_dependency_depends_on"
+        ),
+        CheckConstraint("task_id <> depends_on_task_id", name="not_self"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    task_id: Mapped[uuid.UUID]
+    depends_on_task_id: Mapped[uuid.UUID]
+
+
+class CaseTaskEvent(Base):
+    """Append-only task activity (no UPDATE or DELETE grant)."""
+
+    __tablename__ = "case_task_event"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _tenant_fk(["task_id"], "continuity.case_task", "fk_case_task_event_task"),
+        CheckConstraint(_in("kind", TASK_EVENTS), name="kind"),
+        CheckConstraint("body IS NULL OR char_length(body) BETWEEN 1 AND 5000", name="body_length"),
+        Index(None, "tenant_id", "task_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    task_id: Mapped[uuid.UUID]
+    kind: Mapped[str] = mapped_column(Text)
+    body: Mapped[str | None] = mapped_column(Text)
+    detail: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'"))
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class CaseReadinessCriterion(Base):
@@ -213,8 +305,12 @@ class CaseReadinessCriterion(Base):
         _tenant_fk(["case_id"], "continuity.continuity_case", "fk_criterion_case"),
         _tenant_fk(["scope_item_id"], "continuity.case_scope_item", "fk_criterion_scope_item"),
         CheckConstraint(_in("criterion_type", CRITERION_TYPES), name="type"),
-        CheckConstraint("status IN ('pending', 'met', 'blocked', 'waived')", name="status"),
+        CheckConstraint(_in("status", CRITERION_STATUSES), name="status"),
         CheckConstraint("status <> 'waived' OR note IS NOT NULL", name="waiver"),
+        CheckConstraint(
+            "status NOT IN ('blocked', 'needs_review', 'unable_to_assess') OR note IS NOT NULL",
+            name="explained",
+        ),
         {"schema": SCHEMA},
     )
 
@@ -230,6 +326,8 @@ class CaseReadinessCriterion(Base):
     resolved_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Rehearsal: supervised steps, each {"step", "done", "done_by", "done_at"}.
+    checklist: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'"))
 
 
 class CaseApproval(Base):
