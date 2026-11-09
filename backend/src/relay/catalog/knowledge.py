@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints
-from sqlalchemy import ColumnElement, and_, func, select, true
+from sqlalchemy import ColumnElement, and_, case, func, select, true
 
 from relay.catalog import service as catalog
 from relay.catalog.models import KnowledgeItem, Responsibility
@@ -131,6 +131,8 @@ async def _names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
 
 
 def _freshness(item: KnowledgeItem, now: datetime) -> Freshness:
+    if item.origin != "person" and item.last_reviewed_at is None:
+        return "stale"  # imported content is unreviewed until a person confirms it
     reviewed = item.last_reviewed_at or item.created_at
     return "fresh" if reviewed >= now - timedelta(days=REVIEW_DAYS) else "stale"
 
@@ -237,6 +239,8 @@ async def update_knowledge(
     authorize(access, Permission.KNOWLEDGE_WRITE)
     item = await _editable(access, item_id)
     changes = data.model_dump(exclude_unset=True)
+    if item.origin != "person" and {"title", "body", "url", "kind"} & changes.keys():
+        raise ApiError(409, "edit_in_source", "This page is synced from Notion; edit it there.")
     if changes.get("visibility") == "managers":
         authorize(access, Permission.RESPONSIBILITY_MANAGE)
     for field, value in changes.items():
@@ -305,7 +309,11 @@ async def knowledge_overview(
     if q:
         conditions.append(KnowledgeItem.search.op("@@")(func.websearch_to_tsquery("english", q)))
     cutoff = now - timedelta(days=REVIEW_DAYS)
-    reviewed = func.coalesce(KnowledgeItem.last_reviewed_at, KnowledgeItem.created_at)
+    reviewed = func.coalesce(
+        KnowledgeItem.last_reviewed_at,
+        case((KnowledgeItem.origin == "person", KnowledgeItem.created_at)),
+        func.to_timestamp(0),
+    )
     if freshness == "stale":
         conditions.append(reviewed < cutoff)
     elif freshness == "fresh":

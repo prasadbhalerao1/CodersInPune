@@ -71,6 +71,14 @@ class FakeExternal:
     linear_down: bool = False
     linear_data: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     linear_queries: list[str] = field(default_factory=list)
+    # Notion: OAuth codes -> tokens; shared objects (search), blocks per page, database rows.
+    notion_codes: dict[str, str] = field(default_factory=dict)
+    notion_tokens: set[str] = field(default_factory=set)
+    notion_down: bool = False
+    notion_shared: list[dict[str, Any]] = field(default_factory=list)
+    notion_blocks: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    notion_rows: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    notion_calls: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.private_key_pem, self._public_key = _private_key_pem()
@@ -102,6 +110,8 @@ class FakeExternal:
             return self._resend(request)
         if host == "api.linear.app":
             return self._linear(request)
+        if host == "api.notion.com":
+            return self._notion(request)
         if self.github_down:
             return httpx.Response(502)
         if host == "github.com" and path == "/login/oauth/access_token":
@@ -149,6 +159,46 @@ class FakeExternal:
                 page = {"nodes": nodes, "pageInfo": {"hasNextPage": False, "endCursor": None}}
                 return httpx.Response(200, json={"data": {key: page}})
         return httpx.Response(400)
+
+    def _notion(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path.removeprefix("/v1")
+        if self.notion_down:
+            return httpx.Response(503)
+        if path == "/oauth/token":
+            body = json.loads(request.content)
+            token = self.notion_codes.get(body.get("code", ""))
+            expected = "Basic " + base64.b64encode(b"notion-client:notion-secret").decode()
+            if token is None or request.headers.get("authorization") != expected:
+                return httpx.Response(400, json={"error": "invalid_grant"})
+            self.notion_tokens.add(token)
+            return httpx.Response(
+                200,
+                json={
+                    "access_token": token,
+                    "workspace_id": "nws-1",
+                    "workspace_name": "Acme Wiki",
+                    "bot_id": "bot-1",
+                },
+            )
+        token = request.headers.get("authorization", "").removeprefix("Bearer ")
+        if token not in self.notion_tokens:
+            return httpx.Response(401, json={"code": "unauthorized"})
+        assert request.headers.get("notion-version")
+        self.notion_calls.append(f"{request.method} {path}")
+        everything = self.notion_shared + [r for rows in self.notion_rows.values() for r in rows]
+        if path == "/search":
+            return httpx.Response(200, json={"results": everything, "has_more": False})
+        if path.startswith("/databases/") and path.endswith("/query"):
+            rows = self.notion_rows.get(path.split("/")[2])
+            if rows is None:
+                return httpx.Response(404)
+            return httpx.Response(200, json={"results": rows, "has_more": False})
+        if path.startswith("/blocks/") and path.endswith("/children"):
+            blocks = self.notion_blocks.get(path.split("/")[2])
+            if blocks is None:
+                return httpx.Response(404)
+            return httpx.Response(200, json={"results": blocks, "has_more": False})
+        return httpx.Response(404)
 
     def _resend(self, request: httpx.Request) -> httpx.Response:
         if request.headers.get("authorization") != "Bearer re_test_key":
@@ -321,3 +371,34 @@ def linear_issue(
         "parent": None,
         "labels": {"nodes": [{"name": "backend"}]},
     }
+
+
+def notion_page(
+    page_id: str,
+    title: str,
+    *,
+    edited: str = "2026-11-01T10:00:00.000Z",
+    database: str | None = None,
+) -> dict[str, Any]:
+    parent = {"type": "database_id", "database_id": database} if database else {"type": "workspace"}
+    return {
+        "object": "page",
+        "id": page_id,
+        "url": f"https://www.notion.so/{page_id}",
+        "last_edited_time": edited,
+        "archived": False,
+        "parent": parent,
+        "properties": {"Name": {"type": "title", "title": [{"plain_text": title}]}},
+    }
+
+
+def notion_text(*lines: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"b{i}",
+            "type": "paragraph",
+            "has_children": False,
+            "paragraph": {"rich_text": [{"plain_text": line}]},
+        }
+        for i, line in enumerate(lines)
+    ]

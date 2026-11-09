@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     linear_api_url: str = "https://api.linear.app/graphql"
     linear_oauth_url: str = "https://linear.app/oauth/authorize"
     linear_token_url: str = "https://api.linear.app/oauth/token"  # noqa: S105  (a URL)
+    # Notion public integration (read content). Redirect: {frontend}/integrations/notion/callback
+    notion_client_id: str | None = None
+    notion_client_secret: SecretStr | None = None
+    notion_api_url: str = "https://api.notion.com/v1"
+    notion_page_limit: int = Field(default=500, ge=1, le=5000)
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
 

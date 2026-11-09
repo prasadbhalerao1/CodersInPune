@@ -86,7 +86,8 @@ async def run(api: Api, workspace: uuid.UUID) -> list[Any]:
     with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
         events = conn.execute(
             "SELECT id FROM platform.outbox_event WHERE tenant_id = %s AND processed_at IS NULL "
-            "AND event_type = 'linear.sync_requested' AND (payload->>'reconcile') IS NULL ORDER BY id",
+            "AND event_type = 'linear.sync_requested' AND (payload->>'reconcile') IS NULL "
+            "ORDER BY id",
             (workspace,),
         ).fetchall()
     results: list[Any] = []
@@ -123,8 +124,9 @@ async def test_connect_stores_an_encrypted_token_and_syncs_metadata_only(
     with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
         cipher = conn.execute(
             "SELECT token_ciphertext FROM integrations.linear_connection"
-        ).fetchone()[0]
-    assert cipher and "lin_token" not in cipher  # encrypted at rest
+        ).fetchone()[0]  # type: ignore[index]
+    assert cipher
+    assert "lin_token" not in cipher  # encrypted at rest
     assert await run(api, ws.id) == [True]
 
     view = await ws.call("GET", "/integrations/linear")
@@ -142,7 +144,7 @@ async def test_connect_stores_an_encrypted_token_and_syncs_metadata_only(
     with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
         leaked = conn.execute(
             "SELECT count(*) FROM integrations.linear_issue t WHERE t::text LIKE '%%SECRET%%'"
-        ).fetchone()[0]
+        ).fetchone()[0]  # type: ignore[index]
     assert leaked == 0
     pending = count_rows(
         "platform.outbox_event", "event_type = 'linear.sync_requested' AND processed_at IS NULL"

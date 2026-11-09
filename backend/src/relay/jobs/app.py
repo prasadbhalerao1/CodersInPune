@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 import relay.integrations.github.service
 import relay.integrations.github.webhooks
 import relay.integrations.linear.service
+import relay.integrations.notion.service
 import relay.models
 import relay.notifications.service
 from relay.config import Settings
