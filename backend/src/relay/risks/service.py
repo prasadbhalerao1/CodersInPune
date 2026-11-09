@@ -30,6 +30,7 @@ from relay.audit import service as audit
 from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange, Responsibility
 from relay.catalog.service import active_at, assignee_views
 from relay.directory.models import Person, Team
+from relay.governance import service as governance
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
@@ -110,6 +111,7 @@ class OverviewView(BaseModel):
 async def _detect(access: WorkspaceAccess) -> list[RiskView]:
     session = access.session
     now = datetime.now(UTC)
+    policy = await governance.current(session)
     responsibilities = list(
         await session.scalars(
             select(Responsibility).where(
@@ -174,9 +176,9 @@ async def _detect(access: WorkspaceAccess) -> list[RiskView]:
                     key=f"no_backup:{r.id}",
                     rule="no_backup",
                     severity="high"
-                    if r.criticality == "critical"
+                    if r.criticality == "critical" and policy.critical_requires_backup
                     else "medium"
-                    if r.criticality == "high"
+                    if r.criticality in ("critical", "high")
                     else "low",
                     title="No backup",
                     explanation=f"If the current owner of “{r.name}” is unavailable, "
@@ -185,7 +187,12 @@ async def _detect(access: WorkspaceAccess) -> list[RiskView]:
                     responsibility=subject,
                 )
             )
-        if r.criticality == "critical" and len(holders) < 2 and "primary" in roles:
+        if (
+            policy.critical_requires_backup
+            and r.criticality == "critical"
+            and len(holders) < 2
+            and "primary" in roles
+        ):
             risks.append(
                 RiskView(
                     key=f"insufficient_critical_coverage:{r.id}",

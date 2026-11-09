@@ -20,6 +20,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from relay.catalog.models import Responsibility
 from relay.continuity.models import CaseTask, ContinuityCase
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
@@ -38,6 +39,7 @@ Kind = Literal[
     "approval_requested",
     "mentioned",
     "case_update",
+    "automation",
 ]
 # Audiences resolved at delivery time from current memberships.
 Audience = Literal["approvers"]
@@ -48,9 +50,11 @@ class NotificationView(BaseModel):
     id: uuid.UUID
     kind: str
     detail: str | None
-    case_id: uuid.UUID
-    case_title: str
+    case_id: uuid.UUID | None
+    case_title: str | None
     case_emergency: bool
+    responsibility_id: uuid.UUID | None
+    responsibility_name: str | None
     task_id: uuid.UUID | None
     task_title: str | None
     actor_name: str | None
@@ -216,8 +220,15 @@ async def inbox(access: WorkspaceAccess, *, unread_only: bool = False) -> InboxV
         Notification.recipient_user_id == access.user_id,
     )
     stmt = (
-        select(Notification, ContinuityCase.title, ContinuityCase.emergency, CaseTask.title)
-        .join(ContinuityCase, ContinuityCase.id == Notification.case_id)
+        select(
+            Notification,
+            ContinuityCase.title,
+            ContinuityCase.emergency,
+            CaseTask.title,
+            Responsibility.name,
+        )
+        .outerjoin(ContinuityCase, ContinuityCase.id == Notification.case_id)
+        .outerjoin(Responsibility, Responsibility.id == Notification.responsibility_id)
         .outerjoin(CaseTask, CaseTask.id == Notification.task_id)
         .where(*mine)
     )
@@ -247,14 +258,16 @@ async def inbox(access: WorkspaceAccess, *, unread_only: bool = False) -> InboxV
                 detail=n.detail,
                 case_id=n.case_id,
                 case_title=case_title,
-                case_emergency=emergency,
+                case_emergency=bool(emergency),
+                responsibility_id=n.responsibility_id,
+                responsibility_name=responsibility_name,
                 task_id=n.task_id,
                 task_title=task_title,
                 actor_name=(names.get(n.actor_user_id) or "Member") if n.actor_user_id else None,
                 created_at=n.created_at,
                 read_at=n.read_at,
             )
-            for n, case_title, emergency, task_title in rows
+            for n, case_title, emergency, task_title, responsibility_name in rows
         ],
     )
 

@@ -18,11 +18,11 @@ from typing import Literal
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 
-from relay.catalog.knowledge import REVIEW_DAYS
 from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
 from relay.catalog.service import active_at
 from relay.continuity.models import CaseTask, ContinuityCase
 from relay.directory.models import Department, Person, Team
+from relay.governance import service as governance
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
 from relay.risks import service as risks_service
@@ -203,7 +203,8 @@ async def insights(
     )
 
     # ------------------------------------------------------------ knowledge
-    cutoff = now - timedelta(days=REVIEW_DAYS)
+    review_days = (await governance.current(session)).knowledge_review_days
+    cutoff = now - timedelta(days=review_days)
     fresh_by: dict[uuid.UUID, int] = defaultdict(int)
     stale_by: dict[uuid.UUID, int] = defaultdict(int)
     imported_needing_review = 0
@@ -229,7 +230,7 @@ async def insights(
         responsibilities_only_stale=len(only_stale),
         stale_items=sum(stale_by.values()),
         imported_needing_review=imported_needing_review,
-        review_interval_days=REVIEW_DAYS,
+        review_interval_days=review_days,
     )
 
     # ------------------------------------------------------------ operations
@@ -333,7 +334,7 @@ async def insights(
         _component(
             "stale_knowledge",
             "Knowledge overdue for review",
-            f"Each responsibility whose knowledge is all older than {REVIEW_DAYS} days or "
+            f"Each responsibility whose knowledge is all older than {review_days} days or "
             "unreviewed imports: critical 2, high 1.",
             [
                 responsibility_item(r, STALE_WEIGHT, f"{stale_by[r.id]} items need review")

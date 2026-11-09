@@ -1,7 +1,8 @@
 """Responsibility knowledge: capture, review, freshness, search, and case handover.
 
 Knowledge always belongs to a responsibility and keeps its author and source URL.
-Freshness is derived from the last review: fresh <= REVIEW_DAYS, stale after that, and a
+Freshness is derived from the last review: fresh within the workspace's review interval
+(governance policy, default 90 days), stale after that, and a
 responsibility with no active knowledge is "missing". Visibility "managers" limits an
 item to people who manage responsibilities (owners/admins); everything else follows the
 responsibility's normal read access. Search is PostgreSQL full-text search.
@@ -17,13 +18,13 @@ from sqlalchemy import ColumnElement, and_, case, func, select, true
 from relay.catalog import service as catalog
 from relay.catalog.models import KnowledgeItem, Responsibility
 from relay.continuity.models import CaseKnowledge, CaseScopeItem, ContinuityCase
+from relay.governance import service as governance
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import LongText, Name, StrictInput
 from relay.shared.errors import ApiError
 
-REVIEW_DAYS = 90
 Kind = Literal["note", "link", "document", "procedure", "context"]
 Visibility = Literal["workspace", "managers"]
 Freshness = Literal["fresh", "stale"]
@@ -130,11 +131,16 @@ async def _names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
     return {user_id: name or email or "Member" for user_id, name, email in rows}
 
 
-def _freshness(item: KnowledgeItem, now: datetime) -> Freshness:
+async def review_cutoff(access: WorkspaceAccess) -> datetime:
+    policy = await governance.current(access.session)
+    return _now() - timedelta(days=policy.knowledge_review_days)
+
+
+def _freshness(item: KnowledgeItem, cutoff: datetime) -> Freshness:
     if item.origin != "person" and item.last_reviewed_at is None:
         return "stale"  # imported content is unreviewed until a person confirms it
     reviewed = item.last_reviewed_at or item.created_at
-    return "fresh" if reviewed >= now - timedelta(days=REVIEW_DAYS) else "stale"
+    return "fresh" if reviewed >= cutoff else "stale"
 
 
 def _view(
@@ -142,7 +148,7 @@ def _view(
     item: KnowledgeItem,
     responsibility_name: str,
     names: dict[uuid.UUID, str],
-    now: datetime,
+    cutoff: datetime,
 ) -> KnowledgeView:
     return KnowledgeView(
         id=item.id,
@@ -160,7 +166,7 @@ def _view(
         updated_at=item.updated_at,
         last_reviewed_at=item.last_reviewed_at,
         last_reviewed_by_name=names.get(item.last_reviewed_by) if item.last_reviewed_by else None,
-        freshness=_freshness(item, now),
+        freshness=_freshness(item, cutoff),
         can_edit=item.author_user_id == access.user_id
         or role_allows(access.role, Permission.RESPONSIBILITY_MANAGE),
     )
@@ -178,8 +184,8 @@ async def _items(
             .limit(limit)
         )
     ).all()
-    names, now = await _names(access), _now()
-    return [_view(access, item, name, names, now) for item, name in rows]
+    names, cutoff = await _names(access), await review_cutoff(access)
+    return [_view(access, item, name, names, cutoff) for item, name in rows]
 
 
 async def _editable(access: WorkspaceAccess, item_id: uuid.UUID) -> KnowledgeItem:
@@ -304,11 +310,10 @@ async def knowledge_overview(
     access: WorkspaceAccess, *, q: str | None = None, freshness: Freshness | None = None
 ) -> KnowledgeOverviewView:
     authorize(access, Permission.RESPONSIBILITY_READ)
-    now = _now()
     conditions: list[ColumnElement[bool]] = [KnowledgeItem.status == "active"]
     if q:
         conditions.append(KnowledgeItem.search.op("@@")(func.websearch_to_tsquery("english", q)))
-    cutoff = now - timedelta(days=REVIEW_DAYS)
+    cutoff = await review_cutoff(access)
     reviewed = func.coalesce(
         KnowledgeItem.last_reviewed_at,
         case((KnowledgeItem.origin == "person", KnowledgeItem.created_at)),

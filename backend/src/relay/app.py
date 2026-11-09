@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from relay import health
 from relay.audit import service as audit
+from relay.automation import api as automation_api
 from relay.catalog import api as catalog_api
 from relay.catalog import assets_api, knowledge_api
 from relay.config import Settings
@@ -111,4 +112,5 @@ def create_app(
     app.include_router(notion_api.router)
     app.include_router(notion_api.callback)
     app.include_router(insights_api.router)
+    app.include_router(automation_api.router)
     return app

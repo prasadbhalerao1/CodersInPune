@@ -29,6 +29,7 @@ KINDS: Final = (
     "approval_requested",
     "mentioned",
     "case_update",
+    "automation",
 )
 _USER = "identity.user_account.id"
 
@@ -48,6 +49,12 @@ class Notification(Base):
             ["continuity.case_task.tenant_id", "continuity.case_task.id"],
             name="fk_notification_task",
         ),
+        ForeignKeyConstraint(
+            ["tenant_id", "responsibility_id"],
+            ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
+            name="fk_notification_responsibility",
+        ),
+        CheckConstraint("num_nonnulls(case_id, responsibility_id) >= 1", name="subject"),
         CheckConstraint(f"kind IN ({', '.join(repr(k) for k in KINDS)})", name="kind"),
         Index(None, "tenant_id", "recipient_user_id", "read_at"),
         {"schema": SCHEMA},
@@ -58,7 +65,8 @@ class Notification(Base):
     recipient_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     kind: Mapped[str] = mapped_column(Text)
     detail: Mapped[str | None] = mapped_column(Text)
-    case_id: Mapped[uuid.UUID]
+    case_id: Mapped[uuid.UUID | None]
+    responsibility_id: Mapped[uuid.UUID | None]
     task_id: Mapped[uuid.UUID | None]
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
     dedupe_key: Mapped[str] = mapped_column(Text)

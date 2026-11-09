@@ -39,6 +39,8 @@ class Permission(StrEnum):
     MEMBER_MANAGE = "member.manage"
     INTEGRATION_MANAGE = "integration.manage"
     INSIGHTS_READ = "insights.read"
+    POLICY_MANAGE = "policy.manage"
+    AUTOMATION_MANAGE = "automation.manage"
 
 
 # Granted to any verified identity, independent of workspace membership.
@@ -63,6 +65,8 @@ _MANAGE: Final = frozenset(
         Permission.KNOWLEDGE_WRITE,
         Permission.MEMBER_MANAGE,
         Permission.INTEGRATION_MANAGE,
+        Permission.POLICY_MANAGE,
+        Permission.AUTOMATION_MANAGE,
     }
 )
 

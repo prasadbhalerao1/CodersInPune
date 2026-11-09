@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 # Imported for their side effects: modules register outbox handlers at import time, and
 # relay.models completes the ORM metadata for cross-module foreign keys.
+import relay.automation.service
 import relay.integrations.github.service
 import relay.integrations.github.webhooks
 import relay.integrations.linear.service

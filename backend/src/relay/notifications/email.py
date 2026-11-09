@@ -158,7 +158,8 @@ async def queue_for_notifications(
         return
     by_kind: dict[str, list[Notification]] = defaultdict(list)
     for n in notifications:
-        by_kind[CATEGORY_OF[n.kind]].append(n)
+        if n.kind in CATEGORY_OF:  # automation alerts are in-app only in this release
+            by_kind[CATEGORY_OF[n.kind]].append(n)
     emails = dict(
         (
             await session.execute(
@@ -236,7 +237,7 @@ async def _render(
             Membership.user_id == notification.recipient_user_id, Membership.status == "active"
         )
     )
-    case = await session.get(ContinuityCase, notification.case_id)
+    case = await session.get(ContinuityCase, notification.case_id) if notification.case_id else None
     if active is None or case is None:
         return None  # access removed since: never email what they can no longer see
     task = await session.get(CaseTask, notification.task_id) if notification.task_id else None

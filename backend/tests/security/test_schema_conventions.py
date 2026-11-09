@@ -14,12 +14,15 @@ from sqlalchemy import create_engine
 
 # Register every model on Base.metadata for the drift check.
 import relay.audit.models
+import relay.automation.models
 import relay.catalog.models
 import relay.continuity.models
 import relay.directory.models
+import relay.governance.models
 import relay.identity.models
 import relay.integrations.github.models
 import relay.integrations.linear.models
+import relay.integrations.notion.models
 import relay.jobs.models
 import relay.notifications.models
 import relay.platform.models
@@ -37,6 +40,8 @@ MANAGED_SCHEMAS = (
     "integrations",
     "risks",
     "notifications",
+    "governance",
+    "automation",
 )
 TENANT_ROOT = ("platform", "tenant")
 # Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.
