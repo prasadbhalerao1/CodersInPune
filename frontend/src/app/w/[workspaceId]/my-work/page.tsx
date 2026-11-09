@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ActionForm, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/page";
 import { Badge, CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
@@ -7,6 +8,8 @@ import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { CaseSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+import { completeFollowUpAction } from "../automations/actions";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -21,12 +24,16 @@ export default async function MyWorkPage({
 }: PageProps<"/w/[workspaceId]/my-work">) {
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const filter = FILTERS.find((f) => f.key === query.show)?.key ?? "all";
-  const work = await attempt(api.myWork(workspaceId));
+  const [work, followUps] = await Promise.all([
+    attempt(api.myWork(workspaceId)),
+    attempt(api.followUps(workspaceId)),
+  ]);
   if (!work.ok) return <ApiErrorNotice error={work.error} />;
+  const myFollowUps = followUps.ok ? followUps.data : [];
   const { emergencies, tasks, approvals, attention } = work.data;
   const base = `/w/${workspaceId}`;
   const show = (key: (typeof FILTERS)[number]["key"]) => filter === "all" || filter === key;
-  const empty = tasks.length + approvals.length + attention.length === 0;
+  const empty = tasks.length + approvals.length + attention.length + myFollowUps.length === 0;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -100,6 +107,37 @@ export default async function MyWorkPage({
                       </span>
                     ) : null}
                   </Link>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+        {show("tasks") && myFollowUps.length > 0 ? (
+          <Section
+            title="Follow-ups from automations"
+            description="Fix the gap, then mark it done. A new follow-up opens if the gap remains."
+          >
+            <ul className="divide-y rounded-lg border">
+              {myFollowUps.map((f) => (
+                <li key={f.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                  <Link
+                    href={
+                      f.case_id
+                        ? `${base}/cases/${f.case_id}`
+                        : `${base}/responsibilities/${f.responsibility_id}`
+                    }
+                    className="min-w-0 flex-1 truncate font-medium hover:underline"
+                  >
+                    {f.title}
+                  </Link>
+                  <span className="text-muted-foreground text-xs">
+                    {formatDateTime(f.created_at)}
+                  </span>
+                  <ActionForm action={completeFollowUpAction.bind(null, workspaceId, f.id)}>
+                    <SubmitButton size="sm" variant="outline" pendingLabel="…">
+                      Done
+                    </SubmitButton>
+                  </ActionForm>
                 </li>
               ))}
             </ul>

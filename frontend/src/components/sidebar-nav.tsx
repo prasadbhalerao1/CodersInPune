@@ -20,7 +20,9 @@ const LIVE = [
 const SETTINGS = [
   { label: "Members", path: "/members" },
   { label: "Integrations", path: "/integrations" },
+  { label: "Automations", path: "/automations" },
   { label: "Import", path: "/import" },
+  { label: "Settings", path: "/settings" },
   { label: "Audit log", path: "/audit" },
 ] as const;
 

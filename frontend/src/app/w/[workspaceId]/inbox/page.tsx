@@ -20,6 +20,17 @@ const CASE_UPDATE: Record<string, string> = {
   emergency: "marked the case as an emergency",
 };
 
+const AUTOMATION: Record<string, string> = {
+  critical_without_backup: "Critical responsibility has no backup",
+  no_primary_owner: "Responsibility has no primary owner",
+  stale_knowledge: "Knowledge is overdue for review",
+  archived_owner: "An archived person or team still holds a role",
+  coverage_ending: "Temporary cover ends soon",
+  case_overdue: "Case is past its end date",
+  task_overdue: "A case task is overdue",
+  risk_acceptance_expiring: "A risk acceptance expires soon",
+};
+
 function message(n: NotificationView): string {
   const who = n.actor_name ?? "Someone";
   const task = n.task_title ? `“${n.task_title}”` : "A task";
@@ -36,6 +47,8 @@ function message(n: NotificationView): string {
       return `${who} mentioned you`;
     case "case_update":
       return `${who} ${CASE_UPDATE[n.detail ?? ""] ?? "updated the case"}`;
+    case "automation":
+      return AUTOMATION[n.detail ?? ""] ?? "Automation alert";
   }
 }
 
@@ -93,14 +106,19 @@ export default async function InboxPage({
         {inbox.data.items.length === 0 ? (
           <EmptyState
             title={unreadOnly ? "Nothing unread" : "No notifications yet"}
-            description="Assignments, approval requests, mentions, reminders and case updates appear here."
+            description="Assignments, approval requests, mentions, reminders, case updates and automation alerts appear here."
           />
         ) : (
           <ul className="divide-y rounded-lg border">
             {inbox.data.items.map((n) => (
               <li key={n.id}>
                 <ActionForm
-                  action={openNotificationAction.bind(null, workspaceId, n.id, n.case_id)}
+                  action={openNotificationAction.bind(
+                    null,
+                    workspaceId,
+                    n.id,
+                    n.case_id ? `cases/${n.case_id}` : `responsibilities/${n.responsibility_id}`,
+                  )}
                 >
                   <button
                     type="submit"
@@ -116,7 +134,10 @@ export default async function InboxPage({
                     <span className="min-w-0 flex-1">
                       <span className={cn("block", !n.read_at && "font-medium")}>{message(n)}</span>
                       <span className="text-muted-foreground flex items-center gap-2 text-xs">
-                        <span className="truncate">{n.case_title}</span>
+                        <span className="truncate">
+                          {n.case_title ?? n.responsibility_name}
+                          {n.kind === "automation" ? " · Automation" : ""}
+                        </span>
                         {n.case_emergency ? <EmergencyBadge /> : null}
                       </span>
                     </span>

@@ -17,11 +17,11 @@ export async function markAllReadAction(workspaceId: string): Promise<ActionStat
   return {};
 }
 
-/** Opening a notification marks it read, then goes to its case. */
+/** Opening a notification marks it read, then goes to its case or responsibility. */
 export async function openNotificationAction(
   workspaceId: string,
   notificationId: string,
-  caseId: string,
+  target: string,
 ): Promise<ActionState> {
   try {
     await api.send(workspaceId, "POST", "/notifications/read", { ids: [notificationId] });
@@ -30,5 +30,5 @@ export async function openNotificationAction(
     throw error;
   }
   revalidatePath(`/w/${workspaceId}`, "layout");
-  redirect(`/w/${workspaceId}/cases/${caseId}`);
+  redirect(`/w/${workspaceId}/${target}`);
 }

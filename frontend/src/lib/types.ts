@@ -425,15 +425,18 @@ export type NotificationKind =
   | "task_overdue"
   | "approval_requested"
   | "mentioned"
-  | "case_update";
+  | "case_update"
+  | "automation";
 
 export type NotificationView = {
   id: string;
   kind: NotificationKind;
   detail: string | null;
-  case_id: string;
-  case_title: string;
+  case_id: string | null;
+  case_title: string | null;
   case_emergency: boolean;
+  responsibility_id: string | null;
+  responsibility_name: string | null;
   task_id: string | null;
   task_title: string | null;
   actor_name: string | null;
@@ -748,4 +751,60 @@ export type InsightsView = {
   };
   continuity_debt: number;
   debt: DebtComponent[];
+};
+
+export type AutomationTemplate =
+  | "critical_without_backup"
+  | "no_primary_owner"
+  | "stale_knowledge"
+  | "archived_owner"
+  | "coverage_ending"
+  | "case_overdue"
+  | "task_overdue"
+  | "risk_acceptance_expiring";
+
+export type AutomationRunView = {
+  id: string;
+  trigger: "schedule" | "manual" | "retry";
+  status: "ok" | "failed";
+  matched: number;
+  actions: number;
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+};
+
+export type AutomationRuleView = {
+  template: AutomationTemplate;
+  title: string;
+  description: string;
+  enabled: boolean;
+  action: "notify" | "create_follow_up";
+  assignee_user_id: string | null;
+  assignee_name: string | null;
+  last_run_at: string | null;
+  last_status: "never" | "ok" | "failed";
+  last_error: string | null;
+  next_run_at: string | null;
+  open_follow_ups: number;
+  runs: AutomationRunView[];
+};
+
+export type FollowUpView = {
+  id: string;
+  template: AutomationTemplate;
+  title: string;
+  detail: string | null;
+  responsibility_id: string | null;
+  case_id: string | null;
+  assignee_user_id: string | null;
+  status: "open" | "done";
+  created_at: string;
+};
+
+export type PolicyView = {
+  critical_requires_backup: boolean;
+  knowledge_review_days: number;
+  updated_by_name: string | null;
+  updated_at: string | null;
 };

@@ -82,7 +82,17 @@ export default async function KnowledgePage({
               description={
                 q
                   ? "Try other words; search covers titles and content."
-                  : "Add procedures, links and context from a responsibility's page."
+                  : "Add procedures, links and context from a responsibility's page, or import runbooks you already keep in Notion."
+              }
+              action={
+                !q && !freshness && workspace.data.role !== "guest" ? (
+                  <Link
+                    href={`/w/${workspaceId}/integrations/notion`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    Import from Notion
+                  </Link>
+                ) : undefined
               }
             />
           ) : (
