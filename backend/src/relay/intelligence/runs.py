@@ -10,11 +10,14 @@ step. A crash re-delivers the same step; completed steps are never repeated (`st
 import hashlib
 import re
 import uuid
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
 import procrastinate
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,7 +66,13 @@ def _now() -> datetime:
 
 
 def _event(
-    session: AsyncSession, run: AgentRun, step: str, code: str, level: str = "info", **detail: Any
+    session: AsyncSession,
+    run: AgentRun,
+    step: str,
+    code: str,
+    level: str = "info",
+    /,
+    **detail: Any,
 ) -> None:
     session.add(
         AgentRunEvent(
@@ -379,11 +388,14 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         _mark_failed(run, name)
     else:
         pool, ids = await load_pool(session, run)
+        audience = str(run.checkpoint.get("audience", "managers"))
+        pool = pool.for_audience(audience)
+        kind = STEP_KINDS.get(name, ANALYSIS_KIND)
         try:
             result = await gateway_for(ctx.settings).run(
                 instructions=caps.instructions(name),
-                prompt=caps.prompt(pool, "managers"),
-                output_type=caps.AnalysisOutput,
+                prompt=caps.prompt(pool, audience, str(run.checkpoint.get("brief", ""))),
+                output_type=kind.output_type,
                 tools=[caps.TOOLS[t] for t in spec.tools],
                 deps=pool,
                 token_budget=spec.token_budget,
@@ -403,21 +415,14 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
             if run.cancel_requested:
                 return  # cancelled while the model was answering: discard the output
             record_usage(run, result)
-            outcome = validate_claims(pool, result.output.claims)
-            store_claims(session, run, name, outcome.claims, ids)
-            counts = await store_proposals(session, run, name, result.output.proposals, pool, ids)
-            if outcome.rejected.get("unknown_citation"):
-                run.checkpoint = {**run.checkpoint, "suspicious": True}
+            counts = await kind.store(session, run, name, result.output, pool, ids)
             _event(
                 session,
                 run,
                 name,
                 "step_completed",
-                claims=len(outcome.claims),
-                rejected=sum(outcome.rejected.values()),
-                proposals=counts["kept"],
-                suppressed=counts["suppressed"],
                 tokens=result.input_tokens + result.output_tokens,
+                **counts,
             )
     run.step += 1
     if run.step < len(steps) and ctx.jobs is not None:
@@ -426,6 +431,40 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         failed = run.checkpoint.get("failed_steps", [])
         all_failed = failed and len(failed) == len(steps)
         finish(run, "failed" if all_failed else settled_state(run))
+
+
+async def _store_analysis(
+    session: AsyncSession,
+    run: AgentRun,
+    name: str,
+    output: caps.AnalysisOutput,
+    pool: Pool,
+    ids: dict[str, uuid.UUID],
+) -> dict[str, int]:
+    outcome = validate_claims(pool, output.claims)
+    store_claims(session, run, name, outcome.claims, ids)
+    counts = await store_proposals(session, run, name, output.proposals, pool, ids)
+    if outcome.rejected.get("unknown_citation"):
+        run.checkpoint = {**run.checkpoint, "suspicious": True}
+    return {
+        "claims": len(outcome.claims),
+        "rejected": sum(outcome.rejected.values()),
+        "proposals": counts["kept"],
+        "suppressed": counts["suppressed"],
+    }
+
+
+@dataclass(frozen=True)
+class StepKind:
+    """How one AI step's typed output is validated and stored."""
+
+    output_type: type[BaseModel]
+    store: Callable[..., Awaitable[dict[str, int]]]
+
+
+ANALYSIS_KIND = StepKind(caps.AnalysisOutput, _store_analysis)
+# Other capabilities (interviews, capsules) register their own kinds at import time.
+STEP_KINDS: dict[str, StepKind] = {}
 
 
 def _mark_failed(run: AgentRun, name: str, code: str | None = None) -> None:

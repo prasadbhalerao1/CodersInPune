@@ -354,6 +354,7 @@ def upgrade() -> None:
         sa.Column("responsibility_id", sa.Uuid(), nullable=True),
         _text("question"),
         _text("why"),
+        _text("source", default="rules"),
         _json("evidence_ids", "'[]'"),
         sa.Column("asked_user_id", sa.Uuid(), nullable=True),
         _text("status", default="open"),
@@ -364,6 +365,7 @@ def upgrade() -> None:
         _ts("reviewed_at", nullable=True),
         _ts("created_at"),
         _fk(["case_id"], CASE, "fk_interview_question_case"),
+        _check(t, "source", "source IN ('rules', 'ai')"),
         _fk(["run_id"], RUN, "fk_interview_question_run"),
         _fk(
             ["responsibility_id"], "catalog.responsibility", "fk_interview_question_responsibility"
@@ -412,6 +414,8 @@ def upgrade() -> None:
         sa.Column("capsule_id", sa.Uuid(), nullable=False),
         _int("version"),
         sa.Column("run_id", sa.Uuid(), nullable=True),
+        _text("source", default="rules"),
+        _text("summary", nullable=True),
         _json("sections"),
         _json("omissions", "'[]'"),
         _json("redactions", "'[]'"),
@@ -420,6 +424,7 @@ def upgrade() -> None:
         sa.Column("approved_by", sa.Uuid(), nullable=True),
         _ts("approved_at", nullable=True),
         _fk(["capsule_id"], "intelligence.capsule", "fk_capsule_version_capsule"),
+        _check(t, "source", "source IN ('rules', 'ai', 'edit')"),
         _fk(["run_id"], RUN, "fk_capsule_version_run"),
         _user(t, "created_by"),
         _user(t, "approved_by"),

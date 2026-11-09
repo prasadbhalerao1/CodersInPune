@@ -299,6 +299,7 @@ class InterviewQuestion(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
         _fk(["case_id"], _CASE, "fk_interview_question_case"),
+        CheckConstraint("source IN ('rules', 'ai')", name="source"),
         _fk(["run_id"], "intelligence.agent_run", "fk_interview_question_run"),
         _fk(
             ["responsibility_id"],
@@ -318,6 +319,7 @@ class InterviewQuestion(Base):
     responsibility_id: Mapped[uuid.UUID | None]
     question: Mapped[str] = mapped_column(Text)
     why: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text, server_default="rules")
     evidence_ids: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'"))
     asked_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
     status: Mapped[str] = mapped_column(Text, server_default="open")
@@ -357,6 +359,7 @@ class CapsuleVersion(Base):
         UniqueConstraint("tenant_id", "capsule_id", "version"),
         _fk(["capsule_id"], "intelligence.capsule", "fk_capsule_version_capsule"),
         _fk(["run_id"], "intelligence.agent_run", "fk_capsule_version_run"),
+        CheckConstraint("source IN ('rules', 'ai', 'edit')", name="source"),
         {"schema": SCHEMA},
     )
 
@@ -365,6 +368,8 @@ class CapsuleVersion(Base):
     capsule_id: Mapped[uuid.UUID]
     version: Mapped[int] = mapped_column(Integer)
     run_id: Mapped[uuid.UUID | None]
+    source: Mapped[str] = mapped_column(Text, server_default="rules")
+    summary: Mapped[str | None] = mapped_column(Text)
     sections: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
     omissions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=sql("'[]'"))
     redactions: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'"))

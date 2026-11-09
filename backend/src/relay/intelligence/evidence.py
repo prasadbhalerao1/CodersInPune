@@ -67,6 +67,13 @@ class Pool:
     def get(self, ref: str) -> PoolItem | None:
         return next((i for i in self.items if i.ref == ref), None)
 
+    def for_audience(self, audience: str) -> Pool:
+        """The pool as a given audience may see it (managers see everything)."""
+        if audience == "managers":
+            return self
+        items = [i for i in self.items if i.audience == "workspace"]
+        return Pool(self.case_id, self.case_title, items, self.partial_sources)
+
     def input_hash(self) -> str:
         parts = sorted(
             f"{i.source_system}:{i.source_id}:{i.revision}:{i.audience}" for i in self.items
