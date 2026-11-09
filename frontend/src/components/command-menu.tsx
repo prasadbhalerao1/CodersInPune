@@ -215,6 +215,7 @@ export function CommandMenu() {
         ? [
             ["Integrations", "/integrations"],
             ["Automations", "/automations"],
+            ["Agents", "/agents"],
           ]
         : []),
       ["Settings", "/settings"],

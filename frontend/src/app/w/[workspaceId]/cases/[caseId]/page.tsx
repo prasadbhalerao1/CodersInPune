@@ -169,6 +169,21 @@ export default async function CasePage({ params }: PageProps<"/w/[workspaceId]/c
             </Link>
           </p>
         ) : null}
+        <nav aria-label="Case intelligence" className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {[
+            ["analysis", "Analysis"],
+            ["interview", "Interview"],
+            ["capsules", "Handover capsules"],
+          ].map(([path, label]) => (
+            <Link
+              key={path}
+              href={`/w/${workspaceId}/cases/${caseId}/${path}`}
+              className="font-medium underline-offset-2 hover:underline"
+            >
+              {label} →
+            </Link>
+          ))}
+        </nav>
       </div>
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-8">

@@ -4,6 +4,14 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { connection } from "next/server";
 
 import type {
+  AiAdminView,
+  AnalysisView,
+  CapsuleSummary,
+  CapsuleVersionView,
+  CapsuleView,
+  InterviewView,
+  RunDetail,
+  RunView,
   ActivityView,
   LinearIdentityView,
   LinearIntegrationView,
@@ -206,6 +214,22 @@ export const api = {
     relayFetch<InboxView>(withQuery(`${ws(id)}/notifications`, query)),
   auditEvents: (id: string, query?: Query) =>
     relayFetch<AuditEventView[]>(withQuery(`${ws(id)}/audit-events`, query)),
+
+  analysis: (id: string, caseId: string) =>
+    relayFetch<AnalysisView>(`${ws(id)}/cases/${caseId}/analysis`),
+  interview: (id: string, caseId: string) =>
+    relayFetch<InterviewView>(`${ws(id)}/cases/${caseId}/interview`),
+  caseCapsules: (id: string, caseId: string) =>
+    relayFetch<CapsuleSummary[]>(`${ws(id)}/cases/${caseId}/capsules`),
+  capsule: (id: string, capsuleId: string, version?: number) =>
+    relayFetch<CapsuleView>(
+      withQuery(`${ws(id)}/ai/capsules/${capsuleId}`, { version: version?.toString() }),
+    ),
+  capsuleVersions: (id: string, capsuleId: string) =>
+    relayFetch<CapsuleVersionView[]>(`${ws(id)}/ai/capsules/${capsuleId}/versions`),
+  aiOverview: (id: string) => relayFetch<AiAdminView>(`${ws(id)}/ai`),
+  aiRuns: (id: string) => relayFetch<RunView[]>(`${ws(id)}/ai/runs`),
+  aiRun: (id: string, runId: string) => relayFetch<RunDetail>(`${ws(id)}/ai/runs/${runId}`),
 
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

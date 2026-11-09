@@ -170,5 +170,5 @@ async def acknowledge_capsule(
 @router.get("/ai/capsules/{capsule_id}/versions")
 async def capsule_versions(
     access: CurrentWorkspace, capsule_id: uuid.UUID
-) -> list[capsules.VersionView]:
+) -> list[capsules.CapsuleVersionView]:
     return await capsules.versions(access, capsule_id)

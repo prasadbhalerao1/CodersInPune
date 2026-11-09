@@ -919,3 +919,219 @@ export type NotionPreviewView = {
   pages: { title: string; url: string; last_edited_at: string | null; already_imported: boolean }[];
   more: boolean;
 };
+
+// --- AI runtime (backend relay.intelligence) ---------------------------------------
+export type AiAudience = "workspace" | "managers";
+export type ClaimKind =
+  "finding" | "decision" | "question" | "dependency" | "conflict" | "missing" | "work";
+export type ClaimType = "direct_fact" | "rule" | "ai_inference" | "human_decision";
+export type Confidence = "high" | "medium" | "low" | "insufficient";
+export type RunState =
+  | "queued"
+  | "running"
+  | "waiting_for_approval"
+  | "completed"
+  | "partial"
+  | "failed"
+  | "cancelled"
+  | "timed_out"
+  | "needs_human_review";
+
+export type EvidenceView = {
+  id: string;
+  ref: string;
+  source_system: "relay" | "github" | "linear" | "notion";
+  source_type: string;
+  title: string;
+  url: string | null;
+  revision: string | null;
+  source_ts: string | null;
+  excerpt: string;
+  audience: AiAudience;
+  status: "active" | "stale" | "withdrawn";
+};
+
+export type ClaimView = {
+  id: string;
+  capability: string;
+  kind: ClaimKind;
+  claim_type: ClaimType;
+  text: string;
+  confidence: Confidence;
+  audience: AiAudience;
+  review_status: "unreviewed" | "accepted" | "rejected";
+  supported: boolean;
+  timeline_at: string | null;
+  evidence: EvidenceView[];
+};
+
+export type RunView = {
+  id: string;
+  capability: string;
+  case_id: string | null;
+  state: RunState;
+  step: number;
+  steps: string[];
+  ai: "on" | "off" | "not_configured";
+  provider: string | null;
+  model: string | null;
+  key_index: number | null;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: string;
+  duration_ms: number;
+  error_code: string | null;
+  partial_sources: string[];
+  created_at: string;
+  finished_at: string | null;
+};
+
+export type RunEventView = {
+  step: string;
+  level: "info" | "warning" | "error";
+  code: string;
+  detail: Record<string, unknown>;
+  created_at: string;
+};
+
+export type RunDetail = RunView & { events: RunEventView[] };
+
+export type ProposalType =
+  | "knowledge_draft"
+  | "case_finding"
+  | "task"
+  | "readiness_criterion"
+  | "exception"
+  | "handover_content"
+  | "coordination_message";
+
+export type ProposalView = {
+  id: string;
+  capability: string;
+  type: ProposalType;
+  title: string;
+  detail: string;
+  confidence: Confidence;
+  audience: AiAudience;
+  status: "pending" | "accepted" | "edited" | "rejected";
+  reason: string | null;
+  result_ref: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  evidence: EvidenceView[];
+};
+
+export type AnalysisView = {
+  case_id: string;
+  ai_configured: boolean;
+  run: RunView | null;
+  claims: ClaimView[];
+  proposals: ProposalView[];
+  hidden_restricted: boolean;
+  can_run: boolean;
+  can_review: boolean;
+};
+
+export type QuestionView = {
+  id: string;
+  question: string;
+  why: string;
+  status: "open" | "answered" | "unknown" | "not_applicable" | "cannot_share";
+  answer: string | null;
+  answered_by: string | null;
+  answered_at: string | null;
+  reviewed_at: string | null;
+  asked_user_id: string | null;
+  asked_name: string | null;
+  ai: boolean;
+  can_answer: boolean;
+  evidence: EvidenceView[];
+};
+
+export type InterviewView = {
+  case_id: string;
+  ai_configured: boolean;
+  run: RunView | null;
+  questions: QuestionView[];
+  can_generate: boolean;
+  can_review: boolean;
+};
+
+export type CapsulePoint = {
+  key: string;
+  text: string;
+  kind: ClaimKind;
+  claim_type: ClaimType;
+  confidence: Confidence;
+  redacted: boolean;
+  evidence: EvidenceView[];
+};
+export type CapsuleSection = { heading: string; points: CapsulePoint[] };
+export type CapsuleOmission = { reason: string; count: number };
+export type CapsuleStatus = "draft" | "approved" | "acknowledged" | "superseded";
+
+export type CapsuleView = {
+  id: string;
+  case_id: string;
+  case_title: string;
+  recipient_user_id: string;
+  recipient_name: string;
+  status: CapsuleStatus;
+  version: number;
+  source: "rules" | "ai" | "edit";
+  summary: string | null;
+  sections: CapsuleSection[];
+  omissions: CapsuleOmission[];
+  approved_by: string | null;
+  approved_at: string | null;
+  acknowledged_at: string | null;
+  created_at: string;
+  can_edit: boolean;
+  can_approve: boolean;
+  can_acknowledge: boolean;
+  generating: boolean;
+};
+
+export type CapsuleSummary = {
+  id: string;
+  recipient_user_id: string;
+  recipient_name: string;
+  status: CapsuleStatus;
+  version: number;
+  updated_at: string;
+};
+
+export type CapsuleVersionView = {
+  version: number;
+  source: "rules" | "ai" | "edit";
+  created_by: string | null;
+  created_at: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  acknowledged: boolean;
+};
+
+export type CapabilityView = {
+  name: string;
+  version: number;
+  title: string;
+  description: string;
+  produces: string[];
+  tools: string[];
+  token_budget: number;
+  timeout_seconds: number;
+  enabled: boolean;
+  accepted: number;
+  rejected: number;
+  pending: number;
+};
+
+export type AiAdminView = {
+  configured: boolean;
+  providers: string[];
+  gemini_keys: number;
+  enabled: boolean;
+  monthly_token_budget: number;
+  tokens_this_month: number;
+  capabilities: CapabilityView[];
+};

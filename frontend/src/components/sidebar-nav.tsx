@@ -24,6 +24,7 @@ const SETTINGS: readonly { label: string; path: string; roles?: readonly Workspa
   { label: "Members", path: "/members" },
   { label: "Integrations", path: "/integrations", roles: ADMIN_ROLES },
   { label: "Automations", path: "/automations", roles: ADMIN_ROLES },
+  { label: "Agents", path: "/agents", roles: [...ADMIN_ROLES, "auditor"] },
   { label: "Import", path: "/import", roles: ADMIN_ROLES },
   { label: "Settings", path: "/settings" },
   { label: "Audit log", path: "/audit", roles: [...ADMIN_ROLES, "auditor"] },

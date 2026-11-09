@@ -69,7 +69,7 @@ def _section_of(kind: str, claim_type: str) -> str:
     }.get(kind, "risk" if claim_type == "rule" else "other")
 
 
-class Point(BaseModel):
+class CapsulePoint(BaseModel):
     key: str
     text: str
     kind: str
@@ -79,12 +79,12 @@ class Point(BaseModel):
     evidence: list[svc.EvidenceView] = []
 
 
-class Section(BaseModel):
+class CapsuleSection(BaseModel):
     heading: str
-    points: list[Point]
+    points: list[CapsulePoint]
 
 
-class Omission(BaseModel):
+class CapsuleOmission(BaseModel):
     reason: str
     count: int
 
@@ -99,8 +99,8 @@ class CapsuleView(BaseModel):
     version: int
     source: str
     summary: str | None
-    sections: list[Section]
-    omissions: list[Omission]
+    sections: list[CapsuleSection]
+    omissions: list[CapsuleOmission]
     approved_by: str | None
     approved_at: datetime | None
     acknowledged_at: datetime | None
@@ -120,7 +120,7 @@ class CapsuleSummary(BaseModel):
     updated_at: datetime
 
 
-class VersionView(BaseModel):
+class CapsuleVersionView(BaseModel):
     version: int
     source: str
     created_by: str | None
@@ -428,7 +428,7 @@ async def view(
     ids = {uuid.UUID(e) for s in v.sections for p in s["points"] for e in p["evidence_ids"]}
     evidence = await svc.current_evidence(access, await svc._evidence_rows(access, ids))
     redacted, hidden, withdrawn = set(v.redactions), 0, 0
-    sections: list[Section] = []
+    sections: list[CapsuleSection] = []
     for s in v.sections:
         points = []
         for p in s["points"]:
@@ -443,7 +443,7 @@ async def view(
                 hidden += 1
                 continue
             points.append(
-                Point(
+                CapsulePoint(
                     key=p["key"],
                     text=p["text"],
                     kind=p["kind"],
@@ -454,13 +454,15 @@ async def view(
                 )
             )
         if points:
-            sections.append(Section(heading=s["heading"], points=points))
-    omissions = [Omission(**o) for o in v.omissions]
+            sections.append(CapsuleSection(heading=s["heading"], points=points))
+    omissions = [CapsuleOmission(**o) for o in v.omissions]
     if withdrawn:
-        omissions.append(Omission(reason="Source withdrawn since this version", count=withdrawn))
+        omissions.append(
+            CapsuleOmission(reason="Source withdrawn since this version", count=withdrawn)
+        )
     if hidden:
         omissions.append(
-            Omission(reason="Withheld from you by the editors or access", count=hidden)
+            CapsuleOmission(reason="Withheld from you by the editors or access", count=hidden)
         )
     names = await continuity._member_names(access)
     ack = await session.scalar(
@@ -595,7 +597,7 @@ async def acknowledge(access: WorkspaceAccess, capsule_id: uuid.UUID) -> Capsule
     return await view(access, capsule.id)
 
 
-async def versions(access: WorkspaceAccess, capsule_id: uuid.UUID) -> list[VersionView]:
+async def versions(access: WorkspaceAccess, capsule_id: uuid.UUID) -> list[CapsuleVersionView]:
     capsule = await _load(access, capsule_id)
     session = access.session
     names = await continuity._member_names(access)
@@ -608,7 +610,7 @@ async def versions(access: WorkspaceAccess, capsule_id: uuid.UUID) -> list[Versi
         )
     )
     return [
-        VersionView(
+        CapsuleVersionView(
             version=v.version,
             source=v.source,
             created_by=names.get(v.created_by) if v.created_by else None,
