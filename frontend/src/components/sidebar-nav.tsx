@@ -28,6 +28,7 @@ const SETTINGS: readonly { label: string; path: string; roles?: readonly Workspa
   { label: "Import", path: "/import", roles: ADMIN_ROLES },
   { label: "Settings", path: "/settings" },
   { label: "Audit log", path: "/audit", roles: [...ADMIN_ROLES, "auditor"] },
+  { label: "Help", path: "/help" },
 ];
 
 export function SidebarNav() {
