@@ -22,6 +22,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Literal
 
+import procrastinate
 from pydantic import AwareDatetime, BaseModel
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -35,6 +36,8 @@ from relay.catalog.models import (
     ResponsibilityAsset,
 )
 from relay.catalog.service import active_at, assignee_views
+from relay.continuity import service as continuity
+from relay.continuity.models import OPEN_STATUSES, ContinuityCase
 from relay.directory.models import Person, Team, TeamMember
 from relay.governance import service as governance
 from relay.identity.models import Membership
@@ -56,6 +59,15 @@ class RiskDecisionIn(StrictInput):
     action: Literal["acknowledge", "accept", "reopen", "remediate", "dismiss", "resolve"]
     note: LongText | None = None
     accepted_until: AwareDatetime | None = None
+
+
+class RiskAssignIn(StrictInput):
+    key: str
+    user_id: uuid.UUID | None  # None clears the assignee
+
+
+class RiskCaseIn(StrictInput):
+    key: str
 
 
 class RiskSubjectView(BaseModel):
@@ -81,6 +93,9 @@ class RiskView(BaseModel):
     note: str | None = None
     accepted_until: datetime | None = None
     decided_by_name: str | None = None
+    assignee_user_id: uuid.UUID | None = None
+    assignee_name: str | None = None
+    case_id: uuid.UUID | None = None
     decided_at: datetime | None = None
     first_detected_at: datetime | None = None
 
@@ -438,6 +453,9 @@ async def _reconcile(access: WorkspaceAccess, detected: list[RiskView]) -> None:
         risk.note = record.note
         risk.accepted_until = record.accepted_until
         risk.decided_by_name = names.get(record.decided_by) if record.decided_by else None
+        risk.assignee_user_id = record.assignee_user_id
+        risk.assignee_name = names.get(record.assignee_user_id) if record.assignee_user_id else None
+        risk.case_id = record.case_id
         risk.decided_at = record.decided_at
         risk.first_detected_at = record.first_detected_at
 
@@ -477,17 +495,114 @@ async def resolved_risks(access: WorkspaceAccess) -> list[ResolvedRiskView]:
     ]
 
 
-async def decide_risk(access: WorkspaceAccess, data: RiskDecisionIn) -> RiskView:
-    authorize(access, Permission.RESPONSIBILITY_MANAGE)
-    detected = {r.key for r in await compute_risks(access, statuses=None)}
+async def _detected(access: WorkspaceAccess, key: str) -> tuple[RiskRecord, RiskView]:
+    """The record of a risk that is detected right now, locked for the change."""
+    risk = next((r for r in await compute_risks(access, statuses=None) if r.key == key), None)
     record = await access.session.scalar(
-        select(RiskRecord).where(
-            RiskRecord.risk_key == data.key,
+        select(RiskRecord)
+        .where(
+            RiskRecord.risk_key == key,
             visible(access, Permission.RESPONSIBILITY_READ, RiskRecord.tenant_id),
         )
+        .with_for_update()
     )
-    if record is None or data.key not in detected:
+    if record is None or risk is None:
         raise ApiError(404, "risk_not_found", "This risk is not currently detected.")
+    return record, risk
+
+
+async def _refreshed(access: WorkspaceAccess, key: str) -> RiskView:
+    await access.session.flush()
+    return next(r for r in await compute_risks(access, statuses=None) if r.key == key)
+
+
+def _start_remediation(record: RiskRecord) -> None:
+    if record.status in ("open", "acknowledged"):
+        record.status, record.accepted_until = "in_remediation", None
+
+
+async def assign_risk(access: WorkspaceAccess, data: RiskAssignIn) -> RiskView:
+    """Ask a member to fix the condition. Assigning someone starts remediation."""
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    record, _ = await _detected(access, data.key)
+    if data.user_id is not None and not await access.session.scalar(
+        select(Membership.id).where(
+            visible(access, Permission.MEMBER_READ, Membership.tenant_id),
+            Membership.user_id == data.user_id,
+            Membership.status == "active",
+        )
+    ):
+        raise ApiError(422, "not_a_member", "Assign the risk to an active member.")
+    if record.assignee_user_id == data.user_id:
+        raise ApiError(409, "unchanged", "The risk is already assigned that way.")
+    record.assignee_user_id = data.user_id
+    if data.user_id is not None:
+        _start_remediation(record)
+    record.updated_at = datetime.now(UTC)
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="risk.assigned" if data.user_id else "risk.unassigned",
+        actor_user_id=access.user_id,
+        target_type="risk",
+        target_id=record.id,
+        details={"rule": record.rule, "assignee_user_id": str(data.user_id or "")},
+    )
+    return await _refreshed(access, data.key)
+
+
+async def open_case_for_risk(
+    access: WorkspaceAccess, data: RiskCaseIn, jobs: procrastinate.App | None
+) -> RiskView:
+    """Open a transfer case scoped to the risk's responsibility and link it to the risk.
+
+    The case goes through the usual approvals; the risk resolves itself once its
+    condition is gone (for example, once a backup owner is assigned).
+    """
+    authorize(access, Permission.CASE_MANAGE)
+    record, risk = await _detected(access, data.key)
+    if record.case_id is not None:
+        status = await access.session.scalar(
+            select(ContinuityCase.status).where(
+                ContinuityCase.tenant_id == access.tenant_id, ContinuityCase.id == record.case_id
+            )
+        )
+        if status in OPEN_STATUSES:
+            raise ApiError(409, "case_exists", "A case for this risk is already open.")
+    case = await continuity.create_case(
+        access,
+        continuity.CaseIn(
+            case_type="transfer",
+            title=f"Resolve: {risk.title}"[:200],
+            reason=f"{risk.explanation}\n\nRecommended: {risk.recommendation}",
+            starts_at=datetime.now(UTC),
+            priority="high" if risk.severity == "high" else "normal",
+            accountable_manager_user_id=access.user_id,
+        ),
+        jobs,
+    )
+    if risk.responsibility is not None:
+        await continuity.add_scope_item(
+            access, case.id, continuity.ScopeItemIn(responsibility_id=risk.responsibility.id)
+        )
+    record.case_id = case.id
+    _start_remediation(record)
+    record.updated_at = datetime.now(UTC)
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="risk.case_opened",
+        actor_user_id=access.user_id,
+        target_type="risk",
+        target_id=record.id,
+        details={"rule": record.rule, "case_id": str(case.id)},
+    )
+    return await _refreshed(access, data.key)
+
+
+async def decide_risk(access: WorkspaceAccess, data: RiskDecisionIn) -> RiskView:
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    record, _ = await _detected(access, data.key)
     now = datetime.now(UTC)
     if data.action == "resolve":
         # Deterministic risks resolve themselves when the condition is fixed, never by hand.
@@ -538,8 +653,7 @@ async def decide_risk(access: WorkspaceAccess, data: RiskDecisionIn) -> RiskView
             "accepted_until": record.accepted_until.isoformat() if record.accepted_until else None,
         },
     )
-    await access.session.flush()
-    return next(r for r in await compute_risks(access, statuses=None) if r.key == data.key)
+    return await _refreshed(access, data.key)
 
 
 async def overview(access: WorkspaceAccess) -> OverviewView:

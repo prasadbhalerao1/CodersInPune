@@ -170,6 +170,9 @@ export type RiskView = {
   note: string | null;
   accepted_until: string | null;
   decided_by_name: string | null;
+  assignee_user_id: string | null;
+  assignee_name: string | null;
+  case_id: string | null;
   decided_at: string | null;
   first_detected_at: string | null;
 };

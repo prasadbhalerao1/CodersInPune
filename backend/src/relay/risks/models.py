@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Text,
     UniqueConstraint,
@@ -39,6 +40,11 @@ class RiskRecord(Base):
         CheckConstraint("severity IN ('high', 'medium', 'low')", name="severity"),
         CheckConstraint("status <> 'dismissed' OR note IS NOT NULL", name="dismissal"),
         Index(None, "tenant_id", "status"),
+        ForeignKeyConstraint(
+            ["tenant_id", "case_id"],
+            ["continuity.continuity_case.tenant_id", "continuity.continuity_case.id"],
+        ),
+        Index(None, "tenant_id", "case_id"),
         {"schema": SCHEMA},
     )
 
@@ -58,4 +64,8 @@ class RiskRecord(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("identity.user_account.id")
+    )
+    case_id: Mapped[uuid.UUID | None]
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

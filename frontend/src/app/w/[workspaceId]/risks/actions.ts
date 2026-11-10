@@ -1,9 +1,11 @@
 "use server";
 
 import { refresh, revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
 import { api, RelayApiError } from "@/lib/relay-api";
+import type { RiskView } from "@/lib/types";
 
 export async function decideRiskAction(
   workspaceId: string,
@@ -34,4 +36,38 @@ export async function decideRiskAction(
   revalidatePath(`/w/${workspaceId}`, "layout");
   refresh(); // re-render the current route; data is never cached
   return {};
+}
+
+export async function assignRiskAction(
+  workspaceId: string,
+  key: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const userId = String(fd.get("user_id") ?? "");
+  try {
+    await api.send(workspaceId, "POST", "/risks/assign", { key, user_id: userId || null });
+  } catch (error) {
+    if (error instanceof RelayApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  refresh();
+  return {};
+}
+
+export async function openRiskCaseAction(
+  workspaceId: string,
+  key: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  let risk: RiskView;
+  try {
+    risk = await api.send<RiskView>(workspaceId, "POST", "/risks/case", { key });
+  } catch (error) {
+    if (error instanceof RelayApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath(`/w/${workspaceId}`, "layout");
+  redirect(`/w/${workspaceId}/cases/${risk.case_id}`);
 }

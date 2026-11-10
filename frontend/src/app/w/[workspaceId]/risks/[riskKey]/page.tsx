@@ -7,14 +7,16 @@ import { CriticalityBadge, RiskStatusBadge, SeverityBadge } from "@/components/u
 import { buttonVariants } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
+import { cn } from "@/lib/utils";
 
-import { decideRiskAction } from "../actions";
+import { assignRiskAction, decideRiskAction, openRiskCaseAction } from "../actions";
 
 export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/risks/[riskKey]">) {
   const { workspaceId, riskKey } = await params;
-  const [workspace, risks] = await Promise.all([
+  const [workspace, risks, members] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.risks(workspaceId, "all")),
+    attempt(api.members(workspaceId)),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!risks.ok) return <ApiErrorNotice error={risks.error} />;
@@ -114,6 +116,61 @@ export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/r
                 <p className="text-muted-foreground mt-2 text-xs">No decision recorded yet.</p>
               )}
               {risk.note ? <p className="mt-2 whitespace-pre-line">“{risk.note}”</p> : null}
+            </div>
+          </Section>
+
+          <Section title="Follow-up">
+            <div className="flex flex-col gap-3 rounded-lg border p-4 text-sm">
+              <p>
+                <span className="text-muted-foreground">Assigned to </span>
+                {risk.assignee_name ?? "nobody yet"}
+              </p>
+              {manage && members.ok ? (
+                <ActionForm
+                  action={assignRiskAction.bind(null, workspaceId, risk.key)}
+                  className="flex-row items-center gap-2"
+                >
+                  <select
+                    name="user_id"
+                    defaultValue={risk.assignee_user_id ?? ""}
+                    aria-label="Assignee"
+                    className={cn(inputClass, "min-w-0 flex-1")}
+                  >
+                    <option value="">Nobody</option>
+                    {members.data
+                      .filter((m) => m.status === "active")
+                      .map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.name}
+                        </option>
+                      ))}
+                  </select>
+                  <SubmitButton size="sm" variant="outline" pendingLabel="Saving…">
+                    Assign
+                  </SubmitButton>
+                </ActionForm>
+              ) : null}
+              {risk.case_id ? (
+                <Link
+                  href={`${base}/cases/${risk.case_id}`}
+                  className="font-medium underline-offset-2 hover:underline"
+                >
+                  Open the linked case →
+                </Link>
+              ) : null}
+              {manage ? (
+                <ActionForm action={openRiskCaseAction.bind(null, workspaceId, risk.key)}>
+                  <p className="text-muted-foreground text-xs">
+                    Opens a transfer case scoped to the affected responsibility, with the usual
+                    approvals.
+                  </p>
+                  <div>
+                    <SubmitButton size="sm" pendingLabel="Opening case…">
+                      {risk.case_id ? "Open another case" : "Open a case to fix this"}
+                    </SubmitButton>
+                  </div>
+                </ActionForm>
+              ) : null}
             </div>
           </Section>
 

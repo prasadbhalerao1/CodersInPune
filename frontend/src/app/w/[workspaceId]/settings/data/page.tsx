@@ -205,9 +205,9 @@ export default async function DataPage({ params }: PageProps<"/w/[workspaceId]/s
             ) : (
               <>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  Everything in this workspace, including its audit log, is permanently deleted
-                  30 days after you confirm. Export first if you need a copy. You can cancel at
-                  any time during those 30 days.
+                  Everything in this workspace, including its audit log, is permanently deleted 30
+                  days after you confirm. Export first if you need a copy. You can cancel at any
+                  time during those 30 days.
                 </p>
                 <ActionForm
                   action={scheduleDeletionAction.bind(null, workspaceId)}

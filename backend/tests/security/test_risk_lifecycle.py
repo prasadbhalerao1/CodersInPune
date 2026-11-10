@@ -120,3 +120,25 @@ async def test_only_managers_decide_and_unknown_or_cross_workspace_keys_are_reje
     other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
     await other.call("POST", "/risks/decision", 404, json={"key": key, "action": "acknowledge"})
     await ws.call("POST", "/risks/decision", 409, json={"key": key, "action": "reopen"})
+
+
+async def test_assign_and_open_case_from_a_risk(api: Api, ws: Ws) -> None:
+    rid = await ws.responsibility("Payments", "high")
+    key = f"no_primary_owner:{rid}"
+    await add_member(api, ws.id, "user_member", "member")
+    member = Ws(api, ws.id, "user_member")
+    member_id = next(
+        m["user_id"] for m in await ws.call("GET", "/members") if m["role"] == "member"
+    )
+
+    await member.call("POST", "/risks/assign", 403, json={"key": key, "user_id": member_id})
+    assigned = await ws.call("POST", "/risks/assign", json={"key": key, "user_id": member_id})
+    assert (assigned["status"], assigned["assignee_user_id"]) == ("in_remediation", member_id)
+    assert assigned["assignee_name"]
+    await ws.call("POST", "/risks/assign", 409, json={"key": key, "user_id": member_id})
+
+    opened = await ws.call("POST", "/risks/case", json={"key": key})
+    case = await ws.call("GET", f"/cases/{opened['case_id']}")
+    assert case["case_type"] == "transfer"
+    assert [s["responsibility_id"] for s in case["scope"]] == [rid]
+    await ws.call("POST", "/risks/case", 409, json={"key": key})
