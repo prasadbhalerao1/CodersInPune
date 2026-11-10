@@ -14,6 +14,9 @@ COPY src ./src
 RUN uv sync --frozen --no-dev
 
 FROM python:3.14-slim
+# Patch OS packages and drop the image's pip/setuptools (and their vendored urllib3/msgpack):
+# the runtime only uses the app's own virtualenv.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*  && python -m pip uninstall -y pip setuptools wheel 2>/dev/null;     rm -rf /usr/local/lib/python3.14/site-packages/pip* /usr/local/lib/python3.14/site-packages/setuptools*            /usr/local/lib/python3.14/ensurepip
 RUN useradd --system --uid 10001 --no-create-home relay
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
