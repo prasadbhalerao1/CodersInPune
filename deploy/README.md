@@ -22,7 +22,7 @@ browser never calls it directly.
 
 | Integration | Where | Callback / setting |
 |---|---|---|
-| GitHub App | github.com/settings/apps | Setup/callback URL `https://<domain>/integrations/github/callback`; webhook URL `https://<domain>/integrations/github/webhook` (needs a proxy route, see limitations) with `RELAY_GITHUB_WEBHOOK_SECRET`; repository permissions Metadata, Contents, Pull requests, Issues (read); organisation permission Members (read); events: installation, repository, pull request, issues, team, membership |
+| GitHub App | github.com/settings/apps | Setup/callback URL `https://<domain>/integrations/github/callback`; webhook URL `https://<domain>/integrations/github/webhook` (the web app forwards it to the API) with `RELAY_GITHUB_WEBHOOK_SECRET`; repository permissions Metadata, Contents, Pull requests, Issues (read); organisation permission Members (read); events: installation, repository, pull request, issues, team, membership |
 | Linear | linear.app/settings/api/applications | Callback `https://<domain>/integrations/linear/callback`, scope `read` |
 | Notion | notion.so/my-integrations (public integration) | Redirect `https://<domain>/integrations/notion/callback`, read content capability |
 | Resend | resend.com | Verify the sending domain; use a key with send access |
@@ -120,10 +120,9 @@ the `db` service, and set `RELAY_DATABASE_URL` / `RELAY_MIGRATION_DATABASE_URL` 
 
 ## Known limitations
 
-- GitHub webhooks need a public HTTPS route from GitHub to the API's
-  `/integrations/github/webhook`. The compose file publishes only the web app; route
-  `https://<domain>/integrations/github/webhook` to `api:8000` in your reverse proxy if you
-  want push updates. Without it, the 6-hourly reconciliation keeps data current.
+- GitHub webhooks arrive at the web app, which forwards the raw body and signature headers
+  to the API; the API verifies the signature. The 6-hourly reconciliation covers any missed
+  delivery.
 - One worker process is enough for a small organisation; scale with
   `RELAY_WORKER_CONCURRENCY` before adding replicas.
 - No built-in metrics/alerting: watch container health and logs, or add your platform's.

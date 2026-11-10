@@ -1,0 +1,32 @@
+# Applies database migrations to a deployed environment, as the owner role.
+# Run it by hand (Actions → Migrate → Run workflow) before deploying a release that adds
+# a migration. The owner URL lives only in this environment's secrets, never in the API
+# or worker, so the running app can't alter the schema.
+name: Migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub environment holding RELAY_MIGRATION_DATABASE_URL
+        required: true
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen --no-dev
+      - name: alembic upgrade head
+        env:
+          RELAY_MIGRATION_DATABASE_URL: ${{ secrets.RELAY_MIGRATION_DATABASE_URL }}
+        run: uv run --no-sync alembic upgrade head

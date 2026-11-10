@@ -1,0 +1,22 @@
+# Keeps a free-plan Render API from spinning down (it sleeps after 15 idle minutes).
+# Set the repository variable RELAY_API_HEALTH_URL (e.g. https://relay-api.onrender.com/health/live)
+# to enable it; without it the job does nothing. Not needed on a paid instance.
+# GitHub may delay scheduled runs and pauses them after 60 days without repository activity.
+name: Keep warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: ${{ vars.RELAY_API_HEALTH_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl --fail --silent --show-error --max-time 90 --retry 2 "$URL" > /dev/null
+        env:
+          URL: ${{ vars.RELAY_API_HEALTH_URL }}

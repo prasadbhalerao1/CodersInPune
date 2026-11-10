@@ -1,0 +1,60 @@
+# Render Blueprint for the Relay API and worker (see deployment.md).
+# The web app runs on Vercel and the database on Neon (or any Postgres 18), so neither is
+# declared here. Secrets use `sync: false`: Render asks for them on the first Blueprint
+# sync and never stores them in this file.
+envVarGroups:
+  - name: relay-backend
+    envVars:
+      - key: RELAY_ENVIRONMENT
+        value: production
+      - key: RELAY_JSON_LOGS
+        value: "true"
+      - key: RELAY_DATABASE_URL # relay_app role, direct (non-pooled) host
+        sync: false
+      - key: RELAY_FRONTEND_BASE_URL # https://<your web domain>
+        sync: false
+      - key: RELAY_WORKOS_CLIENT_ID
+        sync: false
+      - key: RELAY_WORKOS_API_KEY
+        sync: false
+      - key: RELAY_INTEGRATION_ENCRYPTION_KEY
+        sync: false
+      - key: RELAY_RESEND_API_KEY
+        sync: false
+      - key: RELAY_EMAIL_FROM
+        sync: false
+      - key: RELAY_LLM_PROVIDERS # e.g. gemini,groq
+        sync: false
+      - key: RELAY_GEMINI_API_KEYS
+        sync: false
+      - key: RELAY_GROQ_API_KEY
+        sync: false
+
+services:
+  - type: web
+    name: relay-api
+    runtime: docker
+    plan: free # "starter" removes spin-down and enables preDeployCommand
+    region: singapore # keep in the same region as the database
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health/ready
+    autoDeploy: true
+    envVars:
+      - fromGroup: relay-backend
+      - key: PORT
+        value: "8000"
+      - key: RELAY_GITHUB_WEBHOOK_SECRET
+        sync: false
+
+  - type: worker
+    name: relay-worker
+    runtime: docker
+    plan: starter # background workers have no free plan
+    region: singapore
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerCommand: relay-worker
+    autoDeploy: true
+    envVars:
+      - fromGroup: relay-backend
