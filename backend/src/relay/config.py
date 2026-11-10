@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -99,6 +100,9 @@ class Settings(BaseSettings):
     ollama_model: str | None = None
     llm_timeout_seconds: float = Field(default=90.0, ge=5, le=900)
     ai_monthly_token_budget: int = Field(default=2_000_000, ge=0)
+    # USD per million tokens for models missing from the built-in price table (cost reports).
+    llm_price_input: Decimal | None = Field(default=None, ge=0)
+    llm_price_output: Decimal | None = Field(default=None, ge=0)
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
     worker_shutdown_seconds: float = Field(default=30.0, ge=0, le=600)

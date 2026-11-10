@@ -101,8 +101,15 @@ class LLMPort(Protocol):
     ) -> LLMResult[T]: ...
 
 
-def cost_of(model: str, input_tokens: int, output_tokens: int) -> Decimal:
-    price_in, price_out = PRICES.get(model, (Decimal(0), Decimal(0)))
+def cost_of(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    fallback: tuple[Decimal | None, Decimal | None] = (None, None),
+) -> Decimal:
+    """Estimated cost. Unknown models use the configured fallback prices, else 0."""
+    known = PRICES.get(model)
+    price_in, price_out = known or (fallback[0] or Decimal(0), fallback[1] or Decimal(0))
     return (price_in * input_tokens + price_out * output_tokens) / 1_000_000
 
 
@@ -247,7 +254,12 @@ class Gateway:
                 input_tokens=usage.input_tokens,
                 output_tokens=usage.output_tokens,
                 duration_ms=int((time.monotonic() - started) * 1000),
-                cost_usd=cost_of(model, usage.input_tokens, usage.output_tokens),
+                cost_usd=cost_of(
+                    model,
+                    usage.input_tokens,
+                    usage.output_tokens,
+                    (self._settings.llm_price_input, self._settings.llm_price_output),
+                ),
                 tool_calls=_tool_calls(result.all_messages()),
             )
         raise LLMError(last, transient=True)

@@ -157,3 +157,15 @@ def test_tool_calls_are_recorded_by_name_only() -> None:
         ModelResponse(parts=[ToolCallPart("final_result", {"claims": []})]),
     ]
     assert _tool_calls(messages) == ("search_evidence", "get_evidence")  # type: ignore[arg-type]
+
+
+def test_unknown_models_use_configured_prices() -> None:
+    from decimal import Decimal
+
+    from relay.intelligence.llm import cost_of
+
+    assert cost_of("gemini-2.5-flash-lite", 1_000_000, 0) == Decimal("0.10")
+    assert cost_of("new-model", 1_000_000, 1_000_000) == 0
+    assert cost_of("new-model", 2_000_000, 1_000_000, (Decimal("0.1"), Decimal("0.4"))) == Decimal(
+        "0.6"
+    )
