@@ -127,6 +127,47 @@ async def reopen(
     return await cases.get_case(access, case_id)
 
 
+# ---------------------------------------------------------------- coverage
+
+
+async def activate(
+    access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
+) -> cases.CaseDetail:
+    """A manager takes on a member's cover request: they coordinate it from now on."""
+    case = await cases._for_change(access, case_id, lifecycle.INTAKE)
+    if not case.self_requested or case.activated_at is not None:
+        raise ApiError(409, "not_a_request", "Only pending cover requests can be activated.")
+    case.activated_by, case.activated_at = access.user_id, func.now()
+    case.coordinator_user_id = access.user_id
+    lifecycle.move(access, case, "investigating", "Cover request activated")
+    cases._record(access, case, "case.activated")
+    await cases._notify_case_update(access, jobs, case, "activated")
+    return await cases.get_case(access, case_id)
+
+
+async def fill_from_backups(access: WorkspaceAccess, case_id: uuid.UUID) -> cases.CaseDetail:
+    """Emergency: propose each responsibility's current backup as its recipient. Only fills
+    empty recipients and changes the plan; approval (and separation of duties for critical
+    responsibilities) is still required before anything is executed."""
+    case = await cases._for_change(access, case_id, cases.EDITABLE)
+    if not case.emergency:
+        raise ApiError(409, "not_emergency", "Only emergency cases can fill from backups.")
+    filled = 0
+    for item in await cases._scope(access.session, case_id):
+        if item.recipient_person_id or item.recipient_team_id or item.exception_reason:
+            continue
+        backup = await cases._current_assignment(access, item.responsibility_id, "backup")
+        if backup is None or backup.person_id == case.affected_person_id:
+            continue
+        item.recipient_person_id, item.recipient_team_id = backup.person_id, backup.team_id
+        filled += 1
+    if not filled:
+        raise ApiError(409, "no_backups", "No responsibility in scope has an available backup.")
+    cases._plan_changed(access, case)
+    cases._record(access, case, "case.backups_proposed", count=filled)
+    return await cases.get_case(access, case_id)
+
+
 # ---------------------------------------------------------------- blockers
 
 

@@ -117,6 +117,9 @@ class ContinuityCase(Base):
             "case_type = 'project_handover' OR project_asset_id IS NULL", name="project_asset"
         ),
         CheckConstraint("char_length(time_zone) BETWEEN 1 AND 64", name="time_zone_length"),
+        CheckConstraint(
+            "NOT self_requested OR case_type = 'coverage'", name="self_request_coverage"
+        ),
         Index(None, "tenant_id", "status"),
         Index(None, "tenant_id", "affected_person_id"),
         {"schema": SCHEMA},
@@ -155,6 +158,10 @@ class ContinuityCase(Base):
     excluded_sources: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'"))
     privacy_notice_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     privacy_notice_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    # A member's request for cover of their own absence, pending manager activation.
+    self_requested: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    activated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class CaseScopeItem(Base):

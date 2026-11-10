@@ -362,3 +362,67 @@ async def test_task_coordination_and_readiness(api: Api, ws: Ws) -> None:
     step = next(c for c in case["criteria"] if c["id"] == rehearsal["id"])["checklist"][0]
     assert step["done"]
     assert step["done_by"]
+
+
+async def test_cover_requests_overlaps_and_emergency_backups(api: Api, ws: Ws) -> None:
+    await add_member(api, ws.id, "user_member", "member")
+    member = Ws(api, ws.id, "user_member")
+    away = await ws.call(
+        "POST", "/people", 201, json={"display_name": "Away", "email": "away@acme.test"}
+    )
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(ws.id),))
+        conn.execute(
+            "UPDATE identity.membership SET email = 'away@acme.test' "
+            "WHERE tenant_id = %s AND role = 'member'",
+            (ws.id,),
+        )
+    cover, backup = await ws.person("Cover"), await ws.person("Backup")
+    rid = await owned(ws, "Billing", away["id"])
+    await ws.call(
+        "POST",
+        f"/responsibilities/{rid}/assignments",
+        201,
+        json={"role": "backup", "person_id": backup},
+    )
+    leave = {
+        "case_type": "coverage",
+        "title": "Away on leave",
+        "affected_person_id": away["id"],
+        "starts_at": iso(timedelta(days=1)),
+        "ends_at": iso(timedelta(days=10)),
+    }
+    await member.call("POST", "/cover-requests", 403, json={**leave, "affected_person_id": cover})
+    request = await member.call("POST", "/cover-requests", 201, json=leave)
+    assert request["self_requested"]
+    assert "activate" not in request["allowed_actions"]
+    blocked = await ws.call("POST", f"/cases/{request['id']}/submit", 409)
+    assert blocked["code"] == "not_activated"
+    active = await ws.call("POST", f"/cases/{request['id']}/activate")
+    assert active["status"] == "investigating"
+    assert active["activated_at"]
+
+    # The chosen cover is away at the same time: say so.
+    await ws.call(
+        "POST",
+        "/cases",
+        201,
+        json={**leave, "title": "Cover away", "affected_person_id": cover},
+    )
+    item = active["scope"][0]["id"]
+    detail = await ws.call(
+        "PATCH", f"/cases/{request['id']}/scope/{item}", json={"recipient_person_id": cover}
+    )
+    assert any("Cover is away" in w for w in detail["warnings"])
+
+    # Emergency: backups fill empty recipients, but approval is still needed.
+    await ws.call(
+        "PATCH", f"/cases/{request['id']}/scope/{item}", json={"recipient_person_id": None}
+    )
+    await ws.call(
+        "POST", f"/cases/{request['id']}/emergency", json={"emergency": True, "reason": "Sick"}
+    )
+    filled = await ws.call("POST", f"/cases/{request['id']}/fill-from-backups")
+    assert filled["scope"][0]["recipient"]["name"] == "Backup"
+    assert not filled["approved"]
+    await ws.call("POST", f"/cases/{request['id']}/execute", 409)

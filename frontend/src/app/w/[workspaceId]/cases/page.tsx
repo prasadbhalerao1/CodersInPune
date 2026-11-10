@@ -58,7 +58,14 @@ export default async function CasesPage({
             <Link href={`${base}/new`} className={buttonVariants({ size: "sm" })}>
               New case
             </Link>
-          ) : null
+          ) : (
+            <Link
+              href={`${base}/new?type=coverage&request=1`}
+              className={buttonVariants({ size: "sm", variant: "outline" })}
+            >
+              Request cover
+            </Link>
+          )
         }
       />
       <div className="flex flex-col gap-4 p-6">

@@ -351,6 +351,8 @@ export type CaseAction =
   | "transition"
   | "reopen"
   | "split"
+  | "activate"
+  | "fill_backups"
   | "comment";
 
 export type BlockerView = {
@@ -428,6 +430,9 @@ export type CaseDetail = CaseSummary & {
   reopen_count: number;
   blocked_from: CaseStatus | null;
   duplicate_override_reason: string | null;
+  self_requested: boolean;
+  activated_at: string | null;
+  warnings: string[];
   transitions: CaseStatus[];
   blockers: BlockerView[];
   status_history: StatusChangeView[];

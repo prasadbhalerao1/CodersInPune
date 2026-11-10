@@ -530,3 +530,33 @@ export async function decideReviewItemAction(
     }),
   );
 }
+
+export async function requestCoverAction(
+  workspaceId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  let id = "";
+  const result = await mutate(workspaceId, async () => {
+    const created = await api.send<{ id: string }>(workspaceId, "POST", "/cover-requests", {
+      case_type: "coverage",
+      title: text(fd, "title"),
+      reason: optional(fd, "reason"),
+      affected_person_id: optional(fd, "affected_person_id"),
+      starts_at: optional(fd, "starts_at") ?? new Date().toISOString(),
+      ends_at: optional(fd, "ends_at"),
+    });
+    id = created.id;
+  });
+  if (result.error) return result;
+  redirect(`/w/${workspaceId}/cases/${id}`);
+}
+
+export async function caseShortcutAction(
+  workspaceId: string,
+  caseId: string,
+  command: "activate" | "fill-from-backups",
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () => api.send(workspaceId, "POST", casePath(caseId, `/${command}`)));
+}

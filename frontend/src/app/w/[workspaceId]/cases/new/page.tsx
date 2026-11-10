@@ -15,7 +15,7 @@ import { api } from "@/lib/relay-api";
 import type { CaseType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { createCaseAction } from "../actions";
+import { createCaseAction, requestCoverAction } from "../actions";
 import { CASE_TYPES, PRIORITY_LABEL } from "../labels";
 
 export const metadata: Metadata = { title: "New case" };
@@ -29,6 +29,8 @@ export default async function NewCasePage({
 }: PageProps<"/w/[workspaceId]/cases/new">) {
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const type = isCaseType(query.type) ? query.type : null;
+  // Members request cover for their own absence; a manager activates it.
+  const request = query.request === "1" && type === "coverage";
   const base = `/w/${workspaceId}/cases/new`;
 
   if (!type) {
@@ -74,7 +76,18 @@ export default async function NewCasePage({
       <PageHeader title={CASE_TYPES[type].label} />
       <div className="flex max-w-xl flex-col gap-4 p-6">
         <p className="text-muted-foreground text-sm">{CASE_TYPES[type].description}</p>
-        <ActionForm action={createCaseAction.bind(null, workspaceId, type)}>
+        {request ? (
+          <p className="text-muted-foreground text-sm">
+            This creates a request. A case manager reviews and activates it before anything changes.
+          </p>
+        ) : null}
+        <ActionForm
+          action={
+            request
+              ? requestCoverAction.bind(null, workspaceId)
+              : createCaseAction.bind(null, workspaceId, type)
+          }
+        >
           <Field label="Title" htmlFor="title">
             <input
               id="title"

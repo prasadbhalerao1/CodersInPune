@@ -18,7 +18,7 @@ under a row lock on the case, and is recorded with actor, time and reason).
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from zoneinfo import available_timezones
 
@@ -372,6 +372,10 @@ class CaseDetail(CaseSummary):
     reopen_count: int = 0
     blocked_from: str | None = None
     duplicate_override_reason: str | None = None
+    self_requested: bool = False
+    activated_at: datetime | None = None
+    # Overlapping absences: the same person, or a cover who is away at the same time.
+    warnings: list[str] = []
     # Moves a manager may make directly from the current status.
     transitions: list[str] = []
     blockers: list[BlockerView] = []
@@ -600,9 +604,22 @@ async def _require_active_member(
 
 
 async def create_case(
-    access: WorkspaceAccess, data: CaseIn, jobs: procrastinate.App | None = None
+    access: WorkspaceAccess,
+    data: CaseIn,
+    jobs: procrastinate.App | None = None,
+    *,
+    self_request: bool = False,
 ) -> CaseDetail:
-    authorize(access, Permission.CASE_MANAGE)
+    """Managers create any case. A member may only request cover for their own absence;
+    that request does nothing until a manager activates it."""
+    if self_request:
+        authorize(access, Permission.CASE_READ)
+        if data.case_type != "coverage" or data.affected_person_id not in (
+            await my_person_ids(access)
+        ):
+            raise ApiError(403, "forbidden", "You can only request cover for your own absence.")
+    else:
+        authorize(access, Permission.CASE_MANAGE)
     await _require_active_member(access, data.accountable_manager_user_id, "accountable manager")
     await _require_active_member(access, data.delegate_approver_user_id, "delegated approver")
     if data.project_asset_id is not None:
@@ -656,10 +673,13 @@ async def create_case(
         duplicate_override_reason=(data.duplicate_override_reason or None) if duplicates else None,
         initiator_user_id=access.user_id,
         coordinator_user_id=access.user_id,
+        self_requested=self_request,
     )
     access.session.add(case)
     await access.session.flush()
-    lifecycle.record_created(access, case, "Case created")
+    lifecycle.record_created(
+        access, case, "Cover requested by the person away" if self_request else "Case created"
+    )
     if data.project_asset_id is not None:
         # Project handover: the responsibilities stewarding the project, as currently held.
         stewards = await access.session.scalars(
@@ -857,6 +877,8 @@ async def submit_case(
     access: WorkspaceAccess, case_id: uuid.UUID, jobs: procrastinate.App
 ) -> CaseDetail:
     case = await _for_change(access, case_id, lifecycle.INTAKE)
+    if case.self_requested and case.activated_at is None:
+        raise ApiError(409, "not_activated", "Activate the cover request first.")
     items = await _scope(access.session, case_id)
     if not items:
         raise ApiError(409, "empty_scope", "Add at least one responsibility first.")
@@ -986,7 +1008,10 @@ async def execute_case(
 
 
 async def extend_coverage(
-    access: WorkspaceAccess, case_id: uuid.UUID, data: ExtendIn
+    access: WorkspaceAccess,
+    case_id: uuid.UUID,
+    data: ExtendIn,
+    jobs: procrastinate.App | None = None,
 ) -> CaseDetail:
     case = await _for_change(access, case_id, lifecycle.RUNNING)
     if case.case_type != "coverage" or case.ends_at is None or data.ends_at <= case.ends_at:
@@ -998,6 +1023,9 @@ async def extend_coverage(
             )
     case.ends_at = data.ends_at
     _record(access, case, "case.extended", ends_at=data.ends_at.isoformat())
+    if jobs is not None:
+        # The coverage-ending reminder follows the new end; the old one becomes a no-op.
+        await notifications.request_case_deadlines(access.session, jobs, case, access.user_id)
     return await get_case(access, case_id)
 
 
@@ -1303,6 +1331,44 @@ async def is_scope_recipient(access: WorkspaceAccess, scope_item_id: uuid.UUID |
     return person is not None and person in await my_person_ids(access)
 
 
+async def coverage_warnings(
+    access: WorkspaceAccess, case: ContinuityCase, items: list[CaseScopeItem]
+) -> list[str]:
+    """Overlapping absences, from open coverage cases whose [start, end) overlaps this one."""
+    if case.status not in OPEN:
+        return []
+    end = case.ends_at or case.starts_at
+    overlapping = select(ContinuityCase).where(
+        visible(access, Permission.CASE_READ, ContinuityCase.tenant_id),
+        ContinuityCase.id != case.id,
+        ContinuityCase.case_type == "coverage",
+        ContinuityCase.status.in_(OPEN),
+        ContinuityCase.starts_at < (end if case.ends_at else case.starts_at + timedelta(days=1)),
+        or_(ContinuityCase.ends_at.is_(None), ContinuityCase.ends_at > case.starts_at),
+    )
+    warnings = []
+    if case.case_type == "coverage" and case.affected_person_id:
+        for other in await access.session.scalars(
+            overlapping.where(ContinuityCase.affected_person_id == case.affected_person_id)
+        ):
+            warnings.append(f"“{other.title}” already covers an overlapping absence.")
+    covers = {i.recipient_person_id for i in items if i.recipient_person_id}
+    if covers:
+        names = dict(
+            (
+                await access.session.execute(
+                    select(Person.id, Person.display_name).where(Person.id.in_(covers))
+                )
+            ).all()
+        )
+        for other in await access.session.scalars(
+            overlapping.where(ContinuityCase.affected_person_id.in_(covers))
+        ):
+            name = names.get(other.affected_person_id, "A recipient")  # type: ignore[arg-type]
+            warnings.append(f"{name} is away during this period (“{other.title}”).")
+    return warnings
+
+
 def _link(c: ContinuityCase) -> CaseLink:
     return CaseLink(id=c.id, title=c.title, case_type=c.case_type, status=c.status)
 
@@ -1421,8 +1487,12 @@ def _allowed_actions(access: WorkspaceAccess, case: ContinuityCase, approved: bo
         actions.append("edit")
     if manage and lifecycle.allowed(case, "cancelled"):
         actions.append("cancel")
-    if manage and case.status in lifecycle.INTAKE:
+    if manage and case.self_requested and case.activated_at is None:
+        actions.append("activate")
+    elif manage and case.status in lifecycle.INTAKE:
         actions.append("submit")
+    if manage and case.emergency and case.status in EDITABLE:
+        actions.append("fill_backups")
     if approve and case.status in lifecycle.APPROVABLE:
         actions.append("decide")
     if manage and case.status in lifecycle.EXECUTABLE and approved:
@@ -1796,6 +1866,9 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
             for c in changes
         ],
         duplicates=[_link(c) for c in duplicates],
+        self_requested=case.self_requested,
+        activated_at=case.activated_at,
+        warnings=await coverage_warnings(access, case, items),
         parent=_link(related[case.parent_case_id]) if case.parent_case_id in related else None,
         children=[_link(c) for c in related.values() if c.parent_case_id == case.id],
     )

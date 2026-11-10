@@ -81,8 +81,10 @@ async def execute(access: CurrentWorkspace, case_id: uuid.UUID, jobs: Jobs) -> D
 
 
 @router.post("/cases/{case_id}/extend")
-async def extend(access: CurrentWorkspace, case_id: uuid.UUID, body: svc.ExtendIn) -> Detail:
-    return await svc.extend_coverage(access, case_id, body)
+async def extend(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: svc.ExtendIn, jobs: Jobs
+) -> Detail:
+    return await svc.extend_coverage(access, case_id, body, jobs)
 
 
 @router.post("/cases/{case_id}/complete")
@@ -312,3 +314,18 @@ async def decide_review_item(
 @router.get("/review-inbox")
 async def review_inbox(access: CurrentWorkspace) -> list[privacy.ReviewItemView]:
     return await privacy.inbox(access)
+
+
+@router.post("/cover-requests", status_code=status.HTTP_201_CREATED)
+async def request_cover(access: CurrentWorkspace, body: svc.CaseIn, jobs: Jobs) -> Detail:
+    return await svc.create_case(access, body, jobs, self_request=True)
+
+
+@router.post("/cases/{case_id}/activate")
+async def activate(access: CurrentWorkspace, case_id: uuid.UUID, jobs: Jobs) -> Detail:
+    return await workflow.activate(access, case_id, jobs)
+
+
+@router.post("/cases/{case_id}/fill-from-backups")
+async def fill_from_backups(access: CurrentWorkspace, case_id: uuid.UUID) -> Detail:
+    return await workflow.fill_from_backups(access, case_id)

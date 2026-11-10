@@ -8,7 +8,7 @@ import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { CaseDetail } from "@/lib/types";
 
-import { addCommentAction, caseCommandAction } from "../actions";
+import { addCommentAction, caseCommandAction, caseShortcutAction } from "../actions";
 import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
 import { CommentComposer } from "./comment-composer";
 import { ImpactPanel } from "./impact";
@@ -91,6 +91,13 @@ export default async function CasePage({
                 </SubmitButton>
               </ActionForm>
             ) : null}
+            {can("activate") ? (
+              <ActionForm action={caseShortcutAction.bind(null, workspaceId, caseId, "activate")}>
+                <SubmitButton size="sm" pendingLabel="Activating…">
+                  Activate cover request
+                </SubmitButton>
+              </ActionForm>
+            ) : null}
             {can("submit") ? (
               <ActionForm action={command("submit")}>
                 <SubmitButton size="sm" pendingLabel="Submitting…">
@@ -140,6 +147,33 @@ export default async function CasePage({
           {tab === "overview" ? (
             <>
               <DuplicateNotice detail={c} workspaceId={workspaceId} />
+              {c.self_requested && !c.activated_at ? (
+                <p className="rounded-lg border p-3 text-sm">
+                  Requested by the person who will be away. Nothing happens until a case manager
+                  activates it.
+                </p>
+              ) : null}
+              {c.warnings.length ? (
+                <ul className="rounded-lg border border-amber-600/30 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+                  {c.warnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {can("fill_backups") ? (
+                <ActionForm
+                  action={caseShortcutAction.bind(null, workspaceId, caseId, "fill-from-backups")}
+                  className="rounded-lg border p-3 text-sm"
+                >
+                  <p>
+                    Emergency: propose each responsibility&apos;s current backup as its cover. The
+                    plan still needs approval before anything changes.
+                  </p>
+                  <SubmitButton size="sm" variant="outline" pendingLabel="Filling…">
+                    Fill recipients from backups
+                  </SubmitButton>
+                </ActionForm>
+              ) : null}
               <DeclinePanel {...ctx} />
               <StatusControls {...ctx} />
               {sodOnComplete ? (
