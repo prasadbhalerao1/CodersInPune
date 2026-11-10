@@ -14,6 +14,13 @@ export const metadata: Metadata = { title: "Members" };
 const ROLES: { value: WorkspaceRole; label: string; hint: string }[] = [
   { value: "owner", label: "Owner", hint: "Everything, including other owners" },
   { value: "admin", label: "Admin", hint: "Manage members, catalogue, cases and integrations" },
+  {
+    value: "continuity_manager",
+    label: "Continuity manager",
+    hint: "Run cases, approvals and ownership changes",
+  },
+  { value: "knowledge_steward", label: "Knowledge steward", hint: "Verify knowledge everywhere" },
+  { value: "team_manager", label: "Team manager", hint: "Manage what their teams hold" },
   { value: "member", label: "Member", hint: "Read and work on assigned tasks" },
   { value: "auditor", label: "Auditor", hint: "Read-only, including the audit log" },
   { value: "guest", label: "Guest", hint: "Read-only" },
@@ -21,10 +28,12 @@ const ROLES: { value: WorkspaceRole; label: string; hint: string }[] = [
 
 export default async function MembersPage({ params }: PageProps<"/w/[workspaceId]/members">) {
   const { workspaceId } = await params;
-  const [workspace, members] = await Promise.all([
+  const [workspace, members, teams] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.members(workspaceId, { include_inactive: "true" })),
+    attempt(api.listTeams(workspaceId)),
   ]);
+  const teamList = teams.ok ? teams.data : [];
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!members.ok) return <ApiErrorNotice error={members.error} />;
   const manage = canManage(workspace.data);
@@ -127,7 +136,24 @@ export default async function MembersPage({ params }: PageProps<"/w/[workspaceId
                           <span className="text-muted-foreground block text-xs">{m.email}</span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-2.5 capitalize">{m.role}</td>
+                      <td className="px-4 py-2.5">
+                        {ROLES.find((r) => r.value === m.role)?.label ?? m.role}
+                        {m.member_type !== "employee" ? (
+                          <Badge tone="muted" className="ml-2 capitalize">
+                            {m.member_type}
+                          </Badge>
+                        ) : null}
+                        {m.role === "team_manager" ? (
+                          <span className="text-muted-foreground block text-xs">
+                            {m.team_ids.length
+                              ? teamList
+                                  .filter((t) => m.team_ids.includes(t.id))
+                                  .map((t) => t.name)
+                                  .join(", ")
+                              : "No teams yet"}
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-2.5">
                         {m.status === "active" ? (
                           <span className="text-muted-foreground text-xs">Active</span>
@@ -146,7 +172,7 @@ export default async function MembersPage({ params }: PageProps<"/w/[workspaceId
                                 name="role"
                                 defaultValue={m.role}
                                 aria-label={`Role for ${m.name}`}
-                                className={`${inputClass} h-8 w-28`}
+                                className={`${inputClass} h-8 w-40`}
                               >
                                 {roles.map((r) => (
                                   <option key={r.value} value={r.value}>
@@ -164,6 +190,37 @@ export default async function MembersPage({ params }: PageProps<"/w/[workspaceId
                                 <option value="suspended">Suspended</option>
                                 <option value="removed">Removed</option>
                               </select>
+                              <select
+                                name="member_type"
+                                defaultValue={m.member_type}
+                                aria-label={`Member type for ${m.name}`}
+                                className={`${inputClass} h-8 w-28`}
+                              >
+                                <option value="employee">Employee</option>
+                                <option value="contractor">Contractor</option>
+                                <option value="external">External</option>
+                              </select>
+                              {m.role === "team_manager" ? (
+                                <details className="relative">
+                                  <summary className="text-muted-foreground cursor-pointer text-xs">
+                                    Teams
+                                  </summary>
+                                  <div className="bg-background absolute right-0 z-10 mt-1 flex w-48 flex-col gap-1 rounded-lg border p-2 text-xs shadow-sm">
+                                    <input type="hidden" name="scope" value="1" />
+                                    {teamList.map((t) => (
+                                      <label key={t.id} className="flex items-center gap-1.5">
+                                        <input
+                                          type="checkbox"
+                                          name="team_ids"
+                                          value={t.id}
+                                          defaultChecked={m.team_ids.includes(t.id)}
+                                        />
+                                        {t.name}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </details>
+                              ) : null}
                               <SubmitButton size="sm" variant="outline" pendingLabel="…">
                                 Save
                               </SubmitButton>

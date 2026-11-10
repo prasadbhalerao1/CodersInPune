@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 
 from relay.audit import service as audit
-from relay.directory.models import Department, Person, Team, TeamMember
+from relay.directory.models import Department, DirectoryHistory, Person, Team, TeamMember
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
 from relay.shared.api_types import Email, LongText, Name, ShortText, StrictInput, blank_to_none
@@ -55,6 +55,7 @@ class PersonIn(StrictInput):
     title: ShortText | None = None
     github_login: GitHubLogin | None = None
     department_id: uuid.UUID | None = None
+    manager_person_id: uuid.UUID | None = None
 
 
 class PersonUpdate(StrictInput):
@@ -64,6 +65,7 @@ class PersonUpdate(StrictInput):
     github_login: GitHubLogin | None = None
     department_id: uuid.UUID | None = None
     status: Status | None = None
+    manager_person_id: uuid.UUID | None = None
 
 
 class PersonView(BaseModel):
@@ -76,6 +78,7 @@ class PersonView(BaseModel):
     department_name: str | None
     status: str
     created_at: datetime
+    manager_person_id: uuid.UUID | None = None
 
 
 class TeamIn(StrictInput):
@@ -121,7 +124,46 @@ def _person_view(p: Person, departments: dict[uuid.UUID, str]) -> PersonView:
         department_name=departments.get(p.department_id) if p.department_id else None,
         status=p.status,
         created_at=p.created_at,
+        manager_person_id=p.manager_person_id,
     )
+
+
+def history(
+    access: WorkspaceAccess,
+    person_id: uuid.UUID,
+    change: str,
+    *,
+    team_id: uuid.UUID | None = None,
+    department_id: uuid.UUID | None = None,
+) -> None:
+    access.session.add(
+        DirectoryHistory(
+            tenant_id=access.tenant_id,
+            person_id=person_id,
+            team_id=team_id,
+            department_id=department_id,
+            change=change,
+            actor_user_id=access.user_id,
+        )
+    )
+
+
+async def _require_manager(
+    access: WorkspaceAccess, person_id: uuid.UUID | None, manager_id: uuid.UUID | None
+) -> None:
+    """The manager exists, and the reporting line doesn't loop back to the person."""
+    if manager_id is None:
+        return
+    seen: set[uuid.UUID] = set()
+    current: uuid.UUID | None = manager_id
+    while current is not None:
+        if current == person_id or current in seen:
+            raise ApiError(422, "reporting_loop", "That would make a reporting loop.")
+        seen.add(current)
+        row = await access.session.get(Person, current)
+        if row is None:
+            raise ApiError(422, "person_not_found", "The manager must be a person in Relay.")
+        current = row.manager_person_id
 
 
 def _team_view(t: Team, departments: dict[uuid.UUID, str]) -> TeamView:
@@ -192,9 +234,11 @@ async def list_people(
 async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:
     authorize(access, Permission.DIRECTORY_MANAGE)
     await _require_department(access, data.department_id)
+    await _require_manager(access, None, data.manager_person_id)
     person = Person(
         tenant_id=access.tenant_id,
         department_id=data.department_id,
+        manager_person_id=data.manager_person_id,
         display_name=data.display_name,
         email=blank_to_none(data.email),
         title=blank_to_none(data.title),
@@ -203,6 +247,8 @@ async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:
     access.session.add(person)
     await access.session.flush()
     await access.session.refresh(person)
+    if person.department_id:
+        history(access, person.id, "joined_department", department_id=person.department_id)
     audit.record(
         access.session,
         tenant_id=access.tenant_id,
@@ -223,6 +269,13 @@ async def update_person(
         raise ApiError(404, "person_not_found", "Person not found.")
     changed = data.model_dump(exclude_unset=True)
     await _require_department(access, changed.get("department_id"))
+    if "manager_person_id" in changed:
+        await _require_manager(access, person.id, changed["manager_person_id"])
+    if "department_id" in changed and changed["department_id"] != person.department_id:
+        if person.department_id:
+            history(access, person.id, "left_department", department_id=person.department_id)
+        if changed["department_id"]:
+            history(access, person.id, "joined_department", department_id=changed["department_id"])
     for field, value in changed.items():
         if field == "github_login":
             value = value.lower() if value else None
@@ -298,6 +351,7 @@ async def add_team_member(
         .returning(TeamMember.id)
     )
     if result.scalar_one_or_none() is not None:
+        history(access, person_id, "joined_team", team_id=team_id)
         audit.record(
             access.session,
             tenant_id=access.tenant_id,
@@ -320,6 +374,7 @@ async def remove_team_member(
     )
     if result.scalar_one_or_none() is None:
         raise ApiError(404, "not_found", "That person is not in this team.")
+    history(access, person_id, "left_team", team_id=team_id)
     audit.record(
         access.session,
         tenant_id=access.tenant_id,

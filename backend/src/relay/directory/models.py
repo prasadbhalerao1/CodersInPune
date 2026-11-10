@@ -69,6 +69,14 @@ class Person(Base):
             postgresql_where=text("github_login IS NOT NULL"),
         ),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
+        CheckConstraint(
+            "manager_person_id IS NULL OR manager_person_id <> id", name="not_own_manager"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "manager_person_id"],
+            ["directory.person.tenant_id", "directory.person.id"],
+            name="fk_person_manager",
+        ),
         _department_fk("person"),
         Index(None, "tenant_id", "department_id"),
         {"schema": SCHEMA},
@@ -82,6 +90,8 @@ class Person(Base):
     title: Mapped[str | None] = mapped_column(Text)
     github_login: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, server_default="active")
+    # Reporting line (who this person reports to).
+    manager_person_id: Mapped[uuid.UUID | None]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -138,3 +148,43 @@ class TeamMember(Base):
     team_id: Mapped[uuid.UUID]
     person_id: Mapped[uuid.UUID]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DirectoryHistory(Base):
+    """Append-only: when someone joined or left a team or department, and who recorded it."""
+
+    __tablename__ = "directory_history"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "person_id"],
+            ["directory.person.tenant_id", "directory.person.id"],
+            name="fk_directory_history_person",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "team_id"],
+            ["directory.team.tenant_id", "directory.team.id"],
+            name="fk_directory_history_team",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "department_id"],
+            ["directory.department.tenant_id", "directory.department.id"],
+            name="fk_directory_history_department",
+        ),
+        CheckConstraint(
+            "change IN ('joined_team', 'left_team', 'joined_department', 'left_department')",
+            name="change",
+        ),
+        CheckConstraint("num_nonnulls(team_id, department_id) = 1", name="one_unit"),
+        Index(None, "tenant_id", "person_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    person_id: Mapped[uuid.UUID]
+    team_id: Mapped[uuid.UUID | None]
+    department_id: Mapped[uuid.UUID | None]
+    change: Mapped[str] = mapped_column(Text)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

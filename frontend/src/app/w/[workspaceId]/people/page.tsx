@@ -14,6 +14,7 @@ import {
   addTeamMemberAction,
   createDepartmentAction,
   createPersonAction,
+  setManagerAction,
   createTeamAction,
   removeTeamMemberAction,
   setDepartmentAction,
@@ -206,6 +207,23 @@ export default async function PeoplePage({
                       defaultValue={department}
                     />
                   </Field>
+                  <Field label="Reports to (optional)" htmlFor="manager">
+                    <select
+                      id="manager"
+                      name="manager_person_id"
+                      defaultValue=""
+                      className={inputClass}
+                    >
+                      <option value="">Nobody</option>
+                      {people.data
+                        .filter((x) => x.status === "active")
+                        .map((x) => (
+                          <option key={x.id} value={x.id}>
+                            {x.display_name}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
                   <Field label="GitHub login" htmlFor="github_login">
                     <input
                       id="github_login"
@@ -271,6 +289,31 @@ export default async function PeoplePage({
                           departments={departments.data}
                           defaultValue={p.department_id ?? ""}
                         />
+                        <SubmitButton variant="ghost" size="sm" pendingLabel="…">
+                          Set
+                        </SubmitButton>
+                      </ActionForm>
+                    ) : null}
+                    {manage && p.status === "active" ? (
+                      <ActionForm
+                        action={setManagerAction.bind(null, workspaceId, p.id)}
+                        className="flex-row items-center gap-1"
+                      >
+                        <select
+                          name="manager_person_id"
+                          defaultValue={p.manager_person_id ?? ""}
+                          aria-label={`${p.display_name} reports to`}
+                          className={`${inputClass} w-36`}
+                        >
+                          <option value="">Reports to nobody</option>
+                          {people.data
+                            .filter((x) => x.id !== p.id && x.status === "active")
+                            .map((x) => (
+                              <option key={x.id} value={x.id}>
+                                {x.display_name}
+                              </option>
+                            ))}
+                        </select>
                         <SubmitButton variant="ghost" size="sm" pendingLabel="…">
                           Set
                         </SubmitButton>

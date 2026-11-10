@@ -71,3 +71,8 @@ async def accept(
         state.session_factory, identity, state.workos, invitation_id
     )
     return {"workspace_id": workspace_id}
+
+
+@router.get("/roles")
+async def roles(access: CurrentWorkspace) -> list[svc.RoleView]:
+    return await svc.list_roles(access)

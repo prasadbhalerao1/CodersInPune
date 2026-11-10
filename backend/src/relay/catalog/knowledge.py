@@ -214,9 +214,9 @@ def state_of(item: KnowledgeItem, cutoff: datetime, *, inaccessible: bool = Fals
 
 
 def can_verify(access: WorkspaceAccess, item: KnowledgeItem) -> bool:
-    """The steward verifies; managers can too. Authors can't verify their own drafts."""
+    """The steward verifies; so can anyone with knowledge.verify (managers, stewards)."""
     return item.steward_user_id == access.user_id or role_allows(
-        access.role, Permission.RESPONSIBILITY_MANAGE
+        access.role, Permission.KNOWLEDGE_VERIFY
     )
 
 
@@ -359,7 +359,7 @@ async def add_knowledge(
     if not data.body and not data.url:
         raise ApiError(422, "content_required", "Add a link or some content.")
     await _check_governance(access, data.model_dump(exclude_unset=True))
-    manager = role_allows(access.role, Permission.RESPONSIBILITY_MANAGE)
+    verifier = role_allows(access.role, Permission.KNOWLEDGE_VERIFY)
     item = KnowledgeItem(
         id=uuid.uuid7(),
         tenant_id=access.tenant_id,
@@ -372,8 +372,8 @@ async def add_knowledge(
         author_user_id=access.user_id,
         last_reviewed_by=access.user_id,
         last_reviewed_at=_now(),
-        # Managers' own knowledge is verified; everyone else's waits for the steward.
-        review_state="verified" if manager else "draft",
+        # Verifiers' own knowledge is verified; everyone else's waits for the steward.
+        review_state="verified" if verifier else "draft",
         steward_user_id=data.steward_user_id,
         valid_from=data.valid_from,
         valid_until=data.valid_until,

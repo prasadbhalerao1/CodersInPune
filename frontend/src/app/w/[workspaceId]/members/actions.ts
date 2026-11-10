@@ -50,10 +50,15 @@ export async function updateMemberAction(
 ): Promise<ActionState> {
   const role = fd.get("role");
   const status = fd.get("status");
+  const memberType = fd.get("member_type");
+  const teams = fd.getAll("team_ids").map(String);
   return mutate(workspaceId, () =>
     api.send(workspaceId, "PATCH", `/members/${userId}`, {
       ...(role ? { role: String(role) } : {}),
       ...(status ? { status: String(status) } : {}),
+      ...(memberType ? { member_type: String(memberType) } : {}),
+      // Only team managers carry a team scope; the field is sent when the picker is shown.
+      ...(fd.has("scope") ? { team_ids: teams } : {}),
     }),
   );
 }

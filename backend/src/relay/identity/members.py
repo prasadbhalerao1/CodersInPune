@@ -12,25 +12,42 @@ from typing import Literal
 
 import procrastinate
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay.audit import service as audit
-from relay.identity.models import ACTIVE, Invitation, Membership, UserAccount
+from relay.directory.models import Team
+from relay.identity.models import ACTIVE, Invitation, Membership, MembershipTeamScope, UserAccount
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workos_api import WorkOSClient, WorkOSUnavailableError
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.notifications import email as email_service
 from relay.notifications.models import EmailDelivery
 from relay.platform.models import Tenant
-from relay.policy.permissions import Permission, authorize, visible
+from relay.policy.permissions import (
+    ROLE_DESCRIPTIONS,
+    ROLE_PERMISSIONS,
+    Permission,
+    authorize,
+    visible,
+)
 from relay.shared.api_types import Email, StrictInput
 from relay.shared.db.session import unit_of_work
 from relay.shared.errors import ApiError
 
-WorkspaceRole = Literal["owner", "admin", "member", "guest", "auditor"]
+WorkspaceRole = Literal[
+    "owner",
+    "admin",
+    "member",
+    "guest",
+    "auditor",
+    "continuity_manager",
+    "knowledge_steward",
+    "team_manager",
+]
+MemberType = Literal["employee", "contractor", "external"]
 
 
 class InvitationIn(StrictInput):
@@ -41,6 +58,9 @@ class InvitationIn(StrictInput):
 class MemberUpdate(StrictInput):
     role: WorkspaceRole | None = None
     status: Literal["active", "suspended", "removed"] | None = None
+    member_type: MemberType | None = None
+    # Team managers only: the teams whose responsibilities they manage (replaces the set).
+    team_ids: list[uuid.UUID] | None = None
 
 
 class WorkspaceMemberView(BaseModel):
@@ -50,6 +70,8 @@ class WorkspaceMemberView(BaseModel):
     role: str
     status: str
     joined_at: datetime
+    member_type: str = "employee"
+    team_ids: list[uuid.UUID] = []
 
 
 class InvitationView(BaseModel):
@@ -75,7 +97,9 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _member_view(m: Membership) -> WorkspaceMemberView:
+def _member_view(
+    m: Membership, scopes: dict[uuid.UUID, list[uuid.UUID]] | None = None
+) -> WorkspaceMemberView:
     return WorkspaceMemberView(
         user_id=m.user_id,
         name=m.display_name or m.email or "Member",
@@ -83,6 +107,8 @@ def _member_view(m: Membership) -> WorkspaceMemberView:
         role=m.role,
         status=m.status,
         joined_at=m.created_at,
+        member_type=m.member_type,
+        team_ids=(scopes or {}).get(m.user_id, []),
     )
 
 
@@ -117,6 +143,25 @@ def _record(
     )
 
 
+class RoleView(BaseModel):
+    role: str
+    description: str
+    permissions: list[str]
+
+
+async def list_roles(access: WorkspaceAccess) -> list[RoleView]:
+    """The permission registry as people see it: every role and what it can do."""
+    authorize(access, Permission.MEMBER_READ)
+    return [
+        RoleView(
+            role=role,
+            description=ROLE_DESCRIPTIONS.get(role, ""),
+            permissions=sorted(str(p) for p in permissions),
+        )
+        for role, permissions in ROLE_PERMISSIONS.items()
+    ]
+
+
 # ---------------------------------------------------------------- members
 
 
@@ -130,7 +175,8 @@ async def list_members(
     rows = await access.session.scalars(
         stmt.order_by(Membership.display_name, Membership.created_at)
     )
-    return [_member_view(m) for m in rows]
+    scopes = await _team_scopes(access)
+    return [_member_view(m, scopes) for m in rows]
 
 
 async def update_member(
@@ -148,6 +194,7 @@ async def update_member(
     if touches_owner and access.role != "owner":
         raise ApiError(403, "owner_required", "Only owners can grant or change the owner role.")
     changes = data.model_dump(exclude_unset=True, exclude_none=True)
+    team_ids = changes.pop("team_ids", None)
     demotes_owner = member.role == "owner" and (
         changes.get("role", "owner") != "owner" or changes.get("status", ACTIVE) != ACTIVE
     )
@@ -162,6 +209,10 @@ async def update_member(
     for field, value in changes.items():
         setattr(member, field, value)
     member.updated_at = func.now()
+    if team_ids is not None or member.role != "team_manager":
+        await _set_team_scope(access, member, [] if member.role != "team_manager" else team_ids)
+        if team_ids is not None:
+            changes["team_scope"] = len(team_ids)
     await access.session.flush()
     await access.session.refresh(member)
     _record(
@@ -171,7 +222,46 @@ async def update_member(
         member.id,
         **{k: str(v) for k, v in changes.items()},
     )
-    return _member_view(member)
+    return _member_view(member, await _team_scopes(access))
+
+
+async def _set_team_scope(
+    access: WorkspaceAccess, member: Membership, team_ids: list[uuid.UUID] | None
+) -> None:
+    """Replace a team manager's scope; anyone else has none."""
+    await access.session.execute(
+        delete(MembershipTeamScope).where(MembershipTeamScope.user_id == member.user_id)
+    )
+    wanted = set(team_ids or [])
+    if not wanted:
+        return
+    found = set(
+        await access.session.scalars(
+            select(Team.id).where(
+                Team.id.in_(wanted), visible(access, Permission.DIRECTORY_READ, Team.tenant_id)
+            )
+        )
+    )
+    if found != wanted:
+        raise ApiError(422, "team_not_found", "Choose existing teams.")
+    access.session.add_all(
+        MembershipTeamScope(
+            tenant_id=access.tenant_id,
+            user_id=member.user_id,
+            team_id=team_id,
+            granted_by=access.user_id,
+        )
+        for team_id in sorted(wanted)
+    )
+
+
+async def _team_scopes(access: WorkspaceAccess) -> dict[uuid.UUID, list[uuid.UUID]]:
+    scopes: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for user_id, team_id in await access.session.execute(
+        select(MembershipTeamScope.user_id, MembershipTeamScope.team_id)
+    ):
+        scopes.setdefault(user_id, []).append(team_id)
+    return scopes
 
 
 # ---------------------------------------------------------------- invitations (admin side)

@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, status
 
-from relay.directory import profiles
+from relay.directory import identities, profiles
 from relay.directory import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 
@@ -101,3 +101,8 @@ async def department_profile(
     access: CurrentWorkspace, department_id: uuid.UUID
 ) -> profiles.ProfileView:
     return await profiles.department_profile(access, department_id)
+
+
+@router.get("/identity-conflicts")
+async def identity_conflicts(access: CurrentWorkspace) -> list[identities.IdentityConflict]:
+    return await identities.identity_conflicts(access)

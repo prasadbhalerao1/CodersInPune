@@ -34,6 +34,8 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  IdentityConflict,
+  RoleView,
   PrivacyView,
   ReviewItemView,
   KnowledgeCompareView,
@@ -232,6 +234,8 @@ export const api = {
         to_version: String(to),
       }),
     ),
+  roles: (id: string) => relayFetch<RoleView[]>(`${ws(id)}/roles`),
+  identityConflicts: (id: string) => relayFetch<IdentityConflict[]>(`${ws(id)}/identity-conflicts`),
   responsibilityTypes: (id: string) =>
     relayFetch<ResponsibilityTypeView[]>(`${ws(id)}/responsibilities/types`),
   stewardship: (id: string, responsibilityId: string) =>

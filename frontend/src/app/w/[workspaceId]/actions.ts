@@ -163,6 +163,20 @@ export async function createPersonAction(
       title: optional(fd, "title"),
       github_login: optional(fd, "github_login"),
       department_id: optional(fd, "department_id"),
+      manager_person_id: optional(fd, "manager_person_id"),
+    }),
+  );
+}
+
+export async function setManagerAction(
+  workspaceId: string,
+  personId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PATCH", `/people/${personId}`, {
+      manager_person_id: optional(fd, "manager_person_id") ?? null,
     }),
   );
 }

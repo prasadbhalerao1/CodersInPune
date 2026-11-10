@@ -129,6 +129,7 @@ export type PersonView = {
   department_name: string | null;
   status: "active" | "archived";
   created_at: string;
+  manager_person_id: string | null;
 };
 
 export type TeamMemberView = { person_id: string; display_name: string };
@@ -442,7 +443,27 @@ export type HistoryView = {
   details: Record<string, string | number | boolean | null>;
 };
 
-export type WorkspaceRole = "owner" | "admin" | "member" | "guest" | "auditor";
+export type WorkspaceRole =
+  | "owner"
+  | "admin"
+  | "member"
+  | "guest"
+  | "auditor"
+  | "continuity_manager"
+  | "knowledge_steward"
+  | "team_manager";
+export type MemberType = "employee" | "contractor" | "external";
+
+export type RoleView = { role: WorkspaceRole; description: string; permissions: string[] };
+
+export type IdentityConflict = {
+  kind: "github_login_mismatch" | "email_mismatch" | "duplicate_email" | "pending_match";
+  provider: "GitHub" | "Linear" | "Directory";
+  person_id: string | null;
+  person_name: string | null;
+  handle: string;
+  detail: string;
+};
 
 export type WorkspaceMemberView = {
   user_id: string;
@@ -451,6 +472,8 @@ export type WorkspaceMemberView = {
   role: WorkspaceRole;
   status: "active" | "suspended" | "removed";
   joined_at: string;
+  member_type: MemberType;
+  team_ids: string[];
 };
 
 export type InvitationView = {
@@ -1132,6 +1155,24 @@ export type SearchView = { query: string; hits: SearchHit[] };
 
 export type ProfileRef = { id: string; name: string; detail: string | null };
 export type ProfileView = {
+  reports_to: ProfileRef | null;
+  direct_reports: ProfileRef[];
+  tasks: {
+    id: string;
+    case_id: string;
+    case_title: string;
+    title: string;
+    due_at: string | null;
+  }[];
+  knowledge: ProfileRef[];
+  history: { change: string; unit: string; changed_at: string }[];
+  coverage: {
+    responsibilities: number;
+    critical: number;
+    without_backup: number;
+    single_holder: number;
+  } | null;
+  risk_breakdown: Record<string, number>;
   kind: "person" | "team" | "department";
   id: string;
   name: string;

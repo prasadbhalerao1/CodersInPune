@@ -36,6 +36,7 @@ class Permission(StrEnum):
     CASE_APPROVE = "case.approve"
     CASE_COMMENT = "case.comment"
     KNOWLEDGE_WRITE = "knowledge.write"
+    KNOWLEDGE_VERIFY = "knowledge.verify"
     MEMBER_MANAGE = "member.manage"
     INTEGRATION_MANAGE = "integration.manage"
     INSIGHTS_READ = "insights.read"
@@ -67,6 +68,7 @@ _MANAGE: Final = frozenset(
         Permission.CASE_APPROVE,
         Permission.CASE_COMMENT,
         Permission.KNOWLEDGE_WRITE,
+        Permission.KNOWLEDGE_VERIFY,
         Permission.MEMBER_MANAGE,
         Permission.INTEGRATION_MANAGE,
         Permission.POLICY_MANAGE,
@@ -88,6 +90,43 @@ ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
     # Members read AI output limited to workspace-audience evidence (D2).
     "member": _READ | {Permission.CASE_COMMENT, Permission.KNOWLEDGE_WRITE, Permission.AI_READ},
     "guest": _READ,
+    # Runs continuity work (cases, approvals, ownership changes) without workspace admin.
+    "continuity_manager": _READ
+    | {
+        Permission.RESPONSIBILITY_MANAGE,
+        Permission.CASE_MANAGE,
+        Permission.CASE_APPROVE,
+        Permission.CASE_COMMENT,
+        Permission.KNOWLEDGE_WRITE,
+        Permission.INSIGHTS_READ,
+        Permission.AI_READ,
+        Permission.AI_RUN,
+        Permission.AI_REVIEW,
+    },
+    # Keeps knowledge trustworthy: verifies and resolves disputes anywhere.
+    "knowledge_steward": _READ
+    | {
+        Permission.CASE_COMMENT,
+        Permission.KNOWLEDGE_WRITE,
+        Permission.KNOWLEDGE_VERIFY,
+        Permission.AI_READ,
+    },
+    # A member who also manages the responsibilities their scoped teams hold
+    # (catalog.service.authorize_responsibility); nothing workspace-wide.
+    "team_manager": _READ
+    | {Permission.CASE_COMMENT, Permission.KNOWLEDGE_WRITE, Permission.AI_READ},
+}
+# Plain-language summary of each role, for the Roles & Permissions screen.
+ROLE_DESCRIPTIONS: Final[dict[str, str]] = {
+    "owner": "Everything, including billing-level decisions and removing admins.",
+    "admin": "Everything except transferring ownership.",
+    "continuity_manager": "Runs cases, approvals and ownership changes; no member or "
+    "integration administration.",
+    "knowledge_steward": "Verifies knowledge and resolves disputes across the workspace.",
+    "team_manager": "A member who manages the responsibilities held by their teams.",
+    "member": "Reads the workspace, comments, writes knowledge and completes their tasks.",
+    "auditor": "Reads everything, including the audit log; changes nothing.",
+    "guest": "Reads the workspace; changes nothing.",
 }
 
 

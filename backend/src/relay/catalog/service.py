@@ -26,9 +26,10 @@ from relay.catalog.models import (
     Responsibility,
     ResponsibilityAsset,
 )
-from relay.directory.models import Department, Person, Team
+from relay.directory.models import Department, Person, Team, TeamMember
+from relay.identity.models import MembershipTeamScope
 from relay.identity.workspace_access import WorkspaceAccess
-from relay.policy.permissions import Permission, authorize, visible
+from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
 
@@ -365,6 +366,33 @@ def record_audit(
     )
 
 
+async def authorize_responsibility(access: WorkspaceAccess, responsibility_id: uuid.UUID) -> None:
+    """Manage one responsibility: workspace managers, or a team manager whose scoped teams
+    (or their members) currently hold it. Everyone else is denied."""
+    if role_allows(access.role, Permission.RESPONSIBILITY_MANAGE):
+        return
+    if access.role == "team_manager":
+        teams = select(MembershipTeamScope.team_id).where(
+            MembershipTeamScope.user_id == access.user_id
+        )
+        people = select(TeamMember.person_id).where(TeamMember.team_id.in_(teams))
+        held = await access.session.scalar(
+            select(OwnershipAssignment.id)
+            .where(
+                OwnershipAssignment.responsibility_id == responsibility_id,
+                active_at(utcnow()),
+                or_(
+                    OwnershipAssignment.team_id.in_(teams),
+                    OwnershipAssignment.person_id.in_(people),
+                ),
+            )
+            .limit(1)
+        )
+        if held is not None:
+            return
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)  # raises the audited denial
+
+
 async def _flush_assignments(access: WorkspaceAccess) -> None:
     try:
         await access.session.flush()
@@ -631,7 +659,7 @@ async def add_responsibility(access: WorkspaceAccess, data: ResponsibilityIn) ->
 async def update_responsibility(
     access: WorkspaceAccess, responsibility_id: uuid.UUID, data: ResponsibilityUpdate
 ) -> ResponsibilityDetail:
-    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await authorize_responsibility(access, responsibility_id)
     await _get_responsibility(access, responsibility_id)
     changes = await stewardship.clean(
         access, data.model_dump(exclude_unset=True, exclude={"version"})
@@ -668,7 +696,7 @@ async def correct_assignment(
 ) -> ResponsibilityDetail:
     """Correct when an assignment really started or ended, including in the past. Overlap
     rules still apply (one primary at a time); history keeps the original and the reason."""
-    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await authorize_responsibility(access, responsibility_id)
     await _get_responsibility(access, responsibility_id, lock=True)
     assignment = await access.session.get(OwnershipAssignment, assignment_id, with_for_update=True)
     if assignment is None or assignment.responsibility_id != responsibility_id:
@@ -699,7 +727,7 @@ async def correct_assignment(
 async def set_responsibility_status(
     access: WorkspaceAccess, responsibility_id: uuid.UUID, status: ResponsibilityStatus
 ) -> ResponsibilityDetail:
-    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await authorize_responsibility(access, responsibility_id)
     r = await _get_responsibility(access, responsibility_id, lock=True)
     if r.status == status:
         raise ApiError(409, f"already_{status}", f"The responsibility is already {status}.")
@@ -725,7 +753,7 @@ async def add_assignment(
     access: WorkspaceAccess, responsibility_id: uuid.UUID, data: AssignmentIn
 ) -> OwnershipAssignment:
     """Assign without replacing anyone: the EXCLUDE constraints reject a second primary."""
-    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await authorize_responsibility(access, responsibility_id)
     await require_active_responsibility(access, responsibility_id)
     await require_assignee(access, data)
     assignment = await _insert_assignment(
@@ -755,7 +783,7 @@ async def end_assignment(
     assignment_id: uuid.UUID,
     data: EndAssignmentIn,
 ) -> ResponsibilityDetail:
-    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await authorize_responsibility(access, responsibility_id)
     await require_active_responsibility(access, responsibility_id)
     assignment = await access.session.scalar(
         select(OwnershipAssignment)

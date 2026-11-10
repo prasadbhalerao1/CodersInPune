@@ -11,11 +11,13 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
-from relay.catalog.models import OwnershipAssignment, Responsibility
-from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, ContinuityCase
-from relay.directory.models import Department, Person, Team, TeamMember
+from relay.catalog.knowledge import readable as knowledge_readable
+from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
+from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, CaseTask, ContinuityCase
+from relay.directory.models import Department, DirectoryHistory, Person, Team, TeamMember
+from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations.github.models import GitHubIdentity
 from relay.integrations.linear.models import LinearIdentity
@@ -60,6 +62,27 @@ class CaseRef(BaseModel):
     relation: str
 
 
+class TaskRef(BaseModel):
+    id: uuid.UUID
+    case_id: uuid.UUID
+    case_title: str
+    title: str
+    due_at: datetime | None
+
+
+class HistoryRef(BaseModel):
+    change: str
+    unit: str
+    changed_at: datetime
+
+
+class CoverageView(BaseModel):
+    responsibilities: int
+    critical: int
+    without_backup: int
+    single_holder: int
+
+
 class IdentityRef(BaseModel):
     provider: str
     handle: str
@@ -82,6 +105,15 @@ class ProfileView(BaseModel):
     cases: list[CaseRef] = []
     identities: list[IdentityRef] = []
     continuity_debt: int | None = None
+    reports_to: Ref | None = None
+    direct_reports: list[Ref] = []
+    # Open case tasks assigned to this person's member account, and knowledge they wrote.
+    tasks: list[TaskRef] = []
+    knowledge: list[Ref] = []
+    history: list[HistoryRef] = []
+    # Teams: how well what the team holds is covered. Departments: risks by severity.
+    coverage: CoverageView | None = None
+    risk_breakdown: dict[str, int] = {}
 
 
 async def _roles(
@@ -264,6 +296,20 @@ async def person_profile(access: WorkspaceAccess, person_id: uuid.UUID) -> Profi
         ]
     if person.github_login and not any(i.provider == "GitHub" for i in identities):
         identities.append(IdentityRef(provider="GitHub", handle=person.github_login))
+    manager = (
+        await access.session.get(Person, person.manager_person_id)
+        if (person.manager_person_id)
+        else None
+    )
+    reports = await access.session.scalars(
+        select(Person)
+        .where(
+            visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+            Person.manager_person_id == person.id,
+            Person.status == "active",
+        )
+        .order_by(Person.display_name)
+    )
     return ProfileView(
         kind="person",
         id=person.id,
@@ -278,6 +324,11 @@ async def person_profile(access: WorkspaceAccess, person_id: uuid.UUID) -> Profi
         risks=await _risks(access, _held(roles), {person.id}),
         cases=await _cases(access, people={person.id}, responsibilities=set()),
         identities=identities,
+        reports_to=Ref(id=manager.id, name=manager.display_name) if manager else None,
+        direct_reports=[Ref(id=r.id, name=r.display_name, detail=r.title) for r in reports],
+        tasks=await _tasks(access, person),
+        knowledge=await _knowledge(access, person),
+        history=await _history(access, person.id),
     )
 
 
@@ -307,6 +358,7 @@ async def team_profile(access: WorkspaceAccess, team_id: uuid.UUID) -> ProfileVi
         roles=roles,
         risks=await _risks(access, _held(roles), set()),
         cases=await _cases(access, people=member_ids, responsibilities=_held(roles)),
+        coverage=await _coverage(access, _held(roles)),
     )
 
 
@@ -353,4 +405,128 @@ async def department_profile(access: WorkspaceAccess, department_id: uuid.UUID) 
         risks=await _risks(access, _held(roles), people_ids),
         cases=await _cases(access, people=people_ids, responsibilities=_held(roles)),
         continuity_debt=debt,
+        coverage=await _coverage(access, _held(roles)),
+        risk_breakdown=_breakdown(await _risks(access, _held(roles), people_ids)),
+    )
+
+
+def _breakdown(risks: list[RiskRef]) -> dict[str, int]:
+    counts = {"high": 0, "medium": 0, "low": 0}
+    for r in risks:
+        counts[r.severity] = counts.get(r.severity, 0) + 1
+    return counts
+
+
+async def _member_user(access: WorkspaceAccess, person: Person) -> uuid.UUID | None:
+    """The member account for a directory person (matched by email)."""
+    if not person.email:
+        return None
+    return await access.session.scalar(
+        select(Membership.user_id).where(
+            func.lower(Membership.email) == person.email.lower(), Membership.status == "active"
+        )
+    )
+
+
+async def _tasks(access: WorkspaceAccess, person: Person) -> list[TaskRef]:
+    if not role_allows(access.role, Permission.CASE_READ):
+        return []
+    user_id = await _member_user(access, person)
+    if user_id is None:
+        return []
+    rows = await access.session.execute(
+        select(CaseTask, ContinuityCase.title)
+        .join(ContinuityCase, ContinuityCase.id == CaseTask.case_id)
+        .where(
+            visible(access, Permission.CASE_READ, CaseTask.tenant_id),
+            CaseTask.assignee_user_id == user_id,
+            CaseTask.status == "open",
+            ContinuityCase.status.in_(OPEN_CASES),
+        )
+        .order_by(CaseTask.due_at.asc().nulls_last())
+        .limit(20)
+    )
+    return [
+        TaskRef(id=t.id, case_id=t.case_id, case_title=title, title=t.title, due_at=t.due_at)
+        for t, title in rows
+    ]
+
+
+async def _knowledge(access: WorkspaceAccess, person: Person) -> list[Ref]:
+    user_id = await _member_user(access, person)
+    if user_id is None:
+        return []
+    rows = await access.session.scalars(
+        select(KnowledgeItem)
+        .join(Responsibility, Responsibility.id == KnowledgeItem.responsibility_id)
+        .where(
+            knowledge_readable(access),
+            KnowledgeItem.author_user_id == user_id,
+            KnowledgeItem.status == "active",
+        )
+        .order_by(KnowledgeItem.updated_at.desc())
+        .limit(20)
+    )
+    return [Ref(id=k.id, name=k.title, detail=k.kind.replace("_", " ")) for k in rows]
+
+
+async def _history(access: WorkspaceAccess, person_id: uuid.UUID) -> list[HistoryRef]:
+    teams = dict((await access.session.execute(select(Team.id, Team.name))).all())
+    departments = dict((await access.session.execute(select(Department.id, Department.name))).all())
+    rows = await access.session.scalars(
+        select(DirectoryHistory)
+        .where(
+            visible(access, Permission.DIRECTORY_READ, DirectoryHistory.tenant_id),
+            DirectoryHistory.person_id == person_id,
+        )
+        .order_by(DirectoryHistory.changed_at.desc())
+        .limit(30)
+    )
+    return [
+        HistoryRef(
+            change=h.change,
+            unit=teams.get(h.team_id, "team")
+            if h.team_id
+            else departments.get(h.department_id, "department"),  # type: ignore[arg-type]
+            changed_at=h.changed_at,
+        )
+        for h in rows
+    ]
+
+
+async def _coverage(access: WorkspaceAccess, held: set[uuid.UUID]) -> CoverageView:
+    if not held:
+        return CoverageView(responsibilities=0, critical=0, without_backup=0, single_holder=0)
+    now = datetime.now(UTC)
+    assignments = list(
+        await access.session.scalars(
+            select(OwnershipAssignment).where(
+                OwnershipAssignment.responsibility_id.in_(held),
+                OwnershipAssignment.valid_from <= now,
+                or_(OwnershipAssignment.valid_to.is_(None), OwnershipAssignment.valid_to > now),
+            )
+        )
+    )
+    criticality = dict(
+        (
+            await access.session.execute(
+                select(Responsibility.id, Responsibility.criticality).where(
+                    Responsibility.id.in_(held), Responsibility.status == "active"
+                )
+            )
+        ).all()
+    )
+    by: dict[uuid.UUID, list[OwnershipAssignment]] = {}
+    for a in assignments:
+        by.setdefault(a.responsibility_id, []).append(a)
+    visible_ids = [r for r in held if r in criticality]
+    return CoverageView(
+        responsibilities=len(visible_ids),
+        critical=sum(1 for r in visible_ids if criticality[r] == "critical"),
+        without_backup=sum(
+            1 for r in visible_ids if not any(a.role == "backup" for a in by.get(r, []))
+        ),
+        single_holder=sum(
+            1 for r in visible_ids if len({a.person_id or a.team_id for a in by.get(r, [])}) <= 1
+        ),
     )

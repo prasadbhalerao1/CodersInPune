@@ -13,6 +13,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Text,
     UniqueConstraint,
@@ -28,7 +29,17 @@ _UUIDV7 = text("uuidv7()")
 
 # Workspace roles (Blueprint §F tier 1). Fine-grained permissions arrive with the
 # permission registry; these values only constrain what can be stored.
-ROLES: Final = ("owner", "admin", "member", "guest", "auditor")
+ROLES: Final = (
+    "owner",
+    "admin",
+    "member",
+    "guest",
+    "auditor",
+    "continuity_manager",
+    "knowledge_steward",
+    "team_manager",
+)
+MEMBER_TYPES: Final = ("employee", "contractor", "external")
 STATUSES: Final = ("active", "suspended", "removed")
 OWNER_ROLE: Final = "owner"
 ACTIVE: Final = "active"
@@ -61,6 +72,7 @@ class Membership(Base):
         UniqueConstraint("tenant_id", "user_id"),
         CheckConstraint(_in("role", ROLES), name="role"),
         CheckConstraint(_in("status", STATUSES), name="status"),
+        CheckConstraint(_in("member_type", MEMBER_TYPES), name="member_type"),
         Index(None, "user_id"),
         {"schema": SCHEMA},
     )
@@ -70,6 +82,7 @@ class Membership(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     role: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text)
+    member_type: Mapped[str] = mapped_column(Text, server_default="employee")
     # Self-reported at sign-in; for display only, never for authorization.
     display_name: Mapped[str | None] = mapped_column(Text)
     email: Mapped[str | None] = mapped_column(Text)
@@ -125,3 +138,26 @@ class Invitation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MembershipTeamScope(Base):
+    """A team a team manager manages: they manage responsibilities those teams hold."""
+
+    __tablename__ = "membership_team_scope"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "user_id", "team_id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "team_id"],
+            ["directory.team.tenant_id", "directory.team.id"],
+            name="fk_membership_team_scope_team",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    team_id: Mapped[uuid.UUID]
+    granted_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

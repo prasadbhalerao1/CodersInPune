@@ -96,6 +96,29 @@ export function Profile({ workspaceId, p }: { workspaceId: string; p: ProfileVie
             ) : null}
           </div>
 
+          {p.coverage && p.kind !== "person" ? (
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(
+                [
+                  ["Responsibilities held", p.coverage.responsibilities],
+                  ["Critical", p.coverage.critical],
+                  ["Without a backup", p.coverage.without_backup],
+                  ["Single holder", p.coverage.single_holder],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label} className="rounded-lg border p-3">
+                  <dt className="text-muted-foreground text-xs">{label}</dt>
+                  <dd className="mt-1 text-lg font-medium tabular-nums">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {p.kind === "department" && Object.values(p.risk_breakdown).some(Boolean) ? (
+            <p className="text-sm">
+              Open risks: {p.risk_breakdown.high ?? 0} high · {p.risk_breakdown.medium ?? 0} medium
+              · {p.risk_breakdown.low ?? 0} low
+            </p>
+          ) : null}
           <Section
             title="Ownership roles"
             description={
@@ -231,6 +254,59 @@ export function Profile({ workspaceId, p }: { workspaceId: string; p: ProfileVie
               ],
             ]}
           />
+          {p.kind === "person" && p.tasks.length ? (
+            <Section title="Assigned case tasks">
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {p.tasks.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      href={`${base}/cases/${t.case_id}/tasks/${t.id}`}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      {t.title}
+                    </Link>
+                    <span className="text-muted-foreground block text-xs">{t.case_title}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+          {p.kind === "person" && p.knowledge.length ? (
+            <Section title="Knowledge written">
+              <RefList
+                refs={p.knowledge}
+                href={(id) => `${base}/knowledge/${id}`}
+                empty="Nothing written yet."
+              />
+            </Section>
+          ) : null}
+          {p.kind === "person" && (p.reports_to || p.direct_reports.length) ? (
+            <Section title="Reporting line">
+              {p.reports_to ? (
+                <p className="text-sm">
+                  Reports to{" "}
+                  <Link href={`${base}/people/${p.reports_to.id}`} className="hover:underline">
+                    {p.reports_to.name}
+                  </Link>
+                </p>
+              ) : null}
+              {p.direct_reports.length ? (
+                <RefList refs={p.direct_reports} href={(id) => `${base}/people/${id}`} empty="" />
+              ) : null}
+            </Section>
+          ) : null}
+          {p.kind === "person" && p.history.length ? (
+            <Section title="Team and department history">
+              <ol className="text-muted-foreground flex flex-col gap-1 text-xs">
+                {p.history.map((h, i) => (
+                  <li key={i}>
+                    {h.change.startsWith("joined") ? "Joined" : "Left"} {h.unit} ·{" "}
+                    {formatDateTime(h.changed_at)}
+                  </li>
+                ))}
+              </ol>
+            </Section>
+          ) : null}
           {p.kind === "person" ? (
             <Section title="Teams">
               <RefList
