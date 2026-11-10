@@ -5,12 +5,13 @@ Desktop, PostgreSQL 18 container, Node 22, Python 3.14):
 
 | Check | Result |
 |---|---|
-| Backend `ruff format --check`, `ruff check`, `mypy` (188 files) | Clean |
-| Backend tests, real PostgreSQL as `relay_app`, migrations rebuilt base→head | **247 passed**, 1 skipped (opt-in perf) |
+| Backend `ruff format --check`, `ruff check`, `mypy` (189 files) | Clean |
+| Backend tests, real PostgreSQL as `relay_app`, migrations rebuilt base→head | **249 passed**, 1 skipped (opt-in perf) |
 | Perf (`RELAY_PERF=1`, 250 people / 1,000 responsibilities / 60 cases) | All reads p95 ≤ 383 ms, writes ≤ 36 ms, search 71 ms |
 | Frontend `format:check`, `lint`, `typecheck`, `build` | Clean; 60 routes built |
 | Playwright on the production build (`next start`), real WorkOS account | **18 passed** (6 public, 12 signed-in) |
-| Live AI (Gemini `gemini-3.5-flash-lite`, synthetic demo data) | 2 analysis runs completed (partial: GitHub source failing by design); citations valid; conflict flagged after fix |
+| Live AI (Gemini `gemini-3.5-flash-lite`, synthetic demo data) | 4 analysis runs (partial: GitHub source failing by design); citations valid; conflict flagged and planner proposals produced after fixes; key rotation observed |
+| Docker images (backend, web) | Built; production-mode smoke: health 200, docs hidden, anonymous 401, JSON logs; worker starts; web serves with security headers |
 | Backup/restore drill (local) | Restored counts identical; schema 0036; RLS forced on 87 tables |
 
 ## Release gates
@@ -26,7 +27,7 @@ Legend: ✅ Ready · 🟡 Ready with conditions · ❌ Not ready · 🔵 Require
 | Critical workflows end to end | ✅ | AC-01..AC-10 pass; transfer and coverage in the browser |
 | Measurable value | 🟡 | Metrics defined (Insights); no baseline from a real team |
 | No developer intervention for major journeys | ✅ | Except deployment and connector app registration |
-| AI outputs understandable, evidence-linked, reviewable | ✅ | Planner proposals not yet useful |
+| AI outputs understandable, evidence-linked, reviewable | ✅ | Proposals modest until an eval set tunes them |
 | Users can recover from failures | ✅ | Partial states, retries, reconnect, cancel/reopen |
 
 ### Functional
@@ -106,7 +107,7 @@ organisational gates, not missing code:
 | Restore drill and alerting on the real host | Deployment / infrastructure |
 | Real-account verification of GitHub webhooks + writes, Linear, Notion, email | User configuration + external credentials |
 | Source ACL mirroring stance (FR-INT-010) | Product decision (+ code if mirroring) |
-| AI evaluation set and planner quality | Code |
+| AI evaluation set | Code |
 | Support and incident ownership | Organisational |
 
 Conditions for the internal pilot: synthetic or the founder's own non-sensitive data; AI
