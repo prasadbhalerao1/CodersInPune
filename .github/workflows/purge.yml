@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         if: env.RELAY_MIGRATION_DATABASE_URL != ''
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         if: env.RELAY_MIGRATION_DATABASE_URL != ''
       - if: env.RELAY_MIGRATION_DATABASE_URL != ''
         run: uv sync --frozen --no-dev && uv run --no-sync relay-purge-workspaces

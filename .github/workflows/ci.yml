@@ -34,7 +34,7 @@ jobs:
       RELAY_TEST_MIGRATION_DATABASE_URL: postgresql+psycopg://relay_owner:relay_owner_dev@localhost:5432/relay_test
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       - name: Provision database roles (same script as docker compose)
         run: psql "postgresql://postgres:postgres_dev@localhost:5432/postgres" -v ON_ERROR_STOP=1 -f ../infra/db/init/01-roles.sql
       - run: uv sync --locked
@@ -93,14 +93,14 @@ jobs:
           format: spdx-json
           output-file: sbom-web.spdx.json
       - name: Vulnerability scan (backend image)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: relay-backend:ci
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
       - name: Vulnerability scan (web image)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: relay-web:ci
           severity: CRITICAL,HIGH
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
