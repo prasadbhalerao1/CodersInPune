@@ -81,6 +81,7 @@ def scripted() -> Iterator[dict[str, Any]]:
             ]
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, out)])
 
+    llm.Gateway._cooldown.clear()  # earlier tests may leave a provider cooling down
     if not LIVE:
         llm.fake_handler = respond
     yield state

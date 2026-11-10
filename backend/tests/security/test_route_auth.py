@@ -16,7 +16,8 @@ from tests.fakes import FakeExternal
 pytestmark = pytest.mark.anyio
 
 # Public by design: health probes, and the GitHub webhook (HMAC-signed instead).
-PUBLIC = {"/health/live", "/health/ready", "/integrations/github/webhook"}
+# /health/ops answers 404 unless the operator token matches (tests/test_health.py).
+PUBLIC = {"/health/live", "/health/ready", "/health/ops", "/integrations/github/webhook"}
 
 
 @pytest.fixture
