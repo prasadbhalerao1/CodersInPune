@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 relay-api = "relay.__main__:main"
 relay-worker = "relay.worker:main"
+relay-demo-seed = "relay.demo.seed:main"
 
 [build-system]
 requires = ["uv_build>=0.12.18,<0.13.0"]
