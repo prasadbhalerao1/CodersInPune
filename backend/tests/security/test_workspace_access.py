@@ -98,7 +98,12 @@ async def test_active_membership_grants_access_to_that_workspace(api: Api) -> No
     workspace = await api.create_workspace("user_owner", "Acme")
     response = await api.client.get(f"/workspaces/{workspace}", headers=api.as_user("user_owner"))
     assert response.status_code == 200
-    assert response.json() == {"id": str(workspace), "name": "Acme", "role": "owner"}
+    assert response.json() == {
+        "id": str(workspace),
+        "name": "Acme",
+        "role": "owner",
+        "deletion_scheduled_for": None,
+    }
 
 
 async def test_inactive_membership_immediately_blocks_access(api: Api) -> None:

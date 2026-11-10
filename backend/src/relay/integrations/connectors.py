@@ -100,6 +100,8 @@ def recorded(provider: Provider, ref_key: str, handler: Handler) -> Handler:
             return
         started = time.monotonic()
         await handler(session, event, ctx)
+        # Flush first: refresh() would otherwise discard the handler's unflushed changes.
+        await session.flush()
         await session.refresh(connection)
         outcome = connection.last_sync_status
         if outcome not in ("ok", "partial", "error"):

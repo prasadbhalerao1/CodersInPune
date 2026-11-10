@@ -64,7 +64,9 @@ def test_owner_has_existing_permissions_and_unknowns_are_denied() -> None:
     assert role_allows("owner", Permission.WORKSPACE_READ)
     assert role_allows("owner", Permission.AUDIT_READ)
     assert not role_allows("member", Permission.AUDIT_READ)
-    assert not role_allows("owner", "workspace.delete")  # unknown permission
+    assert not role_allows("owner", "workspace.destroy")  # unknown permission
+    assert role_allows("owner", Permission.WORKSPACE_DELETE)
+    assert not role_allows("admin", Permission.WORKSPACE_DELETE)  # owner only
     assert not role_allows("superuser", Permission.WORKSPACE_READ)  # unknown role
     with pytest.raises(PermissionDenied):
         authorize(fake_access("owner"), "made.up")
