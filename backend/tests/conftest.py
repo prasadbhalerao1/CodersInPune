@@ -11,7 +11,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from relay.config import Settings
-from relay.shared import rate_limit
 from relay.shared.db import create_engine, create_session_factory
 from tests.db import APP_ROLE, APP_URL, OWNER_URL, libpq_url
 from tests.tokens import CLIENT_ID
@@ -110,4 +109,6 @@ def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
 
 @pytest.fixture(autouse=True)
 def _fresh_rate_limits() -> None:
-    rate_limit.reset()  # limits are per process; tests share one
+    """Counters are shared in the database (migration 0038); each test starts clean."""
+    with psycopg.connect(libpq_url(OWNER_URL)) as conn:
+        conn.execute("DELETE FROM platform.rate_limit_window")

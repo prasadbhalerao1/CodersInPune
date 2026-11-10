@@ -75,3 +75,19 @@ class TenantProbeItem(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
     probe_id: Mapped[uuid.UUID]
     label: Mapped[str] = mapped_column(Text)
+
+
+class RateLimitWindow(Base):
+    """Fixed-window hit counts shared by every API replica (migration 0038).
+
+    Global, not tenant data: the app role has no grants and only calls
+    `platform.rate_limit_hit` (SECURITY DEFINER).
+    """
+
+    __tablename__ = "rate_limit_window"
+    __table_args__ = {"schema": SCHEMA}
+
+    bucket: Mapped[str] = mapped_column(Text, primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    hits: Mapped[int]

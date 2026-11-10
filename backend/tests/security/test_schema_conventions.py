@@ -47,7 +47,11 @@ MANAGED_SCHEMAS = (
 )
 TENANT_ROOT = ("platform", "tenant")
 # Global (not tenant-scoped) tables. Each must still force RLS with explicit policies.
-GLOBAL_TABLES = {("identity", "user_account"), ("identity", "workspace_creation_request")}
+GLOBAL_TABLES = {
+    ("identity", "user_account"),
+    ("identity", "workspace_creation_request"),
+    ("platform", "rate_limit_window"),
+}
 
 
 @pytest.fixture
