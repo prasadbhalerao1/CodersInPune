@@ -5,8 +5,8 @@ then check invariants that must hold for every reachable path, not just the happ
 """
 
 import random
-from itertools import pairwise
 from dataclasses import dataclass
+from itertools import pairwise
 
 from relay.continuity import lifecycle
 
