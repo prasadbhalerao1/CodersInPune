@@ -25,7 +25,9 @@ envVarGroups:
         sync: false
       - key: RELAY_LLM_PROVIDERS # e.g. gemini,groq
         sync: false
-      - key: RELAY_GEMINI_API_KEYS
+      - key: RELAY_GEMINI_KEY_1
+        sync: false
+      - key: RELAY_GEMINI_KEY_2
         sync: false
       - key: RELAY_GROQ_API_KEY
         sync: false

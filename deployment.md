@@ -170,7 +170,7 @@ puts the owner URL into the API's environment. The workflow is the stricter opti
    | `RELAY_WORKOS_CLIENT_ID`, `RELAY_WORKOS_API_KEY` | WorkOS **production** environment |
    | `RELAY_INTEGRATION_ENCRYPTION_KEY` | Fernet key: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Back it up; losing it means reconnecting Linear and Notion. |
    | `RELAY_RESEND_API_KEY`, `RELAY_EMAIL_FROM` | Optional. Without them, emails are skipped and in-app notifications still work. |
-   | `RELAY_LLM_PROVIDERS`, `RELAY_GEMINI_API_KEYS`, `RELAY_GROQ_API_KEY` | Optional. Without them, the deterministic analysis still runs and AI features show "not configured". Ollama is for local use only. |
+   | `RELAY_LLM_PROVIDERS`, `RELAY_GEMINI_KEY_1`…`_4`, `RELAY_GROQ_API_KEY` | Optional. Add keys 3 and 4 by hand if you have them. Without them, the deterministic analysis still runs and AI features show "not configured". Ollama is for local use only. |
    | `RELAY_GITHUB_WEBHOOK_SECRET` (+ the `RELAY_GITHUB_APP_*` values) | Only if you connect GitHub |
 
 3. Deploy. `RELAY_ENVIRONMENT=production` turns on strict configuration validation. A missing or inconsistent value stops startup with a readable message in the logs, rather than half-working.

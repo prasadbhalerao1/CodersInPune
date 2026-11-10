@@ -92,7 +92,16 @@ def create_app(
             await http.aclose()
             await engine.dispose()
 
-    app = FastAPI(title="Relay API", version="0.1.0", lifespan=lifespan)
+    # The schema and interactive docs are for development; production exposes neither.
+    docs = resolved.environment != "production"
+    app = FastAPI(
+        title="Relay API",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url=None,
+        openapi_url="/openapi.json" if docs else None,
+    )
     register_error_handlers(app)
     app.add_middleware(RequestContextMiddleware)
     app.add_exception_handler(PermissionDenied, _handle_permission_denied)

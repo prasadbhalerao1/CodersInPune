@@ -1,11 +1,29 @@
 # Relay
 
-Organisational continuity platform. Planning docs: `docs/blueprint/`. Conventions: `CLAUDE.md`.
+Relay keeps work moving when people and responsibilities change. It finds what someone
+owns, rebuilds the context from GitHub, Linear and Notion with cited evidence, and moves
+ownership through reviewed, audited handovers. AI only proposes; people decide.
+
+## Documentation
+
+| Doc | What's in it |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | System, security boundary, modules, data flows, API, inventory |
+| [docs/ai.md](docs/ai.md) | AI-use disclosure: evidence pipeline, validation, injection handling, providers |
+| [docs/improvements.md](docs/improvements.md) | Status of the three committed improvements, with test references |
+| [docs/trust.md](docs/trust.md) | Privacy, security, accessibility, responsible design, limitations |
+| [docs/demo-script.md](docs/demo-script.md) | Scripted demo on the seeded organisation |
+| [deployment.md](deployment.md) | Deploying to Vercel + Render + Neon, or one Docker host |
+| [docs/sso.md](docs/sso.md), [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | SSO setup, incident response |
+| `docs/blueprint/`, `docs/adr/` | Decision Register, implementation plan, ADRs |
+
+Conventions for contributors: `CLAUDE.md`.
 
 ## Deploying
 
-Production runs as one Docker Compose stack (Postgres, migrations, API, worker, web):
-see [deploy/README.md](deploy/README.md) and the variable reference in
+See [deployment.md](deployment.md) for the managed path (Vercel, Render and Neon, with a
+Render Blueprint). The single-host Docker Compose stack is covered in
+[deploy/README.md](deploy/README.md), with the variable reference in
 [deploy/.env.production.example](deploy/.env.production.example).
 
 ## Prerequisites
@@ -71,14 +89,16 @@ reads source code and stores no GitHub tokens: installation tokens are minted pe
    - Callback URL: `http://localhost:3000/integrations/github/callback`
    - Enable **Request user authorization (OAuth) during installation** (Relay verifies the
      installer owns the installation; the `installation_id` alone is not trusted).
-   - Webhook: inactive.
-   - Repository permissions: **Contents: Read-only**, **Metadata: Read-only**. Nothing else.
+   - Webhook (optional): `https://<public web URL>/integrations/github/webhook` with a secret
+     in `RELAY_GITHUB_WEBHOOK_SECRET`. Locally, leave it inactive and use "Sync now".
+   - Repository permissions: **Contents**, **Metadata**, **Pull requests** and **Issues**:
+     read-only. Organisation permission **Members**: read-only.
 2. Generate a client secret and a private key.
 3. In `backend/.env` set `RELAY_GITHUB_APP_ID`, `RELAY_GITHUB_APP_SLUG` (from the app URL),
    `RELAY_GITHUB_CLIENT_ID`, `RELAY_GITHUB_CLIENT_SECRET` and `RELAY_GITHUB_PRIVATE_KEY`.
 4. Restart `relay-api` and `relay-worker`, then open a workspace → Integrations → Connect GitHub.
 
-Sync runs on connect and on "Sync now" (no webhooks yet). Suggestions are reviewed under
+Sync runs on connect, on "Sync now", on webhooks and every 6 hours. Suggestions are reviewed under
 Integrations → Review suggestions; approving never replaces an existing primary owner.
 
 ## Checks

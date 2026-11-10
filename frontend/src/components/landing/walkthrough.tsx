@@ -77,7 +77,8 @@ export function Walkthrough() {
   const [step, setStep] = useState(0);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
-    if (paused) return;
+    // Auto-advance is motion; people who ask for less of it step through by hand.
+    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = setInterval(() => setStep((s) => (s + 1) % STEPS.length), 3600);
     return () => clearInterval(timer);
   }, [paused]);
