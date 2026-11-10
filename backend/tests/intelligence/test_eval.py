@@ -97,7 +97,9 @@ def _backdate(tenant: uuid.UUID, title: str) -> None:
         )
 
 
-async def run_case(api: Api, ext: FakeExternal, case: Case, state: dict[str, Any]) -> dict:
+async def run_case(
+    api: Api, ext: FakeExternal, case: Case, state: dict[str, Any]
+) -> dict[str, Any]:
     owner = f"user_eval_{case.id}"  # one creator per case: workspace creation is rate limited
     ws = Ws(api, await api.create_workspace(owner, f"Eval {case.id}"), owner)
     await add_member(api, ws.id, "user_member", "member")
@@ -210,13 +212,13 @@ async def run_case(api: Api, ext: FakeExternal, case: Case, state: dict[str, Any
     }
 
 
-def score(results: list[dict]) -> dict[str, Any]:
+def score(results: list[dict[str, Any]]) -> dict[str, Any]:
     by = {r["id"]: r for r in results}
     claims = Counter(label for r in results for label in r["ai_claims"])
     stored_claims = sum(claims.values()) or 1
     scripted_unsupported = sum(c.label == "unsupported" for k in CASES for c in k.claims)
     proposals = Counter(label for r in results for label in r["proposals"])
-    reviews = Counter()
+    reviews: Counter[str] = Counter()
     for r in results:
         reviews.update(r["reviewed"])
     reviewed = sum(v for k, v in reviews.items() if k != "blocked_restricted") or 1
