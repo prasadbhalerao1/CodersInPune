@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     # Fernet key for integration credentials stored at rest (Linear, Notion tokens).
     integration_encryption_key: SecretStr | None = None
+    # Approved external writes (create-only issues for Relay tasks). Off until the provider
+    # permission exists: GitHub App "Issues: Read and write"; Linear OAuth scope that
+    # includes "issues:create" (set RELAY_LINEAR_OAUTH_SCOPE and reconnect).
+    github_issue_writes: bool = False
+    linear_issue_writes: bool = False
+    linear_oauth_scope: str = "read"
     # Linear OAuth app (read scope). Redirect URI: {frontend}/integrations/linear/callback
     linear_client_id: str | None = None
     linear_client_secret: SecretStr | None = None

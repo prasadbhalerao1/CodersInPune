@@ -33,6 +33,11 @@ class GitHubError(Exception):
         super().__init__(message)
         self.status = status
 
+    @property
+    def transient(self) -> bool:
+        """The request may not have reached GitHub, or may have been accepted anyway."""
+        return self.status == 0 or self.status == 429 or self.status >= 500
+
 
 class GitHubNotConfiguredError(Exception):
     pass
@@ -219,6 +224,39 @@ class GitHubClient:
         if response.status_code == 404:
             raise GitHubError(404, "installation not found (uninstalled or suspended)")
         return str(response.json()["token"])
+
+    # ---- approved writes (create-only; see continuity.external)
+
+    async def create_issue(
+        self, token: str, full_name: str, title: str, body: str
+    ) -> dict[str, Any]:
+        response = await self._call(
+            "POST",
+            f"{self._s.github_api_base_url}/repos/{full_name}/issues",
+            token,
+            json={"title": title, "body": body},
+        )
+        if response.status_code == 404:
+            raise GitHubError(404, "repository not found or not accessible")
+        return dict(response.json())
+
+    async def find_issue(self, token: str, full_name: str, marker: str) -> dict[str, Any] | None:
+        """A recently created issue whose body carries `marker` (duplicate prevention)."""
+        response = await self._call(
+            "GET",
+            f"{self._s.github_api_base_url}/repos/{full_name}/issues",
+            token,
+            params={"state": "all", "sort": "created", "direction": "desc", "per_page": 50},
+        )
+        if response.status_code == 404:
+            return None
+        return next((i for i in response.json() if marker in (i.get("body") or "")), None)
+
+    async def issue_state(self, token: str, full_name: str, number: int) -> str | None:
+        response = await self._call(
+            "GET", f"{self._s.github_api_base_url}/repos/{full_name}/issues/{number}", token
+        )
+        return None if response.status_code == 404 else str(response.json().get("state"))
 
     async def repositories(self, token: str) -> list[Repository]:
         return [

@@ -1,11 +1,20 @@
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
-from relay.continuity import briefing, collaboration, impact, privacy, tasks, workflow
+from relay.continuity import (
+    briefing,
+    collaboration,
+    external,
+    impact,
+    privacy,
+    tasks,
+    workflow,
+)
 from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.jobs import outbox
 from relay.jobs.outbox import Jobs
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["continuity"])
@@ -329,3 +338,46 @@ async def activate(access: CurrentWorkspace, case_id: uuid.UUID, jobs: Jobs) -> 
 @router.post("/cases/{case_id}/fill-from-backups")
 async def fill_from_backups(access: CurrentWorkspace, case_id: uuid.UUID) -> Detail:
     return await workflow.fill_from_backups(access, case_id)
+
+
+def _ctx(request: Request) -> outbox.JobContext:
+    state = request.app.state
+    return outbox.JobContext(http=state.http, settings=state.settings, jobs=state.jobs)
+
+
+@router.get("/external-targets")
+async def external_targets(access: CurrentWorkspace, request: Request) -> external.TargetsView:
+    return await external.targets(access, request.app.state.settings)
+
+
+@router.get("/cases/{case_id}/tasks/{task_id}/external")
+async def task_external_actions(
+    access: CurrentWorkspace, case_id: uuid.UUID, task_id: uuid.UUID
+) -> list[external.ExternalActionView]:
+    return await external.task_actions(access, case_id, task_id)
+
+
+@router.post("/cases/{case_id}/tasks/{task_id}/external", status_code=status.HTTP_201_CREATED)
+async def approve_external_action(
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    task_id: uuid.UUID,
+    body: external.ExternalActionIn,
+    request: Request,
+    jobs: Jobs,
+) -> external.ExternalActionView:
+    return await external.approve(access, case_id, task_id, body, request.app.state.settings, jobs)
+
+
+@router.post("/external-actions/{action_id}/retry")
+async def retry_external_action(
+    access: CurrentWorkspace, action_id: uuid.UUID, jobs: Jobs
+) -> external.ExternalActionView:
+    return await external.retry(access, action_id, jobs)
+
+
+@router.post("/external-actions/{action_id}/check")
+async def check_external_action(
+    access: CurrentWorkspace, action_id: uuid.UUID, request: Request
+) -> external.ExternalActionView:
+    return await external.check_status(access, action_id, _ctx(request))

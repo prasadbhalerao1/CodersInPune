@@ -74,6 +74,9 @@ class FakeExternal:
     linear_down: bool = False
     linear_data: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     linear_queries: list[str] = field(default_factory=list)
+    # Linear writes: created issues, and how many creates "time out" after being accepted.
+    linear_created: list[dict[str, Any]] = field(default_factory=list)
+    linear_create_timeouts: int = 0
     # Notion: OAuth codes -> tokens; shared objects (search), blocks per page, database rows.
     notion_codes: dict[str, str] = field(default_factory=dict)
     notion_refresh: dict[str, str] = field(default_factory=dict)
@@ -156,6 +159,32 @@ class FakeExternal:
         body = json.loads(request.content)
         query = body["query"]
         self.linear_queries.append(query)
+        if "issueCreate" in query:
+            data = body["variables"]["input"]
+            n = len(self.linear_created) + 1
+            issue = {
+                "id": f"lin-issue-{n}",
+                "identifier": f"PAY-{100 + n}",
+                "url": f"https://linear.app/acme/issue/PAY-{100 + n}",
+                "description": data["description"],
+                "state": {"type": "started"},
+            }
+            self.linear_created.append(issue)
+            if self.linear_create_timeouts:
+                self.linear_create_timeouts -= 1
+                raise httpx.ReadTimeout("accepted, but the response was lost")
+            return httpx.Response(
+                200, json={"data": {"issueCreate": {"success": True, "issue": issue}}}
+            )
+        if "issueSearch" in query:
+            marker = body["variables"]["marker"]
+            nodes = [i for i in self.linear_created if marker in i["description"]]
+            return httpx.Response(200, json={"data": {"issueSearch": {"nodes": nodes}}})
+        if "issue(id:" in query:
+            found = next(
+                (i for i in self.linear_created if i["id"] == body["variables"]["id"]), None
+            )
+            return httpx.Response(200, json={"data": {"issue": found}})
         if "organization" in query:
             return httpx.Response(
                 200,

@@ -34,6 +34,8 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  ExternalActionView,
+  ExternalTargetsView,
   IdentityConflict,
   RoleView,
   PrivacyView,
@@ -250,6 +252,11 @@ export const api = {
   casePrivacy: (id: string, caseId: string) =>
     relayFetch<PrivacyView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/privacy`),
   reviewInbox: (id: string) => relayFetch<ReviewItemView[]>(`${ws(id)}/review-inbox`),
+  externalTargets: (id: string) => relayFetch<ExternalTargetsView>(`${ws(id)}/external-targets`),
+  taskExternal: (id: string, caseId: string, taskId: string) =>
+    relayFetch<ExternalActionView[]>(
+      `${ws(id)}/cases/${encodeURIComponent(caseId)}/tasks/${encodeURIComponent(taskId)}/external`,
+    ),
   caseImpact: (id: string, caseId: string) =>
     relayFetch<ImpactView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/impact`),
   caseParticipants: (id: string, caseId: string) =>

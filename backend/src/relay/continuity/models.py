@@ -553,3 +553,45 @@ class CaseReviewItem(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ExternalAction(Base):
+    """A human-approved, create-only write to GitHub or Linear for a task. The approved
+    destination and content are what the executor sends, unchanged."""
+
+    __tablename__ = "external_action"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "idempotency_key"),
+        _tenant_fk(["task_id"], "continuity.case_task", "fk_external_action_task"),
+        CheckConstraint("provider IN ('github', 'linear')", name="provider"),
+        CheckConstraint(
+            "state IN ('approved', 'executing', 'succeeded', 'uncertain', 'failed')",
+            name="state",
+        ),
+        CheckConstraint("char_length(title) BETWEEN 1 AND 250", name="title_length"),
+        CheckConstraint("char_length(body) <= 20000", name="body_length"),
+        Index(None, "tenant_id", "task_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    task_id: Mapped[uuid.UUID]
+    provider: Mapped[str] = mapped_column(Text)
+    target: Mapped[str] = mapped_column(Text)
+    target_label: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    body: Mapped[str] = mapped_column(Text)
+    idempotency_key: Mapped[str] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(Text, server_default="approved")
+    attempts: Mapped[int] = mapped_column(server_default="0")
+    external_id: Mapped[str | None] = mapped_column(Text)
+    external_url: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    receipt: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'"))
+    approved_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    approved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

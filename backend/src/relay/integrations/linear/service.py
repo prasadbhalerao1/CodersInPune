@@ -309,6 +309,16 @@ async def _refresh(connection: Any, client: LinearClient, settings: Any) -> str 
     return grant.access_token
 
 
+async def usable_token(connection: Any, client: LinearClient, settings: Any) -> str | None:
+    """A current access token for an active connection (refreshed when close to expiry)."""
+    if connection.status != "active" or connection.token_ciphertext is None:
+        return None
+    token = secret_box.decrypt(settings, connection.token_ciphertext)
+    if oauth.expiring(connection):
+        token = await _refresh(connection, client, settings) or token
+    return token
+
+
 def _match(identity: LinearIdentity, people: list[Person]) -> None:
     """Suggest only; Linear emails are not proof of identity in Relay."""
     if identity.link_status in ("linked", "dismissed") or identity.decided_by is not None:

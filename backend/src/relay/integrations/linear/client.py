@@ -80,7 +80,7 @@ class LinearClient:
                 "client_id": self._s.linear_client_id,
                 "redirect_uri": self.redirect_uri,
                 "response_type": "code",
-                "scope": "read",
+                "scope": self._s.linear_oauth_scope,
                 "state": state,
                 "prompt": "consent",
             }
@@ -136,6 +136,40 @@ class LinearClient:
                 raise LinearError(401, "Linear access was revoked")
             raise LinearError(422, "Linear query failed")
         return dict(body["data"])
+
+    # ---- approved writes (create-only; see continuity.external)
+
+    async def create_issue(
+        self, token: str, team_id: str, title: str, description: str
+    ) -> dict[str, Any]:
+        data = await self._query(
+            token,
+            "mutation($input: IssueCreateInput!) { issueCreate(input: $input) "
+            "{ success issue { id identifier url } } }",
+            {"input": {"teamId": team_id, "title": title, "description": description}},
+        )
+        result = data["issueCreate"]
+        if not result.get("success"):
+            raise LinearError(422, "Linear did not create the issue")
+        return dict(result["issue"])
+
+    async def find_issue(self, token: str, marker: str) -> dict[str, Any] | None:
+        """An issue whose description carries `marker` (duplicate prevention)."""
+        data = await self._query(
+            token,
+            "query($marker: String!) { issueSearch: issues(first: 5, "
+            "filter: { description: { contains: $marker } }) { nodes { id identifier url } } }",
+            {"marker": marker},
+        )
+        nodes = data["issueSearch"]["nodes"]
+        return dict(nodes[0]) if nodes else None
+
+    async def issue_state(self, token: str, issue_id: str) -> str | None:
+        data = await self._query(
+            token, "query($id: String!) { issue(id: $id) { state { type } } }", {"id": issue_id}
+        )
+        issue = data.get("issue")
+        return str(issue["state"]["type"]) if issue else None
 
     async def _nodes(
         self, token: str, query: str, key: str, **variables: Any

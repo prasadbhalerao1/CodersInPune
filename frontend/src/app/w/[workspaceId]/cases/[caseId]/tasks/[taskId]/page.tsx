@@ -13,14 +13,39 @@ import { formatDateTime, PageHeader, Section } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
-import type { TaskEventView } from "@/lib/types";
+import type { ExternalActionView, TaskEventView, TaskView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { changeTaskAction, setTaskStatusAction, taskMessageAction } from "../../../actions";
 import { PRIORITY_LABEL } from "../../../labels";
 import { AssigneeSelect } from "../../tasks";
+import { ExternalPanel } from "./external";
 
 export const metadata: Metadata = { title: "Task" };
+
+async function ExternalSection({
+  workspaceId,
+  caseId,
+  task,
+  actions,
+}: {
+  workspaceId: string;
+  caseId: string;
+  task: TaskView;
+  actions: ExternalActionView[];
+}) {
+  const targets = await attempt(api.externalTargets(workspaceId));
+  if (!targets.ok) return null;
+  return (
+    <ExternalPanel
+      workspaceId={workspaceId}
+      caseId={caseId}
+      task={task}
+      targets={targets.data}
+      actions={actions}
+    />
+  );
+}
 
 function describe(e: TaskEventView): string {
   switch (e.kind) {
@@ -49,11 +74,12 @@ export default async function TaskPage({
   params,
 }: PageProps<"/w/[workspaceId]/cases/[caseId]/tasks/[taskId]">) {
   const { workspaceId, caseId, taskId } = await params;
-  const [detail, caseDetail, members, teams] = await Promise.all([
+  const [detail, caseDetail, members, teams, actions] = await Promise.all([
     attempt(api.caseTask(workspaceId, caseId, taskId)),
     attempt(api.getCase(workspaceId, caseId)),
     attempt(api.members(workspaceId)),
     attempt(api.listTeams(workspaceId)),
+    attempt(api.taskExternal(workspaceId, caseId, taskId)),
   ]);
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
   if (!caseDetail.ok) return <ApiErrorNotice error={caseDetail.error} />;
@@ -168,6 +194,15 @@ export default async function TaskPage({
                 </ActionForm>
               </details>
             </div>
+          ) : null}
+
+          {manage ? (
+            <ExternalSection
+              workspaceId={workspaceId}
+              caseId={caseId}
+              task={t}
+              actions={actions.ok ? actions.data : []}
+            />
           ) : null}
 
           <Section

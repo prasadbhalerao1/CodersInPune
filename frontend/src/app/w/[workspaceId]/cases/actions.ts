@@ -560,3 +560,43 @@ export async function caseShortcutAction(
 ): Promise<ActionState> {
   return mutate(workspaceId, () => api.send(workspaceId, "POST", casePath(caseId, `/${command}`)));
 }
+
+export async function approveExternalAction(
+  workspaceId: string,
+  caseId: string,
+  taskId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const [provider, ...rest] = text(fd, "target").split(":");
+  const target = rest.join(":");
+  if (!target) return { error: "Choose where to create the issue." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", casePath(caseId, `/tasks/${taskId}/external`), {
+      provider,
+      target,
+      title: text(fd, "title"),
+      body: text(fd, "body"),
+    }),
+  );
+}
+
+export async function retryExternalAction(
+  workspaceId: string,
+  actionId: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/external-actions/${encodeURIComponent(actionId)}/retry`),
+  );
+}
+
+export async function checkExternalAction(
+  workspaceId: string,
+  actionId: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/external-actions/${encodeURIComponent(actionId)}/check`),
+  );
+}

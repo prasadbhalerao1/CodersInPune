@@ -1515,3 +1515,28 @@ export type PrivacyView = {
   pending: number;
   can_manage: boolean;
 };
+
+export type ExternalTargetsView = {
+  github_enabled: boolean;
+  linear_enabled: boolean;
+  github_blocker: string | null;
+  linear_blocker: string | null;
+  targets: { provider: "github" | "linear"; target: string; label: string }[];
+};
+
+export type ExternalActionView = {
+  id: string;
+  task_id: string;
+  provider: "github" | "linear";
+  target_label: string;
+  title: string;
+  body: string;
+  state: "approved" | "executing" | "succeeded" | "uncertain" | "failed";
+  attempts: number;
+  external_id: string | null;
+  external_url: string | null;
+  error: string | null;
+  receipt: { recovered_existing?: boolean; [key: string]: unknown };
+  approved_by_name: string | null;
+  approved_at: string;
+};
