@@ -49,3 +49,22 @@ export async function transferOwnershipAction(
     api.send(workspaceId, "POST", "/ownership/transfer", { user_id: userId }),
   );
 }
+
+export async function scheduleDeletionAction(
+  workspaceId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const name = String(fd.get("confirm_name") ?? "").trim();
+  if (!name) return { error: "Type the workspace name to confirm." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", "/deletion", { confirm_name: name }),
+  );
+}
+
+export async function cancelDeletionAction(
+  workspaceId: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () => api.send(workspaceId, "DELETE", "/deletion"));
+}

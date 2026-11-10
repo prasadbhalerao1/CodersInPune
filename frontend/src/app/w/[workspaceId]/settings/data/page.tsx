@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
-import { PageHeader, Section } from "@/components/page";
+import { formatDateTime, PageHeader, Section } from "@/components/page";
 import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
 
 import { SettingsNav } from "../settings-nav";
-import { applyRetentionAction, setRetentionAction, transferOwnershipAction } from "./actions";
+import {
+  applyRetentionAction,
+  cancelDeletionAction,
+  scheduleDeletionAction,
+  setRetentionAction,
+  transferOwnershipAction,
+} from "./actions";
 
 export const metadata: Metadata = { title: "Data & privacy" };
 
@@ -178,6 +184,56 @@ export default async function DataPage({ params }: PageProps<"/w/[workspaceId]/s
               </SubmitButton>
             </ActionForm>
           </Section>
+        ) : null}
+
+        {owner ? (
+          <section id="delete" className="border-destructive/40 scroll-mt-6 rounded-lg border p-4">
+            <h2 className="font-semibold">Delete workspace</h2>
+            {workspace.data.deletion_scheduled_for ? (
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                <p className="flex-1">
+                  Scheduled for permanent deletion on{" "}
+                  <strong>{formatDateTime(workspace.data.deletion_scheduled_for)}</strong>. Until
+                  then everything keeps working and you can cancel.
+                </p>
+                <ActionForm action={cancelDeletionAction.bind(null, workspaceId)}>
+                  <SubmitButton size="sm" variant="outline" pendingLabel="Cancelling…">
+                    Cancel deletion
+                  </SubmitButton>
+                </ActionForm>
+              </div>
+            ) : (
+              <>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Everything in this workspace, including its audit log, is permanently deleted
+                  30 days after you confirm. Export first if you need a copy. You can cancel at
+                  any time during those 30 days.
+                </p>
+                <ActionForm
+                  action={scheduleDeletionAction.bind(null, workspaceId)}
+                  className="mt-3 flex-row flex-wrap items-end gap-2"
+                >
+                  <Field label={`Type “${workspace.data.name}” to confirm`} htmlFor="confirm-name">
+                    <input
+                      id="confirm-name"
+                      name="confirm_name"
+                      required
+                      autoComplete="off"
+                      className={cn(inputClass, "w-64")}
+                    />
+                  </Field>
+                  <SubmitButton
+                    size="sm"
+                    variant="destructive"
+                    pendingLabel="Scheduling…"
+                    confirm="Schedule this workspace for permanent deletion in 30 days?"
+                  >
+                    Delete workspace
+                  </SubmitButton>
+                </ActionForm>
+              </>
+            )}
+          </section>
         ) : null}
       </div>
     </div>

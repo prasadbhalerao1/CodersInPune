@@ -103,6 +103,15 @@ docker compose -f deploy/docker-compose.prod.yml up -d
 Also keep a secure copy of `RELAY_INTEGRATION_ENCRYPTION_KEY`: without it, stored Linear
 and Notion tokens can't be decrypted and those integrations must be reconnected.
 
+### Deleted workspaces
+
+An owner can schedule deletion in Settings → Data & privacy; it can be cancelled for 30
+days. Purge due workspaces daily (host cron) as the owner role:
+
+```sh
+docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.production   run --rm migrate relay-purge-workspaces
+```
+
 ## 6. Using a managed Postgres instead
 
 Create the two roles once as an administrator (the SQL in `db-init/01-roles.sh`), remove

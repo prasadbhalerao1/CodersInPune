@@ -152,6 +152,9 @@ app process can't change the schema.
 Run the workflow before deploying any release that adds a migration. Migrations are
 expand/contract, so the running version keeps working while they apply.
 
+The same secret powers [`purge.yml`](.github/workflows/purge.yml), which runs daily and
+permanently deletes workspaces whose 30-day deletion grace period has ended.
+
 On a paid Render API you can instead set `preDeployCommand: alembic upgrade head`, but that
 puts the owner URL into the API's environment. The workflow is the stricter option.
 

@@ -102,7 +102,9 @@ class WorkspaceCreationRequest(Base):
     idempotency_key: Mapped[str] = mapped_column(Text, primary_key=True)
     # Deferred so the claim can be inserted before the tenant row in one transaction.
     created_tenant_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("platform.tenant.id", deferrable=True, initially="DEFERRED")
+        ForeignKey(
+            "platform.tenant.id", ondelete="CASCADE", deferrable=True, initially="DEFERRED"
+        )
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

@@ -1,0 +1,29 @@
+# Permanently deletes workspaces whose 30-day deletion grace period has ended.
+# Runs as the owner role (the app role cannot delete audit history). Does nothing until the
+# environment secret RELAY_MIGRATION_DATABASE_URL exists.
+name: Purge deleted workspaces
+
+on:
+  schedule:
+    - cron: "40 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RELAY_MIGRATION_DATABASE_URL: ${{ secrets.RELAY_MIGRATION_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        if: env.RELAY_MIGRATION_DATABASE_URL != ''
+      - uses: astral-sh/setup-uv@v10
+        if: env.RELAY_MIGRATION_DATABASE_URL != ''
+      - if: env.RELAY_MIGRATION_DATABASE_URL != ''
+        run: uv sync --frozen --no-dev && uv run --no-sync relay-purge-workspaces

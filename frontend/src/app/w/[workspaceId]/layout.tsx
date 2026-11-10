@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { MobileSearchButton } from "@/components/command-menu";
+import { formatDateTime } from "@/components/page";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { WorkspaceContextBridge } from "@/components/workspace-context";
 import { api } from "@/lib/relay-api";
@@ -12,7 +14,7 @@ async function WorkspaceChrome({ params }: { params: Promise<{ workspaceId: stri
   // layout. Chrome is optional; the page itself explains a missing or forbidden workspace.
   const workspace = await api.getWorkspace(workspaceId).catch(() => null);
   if (!workspace) return null;
-  const { name, role } = workspace;
+  const { name, role, deletion_scheduled_for: deletionAt } = workspace;
   return (
     <>
       <WorkspaceContextBridge workspaceId={workspaceId} name={name} role={role as WorkspaceRole} />
@@ -32,6 +34,17 @@ async function WorkspaceChrome({ params }: { params: Promise<{ workspaceId: stri
         </details>
         <MobileSearchButton />
       </div>
+      {deletionAt ? (
+        <p
+          role="status"
+          className="border-b border-amber-600/20 bg-amber-50 px-4 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+        >
+          This workspace will be permanently deleted on {formatDateTime(deletionAt)}.{" "}
+          <Link href={`/w/${workspaceId}/settings/data#delete`} className="font-medium underline">
+            {role === "owner" ? "Cancel deletion or export data" : "Export what you need"}
+          </Link>
+        </p>
+      ) : null}
     </>
   );
 }

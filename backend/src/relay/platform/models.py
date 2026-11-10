@@ -36,6 +36,9 @@ class Tenant(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
     name: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Owner scheduled deletion; purged by `relay-purge-workspaces` after the grace period.
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deletion_requested_by: Mapped[uuid.UUID | None]
 
 
 class TenantProbe(Base):

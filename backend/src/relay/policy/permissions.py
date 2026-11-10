@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 class Permission(StrEnum):
     WORKSPACE_CREATE = "workspace.create"
     WORKSPACE_READ = "workspace.read"
+    WORKSPACE_DELETE = "workspace.delete"
     AUDIT_READ = "audit.read"
     DIRECTORY_READ = "directory.read"
     DIRECTORY_MANAGE = "directory.manage"
@@ -82,7 +83,12 @@ _MANAGE: Final = frozenset(
 ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
     "owner": _READ
     | _MANAGE
-    | {Permission.AUDIT_READ, Permission.INSIGHTS_READ, Permission.AI_READ},
+    | {
+        Permission.AUDIT_READ,
+        Permission.INSIGHTS_READ,
+        Permission.AI_READ,
+        Permission.WORKSPACE_DELETE,
+    },
     "admin": _READ
     | _MANAGE
     | {Permission.AUDIT_READ, Permission.INSIGHTS_READ, Permission.AI_READ},

@@ -4,7 +4,12 @@ export type Criticality = "critical" | "high" | "standard" | "low";
 export type Role = "primary" | "co_owner" | "backup" | "temporary";
 export type Severity = "high" | "medium" | "low";
 
-export type WorkspaceView = { id: string; name: string; role: string };
+export type WorkspaceView = {
+  id: string;
+  name: string;
+  role: string;
+  deletion_scheduled_for: string | null;
+};
 
 export type AssigneeView = {
   type: "person" | "team";

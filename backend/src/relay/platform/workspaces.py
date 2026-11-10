@@ -1,6 +1,7 @@
 """Workspace endpoints: list mine, create one, read one through verified membership."""
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 import procrastinate
@@ -17,6 +18,7 @@ from relay.identity.models import ACTIVE, Membership, UserAccount, WorkspaceCrea
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import CurrentWorkspace, WorkspaceAccess
 from relay.jobs import outbox
+from relay.platform import deletion
 from relay.platform.models import Tenant
 from relay.policy.permissions import Permission, authorize, authorize_principal
 from relay.shared.api_types import StrictInput
@@ -39,10 +41,19 @@ class WorkspaceView(BaseModel):
     id: uuid.UUID
     name: str
     role: str
+    deletion_scheduled_for: AwareDatetime | None = None
+
+
+def _scheduled_for(requested_at: datetime | None) -> datetime | None:
+    return requested_at + deletion.GRACE if requested_at else None
 
 
 class WorkspaceIn(StrictInput):
     name: WorkspaceName
+
+
+class DeletionIn(StrictInput):
+    confirm_name: WorkspaceName
 
 
 async def _resolve_user_id(session: AsyncSession, workos_user_id: str) -> uuid.UUID:
@@ -156,7 +167,7 @@ async def list_my_workspaces(identity: Identity, request: Request) -> list[Works
     """Workspaces where the caller has an active membership. No tenant context needed."""
     async with unit_of_work(request.app.state.session_factory, None, identity.workos_user_id) as s:
         rows = await s.execute(
-            select(Tenant.id, Tenant.name, Membership.role)
+            select(Tenant.id, Tenant.name, Membership.role, Tenant.deletion_requested_at)
             .join(Membership, Membership.tenant_id == Tenant.id)
             .join(UserAccount, UserAccount.id == Membership.user_id)
             .where(
@@ -165,7 +176,12 @@ async def list_my_workspaces(identity: Identity, request: Request) -> list[Works
             )
             .order_by(Tenant.name, Tenant.id)
         )
-        return [WorkspaceView(id=r[0], name=r[1], role=r[2]) for r in rows]
+        return [
+            WorkspaceView(
+                id=r[0], name=r[1], role=r[2], deletion_scheduled_for=_scheduled_for(r[3])
+            )
+            for r in rows
+        ]
 
 
 @router.post(
@@ -193,12 +209,32 @@ async def create_my_workspace(
 async def read_workspace(access: WorkspaceAccess) -> WorkspaceView:
     authorize(access, Permission.WORKSPACE_READ)
     tenant = await access.session.get_one(Tenant, access.tenant_id)
-    return WorkspaceView(id=tenant.id, name=tenant.name, role=access.role)
+    return WorkspaceView(
+        id=tenant.id,
+        name=tenant.name,
+        role=access.role,
+        deletion_scheduled_for=_scheduled_for(tenant.deletion_requested_at),
+    )
 
 
 @router.get("/{workspace_id}")
 async def get_workspace(access: CurrentWorkspace) -> WorkspaceView:
     return await read_workspace(access)
+
+
+@router.get("/{workspace_id}/deletion")
+async def get_deletion(access: CurrentWorkspace) -> deletion.DeletionView:
+    return await deletion.deletion_status(access)
+
+
+@router.post("/{workspace_id}/deletion")
+async def schedule_deletion(body: DeletionIn, access: CurrentWorkspace) -> deletion.DeletionView:
+    return await deletion.schedule_deletion(access, body.confirm_name)
+
+
+@router.delete("/{workspace_id}/deletion")
+async def cancel_deletion(access: CurrentWorkspace) -> deletion.DeletionView:
+    return await deletion.cancel_deletion(access)
 
 
 @router.get("/{workspace_id}/audit-events")
