@@ -1141,6 +1141,7 @@ export type FollowUpView = {
 export type PolicyView = {
   critical_requires_backup: boolean;
   knowledge_review_days: number;
+  retention_days: number;
   updated_by_name: string | null;
   updated_at: string | null;
 };

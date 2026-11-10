@@ -4,6 +4,7 @@
   (and single-holder critical coverage is flagged). Off: it is a medium risk like any
   other missing backup.
 - knowledge_review_days: how long knowledge stays "fresh" after a review.
+- retention_days: how long operational records are kept (governance.administration).
 """
 
 import uuid
@@ -27,6 +28,7 @@ from relay.shared.api_types import StrictInput
 class Policy:
     critical_requires_backup: bool = True
     knowledge_review_days: int = 90
+    retention_days: int = 365
 
 
 DEFAULT = Policy()
@@ -35,6 +37,7 @@ DEFAULT = Policy()
 class PolicyView(BaseModel):
     critical_requires_backup: bool
     knowledge_review_days: int
+    retention_days: int
     updated_by_name: str | None
     updated_at: datetime | None
 
@@ -42,6 +45,7 @@ class PolicyView(BaseModel):
 class PolicyUpdate(StrictInput):
     critical_requires_backup: bool | None = None
     knowledge_review_days: Annotated[int, Field(ge=7, le=730)] | None = None
+    retention_days: Annotated[int, Field(ge=30, le=3650)] | None = None
 
 
 async def current(session: AsyncSession) -> Policy:
@@ -49,7 +53,7 @@ async def current(session: AsyncSession) -> Policy:
     row = await session.scalar(select(WorkspacePolicy))
     if row is None:
         return DEFAULT
-    return Policy(row.critical_requires_backup, row.knowledge_review_days)
+    return Policy(row.critical_requires_backup, row.knowledge_review_days, row.retention_days)
 
 
 async def _view(access: WorkspaceAccess, row: WorkspacePolicy | None) -> PolicyView:
@@ -57,6 +61,7 @@ async def _view(access: WorkspaceAccess, row: WorkspacePolicy | None) -> PolicyV
         return PolicyView(
             critical_requires_backup=DEFAULT.critical_requires_backup,
             knowledge_review_days=DEFAULT.knowledge_review_days,
+            retention_days=DEFAULT.retention_days,
             updated_by_name=None,
             updated_at=None,
         )
@@ -68,6 +73,7 @@ async def _view(access: WorkspaceAccess, row: WorkspacePolicy | None) -> PolicyV
     return PolicyView(
         critical_requires_backup=row.critical_requires_backup,
         knowledge_review_days=row.knowledge_review_days,
+        retention_days=row.retention_days,
         updated_by_name=name or "Former member",
         updated_at=row.updated_at,
     )
@@ -97,6 +103,7 @@ async def update_policy(access: WorkspaceAccess, data: PolicyUpdate) -> PolicyVi
             tenant_id=access.tenant_id,
             critical_requires_backup=DEFAULT.critical_requires_backup,
             knowledge_review_days=DEFAULT.knowledge_review_days,
+            retention_days=DEFAULT.retention_days,
             updated_by=access.user_id,
         )
         access.session.add(row)

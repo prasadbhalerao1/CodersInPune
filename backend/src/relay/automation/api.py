@@ -1,8 +1,11 @@
 import uuid
+from typing import Any
 
 from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
 
 from relay.automation import service as svc
+from relay.governance import administration
 from relay.governance import service as governance
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
@@ -73,3 +76,23 @@ async def update_policy_tier(
     access: CurrentWorkspace, criticality: governance.Criticality, body: governance.TierUpdate
 ) -> list[governance.TierView]:
     return await governance.update_tier(access, criticality, body)
+
+
+@router.get("/export")
+async def export_workspace(access: CurrentWorkspace) -> dict[str, Any]:
+    return await administration.export_workspace(access)
+
+
+@router.get("/audit/export.csv", response_class=PlainTextResponse)
+async def export_audit(access: CurrentWorkspace) -> str:
+    return await administration.export_audit_csv(access)
+
+
+@router.post("/retention/apply")
+async def apply_retention(access: CurrentWorkspace) -> administration.RetentionResult:
+    return await administration.apply_retention(access)
+
+
+@router.post("/ownership/transfer", status_code=204)
+async def transfer_ownership(access: CurrentWorkspace, body: administration.TransferIn) -> None:
+    await administration.transfer_ownership(access, body)

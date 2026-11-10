@@ -45,6 +45,9 @@ Kind = Literal[
     "project_overview",
 ]
 Visibility = Literal["workspace", "managers"]
+Classification = Literal["public", "internal", "confidential", "restricted"]
+# Classifications that may only be seen by managers (also a database check).
+SENSITIVE = ("confidential", "restricted")
 Freshness = Literal["fresh", "stale"]
 # Lifecycle shown to people: review_state is stored; the rest is derived.
 State = Literal["draft", "verified", "disputed", "stale", "expired", "inaccessible", "archived"]
@@ -66,6 +69,7 @@ class KnowledgeGovernance(StrictInput):
     decision_rationale: Body | None = None
     decision_approver: Name | None = None
     decided_at: AwareDatetime | None = None
+    classification: Classification | None = None
 
 
 class KnowledgeIn(KnowledgeGovernance):
@@ -123,6 +127,7 @@ class KnowledgeView(BaseModel):
     disputed_by_name: str | None = None
     disputed_at: datetime | None = None
     can_verify: bool = False
+    classification: str = "internal"
 
 
 class KnowledgeCoverageView(BaseModel):
@@ -247,6 +252,7 @@ def _view(
         disputed_by_name=names.get(item.disputed_by) if item.disputed_by else None,
         disputed_at=item.disputed_at,
         can_verify=can_verify(access, item),
+        classification=item.classification,
         id=item.id,
         responsibility_id=item.responsibility_id,
         responsibility_name=responsibility_name,
@@ -353,7 +359,8 @@ async def add_knowledge(
     access: WorkspaceAccess, responsibility_id: uuid.UUID, data: KnowledgeIn
 ) -> KnowledgeView:
     authorize(access, Permission.KNOWLEDGE_WRITE)
-    if data.visibility == "managers":
+    sensitive = data.classification in SENSITIVE
+    if data.visibility == "managers" or sensitive:
         authorize(access, Permission.RESPONSIBILITY_MANAGE)
     await catalog.require_active_responsibility(access, responsibility_id)
     if not data.body and not data.url:
@@ -368,7 +375,8 @@ async def add_knowledge(
         title=data.title,
         body=data.body or None,
         url=data.url or None,
-        visibility=data.visibility,
+        visibility="managers" if sensitive else data.visibility,
+        classification=data.classification or "internal",
         author_user_id=access.user_id,
         last_reviewed_by=access.user_id,
         last_reviewed_at=_now(),
@@ -404,8 +412,16 @@ async def update_knowledge(
     changes = data.model_dump(exclude_unset=True)
     if item.origin != "person" and {"title", "body", "url", "kind"} & changes.keys():
         raise ApiError(409, "edit_in_source", "This page is synced from Notion; edit it there.")
-    if changes.get("visibility") == "managers":
+    if changes.get("visibility") == "managers" or changes.get("classification") in SENSITIVE:
         authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    if changes.get("classification") in SENSITIVE:
+        changes["visibility"] = "managers"  # sensitive knowledge is managers-only
+    elif changes.get("visibility") == "workspace" and item.classification in SENSITIVE:
+        raise ApiError(
+            409, "classified", "Lower the classification before sharing it with everyone."
+        )
+    if changes.get("classification") is None:
+        changes.pop("classification", None)
     await _check_governance(access, changes, item)
     change_note = changes.pop("change_note", None)
     for field, value in changes.items():

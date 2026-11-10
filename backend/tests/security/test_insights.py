@@ -171,8 +171,11 @@ async def test_trend_metrics_show_definitions_and_denominators(ws: Ws) -> None:
         "agent_acceptance",
     ]
     for m in view["metrics"]:
-        assert m["definition"] and m["limitations"] and m["coverage"]
-        assert m["denominator"] == 0 and m["value"] is None  # no data: no invented number
+        assert m["definition"]
+        assert m["limitations"]
+        assert m["coverage"]
+        assert m["denominator"] == 0
+        assert m["value"] is None
     snap = await ws.call("POST", "/insights/snapshots", 201, params={"days": 30})
     assert [s["id"] for s in await ws.call("GET", "/insights/snapshots")] == [snap["id"]]
     await ws.call("GET", "/insights/metrics", 422, params={"days": 2})

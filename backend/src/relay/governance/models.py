@@ -32,6 +32,7 @@ class WorkspacePolicy(Base):
         UniqueConstraint("tenant_id", "id"),
         UniqueConstraint("tenant_id"),
         CheckConstraint("knowledge_review_days BETWEEN 7 AND 730", name="knowledge_review_days"),
+        CheckConstraint("retention_days BETWEEN 30 AND 3650", name="retention_days"),
         {"schema": SCHEMA},
     )
 
@@ -39,6 +40,8 @@ class WorkspacePolicy(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
     critical_requires_backup: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
     knowledge_review_days: Mapped[int] = mapped_column(Integer, server_default="90")
+    # How long operational records (read notifications, sync and AI step history) are kept.
+    retention_days: Mapped[int] = mapped_column(Integer, server_default="365")
     updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

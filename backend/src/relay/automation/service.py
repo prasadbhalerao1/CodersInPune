@@ -37,6 +37,7 @@ from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibil
 from relay.catalog.service import active_at
 from relay.continuity.models import OPEN_STATUSES, CaseTask, ContinuityCase
 from relay.directory.models import Person, Team
+from relay.governance import administration
 from relay.governance import service as governance
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
@@ -638,6 +639,9 @@ async def handle_run(session: AsyncSession, event: OutboxEvent, ctx: outbox.JobC
     run.finished_at = func.now()
     rule.last_run_at, rule.last_status = now, run.status
     rule.last_error = run.error
+    if trigger == "schedule":
+        # Scheduled runs are the workspace's heartbeat: apply the retention policy too.
+        await administration.purge(session, now)
     if trigger == "schedule" and rule.enabled and ctx.jobs is not None:
         await _queue(session, ctx.jobs, rule, "schedule", at=now + EVERY)
 

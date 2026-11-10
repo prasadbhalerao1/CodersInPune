@@ -316,6 +316,14 @@ class KnowledgeItem(Base):
         CheckConstraint(
             "applies_to IS NULL OR char_length(applies_to) <= 500", name="applies_to_length"
         ),
+        CheckConstraint(
+            "classification IN ('public', 'internal', 'confidential', 'restricted')",
+            name="classification",
+        ),
+        CheckConstraint(
+            "classification NOT IN ('confidential', 'restricted') OR visibility = 'managers'",
+            name="classified_visibility",
+        ),
         CheckConstraint("char_length(title) BETWEEN 1 AND 200", name="title_length"),
         CheckConstraint("body IS NULL OR char_length(body) <= 20000", name="body_length"),
         CheckConstraint("url IS NULL OR url ~ '^https?://'", name="url"),
@@ -362,6 +370,8 @@ class KnowledgeItem(Base):
     dispute_reason: Mapped[str | None] = mapped_column(Text)
     disputed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("identity.user_account.id"))
     disputed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Confidential and restricted knowledge is managers-only (database check).
+    classification: Mapped[str] = mapped_column(Text, server_default="internal")
 
 
 class KnowledgeVersion(Base):

@@ -6,6 +6,7 @@ const TABS = [
   { key: "general", label: "Policies", path: "", admin: true },
   { key: "governance", label: "Types & tiers", path: "/governance", admin: false },
   { key: "roles", label: "Roles & access", path: "/roles", admin: false },
+  { key: "data", label: "Data & privacy", path: "/data", admin: false },
   { key: "members", label: "Members", path: "/members", admin: false, absolute: true },
   { key: "notifications", label: "Notifications", path: "/notifications", admin: false },
   {

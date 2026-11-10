@@ -134,7 +134,15 @@ class PermissionDenied(ApiError):
     """403 that the API layer also records as an `authorization.denied` audit event."""
 
     def __init__(self, access: WorkspaceAccess, permission: str) -> None:
-        super().__init__(403, "forbidden", "You do not have permission to do this.")
+        roles = [
+            r.replace("_", " ") for r, perms in ROLE_PERMISSIONS.items() if permission in perms
+        ]
+        hint = (
+            f" It needs one of these roles: {', '.join(roles)}. Ask a workspace owner or admin."
+            if roles
+            else ""
+        )
+        super().__init__(403, "forbidden", f"You do not have permission to do this.{hint}")
         self.tenant_id: uuid.UUID = access.tenant_id
         self.user_id: uuid.UUID = access.user_id
         self.role = access.role
