@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from relay.audit import service as audit
 from relay.config import Settings
 from relay.continuity import service as continuity
+from relay.continuity.models import CaseReadinessCriterion, CaseTask
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import capabilities as caps
 from relay.intelligence import deterministic
@@ -201,9 +202,12 @@ def store_claims(
             )
 
 
+def _norm(title: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", title.lower()))
+
+
 def fingerprint(kind: str, title: str) -> str:
-    norm = " ".join(re.findall(r"[a-z0-9]+", title.lower()))
-    return hashlib.sha256(f"{kind}:{norm}".encode()).hexdigest()
+    return hashlib.sha256(f"{kind}:{_norm(title)}".encode()).hexdigest()
 
 
 def cited_revision(pool: Pool, refs: list[str]) -> str:
@@ -221,14 +225,31 @@ async def store_proposals(
     pool: Pool,
     ids: dict[str, uuid.UUID],
 ) -> dict[str, int]:
-    """Validated proposals; a rejected one is not proposed again for the same evidence."""
+    """Validated proposals; a rejected one is not proposed again for the same evidence,
+    and a task or readiness check the case already has is never proposed again."""
     assert run.case_id is not None
-    counts = {"kept": 0, "invalid": 0, "suppressed": 0}
+    counts = {"kept": 0, "invalid": 0, "suppressed": 0, "already_on_case": 0}
+    existing = {
+        ("task", _norm(t))
+        for t in await session.scalars(
+            select(CaseTask.title).where(CaseTask.case_id == run.case_id)
+        )
+    } | {
+        ("readiness_criterion", _norm(t))
+        for t in await session.scalars(
+            select(CaseReadinessCriterion.title).where(
+                CaseReadinessCriterion.case_id == run.case_id
+            )
+        )
+    }
     for d in drafts:
         refs = valid_refs(pool, d.evidence)
         title = " ".join(d.title.split())
         if refs is None or not refs or not title:
             counts["invalid"] += 1
+            continue
+        if (d.type, _norm(title)) in existing:
+            counts["already_on_case"] += 1
             continue
         fp = fingerprint(d.type, title)
         revision = cited_revision(pool, refs)
@@ -462,8 +483,12 @@ async def _store_analysis(
     return {
         "claims": len(outcome.claims),
         "rejected": sum(outcome.rejected.values()),
+        # Why claims were dropped (e.g. rejected_uncited): enum names only.
+        **{f"rejected_{reason}": n for reason, n in outcome.rejected.items()},
         "proposals": counts["kept"],
         "suppressed": counts["suppressed"],
+        "invalid_proposals": counts["invalid"],
+        "already_on_case": counts["already_on_case"],
     }
 
 
@@ -483,13 +508,20 @@ STEP_KINDS: dict[str, StepKind] = {}
 async def _brief(session: AsyncSession, run: AgentRun) -> str:
     """Extra context: what earlier steps already recorded, so the model adds, not repeats."""
     known = list(
-        await session.scalars(
-            select(Claim.text).where(Claim.run_id == run.id).order_by(Claim.created_at).limit(40)
+        await session.execute(
+            select(Claim.text, func.array_agg(Evidence.ref))
+            .join(ClaimEvidence, ClaimEvidence.claim_id == Claim.id)
+            .join(Evidence, Evidence.id == ClaimEvidence.evidence_id)
+            .where(Claim.run_id == run.id)
+            .group_by(Claim.id, Claim.text, Claim.created_at)
+            .order_by(Claim.created_at)
+            .limit(40)
         )
     )
     brief = str(run.checkpoint.get("brief", ""))
     if known:
-        lines = [f"- {t[:200]}" for t in known]
+        # Refs travel with each point so proposals built on them can cite the same evidence.
+        lines = [f"- {text[:200]} [{', '.join(sorted(set(refs)))}]" for text, refs in known]
         brief = "\n".join(
             [brief, "Already recorded (do not repeat these; add only new, cited points):", *lines]
         )

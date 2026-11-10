@@ -41,7 +41,10 @@ class ProposalDraft(BaseModel):
     ]
     title: str = Field(max_length=200)
     detail: str = Field(default="", max_length=4000, description="Body, steps or message text.")
-    evidence: list[str] = Field(default_factory=list, description="Supporting evidence refs.")
+    evidence: list[str] = Field(
+        default_factory=list,
+        description="Evidence refs (e.g. 'E3') it rests on. Proposals without refs are discarded.",
+    )
     confidence: Literal["high", "medium", "low"] = "medium"
 
 
@@ -91,7 +94,9 @@ FOCUS: dict[str, str] = {
     "handover_planner": (
         "Propose concrete handover steps: 'task' (an action for a person), "
         "'readiness_criterion' (a check before the case can complete) and 'exception' (a "
-        "responsibility that cannot be handed over now, with why)."
+        "responsibility that cannot be handed over now, with why). Don't repeat tasks the "
+        "evidence shows already exist; fill the gaps around them. Every proposal cites the "
+        "evidence refs it rests on."
     ),
     "continuity_monitor": "Find continuity risks: single points of failure and silent gaps.",
     "readiness_verifier": (
