@@ -30,6 +30,7 @@ from relay.catalog.models import OwnershipAssignment, Responsibility
 from relay.directory.models import Person
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
+from relay.integrations import connectors
 from relay.integrations.linear.client import LinearClient, LinearError, parse_when
 from relay.integrations.linear.models import (
     LinearConnection,
@@ -518,7 +519,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         )
 
 
-outbox.register(SYNC_EVENT, handle_sync)
+outbox.register(SYNC_EVENT, connectors.recorded("linear", "connection_ref", handle_sync))
 
 
 # ---------------------------------------------------------------- reads and review

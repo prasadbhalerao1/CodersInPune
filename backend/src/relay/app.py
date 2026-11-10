@@ -19,6 +19,7 @@ from relay.identity.tokens import WorkOSTokenVerifier
 from relay.identity.workos_api import WorkOSClient
 from relay.imports import api as imports_api
 from relay.insights import api as insights_api
+from relay.integrations import api as integrations_api
 from relay.integrations.github import api as github_api
 from relay.integrations.github.client import GitHubClient
 from relay.integrations.linear import api as linear_api
@@ -94,6 +95,7 @@ def create_app(
     register_error_handlers(app)
     app.add_exception_handler(PermissionDenied, _handle_permission_denied)
     app.include_router(health.router)
+    app.include_router(integrations_api.router)
     app.include_router(workspaces.router)
     app.include_router(catalog_api.router)
     app.include_router(assets_api.router)

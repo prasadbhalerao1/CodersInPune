@@ -27,6 +27,7 @@ from relay.catalog import service as catalog
 from relay.catalog.models import KnowledgeItem, Responsibility
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
+from relay.integrations import connectors
 from relay.integrations.notion.client import (
     NotionClient,
     NotionError,
@@ -632,7 +633,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         )
 
 
-outbox.register(SYNC_EVENT, handle_sync)
+outbox.register(SYNC_EVENT, connectors.recorded("notion", "connection_ref", handle_sync))
 
 
 # ---------------------------------------------------------------- reads

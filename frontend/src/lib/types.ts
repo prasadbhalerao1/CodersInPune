@@ -1540,3 +1540,31 @@ export type ExternalActionView = {
   approved_by_name: string | null;
   approved_at: string;
 };
+
+export type ConnectorHealth =
+  | "healthy"
+  | "stale"
+  | "partial"
+  | "attention_required"
+  | "rate_limited"
+  | "permission_changed"
+  | "paused"
+  | "revoked"
+  | "failed";
+
+export type ConnectorView = {
+  provider: "github" | "linear" | "notion";
+  ref: string;
+  name: string;
+  health: ConnectorHealth;
+  advice: string;
+  last_synced_at: string | null;
+  last_success_at: string | null;
+  failure_rate: number | null;
+  runs: {
+    status: "ok" | "partial" | "error" | "skipped";
+    error: string | null;
+    duration_ms: number;
+    finished_at: string;
+  }[];
+};

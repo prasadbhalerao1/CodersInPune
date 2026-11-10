@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Text,
     UniqueConstraint,
@@ -86,3 +87,27 @@ class CriticalityPolicy(Base):
     requires_accountable_contact: Mapped[bool] = mapped_column(Boolean)
     updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConnectorRun(Base):
+    """One sync run of a connector: the history behind its health."""
+
+    __tablename__ = "connector_run"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("provider IN ('github', 'linear', 'notion')", name="provider"),
+        CheckConstraint("status IN ('ok', 'partial', 'error', 'skipped')", name="status"),
+        Index(None, "tenant_id", "connection_ref"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    provider: Mapped[str] = mapped_column(Text)
+    connection_ref: Mapped[uuid.UUID]
+    status: Mapped[str] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    duration_ms: Mapped[int] = mapped_column(Integer, server_default="0")
+    finished_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

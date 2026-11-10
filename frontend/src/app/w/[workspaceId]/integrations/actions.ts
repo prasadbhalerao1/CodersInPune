@@ -144,3 +144,32 @@ export async function bulkSuggestionsAction(
     throw error;
   }
 }
+
+export async function setConnectorPausedAction(
+  workspaceId: string,
+  provider: "github" | "linear" | "notion",
+  ref: string,
+  paused: boolean,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(
+      workspaceId,
+      "POST",
+      `/integrations/${provider}/${ref}/${paused ? "pause" : "resume"}`,
+    ),
+  );
+}
+
+export async function syncConnectorAction(
+  workspaceId: string,
+  provider: "github" | "linear" | "notion",
+  ref: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  const path =
+    provider === "github"
+      ? `/integrations/github/installations/${ref}/sync`
+      : `/integrations/${provider}/connections/${ref}/sync`;
+  return mutate(workspaceId, () => api.send(workspaceId, "POST", path));
+}

@@ -11,7 +11,7 @@ import pytest
 
 from relay.jobs import outbox
 from tests.api import OWNER, Api, Ws, make_api
-from tests.db import INSPECTOR_URL, libpq_url
+from tests.db import INSPECTOR_URL, OWNER_URL, libpq_url
 from tests.fakes import FakeExternal
 from tests.security.test_cases import iso
 from tests.security.test_linear import SETTINGS
@@ -68,12 +68,8 @@ async def test_disabled_until_the_provider_permission_is_configured(ext: FakeExt
     async with make_api(ext, **SETTINGS) as api:
         ws = Ws(api, await api.create_workspace(OWNER, "Acme"))
         targets = await ws.call("GET", "/external-targets")
-        assert (
-            not targets["linear_enabled"]
-        )
-        assert (
-            "RELAY_LINEAR_ISSUE_WRITES" in targets["linear_blocker"]
-        )
+        assert not targets["linear_enabled"]
+        assert "RELAY_LINEAR_ISSUE_WRITES" in targets["linear_blocker"]
         case_id, task_id = await task(ws)
         blocked = await ws.call(
             "POST",
@@ -115,3 +111,30 @@ async def test_timeout_is_recovered_without_a_duplicate(api: Api, ext: FakeExter
     await ws.call("POST", f"/external-actions/{done['id']}/check")
     detail = await ws.call("GET", f"/cases/{case_id}/tasks/{task_id}")
     assert detail["task"]["status"] == "done"
+
+
+async def test_connector_health_pause_and_run_history(api: Api, ext: FakeExternal) -> None:
+    ws = Ws(api, await api.create_workspace(OWNER, "Acme"))
+    await connect_linear(api, ws, ext)
+    [linear] = await ws.call("GET", "/integrations/health")
+    assert linear["health"] == "healthy"
+    assert [r["status"] for r in linear["runs"]] == ["ok"]
+    assert linear["failure_rate"] == 0
+
+    paused = await ws.call("POST", f"/integrations/linear/{linear['ref']}/pause")
+    assert paused[0]["health"] == "paused"
+    await ws.call("POST", f"/integrations/linear/connections/{linear['ref']}/sync", 202)
+    await drain(api, ws.id, "linear.sync_requested")
+    [skipped] = await ws.call("GET", "/integrations/health")
+    assert skipped["runs"][0]["status"] == "skipped"
+
+    await ws.call("POST", f"/integrations/linear/{linear['ref']}/resume")
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(ws.id),))
+        conn.execute(
+            "UPDATE integrations.linear_connection SET status = 'revoked', "
+            "last_sync_status = 'error', last_sync_error = 'Linear access was revoked.'"
+        )
+    [revoked] = await ws.call("GET", "/integrations/health")
+    assert revoked["health"] == "revoked"
+    assert "Reconnect" in revoked["advice"]

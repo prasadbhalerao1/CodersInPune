@@ -6,6 +6,7 @@ const PROVIDERS = [
   { key: "github", label: "GitHub", path: "" },
   { key: "linear", label: "Linear", path: "/linear" },
   { key: "notion", label: "Notion", path: "/notion" },
+  { key: "health", label: "Health", path: "/health" },
 ] as const;
 
 /** Consistent switcher across the integration providers. */

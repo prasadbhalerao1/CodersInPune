@@ -80,6 +80,9 @@ class GitHubInstallation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_status: Mapped[str] = mapped_column(Text, server_default="never")
+    # Paused: credentials and data are kept, but no sync runs.
+    paused: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_error: Mapped[str | None] = mapped_column(Text)
 
 
