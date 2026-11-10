@@ -1,0 +1,78 @@
+# Nightly logical backup of the production database plus an automatic restore drill
+# (NFR-REL-002). The dump is encrypted with RELAY_BACKUP_PASSPHRASE before it leaves the
+# runner (artifacts of a public repository are downloadable by signed-in users), kept for
+# 14 days, then restored into a throwaway PostgreSQL 18 with the real role setup and
+# checked: schema version, workspace count, forced RLS on every tenant table and that the
+# app role is still neither superuser nor BYPASSRLS. A failed run emails the repository
+# owner. This complements Neon's point-in-time restore; it never touches production
+# beyond a read-only pg_dump.
+#
+# Secrets (environment `production`): RELAY_MIGRATION_DATABASE_URL (owner, libpq form
+# accepted), RELAY_BACKUP_PASSPHRASE.
+name: Backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    services:
+      scratch:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: drill
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 20
+    steps:
+      - name: Install PostgreSQL 18 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get -qq update && sudo apt-get -qq install -y postgresql-client-18 > /dev/null
+      - name: Dump and encrypt
+        env:
+          URL: ${{ secrets.RELAY_MIGRATION_DATABASE_URL }}
+          PASSPHRASE: ${{ secrets.RELAY_BACKUP_PASSPHRASE }}
+        run: |
+          [ -n "$PASSPHRASE" ] || { echo "RELAY_BACKUP_PASSPHRASE is not set"; exit 1; }
+          url=$(printf '%s' "$URL" | sed 's#^postgresql+psycopg://#postgresql://#')
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          /usr/lib/postgresql/18/bin/pg_dump --format=custom --no-owner --no-privileges "$url" > relay.dump
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "relay-$stamp.dump.gpg" relay.dump
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          ls -l relay.dump "relay-$stamp.dump.gpg"
+      - name: Restore drill
+        env:
+          PGPASSWORD: drill
+        run: |
+          psql() { /usr/lib/postgresql/18/bin/psql -v ON_ERROR_STOP=1 -h localhost -U postgres "$@"; }
+          psql -q -c "CREATE ROLE relay_owner NOSUPERUSER NOBYPASSRLS" \
+                  -c "CREATE ROLE relay_app NOSUPERUSER NOBYPASSRLS NOINHERIT" \
+                  -c "CREATE DATABASE relay_drill OWNER relay_owner"
+          start=$(date +%s)
+          /usr/lib/postgresql/18/bin/pg_restore -h localhost -U postgres -d relay_drill \
+            --no-owner --role=relay_owner --exit-on-error relay.dump
+          echo "restore took $(( $(date +%s) - start ))s"
+          version=$(psql -d relay_drill -Atc "SELECT version_num FROM alembic_version")
+          tenants=$(psql -d relay_drill -Atc "SET ROLE relay_owner; SELECT count(*) FROM platform.tenant" | tail -1)
+          unforced=$(psql -d relay_drill -Atc "SELECT count(*) FROM information_schema.columns c JOIN pg_class t ON t.relname = c.table_name JOIN pg_namespace n ON n.oid = t.relnamespace AND n.nspname = c.table_schema WHERE c.column_name = 'tenant_id' AND t.relkind = 'r' AND NOT (t.relrowsecurity AND t.relforcerowsecurity)")
+          unsafe=$(psql -d relay_drill -Atc "SELECT count(*) FROM pg_roles WHERE rolname = 'relay_app' AND (rolsuper OR rolbypassrls)")
+          echo "schema $version · tenant rows visible to owner without context: $tenants · tenant tables without forced RLS: $unforced"
+          [ -n "$version" ] && [ "$unforced" = 0 ] && [ "$unsafe" = 0 ]
+          rm relay.dump
+      - uses: actions/upload-artifact@v5
+        with:
+          name: relay-backup-${{ env.STAMP }}
+          path: relay-*.dump.gpg
+          retention-days: 14
+          if-no-files-found: error

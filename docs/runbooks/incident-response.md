@@ -73,3 +73,49 @@ contain first, then investigate.
   - one or two concrete follow-ups, each with an owner, preferably a test that would have caught it.
 
   Record any architectural change as an ADR in `docs/adr/`.
+
+## Alerts
+
+The **Monitor** workflow (`.github/workflows/monitor.yml`) checks every 10 minutes and
+keeps one open GitHub issue labelled `incident` while anything is wrong (GitHub emails
+the repository owner). Each alert name maps to a first action:
+
+| Alert | Meaning | First action |
+|---|---|---|
+| `api_or_database_unavailable` | `/health/ready` not 200 | Render API logs; Neon status; if DB is down, see "Database outage" below |
+| `web_unavailable(code)` | Frontend not serving | Vercel deployment status; roll back to the previous deployment |
+| `worker_down` | No worker heartbeat for 5 min | Render worker logs; restart the worker; jobs resume from the queue (outbox is durable) |
+| `queue_backlog` | A ready job waited > 15 min | Worker running but slow or stuck: check logs for one long job; restart; scale concurrency |
+| `jobs_failing` | ≥ 5 failed jobs in 1 h | Logs filtered by the event id (`request_id`); fix the cause; failed outbox events retry |
+| `events_failing` | Outbox events erroring | Same as above; `last_error_type` names the exception class |
+| `connector_unhealthy` | A connector is revoked or its last sync failed | Integrations health page; reconnect or pause; tell the workspace admin |
+| `email_failing` | ≥ 3 failed emails in 24 h | Email provider dashboard (sender verification, quota); admins can retry deliveries |
+| `ai_failing` | ≥ 3 failed or timed-out AI runs in 24 h | Provider status / key quota; the deterministic analysis still works; kill switch in Agents |
+| `ai_budget_exhausted` | A run hit a token budget | Raise the workspace budget or wait for the month to roll over |
+| `ops_unreachable` | `/health/ops` didn't answer | Check `RELAY_OPS_TOKEN` matches in Render and GitHub secrets |
+| `database_unavailable` | Ops summary couldn't reach the DB | As `api_or_database_unavailable` |
+
+The **Backup** workflow fails (and GitHub emails the owner) when the nightly dump or its
+restore drill fails.
+
+### Database outage
+Neon status page → if the branch is unavailable, wait or restore: Neon console → Restore
+→ point in time into a **new branch**, check it, then switch `RELAY_DATABASE_URL` to it.
+Never restore over the live branch. Nightly encrypted dumps (Backup workflow artifacts,
+14 days) are the second line: `gpg -d relay-*.dump.gpg > relay.dump` then `pg_restore`
+into a fresh database created with the roles from `deployment.md`.
+
+### Failed migration
+Migrations are transactional: a failure leaves the previous schema. Keep the previous app
+version running; fix forward with a new migration. Never edit an applied migration.
+
+### Credential compromise
+Rotate in this order: the leaked secret at its provider → Render/Vercel env → redeploy.
+Database: `ALTER ROLE relay_app PASSWORD …` as the Neon admin. WorkOS/GitHub App/Linear/
+Notion: regenerate the client secret or private key. `RELAY_INTEGRATION_ENCRYPTION_KEY`:
+re-encrypt is not supported; disconnect and reconnect integrations after rotation.
+
+### Data leakage
+Treat as Sev 1. Pause affected connectors, narrow source audiences to managers, use the
+AI kill switch, export the audit log for the window, then follow §5 notification duties
+(legal advice required).

@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     github_web_base_url: str = "https://github.com"
     # Webhook HMAC secret (App settings > Webhook secret). Unset = webhooks rejected (503).
     github_webhook_secret: SecretStr | None = None
+    # Operator token for /health/ops (aggregate alerting counts). Unset = endpoint hidden.
+    ops_token: SecretStr | None = None
     # Email (Resend). Unset key = email off; in-app notifications are unaffected.
     resend_api_key: SecretStr | None = None
     resend_api_base_url: str = "https://api.resend.com"

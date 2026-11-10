@@ -1,0 +1,75 @@
+# Uptime and operational alerting for the deployed stack (NFR-OBS-A01).
+# Every 10 minutes: web and API reachability, database readiness and /health/ops (worker
+# heartbeat, queue age, failing jobs/events, unhealthy connectors, failed emails, AI
+# failures and budget). On a problem it opens one issue labelled `incident` (GitHub emails
+# the repository owner) and comments on it while it lasts; it closes the issue on recovery.
+# Issues contain alert names and counts only, never secrets, tenants or content.
+#
+# Repository variables: RELAY_API_URL, RELAY_WEB_URL. Secret: RELAY_OPS_TOKEN (same value
+# as the API's RELAY_OPS_TOKEN). Without RELAY_API_URL the job does nothing.
+name: Monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency: monitor
+
+jobs:
+  check:
+    if: ${{ vars.RELAY_API_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe
+        id: probe
+        env:
+          API: ${{ vars.RELAY_API_URL }}
+          WEB: ${{ vars.RELAY_WEB_URL }}
+          OPS_TOKEN: ${{ secrets.RELAY_OPS_TOKEN }}
+        run: |
+          problems=""
+          probe() { curl --silent --output /dev/null --write-out '%{http_code}' --max-time 60 --retry 2 --retry-all-errors "$@" || echo 000; }
+          [ "$(probe "$API/health/ready")" = 200 ] || problems="$problems api_or_database_unavailable"
+          if [ -n "$WEB" ]; then
+            code=$(probe "$WEB/")
+            case "$code" in 2*|3*) ;; *) problems="$problems web_unavailable($code)";; esac
+          fi
+          if [ -n "$OPS_TOKEN" ]; then
+            body=$(curl --silent --max-time 60 -H "Authorization: Bearer $OPS_TOKEN" "$API/health/ops" || true)
+            alerts=$(printf '%s' "$body" | jq -r '(.alerts // ["ops_unreachable"]) | join(" ")' 2>/dev/null || echo ops_unreachable)
+            problems="$problems $alerts"
+            counts=$(printf '%s' "$body" | jq -c '.counts // {}' 2>/dev/null || echo '{}')
+            echo "counts=$counts" >> "$GITHUB_OUTPUT"
+          fi
+          problems=$(echo $problems)
+          echo "problems=$problems" >> "$GITHUB_OUTPUT"
+          echo "problems: ${problems:-none}"
+      - name: Open, update or close the incident issue
+        uses: actions/github-script@v8
+        env:
+          PROBLEMS: ${{ steps.probe.outputs.problems }}
+          COUNTS: ${{ steps.probe.outputs.counts }}
+        with:
+          script: |
+            const problems = process.env.PROBLEMS.trim();
+            const open = await github.rest.issues.listForRepo({
+              ...context.repo, state: "open", labels: "incident", per_page: 1,
+            });
+            const issue = open.data[0];
+            const note = `Alerts: \`${problems || "none"}\`\nCounts: \`${process.env.COUNTS || "{}"}\`\n` +
+              `Runbook: docs/runbooks/incident-response.md#alerts · ${new Date().toISOString()}`;
+            if (problems && !issue) {
+              await github.rest.issues.create({
+                ...context.repo, title: `Relay incident: ${problems}`, labels: ["incident"], body: note,
+              });
+            } else if (problems && issue) {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: issue.number, body: note });
+            } else if (!problems && issue) {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: issue.number, body: `Recovered. ${note}` });
+              await github.rest.issues.update({ ...context.repo, issue_number: issue.number, state: "closed" });
+            }
