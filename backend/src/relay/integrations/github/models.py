@@ -95,6 +95,7 @@ class GitHubRepository(Base):
         UniqueConstraint(
             "tenant_id", "github_repo_id", name="uq_github_repository_tenant_id_github_repo_id"
         ),
+        CheckConstraint("audience IN ('workspace', 'managers')", name="audience"),
         ForeignKeyConstraint(
             ["tenant_id", "installation_ref"],
             ["integrations.github_installation.tenant_id", "integrations.github_installation.id"],
@@ -119,6 +120,8 @@ class GitHubRepository(Base):
     archived: Mapped[bool] = mapped_column(Boolean)
     selected: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
     accessible: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    # Who in Relay may see this repository's evidence (migration 0037).
+    audience: Mapped[str] = mapped_column(Text, server_default="managers")
     responsibility_id: Mapped[uuid.UUID | None]
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sync_error: Mapped[str | None] = mapped_column(Text)

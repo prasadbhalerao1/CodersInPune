@@ -407,3 +407,67 @@ async def test_evidence_is_for_admins_and_isolated_per_workspace(
         scalar("SELECT count(*) FROM integrations.webhook_delivery WHERE tenant_id = %s", other.id)
         == 0
     )
+
+
+async def test_private_repository_evidence_is_managers_only_until_an_admin_widens_it(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    """Relay can't read each member's GitHub access, so private repos never default open."""
+    await ws.call("POST", "/people", 201, json={"display_name": "Dee", "github_login": "dee"})
+    await synced(api, ws, ext)
+    suggestion = next(
+        s for s in await ws.call("GET", "/integrations/github/suggestions") if s["handle"] == "@dee"
+    )
+    await ws.call(
+        "POST",
+        f"/integrations/github/suggestions/{suggestion['id']}/decision",
+        json={"action": "approve"},
+    )
+    repo = next(
+        r
+        for r in (await ws.call("GET", "/integrations/github"))["repositories"]
+        if r["full_name"] == "acme/payments"
+    )
+    assert repo["audience"] == "managers"
+    rid = repo["responsibility_id"]
+    await add_member(api, ws.id, "user_member", "member")
+    member = Ws(api, ws.id, "user_member")
+
+    async def sees(who: Ws) -> tuple[bool, bool]:
+        context = await who.call("GET", f"/responsibilities/{rid}/context")
+        hits = (await who.call("GET", "/search", params={"q": "Change"}))["hits"]
+        return (
+            any(e["source"] == "GitHub" for e in context["evidence"]),
+            any(h["kind"] == "github" for h in hits),
+        )
+
+    assert await sees(ws) == (True, True)
+    assert await sees(member) == (False, False)
+    await member.call(
+        "PATCH",
+        f"/integrations/github/repositories/{repo['id']}",
+        403,
+        json={"audience": "workspace"},
+    )
+
+    # An admin's explicit, audited decision widens it; GitHub turning it private again narrows it.
+    await ws.call(
+        "PATCH", f"/integrations/github/repositories/{repo['id']}", json={"audience": "workspace"}
+    )
+    assert await sees(member) == (True, True)
+    assert (
+        scalar(
+            "SELECT count(*) FROM audit.audit_event WHERE tenant_id = %s AND "
+            "action = 'integration.github_repository_updated' "
+            "AND metadata->>'audience' = 'workspace'",
+            ws.id,
+        )
+        == 1
+    )
+    ext.repos[0].private = False
+    await ws.call("POST", f"/integrations/github/installations/{repo['installation_ref']}/sync")
+    await run_events(api, ws.id, "github.sync_requested")
+    ext.repos[0].private = True
+    await ws.call("POST", f"/integrations/github/installations/{repo['installation_ref']}/sync")
+    await run_events(api, ws.id, "github.sync_requested")
+    assert await sees(member) == (False, False)

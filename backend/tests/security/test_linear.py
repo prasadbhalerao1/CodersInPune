@@ -359,9 +359,26 @@ async def test_responsibility_context_separates_evidence_risks_and_cases(
     assert context["cases"] == []
     assert context["suggestions"] == []
 
+    # Relay can't read Linear team access: issues stay managers-only until an admin shares them.
     await add_member(api, ws.id, "user_member", "member")
-    member = await Ws(api, ws.id, "user_member").call("GET", f"/responsibilities/{rid}/context")
-    assert [e["label"] for e in member["evidence"]] == ["Checkout v2"]  # linked = catalogue fact
+    member = Ws(api, ws.id, "user_member")
+
+    async def member_sees() -> tuple[list[str], int]:
+        context = await member.call("GET", f"/responsibilities/{rid}/context")
+        hits = (await member.call("GET", "/search", params={"q": "PAY"}))["hits"]
+        return [e["label"] for e in context["evidence"]], sum(h["kind"] == "linear" for h in hits)
+
+    assert await member_sees() == ([], 0)
+    assert (await ws.call("GET", "/search", params={"q": "PAY"}))["hits"]
+    await ws.call(
+        "POST",
+        f"/integrations/linear/projects/{project['id']}/link",
+        204,
+        json={"action": "link", "responsibility_id": rid, "audience": "workspace"},
+    )
+    labels, issues = await member_sees()
+    assert labels == ["Checkout v2"]
+    assert issues > 0
     other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
     await other.call("GET", f"/responsibilities/{rid}/context", 404)
 

@@ -64,6 +64,17 @@ export async function setRepositorySelectedAction(
   );
 }
 
+export async function setRepositoryAudienceAction(
+  workspaceId: string,
+  repositoryId: string,
+  audience: "workspace" | "managers",
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PATCH", `${gh}/repositories/${repositoryId}`, { audience }),
+  );
+}
+
 export async function decideSuggestionAction(
   workspaceId: string,
   suggestionId: string,

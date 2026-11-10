@@ -14,7 +14,7 @@ from typing import Literal
 
 import procrastinate
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 
 from relay.audit import service as audit
 from relay.catalog import knowledge as catalog_knowledge
@@ -25,7 +25,7 @@ from relay.continuity import service as continuity
 from relay.continuity.models import CaseScopeItem
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations.github.models import GitHubRepository
-from relay.integrations.linear.models import LinearIssue
+from relay.integrations.linear.models import LinearIssue, LinearProject
 from relay.integrations.notion.models import NotionPage
 from relay.intelligence import runs
 from relay.intelligence.models import (
@@ -205,21 +205,36 @@ async def current_evidence(
             ok = page_status == "active" and k_status == "active"
             notion[nid] = ("active" if ok else "withdrawn", vis)
             revisions["notion_page", nid] = revision
+    # A source's current audience applies to evidence cited before it was narrowed.
     repos = {
-        name: accessible
-        for name, accessible in await session.execute(
-            select(GitHubRepository.full_name, GitHubRepository.accessible)
+        name: (accessible and selected, audience)
+        for name, accessible, selected, audience in await session.execute(
+            select(
+                GitHubRepository.full_name,
+                GitHubRepository.accessible,
+                GitHubRepository.selected,
+                GitHubRepository.audience,
+            )
         )
     }
     linear_ids = by_type.get("issue", set())
-    linear = (
-        set(
-            await session.scalars(
-                select(LinearIssue.identifier).where(LinearIssue.identifier.in_(linear_ids))
+    linear: dict[str, str] = (
+        {
+            identifier: audience or "managers"
+            for identifier, audience in await session.execute(
+                select(LinearIssue.identifier, LinearProject.audience)
+                .outerjoin(
+                    LinearProject,
+                    and_(
+                        LinearProject.linear_id == LinearIssue.project_linear_id,
+                        LinearProject.removed.is_(False),
+                    ),
+                )
+                .where(LinearIssue.identifier.in_(linear_ids))
             )
-        )
+        }
         if linear_ids
-        else set()
+        else {}
     )
 
     out: dict[uuid.UUID, EvidenceView] = {}
@@ -233,10 +248,14 @@ async def current_evidence(
             status, vis = notion.get(e.source_id, ("withdrawn", "managers"))
             audience = "managers" if vis == "managers" else audience
         elif e.source_system == "github":
-            if not repos.get(e.source_id.split("#")[0], False):
+            reachable, repo_audience = repos.get(e.source_id.split("#")[0], (False, "managers"))
+            if not reachable:
                 status = "withdrawn"
-        elif e.source_system == "linear" and e.source_id not in linear:
-            status = "withdrawn"
+            audience = "managers" if repo_audience == "managers" else audience
+        elif e.source_system == "linear":
+            if e.source_id not in linear:
+                status = "withdrawn"
+            audience = "managers" if linear.get(e.source_id) != "workspace" else audience
         current = revisions.get((e.source_type, e.source_id))
         out[e.id] = EvidenceView(
             changed=status == "active" and current is not None and current != e.revision,

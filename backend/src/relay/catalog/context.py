@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 from relay.catalog import service as catalog
 from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, ContinuityCase
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.integrations.audience import shared
 from relay.integrations.github.models import GitHubRepository, GitHubWorkItem, OwnershipSuggestion
 from relay.integrations.linear.models import LinearIssue, LinearProject
 from relay.integrations.notion.models import NotionPage, NotionSource
@@ -127,6 +128,7 @@ async def responsibility_context(
             .where(
                 visible(access, readable, GitHubRepository.tenant_id),
                 GitHubRepository.responsibility_id == rid,
+                shared(access, GitHubRepository.audience),
             )
             .order_by(GitHubRepository.full_name)
         )
@@ -164,6 +166,7 @@ async def responsibility_context(
             visible(access, readable, LinearProject.tenant_id),
             LinearProject.responsibility_id == rid,
             LinearProject.removed.is_(False),
+            shared(access, LinearProject.audience),
         )
         .order_by(LinearProject.name)
     ):
@@ -187,6 +190,7 @@ async def responsibility_context(
         .where(
             visible(access, readable, NotionSource.tenant_id),
             NotionSource.responsibility_id == rid,
+            shared(access, NotionSource.visibility),
         )
         .order_by(NotionSource.title)
     ):

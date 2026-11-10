@@ -528,6 +528,7 @@ export type RepositoryView = {
   archived: boolean;
   selected: boolean;
   accessible: boolean;
+  audience: "workspace" | "managers";
   last_synced_at: string | null;
   sync_error: string | null;
   responsibility_id: string | null;
@@ -980,6 +981,7 @@ export type LinearProjectView = {
   recent_issues: number;
   responsibility_id: string | null;
   responsibility_name: string | null;
+  audience: "workspace" | "managers";
 };
 
 export type LinearIntegrationView = {

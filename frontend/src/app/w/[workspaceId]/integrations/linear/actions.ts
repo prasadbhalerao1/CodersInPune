@@ -55,11 +55,13 @@ export async function linkProjectAction(
   fd?: FormData,
 ): Promise<ActionState> {
   const responsibilityId = fd ? String(fd.get("responsibility_id") ?? "") || undefined : undefined;
+  const audience = fd?.get("audience") === "workspace" ? "workspace" : "managers";
   if (action === "link" && !responsibilityId) return { error: "Choose a responsibility." };
   return mutate(workspaceId, () =>
     api.send(workspaceId, "POST", `${base}/projects/${projectId}/link`, {
       action,
       responsibility_id: responsibilityId,
+      audience,
     }),
   );
 }

@@ -224,6 +224,26 @@ export default async function LinearPage({
                       >
                         {p.responsibility_name}
                       </a>
+                      <ActionForm action={linkProjectAction.bind(null, workspaceId, p.id, "link")}>
+                        <input type="hidden" name="responsibility_id" value={p.responsibility_id} />
+                        <input
+                          type="hidden"
+                          name="audience"
+                          value={p.audience === "managers" ? "workspace" : "managers"}
+                        />
+                        <SubmitButton
+                          size="sm"
+                          variant="ghost"
+                          pendingLabel="…"
+                          confirm={
+                            p.audience === "managers"
+                              ? "Everyone in this workspace will see this project's issues in Relay, including people outside its Linear teams. Continue?"
+                              : undefined
+                          }
+                        >
+                          {p.audience === "managers" ? "Share with workspace" : "Limit to managers"}
+                        </SubmitButton>
+                      </ActionForm>
                       <ActionForm
                         action={linkProjectAction.bind(null, workspaceId, p.id, "unlink")}
                       >
@@ -251,6 +271,15 @@ export default async function LinearPage({
                                 {r.name}
                               </option>
                             ))}
+                          </select>
+                          <select
+                            name="audience"
+                            defaultValue="managers"
+                            aria-label={`Who sees ${p.name} in Relay`}
+                            className={cn(inputClass, "h-8 w-40")}
+                          >
+                            <option value="managers">Managers only</option>
+                            <option value="workspace">Whole workspace</option>
                           </select>
                           <SubmitButton size="sm" variant="ghost">
                             Link

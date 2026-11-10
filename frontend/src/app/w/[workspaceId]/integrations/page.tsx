@@ -17,6 +17,7 @@ import { IntegrationsNav } from "./integrations-nav";
 import {
   connectGitHubAction,
   disconnectInstallationAction,
+  setRepositoryAudienceAction,
   setRepositorySelectedAction,
   syncInstallationAction,
 } from "./actions";
@@ -199,6 +200,30 @@ export default async function IntegrationsPage({
                       Responsibility
                     </Link>
                   ) : null}
+                  <Badge tone="muted">
+                    {r.audience === "managers" ? "Managers only" : "Workspace"}
+                  </Badge>
+                  <ActionForm
+                    action={setRepositoryAudienceAction.bind(
+                      null,
+                      workspaceId,
+                      r.id,
+                      r.audience === "managers" ? "workspace" : "managers",
+                    )}
+                  >
+                    <SubmitButton
+                      size="sm"
+                      variant="ghost"
+                      pendingLabel="…"
+                      confirm={
+                        r.audience === "managers" && r.private
+                          ? "Everyone in this workspace will see this private repository's pull requests and issues in Relay, including people without access on GitHub. Continue?"
+                          : undefined
+                      }
+                    >
+                      {r.audience === "managers" ? "Share with workspace" : "Limit to managers"}
+                    </SubmitButton>
+                  </ActionForm>
                   <ActionForm
                     action={setRepositorySelectedAction.bind(null, workspaceId, r.id, !r.selected)}
                   >

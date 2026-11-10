@@ -92,6 +92,7 @@ class RepositoryView(BaseModel):
     archived: bool
     selected: bool
     accessible: bool
+    audience: str
     last_synced_at: datetime | None
     sync_error: str | None
     responsibility_id: uuid.UUID | None
@@ -142,7 +143,9 @@ class CompleteConnectIn(StrictInput):
 
 
 class RepositoryUpdate(StrictInput):
-    selected: bool
+    selected: bool | None = None
+    # Widening a private repository to the whole workspace is an explicit, audited decision.
+    audience: Literal["workspace", "managers"] | None = None
 
 
 class SuggestionDecisionIn(StrictInput):
@@ -205,6 +208,7 @@ def _repository_view(r: GitHubRepository) -> RepositoryView:
         archived=r.archived,
         selected=r.selected,
         accessible=r.accessible,
+        audience=r.audience,
         last_synced_at=r.last_synced_at,
         sync_error=r.sync_error,
         responsibility_id=r.responsibility_id,
@@ -402,8 +406,11 @@ async def set_repository_selected(
     repo = await access.session.get(GitHubRepository, repository_id, with_for_update=True)
     if repo is None:
         raise ApiError(404, "repository_not_found", "Repository not found.")
-    repo.selected = data.selected
-    if not data.selected:
+    if data.audience is not None:
+        repo.audience = data.audience
+    if data.selected is not None:
+        repo.selected = data.selected
+    if data.selected is False:
         await access.session.execute(
             update(OwnershipSuggestion)
             .where(
@@ -417,7 +424,8 @@ async def set_repository_selected(
         "integration.github_repository_updated",
         "github_repository",
         repo.id,
-        selected=str(data.selected),
+        selected=str(repo.selected),
+        audience=repo.audience,
     )
     return _repository_view(repo)
 
@@ -613,6 +621,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
                 default_branch=remote.default_branch,
                 private=remote.private,
                 archived=remote.archived,
+                audience="managers" if remote.private else "workspace",
             )
             session.add(repo)
             await session.flush()
@@ -621,6 +630,8 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
             remote.html_url,
             remote.default_branch,
         )
+        if remote.private and not repo.private:
+            repo.audience = "managers"  # turned private on GitHub: narrow, never widen
         repo.private, repo.archived, repo.accessible = remote.private, remote.archived, True
         repo.pushed_at = remote.pushed_at
     for github_id, repo in known.items():

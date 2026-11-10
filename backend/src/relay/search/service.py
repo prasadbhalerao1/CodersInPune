@@ -20,6 +20,7 @@ from relay.continuity.models import ContinuityCase
 from relay.directory.models import Department, Person, Team
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.integrations.audience import linear_issue_shared, shared
 from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
 from relay.integrations.linear.models import LinearIssue, LinearTeam
 from relay.policy.permissions import Permission, authorize, role_allows, visible
@@ -259,6 +260,7 @@ async def _external(access: WorkspaceAccess, q: str, limit: int) -> list[SearchH
             visible(access, Permission.RESPONSIBILITY_READ, GitHubWorkItem.tenant_id),
             GitHubRepository.accessible.is_(True),
             GitHubRepository.selected.is_(True),
+            shared(access, GitHubRepository.audience),
             _like(GitHubWorkItem.title, q),
         )
         .order_by(GitHubWorkItem.gh_updated_at.desc())
@@ -284,6 +286,7 @@ async def _external(access: WorkspaceAccess, q: str, limit: int) -> list[SearchH
                 LinearIssue.team_linear_id.is_(None),
                 LinearIssue.team_linear_id.not_in(removed_teams),
             ),
+            linear_issue_shared(access),
             or_(_like(LinearIssue.title, q), _like(LinearIssue.identifier, q)),
         )
         .order_by(LinearIssue.li_updated_at.desc())
@@ -374,6 +377,7 @@ async def experts(access: WorkspaceAccess, q: str) -> list[ExpertView]:
         .where(
             visible(access, Permission.RESPONSIBILITY_READ, GitHubWorkItem.tenant_id),
             GitHubRepository.accessible.is_(True),
+            shared(access, GitHubRepository.audience),
             _like(GitHubWorkItem.title, q),
         )
         .order_by(GitHubWorkItem.gh_updated_at.desc())

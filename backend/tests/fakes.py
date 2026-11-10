@@ -45,6 +45,7 @@ class FakeRepo:
     pulls: list[dict[str, Any]] = field(default_factory=list)  # REST pull objects
     issues: list[dict[str, Any]] = field(default_factory=list)  # REST issue objects
     pushed_at: str | None = None
+    private: bool = True
 
 
 @dataclass
@@ -317,7 +318,7 @@ class FakeExternal:
                     "full_name": r.full_name,
                     "html_url": f"https://github.com/{r.full_name}",
                     "default_branch": "main",
-                    "private": True,
+                    "private": r.private,
                     "archived": r.archived,
                     "pushed_at": r.pushed_at,
                 }

@@ -111,6 +111,7 @@ class LinearProject(Base):
         UniqueConstraint("tenant_id", "linear_id"),
         _fk(["connection_ref"], "integrations.linear_connection", "fk_linear_project_connection"),
         _fk(["responsibility_id"], "catalog.responsibility", "fk_linear_project_responsibility"),
+        CheckConstraint("audience IN ('workspace', 'managers')", name="audience"),
         {"schema": SCHEMA},
     )
 
@@ -124,6 +125,8 @@ class LinearProject(Base):
     lead_linear_id: Mapped[str | None] = mapped_column(Text)
     team_linear_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     responsibility_id: Mapped[uuid.UUID | None]
+    # Who in Relay may see this project's issues (migration 0037).
+    audience: Mapped[str] = mapped_column(Text, server_default="managers")
     removed: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

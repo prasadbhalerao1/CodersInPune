@@ -32,6 +32,7 @@ from relay.continuity.models import (
 from relay.continuity.privacy import narrowed_knowledge
 from relay.directory.models import Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.integrations.audience import linear_issue_shared, shared
 from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
 from relay.integrations.linear.models import LinearIssue, LinearProject
 from relay.integrations.notion.models import NotionPage
@@ -309,6 +310,9 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
             select(GitHubRepository).where(
                 visible(access, readable, GitHubRepository.tenant_id),
                 GitHubRepository.responsibility_id.in_(responsibility_ids),
+                GitHubRepository.accessible.is_(True),
+                GitHubRepository.selected.is_(True),
+                shared(access, GitHubRepository.audience),
             )
         )
     }
@@ -331,6 +335,7 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
             url=w.html_url,
             revision=w.gh_updated_at.isoformat(),
             source_ts=w.gh_updated_at,
+            audience=repo.audience,
             excerpt=(
                 f"{repo.full_name}#{w.number} {w.kind} {w.state}"
                 f"{' (merged)' if w.merged_at else ''}; author {w.author_login or '?'}; "
@@ -351,6 +356,7 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
                 visible(access, readable, LinearProject.tenant_id),
                 LinearProject.responsibility_id.in_(responsibility_ids),
                 LinearProject.removed.is_(False),
+                shared(access, LinearProject.audience),
             )
         )
     }
@@ -359,6 +365,7 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
         .where(
             visible(access, readable, LinearIssue.tenant_id),
             LinearIssue.project_linear_id.in_(list(projects)),
+            linear_issue_shared(access),
             or_(
                 and_(LinearIssue.completed_at.is_(None), LinearIssue.canceled_at.is_(None)),
                 LinearIssue.li_updated_at >= since,
@@ -377,6 +384,7 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
             url=issue.url,
             revision=issue.li_updated_at.isoformat(),
             source_ts=issue.li_updated_at,
+            audience=project.audience,
             excerpt=(
                 f"{issue.identifier} in project {project.name}: "
                 f"state {issue.state_name or issue.state_type}, "

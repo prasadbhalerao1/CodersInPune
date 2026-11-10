@@ -87,6 +87,7 @@ class ProjectView(BaseModel):
     recent_issues: int
     responsibility_id: uuid.UUID | None
     responsibility_name: str | None
+    audience: str
 
 
 class LinearIntegrationView(BaseModel):
@@ -100,6 +101,9 @@ class LinearIntegrationView(BaseModel):
 class ProjectLinkIn(StrictInput):
     action: Literal["link", "create", "unlink"]
     responsibility_id: uuid.UUID | None = None
+    # Relay can't read each person's Linear team access, so issues stay managers-only unless
+    # an admin decides the whole workspace may see them.
+    audience: Literal["workspace", "managers"] = "managers"
 
 
 class LinearIdentityView(BaseModel):
@@ -608,6 +612,7 @@ async def get_integration(access: WorkspaceAccess, *, configured: bool) -> Linea
                 ),
                 responsibility_id=p.responsibility_id,
                 responsibility_name=names.get(p.responsibility_id) if p.responsibility_id else None,
+                audience=p.audience,
             )
             for p in projects
         ],
@@ -631,6 +636,7 @@ async def link_project(access: WorkspaceAccess, project_id: uuid.UUID, data: Pro
     )
     if project is None:
         raise ApiError(404, "project_not_found", "Linear project not found.")
+    project.audience = "managers" if data.action == "unlink" else data.audience
     if data.action == "unlink":
         project.responsibility_id = None
     elif data.action == "create":
@@ -656,7 +662,8 @@ async def link_project(access: WorkspaceAccess, project_id: uuid.UUID, data: Pro
         details={
             "responsibility_id": str(project.responsibility_id)
             if project.responsibility_id
-            else None
+            else None,
+            "audience": project.audience,
         },
     )
 
