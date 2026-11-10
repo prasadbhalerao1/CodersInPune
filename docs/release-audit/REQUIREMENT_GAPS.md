@@ -19,8 +19,8 @@ as approved except where a decision is explicitly "Founder approval" pending (C-
 
 | Status | Count |
 |---|---|
-| Implemented and verified | 172 |
-| Partially implemented | 15 |
+| Implemented and verified | 173 |
+| Partially implemented | 14 |
 | Implemented but insufficiently verified | 8 |
 | Blocked by external dependency | 7 |
 | Proposed deferment | 4 |
@@ -45,7 +45,7 @@ pass in the browser on a production build, and AC-02/AC-07 against the live Gemi
 | FR-ADMIN-007 | P1 | Audit retention not configurable | Decision C-02 |
 | NFR-SCAL-A03/A06 | — | Concurrency serialised, not configurable/fair-share | Accept |
 | NFR-PRIV-A02/A06/A07 | — | ACL mirroring; legal hold; per-class retention | See FR-INT-010, C-02 |
-| NFR-OBS-A01/A02 | — | No metrics/alerting endpoint; request ID not in job logs | Platform log alerts for pilot; add later |
+| NFR-OBS-A01 | — | No metrics/alerting endpoint | Platform log alerts for pilot; add later |
 
 ## Implemented but insufficiently verified
 

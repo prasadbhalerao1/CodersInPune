@@ -9,6 +9,31 @@ check the linked pages before committing money.
 | **A. Managed (recommended)** | Demo, pilot, small teams; no servers to run | Vercel (web) · Render (API + worker) · Neon (Postgres 18) |
 | **B. Single host** | Full control, one bill, data on your VM | Docker Compose on any VM ([deploy/README.md](deploy/README.md)) |
 
+## 0. Status and your checklist
+
+**Verified locally (2026-11-10):** both Docker images build; the backend image runs in
+`RELAY_ENVIRONMENT=production` (health 200, `/api/v1` alias, API docs hidden, anonymous
+401, JSON logs with request IDs); the worker image starts and consumes jobs; the web image
+serves with CSP/HSTS/X-Frame-Options and rejects unsigned webhooks; backend tests,
+frontend build and the Playwright suites pass; a dump/restore drill restores identical
+counts. Release decision and remaining external gates:
+[docs/release-audit/PRODUCTION_READINESS.md](docs/release-audit/PRODUCTION_READINESS.md).
+
+**What only you can do, in order** (everything else is in the repo):
+
+1. Push `main` to GitHub (CI then runs tests, SBOM, image scan and licence checks).
+2. Neon: create a Postgres 18 project in Singapore; run the role SQL in §3.1; keep both URLs.
+3. GitHub → Settings → Environments → `production`: add secret `RELAY_MIGRATION_DATABASE_URL`;
+   run **Actions → Migrate**.
+4. Render → New → Blueprint → this repo; paste the prompted secrets (§3.3). Generate the
+   encryption key with the command shown there. Keep the worker on Starter.
+5. Vercel → import repo, root `frontend`, region `sin1`, env vars from §3.4.
+6. WorkOS production environment: redirect `https://<web>/callback`, sign-out `https://<web>/`.
+7. Set repository variable `RELAY_API_HEALTH_URL` (keep-warm) while the API is on the free plan.
+8. Optional: GitHub App / Linear / Notion apps with the callback URLs in §3.5; Resend domain.
+9. Before real customer data: confirm the AI provider's data terms for your Gemini tier
+   (or leave `RELAY_LLM_PROVIDERS` blank) and complete the legal review.
+
 ## 1. What has to run
 
 ```

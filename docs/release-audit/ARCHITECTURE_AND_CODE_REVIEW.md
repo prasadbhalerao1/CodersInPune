@@ -76,18 +76,18 @@ Remaining: a running case can be cancelled via `blocked` (C-05), and some second
 | Budgets | Per-run token limit, per-tenant monthly budget, timeout, cancellation, kill switch |
 | AI knowledge | `origin='ai'` stays draft until a reviewer verifies it |
 | Recording | Steps, tokens, cost, errors; **tool calls now recorded by name** (fixed) |
-| Live behaviour (Gemini, 2 runs) | 8.4–8.8k tokens, 10–17 s model time; 7 and 11 claims rejected by the validator; 0 uncited claims stored; conflicting runbooks flagged after the fix; **planner produced no proposals** |
+| Live behaviour (Gemini, 4 runs) | 8.3–8.8k tokens, 10–17 s model time; the validator rejects uncited claims (reasons now recorded per step); 0 uncited claims stored; conflicting runbooks flagged after the fix; key rotation observed (key 2 used once). Planner produced 0 proposals in the first runs because step briefs dropped evidence refs; **after the fix (3447f9c) it produced 2 cited proposals and skipped 1 duplicate of an existing case task** |
 
 **Usefulness.** The analysis adds synthesis beyond a summary: it connected open tasks to
 the leaver, flagged contradictory runbooks and missing escalation knowledge, and asked a
-targeted question. Proposal generation is not yet useful and needs prompt work plus an
-evaluation set (FR-AGENT-012).
+targeted question. Proposal generation now works but is modest (2 per run on the demo);
+a labelled evaluation set (FR-AGENT-012) is still needed to measure and tune it.
 
 ## 6. Integrations
 
 | Provider | Auth | Sync | Webhooks | Revocation | Verified with real account |
 |---|---|---|---|---|---|
-| GitHub App | Installation verified against installer; tokens minted per sync | Metadata, CODEOWNERS, PRs/issues since a date | HMAC, dedupe, order-safe, via web proxy | Reported; suggestions withdrawn; data purged 30 d after disconnect | App install/sync used during development; webhooks and writes not verified |
+| GitHub App | Installation verified against installer; tokens minted per sync | Metadata, CODEOWNERS, PRs/issues since a date | HMAC, dedupe, order-safe, via web proxy | Reported; suggestions withdrawn; data purged 30 d after disconnect | App install/sync used during development; webhooks and writes verified only against the fake (incl. lost-response recovery) |
 | Linear | OAuth, single-use hashed state, encrypted tokens, refresh | Incremental by `updatedAt`, self-scheduled reconcile | None (scheduled) | Revoked vs expired distinguished; purge 30 d | Not re-verified in this audit |
 | Notion | OAuth, encrypted tokens | Mapped sources only, revision-hashed, unchanged pages skipped | None | Withdrawn pages drop out; purge 30 d (knowledge archived) | Not re-verified |
 | WorkOS | AuthKit; API verifies JWT | — | — | Membership removal effective next request | **Yes** (Playwright smoke with a real account) |
@@ -121,7 +121,5 @@ an incremental (event-driven) risk table.
 
 1. Risk computation on read (fine to ~2–3k responsibilities; move to incremental beyond).
 2. In-process rate limiter (blocks horizontal scaling).
-3. Request ID not propagated to jobs.
-4. Secondary lists capped instead of paged.
-5. AI planner prompt quality and missing evaluation set.
-6. GitHub external write path lacks a fake-provider test (Linear has one).
+3. Secondary lists capped instead of paged.
+4. Missing AI evaluation set.

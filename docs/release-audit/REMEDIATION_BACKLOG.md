@@ -17,7 +17,12 @@ Ordered by priority. "Owner" says who or what must resolve it.
 | `13b8a02` | Risk reconcile no longer locks/rewrites unchanged rows (p95 866→342 ms) | NFR-PERF-001 |
 | `01defae` | Opt-in latency benchmark at 1,000 responsibilities | NFR-PERF-001/002/004 |
 | `f879fdf` | Purge source data 30 days after disconnect | FR-INT-012, D13 |
+| `3447f9c` | Planner proposals kept their citations; tasks already on the case are skipped (0 → 2 proposals live) | FR-AGENT-005/016 |
+| `0241b9a` | Production env reference complete (AI, logging, write flags); Blueprint carries 4 Gemini keys | Deployment |
+| `7b359d2` | Jobs log under their event id; queued events logged per request | NFR-OBS-A02 |
+| `16847ba` | GitHub issue write test: lost response recovered, no duplicate, closing completes the task | FR-TASK-004, FR-AGENT-007 |
 | — | Local backup/restore drill with matching counts | NFR-REL-002 |
+| — | Docker images built and smoke-tested in production mode (API health, docs hidden, 401 anon, JSON logs; worker starts; web serves with security headers) | Deployment |
 
 ## P0 — before any use with real customer data
 
@@ -33,7 +38,7 @@ Ordered by priority. "Owner" says who or what must resolve it.
 |---|---|---|---|
 | 4 | Real-account verification per connector (FR-INT-002) | One real sync each for GitHub, Linear, Notion; one real GitHub webhook; one approved Linear issue write with receipt | User configuration + credentials |
 | 5 | AI evaluation set (FR-AGENT-012) | ≥ 30 labelled synthetic cases; report citation validity, restricted leaks (must be 0), conflict recall; run on prompt/model change | Code |
-| 6 | Handover planner usefulness | ≥ 1 accepted-quality proposal per demo analysis on the eval set | Code |
+| 6 | Handover planner quality | Measured on the eval set; currently 2 cited proposals per demo run | Code |
 | 7 | Source ACL mirroring decision (FR-INT-010) | Either restrict imports to org-visible sources by default, or map per-user visibility for GitHub private repos | Product decision + code |
 | 8 | Cancel-while-executing rule (C-05) | Documented decision; test that matches it | Product decision |
 | 9 | Monitoring (NFR-OBS-A01) | Uptime check on `/health/ready`; alert on 5xx rate and worker down | Deployment |
@@ -46,7 +51,6 @@ Ordered by priority. "Owner" says who or what must resolve it.
 | Item | Why deferral is safe |
 |---|---|
 | Shared rate limiter (needed only with > 1 API replica) | Pilot runs one replica |
-| Request ID propagated into job logs | Job and event IDs already correlate |
 | Incremental risk table (> 3k responsibilities) | Pilot size is far below |
 | Paging for teams/members/knowledge overview | Capped lists are far above pilot sizes |
 | Integration/security alert emails | Health page and in-app state cover admins |
