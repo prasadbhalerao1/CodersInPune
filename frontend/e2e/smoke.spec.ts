@@ -295,3 +295,34 @@ test("another workspace cannot be reached", async ({ page }) => {
   await expect(page.getByText(names.duty)).toHaveCount(0);
   await expect(page.getByText(names.workspace)).toHaveCount(0);
 });
+
+test("help explains the product and links back into it", async ({ page }) => {
+  await page.goto(`${base}/help`);
+  await expect(page.getByRole("heading", { name: "Help" })).toBeVisible();
+  await page.getByRole("link", { name: /Review risks/ }).click();
+  await page.waitForURL(/\/risks$/);
+});
+
+// Last: it leaves this run's workspace scheduled for deletion, so test data is purged.
+test("deleting a workspace needs its exact name and can be cancelled", async ({ page }) => {
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto(`${base}/settings/data`);
+  const confirmName = page.getByLabel(/to confirm/);
+  const banner = page.getByText(/will be permanently deleted on/);
+
+  await confirmName.fill("not the name");
+  await submitAndSettle(page, "Delete workspace");
+  await expect(page.getByText("Type the workspace name exactly to confirm.")).toBeVisible();
+  await expect(banner).toHaveCount(0);
+
+  await confirmName.fill(names.workspace);
+  await submitAndSettle(page, "Delete workspace");
+  await expect(banner).toBeVisible();
+
+  await submitAndSettle(page, "Cancel deletion");
+  await expect(banner).toHaveCount(0);
+
+  await page.getByLabel(/to confirm/).fill(names.workspace);
+  await submitAndSettle(page, "Delete workspace");
+  await expect(banner).toBeVisible();
+});

@@ -16,3 +16,21 @@ test("the GitHub callback rejects requests without a session", async ({ page }) 
   await page.waitForURL((url) => !url.pathname.startsWith("/integrations/github/callback"));
   expect(page.url()).not.toContain("connected=1");
 });
+
+test("the landing page leads to sign-in and explains the loop", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Get started →" }).first()).toHaveAttribute(
+    "href",
+    "/sign-in",
+  );
+  await expect(page.getByRole("list", { name: "Workflow steps" })).toBeVisible();
+});
+
+test("unsigned GitHub webhook deliveries are rejected", async ({ request }) => {
+  const response = await request.post("/integrations/github/webhook", {
+    data: { zen: "forged" },
+    headers: { "X-GitHub-Event": "ping", "X-GitHub-Delivery": "e2e-forged-delivery" },
+  });
+  expect(response.status()).toBeGreaterThanOrEqual(400);
+});
