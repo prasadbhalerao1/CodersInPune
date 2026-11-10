@@ -379,3 +379,27 @@ async def test_syncs_are_serialised_per_tenant_and_connector(
             )
         }
     assert f"{ws.id}:linear-sync" in locks
+
+
+async def test_disconnected_source_data_is_purged_after_30_days(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    await connect(api, ws, ext)
+    assert await run(api, ws.id) == [True]
+    issues = "integrations.linear_issue"
+    assert count_rows(issues, "tenant_id = %s", (ws.id,)) > 0
+    connection = (await ws.call("GET", "/integrations/linear"))["connections"][0]
+    await ws.call("POST", f"/integrations/linear/connections/{connection['id']}/disconnect", 204)
+
+    kept = await ws.call("POST", "/retention/apply")
+    assert kept["source_records"] == 0  # within 30 days of the disconnect
+    assert count_rows(issues, "tenant_id = %s", (ws.id,)) > 0
+    with psycopg.connect(libpq_url(INSPECTOR_URL), autocommit=True) as conn:
+        conn.execute(
+            "UPDATE integrations.linear_connection "
+            "SET disconnected_at = now() - interval '31 days' WHERE tenant_id = %s",
+            (ws.id,),
+        )
+    purged = await ws.call("POST", "/retention/apply")
+    assert purged["source_records"] > 0
+    assert count_rows(issues, "tenant_id = %s", (ws.id,)) == 0

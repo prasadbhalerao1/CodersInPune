@@ -83,6 +83,8 @@ class GitHubInstallation(Base):
     # Paused: credentials and data are kept, but no sync runs.
     paused: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Source snapshots are purged 30 days after this (connectors.purge_disconnected).
+    disconnected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_error: Mapped[str | None] = mapped_column(Text)
 
 

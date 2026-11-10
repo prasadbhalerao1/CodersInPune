@@ -270,6 +270,7 @@ async def disconnect(access: WorkspaceAccess, ref: uuid.UUID) -> None:
     authorize(access, Permission.INTEGRATION_MANAGE)
     connection = await _connection(access, ref)
     connection.status = "disconnected"
+    connection.disconnected_at = _now()
     oauth.forget(connection)  # forget the tokens
     connection.next_reconcile_at = None
     _record(access, "integration.linear_disconnected", connection.id)

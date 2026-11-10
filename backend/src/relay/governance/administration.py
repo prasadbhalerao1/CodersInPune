@@ -29,6 +29,7 @@ from relay.governance import service as governance
 from relay.governance.models import ConnectorRun
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.integrations import connectors
 from relay.intelligence.models import AgentRunEvent
 from relay.notifications.models import Notification
 from relay.policy.permissions import Permission, authorize, visible
@@ -44,6 +45,8 @@ class RetentionResult(BaseModel):
     notifications: int
     connector_runs: int
     ai_run_events: int
+    # Source snapshots of connectors disconnected more than 30 days ago.
+    source_records: int = 0
 
 
 class TransferIn(StrictInput):
@@ -171,7 +174,8 @@ async def export_audit_csv(access: WorkspaceAccess) -> str:
 async def purge(session: AsyncSession, now: datetime | None = None) -> RetentionResult:
     """Delete operational records past the retention period (tenant scoped by RLS)."""
     days = (await governance.current(session)).retention_days
-    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
+    now = now or datetime.now(UTC)
+    cutoff = now - timedelta(days=days)
     notes = await session.execute(
         delete(Notification).where(
             Notification.read_at.is_not(None), Notification.created_at < cutoff
@@ -184,6 +188,7 @@ async def purge(session: AsyncSession, now: datetime | None = None) -> Retention
         notifications=notes.rowcount,  # type: ignore[attr-defined]
         connector_runs=runs.rowcount,  # type: ignore[attr-defined]
         ai_run_events=events.rowcount,  # type: ignore[attr-defined]
+        source_records=await connectors.purge_disconnected(session, now),
     )
 
 

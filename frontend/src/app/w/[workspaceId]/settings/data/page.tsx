@@ -107,7 +107,7 @@ export default async function DataPage({ params }: PageProps<"/w/[workspaceId]/s
 
         <Section
           title="Retention"
-          description="Read notifications, integration sync history and AI step logs older than this are deleted. Audit events, cases, ownership history and knowledge versions are kept."
+          description="Read notifications, integration sync history and AI step logs older than this are deleted. Data synced from a disconnected integration is deleted 30 days after the disconnect. Audit events, cases, ownership history and knowledge versions are kept."
         >
           {admin ? (
             <div className="flex flex-wrap items-end gap-3">

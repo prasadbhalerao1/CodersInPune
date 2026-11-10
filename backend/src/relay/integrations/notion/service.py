@@ -231,10 +231,12 @@ async def _connection(access: WorkspaceAccess, ref: uuid.UUID) -> NotionConnecti
 
 
 async def disconnect(access: WorkspaceAccess, ref: uuid.UUID) -> None:
-    """Forget the token. Imported knowledge stays as a snapshot and stops updating."""
+    """Forget the token. Imported pages stop updating; their source records are purged
+    30 days later and the imported knowledge is archived (connectors.purge_disconnected)."""
     authorize(access, Permission.INTEGRATION_MANAGE)
     connection = await _connection(access, ref)
     connection.status = "disconnected"
+    connection.disconnected_at = _now()
     oauth.forget(connection)
     connection.next_reconcile_at = None
     _record(access, "integration.notion_disconnected", connection.id)

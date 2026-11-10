@@ -327,6 +327,7 @@ async def disconnect(access: WorkspaceAccess, installation_ref: uuid.UUID) -> In
     authorize(access, Permission.INTEGRATION_MANAGE)
     installation = await _installation(access, installation_ref)
     installation.status = "disconnected"
+    installation.disconnected_at = func.now()
     await directory_sync.remove_route(access.session, installation.installation_id)
     repo_ids = select(GitHubRepository.id).where(
         GitHubRepository.installation_ref == installation_ref

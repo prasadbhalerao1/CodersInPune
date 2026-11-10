@@ -18,15 +18,28 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
+from relay.catalog.models import KnowledgeItem
 from relay.governance.models import ConnectorRun
 from relay.identity.workspace_access import WorkspaceAccess
-from relay.integrations.github.models import GitHubInstallation
-from relay.integrations.linear.models import LinearConnection
-from relay.integrations.notion.models import NotionConnection
+from relay.integrations.github.models import (
+    GitHubInstallation,
+    GitHubRepository,
+    GitHubTeam,
+    GitHubTeamMember,
+    GitHubWorkItem,
+    OwnershipSuggestion,
+)
+from relay.integrations.linear.models import (
+    LinearConnection,
+    LinearIssue,
+    LinearProject,
+    LinearTeam,
+)
+from relay.integrations.notion.models import NotionConnection, NotionPage, NotionSource
 from relay.jobs import outbox
 from relay.jobs.models import OutboxEvent
 from relay.policy.permissions import Permission, authorize, visible
@@ -217,3 +230,51 @@ async def set_paused(
     )
     await access.session.flush()
     return await health(access)
+
+
+SOURCE_RETENTION = timedelta(days=30)  # D13: source snapshots go within 30 days of disconnect
+
+
+async def purge_disconnected(session: AsyncSession, now: datetime) -> int:
+    """Delete source snapshots of connectors disconnected more than 30 days ago.
+
+    Runs with the retention job, in the tenant's context. Relay's own records (owners,
+    cases, audit) and identity mappings stay; knowledge imported from Notion is archived,
+    so nothing keeps presenting it as current. Returns the number of rows removed.
+    """
+    cutoff = now - SOURCE_RETENTION
+
+    def gone(model: Any) -> Any:
+        return select(model.id).where(
+            model.status == "disconnected", model.disconnected_at < cutoff
+        )
+
+    removed = 0
+
+    async def run(statement: Any) -> None:
+        nonlocal removed
+        removed += (await session.execute(statement)).rowcount  # type: ignore[attr-defined]
+
+    linear = gone(LinearConnection)
+    for model in (LinearIssue, LinearProject, LinearTeam):
+        await run(delete(model).where(model.connection_ref.in_(linear)))
+
+    sources = select(NotionSource.id).where(NotionSource.connection_ref.in_(gone(NotionConnection)))
+    imported = select(NotionPage.knowledge_item_id).where(NotionPage.source_ref.in_(sources))
+    await session.execute(
+        update(KnowledgeItem)
+        .where(KnowledgeItem.id.in_(imported), KnowledgeItem.status == "active")
+        .values(status="archived")
+    )
+    await run(delete(NotionPage).where(NotionPage.source_ref.in_(sources)))
+    await run(delete(NotionSource).where(NotionSource.id.in_(sources)))
+
+    github = gone(GitHubInstallation)
+    repos = select(GitHubRepository.id).where(GitHubRepository.installation_ref.in_(github))
+    teams = select(GitHubTeam.id).where(GitHubTeam.installation_ref.in_(github))
+    await run(delete(GitHubWorkItem).where(GitHubWorkItem.repository_id.in_(repos)))
+    await run(delete(OwnershipSuggestion).where(OwnershipSuggestion.repository_id.in_(repos)))
+    await run(delete(GitHubTeamMember).where(GitHubTeamMember.github_team_ref.in_(teams)))
+    await run(delete(GitHubTeam).where(GitHubTeam.id.in_(teams)))
+    await run(delete(GitHubRepository).where(GitHubRepository.id.in_(repos)))
+    return removed
