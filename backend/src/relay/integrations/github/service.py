@@ -697,7 +697,9 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     installation.last_sync_error = " ".join(dict.fromkeys(notes)) or None
 
 
-outbox.register(SYNC_EVENT, connectors.recorded("github", "installation_ref", handle_sync))
+outbox.register(
+    SYNC_EVENT, connectors.recorded("github", "installation_ref", handle_sync), serial="github-sync"
+)
 
 
 # ---------------------------------------------------------------- suggestions

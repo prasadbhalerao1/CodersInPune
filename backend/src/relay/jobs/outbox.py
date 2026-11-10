@@ -53,11 +53,24 @@ async def _workspace_created(_session: AsyncSession, _event: OutboxEvent, _ctx: 
 
 
 HANDLERS: dict[str, Handler] = {"workspace.created": _workspace_created}
+# Event types whose jobs run one at a time per tenant and group (NFR-PERF-006): one
+# tenant's connector syncs or AI steps can't occupy every worker slot or race each other.
+SERIAL: dict[str, str] = {}
 
 
-def register(event_type: str, handler: Handler) -> None:
-    """Register a handler for an event type (modules call this at import time)."""
+def register(event_type: str, handler: Handler, *, serial: str | None = None) -> None:
+    """Register a handler for an event type (modules call this at import time).
+
+    `serial` names a group: jobs for the same tenant and group never run concurrently.
+    """
     HANDLERS[event_type] = handler
+    if serial:
+        SERIAL[event_type] = serial
+
+
+def lock_for(tenant_id: uuid.UUID, event_type: str) -> str | None:
+    group = SERIAL.get(event_type)
+    return f"{tenant_id}:{group}" if group else None
 
 
 async def emit(
@@ -80,7 +93,12 @@ async def emit(
     connection = await (await session.connection()).get_raw_connection()
     await (
         jobs.tasks[PROCESS_TASK]
-        .configure(connection=connection.driver_connection, schedule_at=schedule_at)
+        .configure(
+            connection=connection.driver_connection,
+            schedule_at=schedule_at,
+            # Delayed jobs stay unlocked so a future reminder never holds up current work.
+            lock=None if schedule_at else lock_for(tenant_id, event_type),
+        )
         .defer_async(tenant_id=str(tenant_id), event_id=str(event_id))
     )
     return event_id

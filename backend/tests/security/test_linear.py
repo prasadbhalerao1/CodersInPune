@@ -364,3 +364,18 @@ async def test_responsibility_context_separates_evidence_risks_and_cases(
     assert [e["label"] for e in member["evidence"]] == ["Checkout v2"]  # linked = catalogue fact
     other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
     await other.call("GET", f"/responsibilities/{rid}/context", 404)
+
+
+async def test_syncs_are_serialised_per_tenant_and_connector(
+    api: Api, ws: Ws, ext: FakeExternal
+) -> None:
+    await connect(api, ws, ext)
+    with psycopg.connect(libpq_url(INSPECTOR_URL)) as conn:
+        locks = {
+            row[0]
+            for row in conn.execute(
+                "SELECT lock FROM procrastinate_jobs WHERE args->>'tenant_id' = %s",
+                (str(ws.id),),
+            )
+        }
+    assert f"{ws.id}:linear-sync" in locks

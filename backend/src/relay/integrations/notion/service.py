@@ -633,7 +633,9 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         )
 
 
-outbox.register(SYNC_EVENT, connectors.recorded("notion", "connection_ref", handle_sync))
+outbox.register(
+    SYNC_EVENT, connectors.recorded("notion", "connection_ref", handle_sync), serial="notion-sync"
+)
 
 
 # ---------------------------------------------------------------- reads
