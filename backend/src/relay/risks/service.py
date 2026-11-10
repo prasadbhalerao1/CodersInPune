@@ -387,7 +387,30 @@ async def _reconcile(access: WorkspaceAccess, detected: list[RiskView]) -> None:
     """
     session = access.session
     now = datetime.now(UTC)
-    if detected:
+    visible_records = visible(access, Permission.RESPONSIBILITY_READ, RiskRecord.tenant_id)
+    # Most reads change nothing: read without locks, then insert and lock only what changes.
+    records = {
+        r.risk_key: r for r in await session.scalars(select(RiskRecord).where(visible_records))
+    }
+    by_key = {r.key: r for r in detected}
+
+    def needs_change(record: RiskRecord) -> bool:
+        risk = by_key.get(record.risk_key)
+        if risk is None:
+            return record.status != "resolved"
+        return (
+            (record.severity, record.title, record.subject)
+            != (risk.severity, risk.title, _subject(risk))
+            or record.status == "resolved"
+            or (
+                record.status == "accepted"
+                and record.accepted_until is not None
+                and record.accepted_until <= now
+            )
+        )
+
+    missing = [r for r in detected if r.key not in records]
+    if missing:
         await session.execute(
             insert(RiskRecord)
             .values(
@@ -400,20 +423,24 @@ async def _reconcile(access: WorkspaceAccess, detected: list[RiskView]) -> None:
                         "title": r.title,
                         "subject": _subject(r),
                     }
-                    for r in detected
+                    for r in missing
                 ]
             )
             .on_conflict_do_nothing(index_elements=["tenant_id", "risk_key"])
         )
-    records = {
-        r.risk_key: r
-        for r in await session.scalars(
-            select(RiskRecord)
-            .where(visible(access, Permission.RESPONSIBILITY_READ, RiskRecord.tenant_id))
-            .order_by(RiskRecord.id)
-            .with_for_update()
-        )
-    }
+    changing = [k for k, r in records.items() if needs_change(r)] + [r.key for r in missing]
+    if changing:
+        # Re-read under lock: a concurrent reader may have applied the same change already.
+        records |= {
+            r.risk_key: r
+            for r in await session.scalars(
+                select(RiskRecord)
+                .where(visible_records, RiskRecord.risk_key.in_(changing))
+                .order_by(RiskRecord.id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        }
 
     def system_event(record: RiskRecord, action: str) -> None:
         audit.record(
