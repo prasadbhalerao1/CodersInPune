@@ -228,7 +228,9 @@ def score(results: list[dict]) -> dict[str, Any]:
         "categories": len({k.category for k in CASES}),
         "citation_precision": round(claims["supported"] / stored_claims, 3),
         "unsupported_claim_rate": round(claims["unsupported"] / stored_claims, 3),
-        "unsupported_blocked": f"{scripted_unsupported - claims['unsupported']}/{scripted_unsupported}",
+        "unsupported_blocked": (
+            f"{scripted_unsupported - claims['unsupported']}/{scripted_unsupported}"
+        ),
         "wrong_citations_stored": claims["wrong_citation"],
         "all_ai_claims_cited": all(r["all_ai_cited"] for r in results),
         "conflict_recall": round(
