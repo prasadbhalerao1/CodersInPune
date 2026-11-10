@@ -92,6 +92,8 @@ const RISK_STATUS: Record<RiskStatus, { label: string; tone: Tone }> = {
   acknowledged: { label: "Acknowledged", tone: "muted" },
   accepted: { label: "Accepted", tone: "muted" },
   resolved: { label: "Resolved", tone: "muted" },
+  in_remediation: { label: "In remediation", tone: "neutral" },
+  dismissed: { label: "Dismissed", tone: "muted" },
 };
 
 export function RiskStatusBadge({ value }: { value: RiskStatus }) {

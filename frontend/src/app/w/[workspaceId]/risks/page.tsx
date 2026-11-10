@@ -93,7 +93,7 @@ async function ActiveList({
             <span className="min-w-0 flex-1 text-sm">
               <span className="font-medium">{risk.title}</span>
               <span className="text-muted-foreground mx-1.5">·</span>
-              <span>{risk.responsibility?.name ?? risk.person_name}</span>
+              <span>{risk.responsibility?.name ?? risk.person_name ?? risk.asset_name}</span>
               <span className="text-muted-foreground block">{risk.explanation}</span>
             </span>
             <span className="flex shrink-0 flex-col items-end gap-1">

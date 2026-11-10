@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { key: "general", label: "Policies", path: "", admin: true },
+  { key: "governance", label: "Types & tiers", path: "/governance", admin: false },
   { key: "members", label: "Members", path: "/members", admin: false, absolute: true },
   { key: "notifications", label: "Notifications", path: "/notifications", admin: false },
   {

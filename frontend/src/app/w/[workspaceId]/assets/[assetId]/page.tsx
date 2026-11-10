@@ -9,14 +9,17 @@ import { api, canManage } from "@/lib/relay-api";
 
 import { setAssetStatusAction } from "../actions";
 import { ASSET_TYPE_LABEL } from "../labels";
+import { AssetFacts, AssetLinks, AssetMetadata } from "./details";
 
 export default async function AssetPage({
   params,
 }: PageProps<"/w/[workspaceId]/assets/[assetId]">) {
   const { workspaceId, assetId } = await params;
-  const [workspace, asset] = await Promise.all([
+  const [workspace, asset, cases, knowledge] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.getAsset(workspaceId, assetId)),
+    attempt(api.listCases(workspaceId, { status: "open" })),
+    attempt(api.knowledge(workspaceId)),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!asset.ok) return <ApiErrorNotice error={asset.error} />;
@@ -63,6 +66,7 @@ export default async function AssetPage({
         }
       />
       <div className="flex max-w-4xl flex-col gap-8 p-6">
+        <AssetFacts asset={a} />
         <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-muted-foreground text-xs">Type</dt>
@@ -92,6 +96,14 @@ export default async function AssetPage({
           ) : null}
         </dl>
 
+        <AssetMetadata workspaceId={workspaceId} asset={a} manage={manage} />
+        <AssetLinks
+          workspaceId={workspaceId}
+          asset={a}
+          manage={manage}
+          cases={cases.ok ? cases.data : []}
+          knowledge={knowledge.ok ? knowledge.data.results : []}
+        />
         <Section
           title="Looked after by"
           description={`Added ${formatDateTime(a.created_at)}. Link responsibilities from their own page.`}

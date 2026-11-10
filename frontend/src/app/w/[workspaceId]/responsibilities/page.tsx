@@ -4,6 +4,7 @@ import Link from "next/link";
 import { inputClass } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, PageHeader } from "@/components/page";
+import { SavedViews } from "@/components/saved-views";
 import { Badge, CriticalityBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
@@ -22,18 +23,40 @@ export default async function ResponsibilitiesPage({
     criticality: pick("criticality"),
     status: pick("status") ?? "active",
     department_id: pick("department_id"),
+    type_id: pick("type_id"),
+    has_backup: pick("has_backup"),
+    review: pick("review"),
+    needs_verification: pick("needs_verification"),
   };
-  const [workspace, list, departments] = await Promise.all([
+  const currentQuery = new URLSearchParams(
+    Object.entries(filters).filter((e): e is [string, string] => Boolean(e[1])),
+  ).toString();
+  const [workspace, list, departments, types, views] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
-    attempt(api.listResponsibilities(workspaceId, filters)),
+    attempt(
+      api.listResponsibilities(
+        workspaceId,
+        Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) as Record<string, string>,
+      ),
+    ),
     attempt(api.departments(workspaceId)),
+    attempt(api.responsibilityTypes(workspaceId)),
+    attempt(api.savedViews(workspaceId, "responsibilities")),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!list.ok) return <ApiErrorNotice error={list.error} />;
   const base = `/w/${workspaceId}/responsibilities`;
   const filtered = Boolean(
-    filters.q || filters.criticality || filters.department_id || filters.status !== "active",
+    filters.q ||
+    filters.criticality ||
+    filters.department_id ||
+    filters.type_id ||
+    filters.has_backup ||
+    filters.review ||
+    filters.needs_verification ||
+    filters.status !== "active",
   );
+  const select = `${inputClass} w-40`;
   const departmentOptions = departments.ok ? departments.data : [];
   const manage = canManage(workspace.data);
 
@@ -93,6 +116,50 @@ export default async function ResponsibilitiesPage({
               ))}
             </select>
           ) : null}
+          {types.ok && types.data.length ? (
+            <select
+              name="type_id"
+              defaultValue={filters.type_id ?? ""}
+              aria-label="Type"
+              className={select}
+            >
+              <option value="">Any type</option>
+              {types.data.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <select
+            name="has_backup"
+            defaultValue={filters.has_backup ?? ""}
+            aria-label="Backup"
+            className={select}
+          >
+            <option value="">Backup: any</option>
+            <option value="true">Has a backup</option>
+            <option value="false">No backup</option>
+          </select>
+          <select
+            name="review"
+            defaultValue={filters.review ?? ""}
+            aria-label="Review state"
+            className={select}
+          >
+            <option value="">Review: any</option>
+            <option value="due">Review overdue</option>
+            <option value="ok">Reviewed</option>
+          </select>
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              name="needs_verification"
+              value="true"
+              defaultChecked={filters.needs_verification === "true"}
+            />
+            Needs verification
+          </label>
           <select
             name="status"
             defaultValue={filters.status}
@@ -111,6 +178,15 @@ export default async function ResponsibilitiesPage({
             </Link>
           ) : null}
         </form>
+        {views.ok ? (
+          <SavedViews
+            workspaceId={workspaceId}
+            page="responsibilities"
+            base={base}
+            views={views.data}
+            current={filtered ? currentQuery : ""}
+          />
+        ) : null}
 
         {list.data.length === 0 ? (
           <EmptyState
@@ -146,8 +222,25 @@ export default async function ResponsibilitiesPage({
                       <Link href={`${base}/${r.id}`} className="font-medium hover:underline">
                         {r.name}
                       </Link>
-                      {r.category ? (
-                        <span className="text-muted-foreground ml-2 text-xs">{r.category}</span>
+                      {r.type_name || r.category ? (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {r.type_name ?? r.category}
+                        </span>
+                      ) : null}
+                      {r.restricted ? (
+                        <Badge tone="muted" className="ml-2">
+                          Restricted
+                        </Badge>
+                      ) : null}
+                      {r.needs_verification ? (
+                        <Badge tone="warning" className="ml-2">
+                          Verify
+                        </Badge>
+                      ) : null}
+                      {r.review_due ? (
+                        <Badge tone="warning" className="ml-2">
+                          Review due
+                        </Badge>
                       ) : null}
                     </td>
                     <td className="px-4 py-2.5">

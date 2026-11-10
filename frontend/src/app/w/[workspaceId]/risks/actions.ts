@@ -8,7 +8,7 @@ import { api, RelayApiError } from "@/lib/relay-api";
 export async function decideRiskAction(
   workspaceId: string,
   key: string,
-  action: "acknowledge" | "accept" | "reopen",
+  action: "acknowledge" | "accept" | "reopen" | "remediate" | "dismiss",
   _state: ActionState,
   fd: FormData,
 ): Promise<ActionState> {
@@ -19,6 +19,7 @@ export async function decideRiskAction(
   if (action === "accept" && (!note || !until)) {
     return { error: "Give a reason and the date the acceptance ends." };
   }
+  if (action === "dismiss" && !note) return { error: "Say why the risk is dismissed." };
   try {
     await api.send(workspaceId, "POST", "/risks/decision", {
       key,

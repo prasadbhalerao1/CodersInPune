@@ -150,6 +150,8 @@ export type RiskSubjectView = { id: string; name: string; criticality: Criticali
 export type RiskView = {
   key: string;
   rule: string;
+  asset_id: string | null;
+  asset_name: string | null;
   severity: Severity;
   title: string;
   explanation: string;
@@ -166,7 +168,8 @@ export type RiskView = {
   first_detected_at: string | null;
 };
 
-export type RiskStatus = "open" | "acknowledged" | "accepted" | "resolved";
+export type RiskStatus =
+  "open" | "acknowledged" | "accepted" | "resolved" | "in_remediation" | "dismissed";
 
 export type ResolvedRiskView = {
   key: string;
@@ -549,7 +552,16 @@ export type DepartmentView = {
 };
 
 export type AssetType =
-  "repository" | "service" | "project" | "process" | "vendor" | "document_collection" | "other";
+  | "repository"
+  | "service"
+  | "project"
+  | "process"
+  | "vendor"
+  | "document_collection"
+  | "customer_account"
+  | "infrastructure"
+  | "other";
+export type AssetLifecycle = "planned" | "active" | "deprecated" | "retired";
 
 export type LinkedAssetView = {
   id: string;
@@ -569,6 +581,22 @@ export type AssetSummary = {
   status: "active" | "archived";
   responsibility_count: number;
   updated_at: string;
+  criticality: Criticality | null;
+  tags: string[];
+  lifecycle: AssetLifecycle;
+  external_source: "github" | "linear" | "notion" | "manual" | null;
+  external_id: string | null;
+  source_state: "available" | "unavailable";
+  stewarded: boolean;
+};
+
+export type AssetLinkView = {
+  id: string;
+  kind: "knowledge" | "case" | "task";
+  target_id: string;
+  case_id: string | null;
+  title: string;
+  status: string;
 };
 
 export type AssetResponsibilityView = {
@@ -582,6 +610,10 @@ export type AssetResponsibilityView = {
 export type AssetDetail = AssetSummary & {
   created_at: string;
   responsibilities: AssetResponsibilityView[];
+  metadata: Record<string, string>;
+  metadata_fields: string[];
+  links: AssetLinkView[];
+  dependents: AssetResponsibilityView[];
 };
 
 export type ImportKind = "people" | "responsibilities" | "assignments";

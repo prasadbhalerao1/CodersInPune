@@ -41,7 +41,8 @@ export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/r
 
   const manage = canManage(workspace.data);
   const subjects = risk.responsibility ? [risk.responsibility] : risk.related;
-  const decide = (action: "acknowledge" | "accept" | "reopen") =>
+  const assetLink = risk.asset_id ? `/w/${workspaceId}/assets/${risk.asset_id}` : null;
+  const decide = (action: "acknowledge" | "accept" | "reopen" | "remediate" | "dismiss") =>
     decideRiskAction.bind(null, workspaceId, risk.key, action);
 
   return (
@@ -57,6 +58,14 @@ export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/r
       />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,42rem)_22rem]">
         <div className="flex flex-col gap-6">
+          {assetLink ? (
+            <p className="text-sm">
+              Asset:{" "}
+              <a href={assetLink} className="font-medium underline-offset-2 hover:underline">
+                {risk.asset_name}
+              </a>
+            </p>
+          ) : null}
           <Section title="Why this is a risk">
             <p className="text-sm">{risk.explanation}</p>
           </Section>
@@ -126,6 +135,49 @@ export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/r
                     <div>
                       <SubmitButton size="sm" variant="outline">
                         Acknowledge
+                      </SubmitButton>
+                    </div>
+                  </ActionForm>
+                </Section>
+              ) : null}
+              {risk.status !== "in_remediation" ? (
+                <Section
+                  title="Start remediation"
+                  description="Someone is fixing the underlying condition. Relay resolves the risk by itself once it's gone."
+                >
+                  <ActionForm action={decide("remediate")}>
+                    <input
+                      name="note"
+                      maxLength={4000}
+                      placeholder="What is being done (optional)"
+                      aria-label="Remediation note"
+                      className={inputClass}
+                    />
+                    <div>
+                      <SubmitButton size="sm" variant="outline">
+                        Mark in remediation
+                      </SubmitButton>
+                    </div>
+                  </ActionForm>
+                </Section>
+              ) : null}
+              {risk.status !== "dismissed" ? (
+                <Section
+                  title="Dismiss"
+                  description="Not a real risk here. The reason is kept; it reopens if it's resolved and comes back."
+                >
+                  <ActionForm action={decide("dismiss")}>
+                    <input
+                      name="note"
+                      required
+                      maxLength={4000}
+                      placeholder="Why this doesn't apply"
+                      aria-label="Dismissal reason"
+                      className={inputClass}
+                    />
+                    <div>
+                      <SubmitButton size="sm" variant="ghost">
+                        Dismiss
                       </SubmitButton>
                     </div>
                   </ActionForm>

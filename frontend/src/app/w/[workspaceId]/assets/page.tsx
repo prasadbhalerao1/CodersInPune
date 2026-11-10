@@ -10,7 +10,7 @@ import { attempt } from "@/lib/attempt";
 import { api, canManage } from "@/lib/relay-api";
 
 import { createAssetAction } from "./actions";
-import { ASSET_TYPE_LABEL, ASSET_TYPES } from "./labels";
+import { ASSET_TYPE_LABEL, ASSET_TYPES, LIFECYCLE_LABEL } from "./labels";
 
 export const metadata: Metadata = { title: "Assets" };
 
@@ -24,16 +24,33 @@ export default async function AssetsPage({
     q: pick("q"),
     asset_type: pick("asset_type"),
     status: pick("status") ?? "active",
+    lifecycle: pick("lifecycle"),
+    criticality: pick("criticality"),
+    tag: pick("tag"),
+    stewarded: pick("stewarded"),
   };
   const [workspace, assets] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
-    attempt(api.assets(workspaceId, filters)),
+    attempt(
+      api.assets(
+        workspaceId,
+        Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) as Record<string, string>,
+      ),
+    ),
   ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!assets.ok) return <ApiErrorNotice error={assets.error} />;
   const manage = canManage(workspace.data);
   const base = `/w/${workspaceId}/assets`;
-  const filtered = Boolean(filters.q || filters.asset_type || filters.status !== "active");
+  const filtered = Boolean(
+    filters.q ||
+    filters.asset_type ||
+    filters.lifecycle ||
+    filters.criticality ||
+    filters.tag ||
+    filters.stewarded ||
+    filters.status !== "active",
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -78,6 +95,29 @@ export default async function AssetsPage({
                     className={inputClass}
                   />
                 </Field>
+                <Field label="Criticality (optional)" htmlFor="asset-criticality">
+                  <select
+                    id="asset-criticality"
+                    name="criticality"
+                    defaultValue=""
+                    className={inputClass}
+                  >
+                    <option value="">Not set</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="standard">Standard</option>
+                    <option value="low">Low</option>
+                  </select>
+                </Field>
+                <Field label="Tags (comma separated)" htmlFor="asset-tags">
+                  <input
+                    id="asset-tags"
+                    name="tags"
+                    maxLength={400}
+                    placeholder="payments, pci"
+                    className={inputClass}
+                  />
+                </Field>
                 <Field label="Description (optional)" htmlFor="asset-description">
                   <input
                     id="asset-description"
@@ -115,6 +155,48 @@ export default async function AssetsPage({
               </option>
             ))}
           </select>
+          <select
+            name="lifecycle"
+            defaultValue={filters.lifecycle ?? ""}
+            aria-label="Lifecycle"
+            className={`${inputClass} w-36`}
+          >
+            <option value="">Any lifecycle</option>
+            {Object.entries(LIFECYCLE_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
+            name="criticality"
+            defaultValue={filters.criticality ?? ""}
+            aria-label="Criticality"
+            className={`${inputClass} w-36`}
+          >
+            <option value="">Any criticality</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="standard">Standard</option>
+            <option value="low">Low</option>
+          </select>
+          <select
+            name="stewarded"
+            defaultValue={filters.stewarded ?? ""}
+            aria-label="Stewardship"
+            className={`${inputClass} w-40`}
+          >
+            <option value="">Stewarded or not</option>
+            <option value="false">Nobody stewards it</option>
+            <option value="true">Stewarded</option>
+          </select>
+          <input
+            name="tag"
+            defaultValue={filters.tag}
+            placeholder="Tag"
+            aria-label="Tag"
+            className={`${inputClass} w-28`}
+          />
           <select
             name="status"
             defaultValue={filters.status}
@@ -160,6 +242,21 @@ export default async function AssetsPage({
                       <Link href={`${base}/${a.id}`} className="font-medium hover:underline">
                         {a.name}
                       </Link>
+                      {a.lifecycle !== "active" ? (
+                        <Badge tone="muted" className="ml-2">
+                          {LIFECYCLE_LABEL[a.lifecycle]}
+                        </Badge>
+                      ) : null}
+                      {a.source_state === "unavailable" ? (
+                        <Badge tone="warning" className="ml-2">
+                          Source unavailable
+                        </Badge>
+                      ) : null}
+                      {a.tags.length ? (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {a.tags.map((t) => `#${t}`).join(" ")}
+                        </span>
+                      ) : null}
                       {a.description ? (
                         <span className="text-muted-foreground block truncate text-xs">
                           {a.description}
@@ -170,10 +267,10 @@ export default async function AssetsPage({
                       <Badge tone="muted">{ASSET_TYPE_LABEL[a.asset_type]}</Badge>
                     </td>
                     <td className="px-4 py-2.5 tabular-nums">
-                      {a.responsibility_count > 0 ? (
-                        a.responsibility_count
+                      {!a.stewarded ? (
+                        <Badge tone="warning">Nobody stewards it</Badge>
                       ) : (
-                        <Badge tone="warning">Not linked</Badge>
+                        a.responsibility_count
                       )}
                     </td>
                   </tr>
