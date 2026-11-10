@@ -33,6 +33,12 @@ export type ResponsibilitySummary = {
   primary_owner: AssigneeView | null;
   backup_count: number;
   updated_at: string;
+  restricted: boolean;
+  type_id: string | null;
+  type_name: string | null;
+  needs_verification: boolean;
+  review_due: boolean;
+  last_reviewed_at: string | null;
 };
 
 export type ResponsibilityDetail = {
@@ -50,12 +56,60 @@ export type ResponsibilityDetail = {
   owners_as_of: AssignmentView[];
   assignments: AssignmentView[];
   assets: LinkedAssetView[];
+  restricted: boolean;
+  type_id: string | null;
+  type_name: string | null;
+  escalation_path: string | null;
+  escalation_contact: string | null;
+  review_cadence_days: number | null;
+  effective_review_days: number;
+  last_reviewed_at: string | null;
+  last_reviewed_by_name: string | null;
+  review_due: boolean;
+  needs_verification: boolean;
+  procedures: string[];
+  access_prerequisites: string[];
+  accountable_person_id: string | null;
+  accountable_person_name: string | null;
+};
+
+export type ResponsibilityTypeView = {
+  id: string;
+  name: string;
+  description: string | null;
+  review_cadence_days: number | null;
+  responsibilities: number;
+};
+
+export type DependencyView = {
+  id: string;
+  direction: "outgoing" | "incoming";
+  relationship: "depends_on" | "feeds" | "escalates_to" | "shares_access";
+  provenance: string;
+  note: string | null;
+  target_type: "responsibility" | "asset";
+  target_id: string;
+  target_name: string;
+  created_at: string;
+};
+
+export type StewardshipView = {
+  dependencies: DependencyView[];
+  access: { user_id: string; name: string; granted_at: string }[];
+};
+
+export type TierView = {
+  criticality: Criticality;
+  requires_backup: boolean;
+  review_days: number;
+  requires_accountable_contact: boolean;
+  customised: boolean;
 };
 
 export type ChangeView = {
   id: string;
   assignment_id: string;
-  change_type: "assigned" | "ended";
+  change_type: "assigned" | "ended" | "extended" | "corrected";
   role: Role;
   assignee: AssigneeView;
   valid_from: string;

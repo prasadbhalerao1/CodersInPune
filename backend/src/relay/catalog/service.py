@@ -10,14 +10,15 @@ event in the same transaction.
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, BaseModel, model_validator
+from pydantic import AwareDatetime, BaseModel, Field, model_validator
 from sqlalchemy import ColumnElement, and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
+from relay.catalog import stewardship
 from relay.catalog.models import (
     Asset,
     OwnershipAssignment,
@@ -54,14 +55,28 @@ _CONSTRAINT_ERRORS = {
 # ---------------------------------------------------------------- schemas
 
 
-class ResponsibilityIn(StrictInput):
+class Stewardship(StrictInput):
+    """Governance fields shared by create and update."""
+
+    restricted: bool | None = None
+    type_id: uuid.UUID | None = None
+    escalation_path: LongText | None = None
+    escalation_contact: ShortText | None = None
+    review_cadence_days: Annotated[int, Field(ge=7, le=730)] | None = None
+    needs_verification: bool | None = None
+    procedures: Annotated[list[Name], Field(max_length=30)] | None = None
+    access_prerequisites: Annotated[list[Name], Field(max_length=30)] | None = None
+    accountable_person_id: uuid.UUID | None = None
+
+
+class ResponsibilityIn(Stewardship):
     name: Name
     description: LongText | None = None
     category: ShortText | None = None
     criticality: Criticality = "standard"
 
 
-class ResponsibilityUpdate(StrictInput):
+class ResponsibilityUpdate(Stewardship):
     version: int
     name: Name | None = None
     description: LongText | None = None
@@ -89,6 +104,15 @@ class AssignmentIn(Assignee):
 class EndAssignmentIn(StrictInput):
     ends_at: AwareDatetime | None = None
     reason: LongText | None = None
+
+
+class CorrectionIn(StrictInput):
+    """Fix a recorded period (e.g. backdate a start). The previous period stays in the
+    change history; a reason is mandatory."""
+
+    valid_from: AwareDatetime
+    valid_to: AwareDatetime | None = None
+    reason: LongText
 
 
 class ReplacePrimaryIn(Assignee):
@@ -123,6 +147,12 @@ class ResponsibilitySummary(BaseModel):
     primary_owner: AssigneeView | None
     backup_count: int
     updated_at: datetime
+    restricted: bool = False
+    type_id: uuid.UUID | None = None
+    type_name: str | None = None
+    needs_verification: bool = False
+    review_due: bool = False
+    last_reviewed_at: datetime | None = None
 
 
 class ResponsibilityDetail(BaseModel):
@@ -140,6 +170,21 @@ class ResponsibilityDetail(BaseModel):
     owners_as_of: list[AssignmentView]
     assignments: list[AssignmentView]
     assets: list[LinkedAssetView]
+    restricted: bool = False
+    type_id: uuid.UUID | None = None
+    type_name: str | None = None
+    escalation_path: str | None = None
+    escalation_contact: str | None = None
+    review_cadence_days: int | None = None
+    effective_review_days: int = 365
+    last_reviewed_at: datetime | None = None
+    last_reviewed_by_name: str | None = None
+    review_due: bool = False
+    needs_verification: bool = False
+    procedures: list[str] = []
+    access_prerequisites: list[str] = []
+    accountable_person_id: uuid.UUID | None = None
+    accountable_person_name: str | None = None
 
 
 class LinkedAssetView(BaseModel):
@@ -381,6 +426,10 @@ async def list_responsibilities(
     status: ResponsibilityStatus | None = "active",
     category: str | None = None,
     department_id: uuid.UUID | None = None,
+    type_id: uuid.UUID | None = None,
+    has_backup: bool | None = None,
+    review: Literal["due", "ok"] | None = None,
+    needs_verification: bool | None = None,
 ) -> list[ResponsibilitySummary]:
     now = utcnow()
     stmt = select(Responsibility).where(
@@ -404,6 +453,17 @@ async def list_responsibilities(
         stmt = stmt.where(Responsibility.criticality == criticality)
     if category:
         stmt = stmt.where(Responsibility.category == category)
+    if type_id:
+        stmt = stmt.where(Responsibility.type_id == type_id)
+    if needs_verification is not None:
+        stmt = stmt.where(Responsibility.needs_verification.is_(needs_verification))
+    if has_backup is not None:
+        backed = select(OwnershipAssignment.responsibility_id).where(
+            OwnershipAssignment.role == "backup", active_at(now)
+        )
+        stmt = stmt.where(
+            Responsibility.id.in_(backed) if has_backup else Responsibility.id.not_in(backed)
+        )
     if q:
         stmt = stmt.where(
             or_(
@@ -427,10 +487,15 @@ async def list_responsibilities(
         )
     )
     assignees = await assignee_views(access.session, current)
+    cadence = await stewardship.review_days(access, responsibilities)
+    types = await stewardship.type_names(access)
     summaries = []
     for r in responsibilities:
         mine = [a for a in current if a.responsibility_id == r.id]
         primary = next((a for a in mine if a.role == "primary"), None)
+        due = stewardship.is_review_due(r, cadence[r.id], now)
+        if review is not None and due != (review == "due"):
+            continue
         summaries.append(
             ResponsibilitySummary(
                 id=r.id,
@@ -443,6 +508,12 @@ async def list_responsibilities(
                 else None,
                 backup_count=sum(1 for a in mine if a.role == "backup"),
                 updated_at=r.updated_at,
+                restricted=r.restricted,
+                type_id=r.type_id,
+                type_name=types.get(r.type_id) if r.type_id else None,
+                needs_verification=r.needs_verification,
+                review_due=due,
+                last_reviewed_at=r.last_reviewed_at,
             )
         )
     return summaries
@@ -480,7 +551,24 @@ async def get_responsibility(
         )
         .order_by(Asset.name)
     )
+    days = (await stewardship.review_days(access, [r]))[r.id]
+    names = await stewardship.governance_names(access, r)
     return ResponsibilityDetail(
+        restricted=r.restricted,
+        type_id=r.type_id,
+        type_name=names.type_name,
+        escalation_path=r.escalation_path,
+        escalation_contact=r.escalation_contact,
+        review_cadence_days=r.review_cadence_days,
+        effective_review_days=days,
+        last_reviewed_at=r.last_reviewed_at,
+        last_reviewed_by_name=names.reviewer_name,
+        review_due=stewardship.is_review_due(r, days, now),
+        needs_verification=r.needs_verification,
+        procedures=r.procedures,
+        access_prerequisites=r.access_prerequisites,
+        accountable_person_id=r.accountable_person_id,
+        accountable_person_name=names.accountable_name,
         id=r.id,
         name=r.name,
         description=r.description,
@@ -517,6 +605,7 @@ async def create_responsibility(
 
 async def add_responsibility(access: WorkspaceAccess, data: ResponsibilityIn) -> Responsibility:
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    fields = await stewardship.clean(access, data.model_dump(exclude_unset=True))
     responsibility = Responsibility(
         id=uuid.uuid7(),
         tenant_id=access.tenant_id,
@@ -525,6 +614,7 @@ async def add_responsibility(access: WorkspaceAccess, data: ResponsibilityIn) ->
         category=blank_to_none(data.category),
         criticality=data.criticality,
         created_by=access.user_id,
+        **{k: v for k, v in fields.items() if k in stewardship.FIELDS},
     )
     access.session.add(responsibility)
     await access.session.flush()
@@ -543,7 +633,9 @@ async def update_responsibility(
 ) -> ResponsibilityDetail:
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
     await _get_responsibility(access, responsibility_id)
-    changes = data.model_dump(exclude_unset=True, exclude={"version"})
+    changes = await stewardship.clean(
+        access, data.model_dump(exclude_unset=True, exclude={"version"})
+    )
     for field in ("description", "category"):
         if field in changes:
             changes[field] = blank_to_none(changes[field])
@@ -563,6 +655,42 @@ async def update_responsibility(
         "responsibility",
         responsibility_id,
         fields=",".join(sorted(changes)),
+    )
+    access.session.expire_all()
+    return await get_responsibility(access, responsibility_id)
+
+
+async def correct_assignment(
+    access: WorkspaceAccess,
+    responsibility_id: uuid.UUID,
+    assignment_id: uuid.UUID,
+    data: CorrectionIn,
+) -> ResponsibilityDetail:
+    """Correct when an assignment really started or ended, including in the past. Overlap
+    rules still apply (one primary at a time); history keeps the original and the reason."""
+    authorize(access, Permission.RESPONSIBILITY_MANAGE)
+    await _get_responsibility(access, responsibility_id, lock=True)
+    assignment = await access.session.get(OwnershipAssignment, assignment_id, with_for_update=True)
+    if assignment is None or assignment.responsibility_id != responsibility_id:
+        raise ApiError(404, "assignment_not_found", "Assignment not found.")
+    if not data.reason.strip():
+        raise ApiError(422, "reason_required", "Say why the record is corrected.")
+    if data.valid_to is not None and data.valid_to <= data.valid_from:
+        raise ApiError(422, "invalid_range", "The end must be after the start.")
+    if assignment.role == "temporary" and data.valid_to is None:
+        raise ApiError(422, "invalid_range", "Temporary cover needs an end.")
+    before = (assignment.valid_from, assignment.valid_to)
+    assignment.valid_from, assignment.valid_to = data.valid_from, data.valid_to
+    await _flush_assignments(access)
+    _record_change(access, assignment, "corrected", data.reason)
+    record_audit(
+        access,
+        "assignment.corrected",
+        "responsibility",
+        responsibility_id,
+        assignment_id=str(assignment_id),
+        from_start=before[0].isoformat(),
+        from_end=before[1].isoformat() if before[1] else None,
     )
     access.session.expire_all()
     return await get_responsibility(access, responsibility_id)

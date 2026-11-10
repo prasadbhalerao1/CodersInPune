@@ -217,6 +217,8 @@ class ScopeItemView(BaseModel):
     state: str
     decline_reason: str | None = None
     declined_at: datetime | None = None
+    # Restricted and not visible to the viewer: no details beyond its existence.
+    hidden: bool = False
     # The signed-in user is the incoming person and may decline the assignment.
     can_decline: bool = False
 
@@ -1691,10 +1693,18 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
             ScopeItemView(
                 id=i.id,
                 responsibility_id=i.responsibility_id,
-                responsibility_name=responsibilities[i.responsibility_id].name,
-                criticality=responsibilities[i.responsibility_id].criticality,
+                # Restricted responsibilities the viewer can't see stay unnamed.
+                responsibility_name=responsibilities[i.responsibility_id].name
+                if i.responsibility_id in responsibilities
+                else "Restricted responsibility",
+                criticality=responsibilities[i.responsibility_id].criticality
+                if i.responsibility_id in responsibilities
+                else "standard",
+                hidden=i.responsibility_id not in responsibilities,
                 role=i.role,
-                current_owner_name=owner_name(i),
+                current_owner_name=None
+                if i.responsibility_id not in responsibilities
+                else owner_name(i),
                 recipient=recipient(i),
                 handover_notes=i.handover_notes,
                 exception_reason=i.exception_reason,

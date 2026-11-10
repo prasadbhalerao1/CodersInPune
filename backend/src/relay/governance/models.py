@@ -62,3 +62,27 @@ class SavedView(Base):
     name: Mapped[str] = mapped_column(Text)
     query: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CriticalityPolicy(Base):
+    """Per criticality tier; no row means the built-in defaults (governance.service)."""
+
+    __tablename__ = "criticality_policy"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "criticality"),
+        CheckConstraint(
+            "criticality IN ('critical', 'high', 'standard', 'low')", name="criticality"
+        ),
+        CheckConstraint("review_days BETWEEN 7 AND 730", name="review_days"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    criticality: Mapped[str] = mapped_column(Text)
+    requires_backup: Mapped[bool] = mapped_column(Boolean)
+    review_days: Mapped[int] = mapped_column(Integer)
+    requires_accountable_contact: Mapped[bool] = mapped_column(Boolean)
+    updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

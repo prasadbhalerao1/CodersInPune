@@ -14,8 +14,21 @@ async def list_assets(
     q: str | None = None,
     asset_type: svc.AssetType | None = None,
     status: svc.AssetStatus | None = "active",
+    tag: str | None = None,
+    lifecycle: svc.Lifecycle | None = None,
+    criticality: svc.Criticality | None = None,
+    stewarded: bool | None = None,
 ) -> list[svc.AssetSummary]:
-    return await svc.list_assets(access, q=q, asset_type=asset_type, status=status)
+    return await svc.list_assets(
+        access,
+        q=q,
+        asset_type=asset_type,
+        status=status,
+        tag=tag,
+        lifecycle=lifecycle,
+        criticality=criticality,
+        stewarded=stewarded,
+    )
 
 
 @router.post("/assets", status_code=status.HTTP_201_CREATED)
@@ -50,3 +63,17 @@ async def unlink_asset(
     access: CurrentWorkspace, responsibility_id: uuid.UUID, asset_id: uuid.UUID
 ) -> None:
     await svc.unlink_asset(access, responsibility_id, asset_id)
+
+
+@router.post("/assets/{asset_id}/links", status_code=status.HTTP_201_CREATED)
+async def link_target(
+    access: CurrentWorkspace, asset_id: uuid.UUID, body: svc.AssetTargetIn
+) -> svc.AssetDetail:
+    return await svc.link_target(access, asset_id, body)
+
+
+@router.delete("/assets/{asset_id}/links/{link_id}")
+async def unlink_target(
+    access: CurrentWorkspace, asset_id: uuid.UUID, link_id: uuid.UUID
+) -> svc.AssetDetail:
+    return await svc.unlink_target(access, asset_id, link_id)

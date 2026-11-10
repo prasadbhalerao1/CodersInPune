@@ -34,6 +34,9 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  ResponsibilityTypeView,
+  StewardshipView,
+  TierView,
   TaskDetail,
   ImpactView,
   ParticipantView,
@@ -200,6 +203,13 @@ export const api = {
     relayFetch<CaseSummary[]>(withQuery(`${ws(id)}/cases`, query)),
   getCase: (id: string, caseId: string) =>
     relayFetch<CaseDetail>(`${ws(id)}/cases/${encodeURIComponent(caseId)}`),
+  responsibilityTypes: (id: string) =>
+    relayFetch<ResponsibilityTypeView[]>(`${ws(id)}/responsibilities/types`),
+  stewardship: (id: string, responsibilityId: string) =>
+    relayFetch<StewardshipView>(
+      `${ws(id)}/responsibilities/${encodeURIComponent(responsibilityId)}/stewardship`,
+    ),
+  policyTiers: (id: string) => relayFetch<TierView[]>(`${ws(id)}/policy/tiers`),
   caseTask: (id: string, caseId: string, taskId: string) =>
     relayFetch<TaskDetail>(
       `${ws(id)}/cases/${encodeURIComponent(caseId)}/tasks/${encodeURIComponent(taskId)}`,

@@ -27,9 +27,15 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
 from relay.audit import service as audit
-from relay.catalog.models import OwnershipAssignment, OwnershipAssignmentChange, Responsibility
+from relay.catalog.models import (
+    Asset,
+    OwnershipAssignment,
+    OwnershipAssignmentChange,
+    Responsibility,
+    ResponsibilityAsset,
+)
 from relay.catalog.service import active_at, assignee_views
-from relay.directory.models import Person, Team
+from relay.directory.models import Person, Team, TeamMember
 from relay.governance import service as governance
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
@@ -39,14 +45,15 @@ from relay.shared.api_types import LongText, StrictInput
 from relay.shared.errors import ApiError
 
 Severity = Literal["high", "medium", "low"]
-RiskStatus = Literal["open", "acknowledged", "accepted", "resolved"]
+RiskStatus = Literal["open", "acknowledged", "accepted", "resolved", "in_remediation", "dismissed"]
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
-ACTIVE: tuple[RiskStatus, ...] = ("open", "acknowledged")
+ACTIVE: tuple[RiskStatus, ...] = ("open", "acknowledged", "in_remediation")
 
 
 class RiskDecisionIn(StrictInput):
     key: str
-    action: Literal["acknowledge", "accept", "reopen"]
+    # "resolve" is only possible once the condition is gone (Relay resolves it then).
+    action: Literal["acknowledge", "accept", "reopen", "remediate", "dismiss", "resolve"]
     note: LongText | None = None
     accepted_until: AwareDatetime | None = None
 
@@ -68,6 +75,8 @@ class RiskView(BaseModel):
     person_id: uuid.UUID | None = None
     person_name: str | None = None
     related: list[RiskSubjectView] = []
+    asset_id: uuid.UUID | None = None
+    asset_name: str | None = None
     status: RiskStatus = "open"
     note: str | None = None
     accepted_until: datetime | None = None
@@ -112,6 +121,12 @@ async def _detect(access: WorkspaceAccess) -> list[RiskView]:
     session = access.session
     now = datetime.now(UTC)
     policy = await governance.current(session)
+    tiers = await governance.criticality_tiers(session)
+    members_of: dict[uuid.UUID, set[uuid.UUID]] = defaultdict(set)
+    for team_id, person_id in await session.execute(
+        select(TeamMember.team_id, TeamMember.person_id)
+    ):
+        members_of[team_id].add(person_id)
     responsibilities = list(
         await session.scalars(
             select(Responsibility).where(
@@ -204,6 +219,41 @@ async def _detect(access: WorkspaceAccess) -> list[RiskView]:
                     responsibility=subject,
                 )
             )
+        # The same holder can't hold two roles (database rule), but cover is still illusory
+        # when the backup person is in the primary team, or the primary is in the backup team.
+        primary_people = _people_of(mine, "primary", members_of)
+        backup_people = _people_of(mine, "backup", members_of)
+        if primary_people and backup_people and backup_people <= primary_people:
+            risks.append(
+                RiskView(
+                    key=f"backup_is_primary:{r.id}",
+                    rule="backup_is_primary",
+                    severity="high" if r.criticality in ("critical", "high") else "medium",
+                    title="Backup is the same as the primary owner",
+                    explanation=f"The backup for “{r.name}” is the same people as its "
+                    "primary owner (directly or through a team), so nobody else can cover.",
+                    recommendation="Choose a different person or team as backup.",
+                    responsibility=subject,
+                )
+            )
+        primary_team = any(a.role == "primary" and a.team_id for a in mine)
+        if (
+            primary_team
+            and tiers[r.criticality].requires_accountable_contact
+            and r.accountable_person_id is None
+        ):
+            risks.append(
+                RiskView(
+                    key=f"team_without_contact:{r.id}",
+                    rule="team_without_contact",
+                    severity="high" if r.criticality == "critical" else "medium",
+                    title="Team-owned without an accountable contact",
+                    explanation=f"“{r.name}” is owned by a team but no person is named to "
+                    "call when something goes wrong.",
+                    recommendation="Name an accountable contact on the responsibility.",
+                    responsibility=subject,
+                )
+            )
         for a in mine:
             holder = people.get(a.person_id) if a.person_id else teams.get(a.team_id)  # type: ignore[arg-type]
             if holder is not None and holder.status == "archived":
@@ -247,12 +297,61 @@ async def _detect(access: WorkspaceAccess) -> list[RiskView]:
             )
         )
 
+    # Assets nobody stewards: no active responsibility looks after them.
+    stewarded = (
+        select(ResponsibilityAsset.asset_id)
+        .join(Responsibility, Responsibility.id == ResponsibilityAsset.responsibility_id)
+        .where(ResponsibilityAsset.relationship == "stewards", Responsibility.status == "active")
+    )
+    for asset in await session.scalars(
+        select(Asset).where(
+            visible(access, Permission.RESPONSIBILITY_READ, Asset.tenant_id),
+            Asset.status == "active",
+            Asset.lifecycle.in_(("planned", "active")),
+            Asset.id.not_in(stewarded),
+        )
+    ):
+        risks.append(
+            RiskView(
+                key=f"unstewarded_asset:{asset.id}",
+                rule="unstewarded_asset",
+                severity="high"
+                if asset.criticality in ("critical", "high")
+                else "medium"
+                if asset.criticality == "standard"
+                else "low",
+                title="Asset without a stewarding responsibility",
+                explanation=f"No responsibility looks after “{asset.name}”, so nobody is "
+                "accountable for it.",
+                recommendation="Link the asset to the responsibility that stewards it.",
+                asset_id=asset.id,
+                asset_name=asset.name,
+            )
+        )
+
     risks.sort(key=lambda x: (_SEVERITY_ORDER[x.severity], x.title, x.key))
     return risks
 
 
+def _people_of(
+    assignments: list[OwnershipAssignment],
+    role: str,
+    members_of: dict[uuid.UUID, set[uuid.UUID]],
+) -> set[uuid.UUID]:
+    """The people behind a role: the person, or the members of the team."""
+    people: set[uuid.UUID] = set()
+    for a in assignments:
+        if a.role != role:
+            continue
+        if a.person_id:
+            people.add(a.person_id)
+        elif a.team_id:
+            people |= members_of.get(a.team_id, set())
+    return people
+
+
 def _subject(risk: RiskView) -> str | None:
-    return risk.responsibility.name if risk.responsibility else risk.person_name
+    return risk.responsibility.name if risk.responsibility else risk.person_name or risk.asset_name
 
 
 async def _member_names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
@@ -390,7 +489,21 @@ async def decide_risk(access: WorkspaceAccess, data: RiskDecisionIn) -> RiskView
     if record is None or data.key not in detected:
         raise ApiError(404, "risk_not_found", "This risk is not currently detected.")
     now = datetime.now(UTC)
-    if data.action == "accept":
+    if data.action == "resolve":
+        # Deterministic risks resolve themselves when the condition is fixed, never by hand.
+        raise ApiError(
+            409,
+            "condition_present",
+            "The condition behind this risk still exists. Fix it and Relay resolves the risk.",
+        )
+    if data.action == "dismiss" and not data.note:
+        raise ApiError(422, "reason_required", "Dismissing a risk needs a reason.")
+    if data.action in ("remediate", "dismiss"):
+        target: RiskStatus = "in_remediation" if data.action == "remediate" else "dismissed"
+        if record.status == target:
+            raise ApiError(409, "unchanged", f"This risk is already {target.replace('_', ' ')}.")
+        record.status, record.accepted_until = target, None
+    elif data.action == "accept":
         if not data.note:
             raise ApiError(422, "reason_required", "Accepting a risk needs a reason.")
         if data.accepted_until is None or data.accepted_until <= now:
@@ -411,9 +524,12 @@ async def decide_risk(access: WorkspaceAccess, data: RiskDecisionIn) -> RiskView
     audit.record(
         access.session,
         tenant_id=access.tenant_id,
-        action={"accept": "risk.accepted", "acknowledge": "risk.acknowledged"}.get(
-            data.action, "risk.reopened"
-        ),
+        action={
+            "accept": "risk.accepted",
+            "acknowledge": "risk.acknowledged",
+            "remediate": "risk.in_remediation",
+            "dismiss": "risk.dismissed",
+        }.get(data.action, "risk.reopened"),
         actor_user_id=access.user_id,
         target_type="risk",
         target_id=record.id,

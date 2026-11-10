@@ -28,13 +28,16 @@ class RiskRecord(Base):
         UniqueConstraint("tenant_id", "id"),
         UniqueConstraint("tenant_id", "risk_key"),
         CheckConstraint(
-            "status IN ('open', 'acknowledged', 'accepted', 'resolved')", name="status"
+            "status IN ('open', 'acknowledged', 'accepted', 'resolved', 'in_remediation', "
+            "'dismissed')",
+            name="status",
         ),
         CheckConstraint(
             "status <> 'accepted' OR (accepted_until IS NOT NULL AND note IS NOT NULL)",
             name="acceptance",
         ),
         CheckConstraint("severity IN ('high', 'medium', 'low')", name="severity"),
+        CheckConstraint("status <> 'dismissed' OR note IS NOT NULL", name="dismissal"),
         Index(None, "tenant_id", "status"),
         {"schema": SCHEMA},
     )

@@ -25,6 +25,12 @@ import {
   setResponsibilityStatusAction,
 } from "../../actions";
 import { ContinuityContext } from "./context";
+import {
+  AccessSection,
+  CorrectAssignment,
+  DependenciesSection,
+  StewardshipFacts,
+} from "./stewardship";
 
 export default async function ResponsibilityPage({
   params,
@@ -32,18 +38,31 @@ export default async function ResponsibilityPage({
 }: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]">) {
   const [{ workspaceId, responsibilityId }, query] = await Promise.all([params, searchParams]);
   const asOf = typeof query.as_of === "string" ? query.as_of : undefined;
-  const [workspace, detail, history, people, teams, assets, knowledge, context] = await Promise.all(
-    [
-      attempt(api.getWorkspace(workspaceId)),
-      attempt(api.getResponsibility(workspaceId, responsibilityId, asOf)),
-      attempt(api.responsibilityHistory(workspaceId, responsibilityId)),
-      attempt(api.listPeople(workspaceId)),
-      attempt(api.listTeams(workspaceId)),
-      attempt(api.assets(workspaceId)),
-      attempt(api.responsibilityKnowledge(workspaceId, responsibilityId)),
-      attempt(api.responsibilityContext(workspaceId, responsibilityId)),
-    ],
-  );
+  const [
+    workspace,
+    detail,
+    history,
+    people,
+    teams,
+    assets,
+    knowledge,
+    context,
+    stewardship,
+    members,
+    responsibilities,
+  ] = await Promise.all([
+    attempt(api.getWorkspace(workspaceId)),
+    attempt(api.getResponsibility(workspaceId, responsibilityId, asOf)),
+    attempt(api.responsibilityHistory(workspaceId, responsibilityId)),
+    attempt(api.listPeople(workspaceId)),
+    attempt(api.listTeams(workspaceId)),
+    attempt(api.assets(workspaceId)),
+    attempt(api.responsibilityKnowledge(workspaceId, responsibilityId)),
+    attempt(api.responsibilityContext(workspaceId, responsibilityId)),
+    attempt(api.stewardship(workspaceId, responsibilityId)),
+    attempt(api.members(workspaceId)),
+    attempt(api.listResponsibilities(workspaceId)),
+  ]);
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
   if (!history.ok) return <ApiErrorNotice error={history.error} />;
@@ -98,6 +117,7 @@ export default async function ResponsibilityPage({
           {r.description ? (
             <p className="max-w-prose text-sm whitespace-pre-line">{r.description}</p>
           ) : null}
+          <StewardshipFacts workspaceId={workspaceId} detail={r} manage={manage} />
 
           <Section
             title={asOf ? `Owners on ${formatDateTime(r.as_of)}` : "Current owners"}
@@ -120,6 +140,17 @@ export default async function ResponsibilityPage({
           >
             <OwnerList
               owners={r.owners_as_of}
+              extra={
+                manage && !asOf
+                  ? (o) => (
+                      <CorrectAssignment
+                        workspaceId={workspaceId}
+                        responsibilityId={responsibilityId}
+                        assignment={o}
+                      />
+                    )
+                  : undefined
+              }
               endAction={
                 manage && !asOf
                   ? (id) => endAssignmentAction.bind(null, workspaceId, responsibilityId, id)
@@ -130,6 +161,24 @@ export default async function ResponsibilityPage({
 
           {context.ok && !asOf ? (
             <ContinuityContext workspaceId={workspaceId} context={context.data} />
+          ) : null}
+          {stewardship.ok ? (
+            <DependenciesSection
+              workspaceId={workspaceId}
+              responsibilityId={responsibilityId}
+              stewardship={stewardship.data}
+              manage={manage}
+              responsibilities={responsibilities.ok ? responsibilities.data : []}
+              assets={assets.ok ? assets.data : []}
+            />
+          ) : null}
+          {stewardship.ok && r.restricted && canManage(workspace.data) ? (
+            <AccessSection
+              workspaceId={workspaceId}
+              responsibilityId={responsibilityId}
+              stewardship={stewardship.data}
+              members={members.ok ? members.data : []}
+            />
           ) : null}
 
           <section id="knowledge" className="scroll-mt-6">
@@ -255,7 +304,14 @@ export default async function ResponsibilityPage({
                     />
                     <p>
                       <span className="font-medium">{h.assignee.name}</span>{" "}
-                      {h.change_type === "assigned" ? "assigned as" : "ended as"}{" "}
+                      {
+                        {
+                          assigned: "assigned as",
+                          ended: "ended as",
+                          extended: "extended as",
+                          corrected: "record corrected as",
+                        }[h.change_type]
+                      }{" "}
                       {ROLE_LABEL[h.role].toLowerCase()}
                     </p>
                     <p className="text-muted-foreground text-xs">
@@ -330,9 +386,11 @@ export default async function ResponsibilityPage({
 function OwnerList({
   owners,
   endAction,
+  extra,
 }: {
   owners: AssignmentView[];
   endAction?: (assignmentId: string) => Parameters<typeof ActionForm>[0]["action"];
+  extra?: (owner: AssignmentView) => React.ReactNode;
 }) {
   if (owners.length === 0) {
     return (
@@ -361,6 +419,7 @@ function OwnerList({
               Since {formatDateTime(o.valid_from)}
               {o.valid_to ? ` · until ${formatDateTime(o.valid_to)}` : ""}
             </span>
+            {extra ? extra(o) : null}
           </span>
           {endAction ? (
             <ActionForm action={endAction(o.id)}>

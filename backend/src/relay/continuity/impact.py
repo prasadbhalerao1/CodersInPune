@@ -82,7 +82,7 @@ async def source_status(access: WorkspaceAccess) -> list[SourceStatus]:
 async def case_impact(access: WorkspaceAccess, case_id: uuid.UUID) -> ImpactView:
     authorize(access, Permission.CASE_READ)
     detail = await cases.get_case(access, case_id)
-    rids = [s.responsibility_id for s in detail.scope]
+    rids = [s.responsibility_id for s in detail.scope if not s.hidden]
     assets: dict[uuid.UUID, list[AssetRef]] = {rid: [] for rid in rids}
     for rid, asset in await access.session.execute(
         select(ResponsibilityAsset.responsibility_id, Asset)
@@ -98,6 +98,8 @@ async def case_impact(access: WorkspaceAccess, case_id: uuid.UUID) -> ImpactView
         )
     items = []
     for s in detail.scope:
+        if s.hidden:
+            continue
         ctx = await context.responsibility_context(access, s.responsibility_id)
         knowledge = await catalog_knowledge.responsibility_knowledge(access, s.responsibility_id)
         items.append(

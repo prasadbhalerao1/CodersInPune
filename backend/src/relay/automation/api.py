@@ -61,3 +61,15 @@ async def update_policy(
     access: CurrentWorkspace, body: governance.PolicyUpdate
 ) -> governance.PolicyView:
     return await governance.update_policy(access, body)
+
+
+@router.get("/policy/tiers")
+async def policy_tiers(access: CurrentWorkspace) -> list[governance.TierView]:
+    return await governance.list_tiers(access)
+
+
+@router.put("/policy/tiers/{criticality}")
+async def update_policy_tier(
+    access: CurrentWorkspace, criticality: governance.Criticality, body: governance.TierUpdate
+) -> list[governance.TierView]:
+    return await governance.update_tier(access, criticality, body)

@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Final
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Computed,
     DateTime,
@@ -24,7 +25,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from relay.shared.db.base import Base
@@ -32,7 +33,9 @@ from relay.shared.db.base import Base
 SCHEMA = "catalog"
 CRITICALITIES: Final = ("critical", "high", "standard", "low")
 ROLES: Final = ("primary", "co_owner", "backup", "temporary")
-CHANGE_TYPES: Final = ("assigned", "ended", "extended")
+CHANGE_TYPES: Final = ("assigned", "ended", "extended", "corrected")
+DEPENDENCY_TYPES: Final = ("depends_on", "feeds", "escalates_to", "shares_access")
+PROVENANCES: Final = ("manual", "github", "linear", "notion", "import", "ai_accepted")
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -46,6 +49,20 @@ class Responsibility(Base):
         CheckConstraint("char_length(name) BETWEEN 1 AND 200", name="name_length"),
         CheckConstraint(_in("criticality", CRITICALITIES), name="criticality"),
         CheckConstraint("status IN ('active', 'archived', 'withdrawn')", name="status"),
+        CheckConstraint(
+            "review_cadence_days IS NULL OR review_cadence_days BETWEEN 7 AND 730",
+            name="review_cadence_days",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "type_id"],
+            ["catalog.responsibility_type.tenant_id", "catalog.responsibility_type.id"],
+            name="fk_responsibility_type",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "accountable_person_id"],
+            ["directory.person.tenant_id", "directory.person.id"],
+            name="fk_responsibility_accountable_person",
+        ),
         Index(None, "tenant_id", "status"),
         {"schema": SCHEMA},
     )
@@ -62,6 +79,22 @@ class Responsibility(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Fail-closed: hidden (also by a row policy) from anyone who isn't a manager, granted
+    # access, or a current holder.
+    restricted: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    type_id: Mapped[uuid.UUID | None]
+    escalation_path: Mapped[str | None] = mapped_column(Text)
+    escalation_contact: Mapped[str | None] = mapped_column(Text)
+    review_cadence_days: Mapped[int | None]
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("identity.user_account.id")
+    )
+    needs_verification: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    procedures: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'"))
+    access_prerequisites: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'"))
+    # For team-owned critical responsibilities: the person to call.
+    accountable_person_id: Mapped[uuid.UUID | None]
 
 
 class OwnershipAssignment(Base):
@@ -150,8 +183,11 @@ ASSET_TYPES: Final = (
     "process",
     "vendor",
     "document_collection",
+    "customer_account",
+    "infrastructure",
     "other",
 )
+ASSET_LIFECYCLES: Final = ("planned", "active", "deprecated", "retired")
 
 
 class Asset(Base):
@@ -164,6 +200,19 @@ class Asset(Base):
         CheckConstraint(_in("asset_type", ASSET_TYPES), name="asset_type"),
         CheckConstraint("status IN ('active', 'archived')", name="status"),
         CheckConstraint("url IS NULL OR url ~ '^https?://'", name="url_scheme"),
+        CheckConstraint(
+            "criticality IS NULL OR criticality IN ('critical', 'high', 'standard', 'low')",
+            name="criticality",
+        ),
+        CheckConstraint(_in("lifecycle", ASSET_LIFECYCLES), name="lifecycle"),
+        CheckConstraint(
+            "external_source IS NULL "
+            "OR external_source IN ('github', 'linear', 'notion', 'manual')",
+            name="external_source",
+        ),
+        CheckConstraint("source_state IN ('available', 'unavailable')", name="source_state"),
+        CheckConstraint("cardinality(tags) <= 20", name="tags"),
+        Index("ix_asset_tags", "tags", postgresql_using="gin"),
         Index(None, "tenant_id", "status"),
         {"schema": SCHEMA},
     )
@@ -178,6 +227,15 @@ class Asset(Base):
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    criticality: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    lifecycle: Mapped[str] = mapped_column(Text, server_default="active")
+    external_source: Mapped[str | None] = mapped_column(Text)
+    external_id: Mapped[str | None] = mapped_column(Text)
+    # Typed per asset type (see catalog.assets.METADATA_FIELDS).
+    meta: Mapped[dict[str, str]] = mapped_column("metadata", JSONB, server_default=text("'{}'"))
+    # "unavailable" when the external source no longer resolves (never silently dropped).
+    source_state: Mapped[str] = mapped_column(Text, server_default="available")
 
 
 class ResponsibilityAsset(Base):
@@ -260,3 +318,137 @@ class KnowledgeItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     search: Mapped[str | None] = mapped_column(TSVECTOR, Computed(KNOWLEDGE_SEARCH, persisted=True))
+
+
+class ResponsibilityType(Base):
+    """Managed responsibility types (replacing free-text categories)."""
+
+    __tablename__ = "responsibility_type"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "name"),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
+        CheckConstraint(
+            "review_cadence_days IS NULL OR review_cadence_days BETWEEN 7 AND 730",
+            name="review_cadence_days",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    review_cadence_days: Mapped[int | None]
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ResponsibilityAccess(Base):
+    """An explicit grant to see a restricted responsibility."""
+
+    __tablename__ = "responsibility_access"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "responsibility_id", "user_id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "responsibility_id"],
+            ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
+            name="fk_responsibility_access_responsibility",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    responsibility_id: Mapped[uuid.UUID]
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    granted_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ResponsibilityDependency(Base):
+    __tablename__ = "responsibility_dependency"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "responsibility_id"],
+            ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
+            name="fk_responsibility_dependency_responsibility",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "depends_on_responsibility_id"],
+            ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
+            name="fk_responsibility_dependency_target",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "depends_on_asset_id"],
+            ["catalog.asset.tenant_id", "catalog.asset.id"],
+            name="fk_responsibility_dependency_asset",
+        ),
+        CheckConstraint(
+            "num_nonnulls(depends_on_responsibility_id, depends_on_asset_id) = 1",
+            name="one_target",
+        ),
+        CheckConstraint(
+            "depends_on_responsibility_id IS NULL "
+            "OR depends_on_responsibility_id <> responsibility_id",
+            name="not_self",
+        ),
+        CheckConstraint(_in("relationship", DEPENDENCY_TYPES), name="relationship"),
+        CheckConstraint(_in("provenance", PROVENANCES), name="provenance"),
+        Index(None, "tenant_id", "responsibility_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    responsibility_id: Mapped[uuid.UUID]
+    depends_on_responsibility_id: Mapped[uuid.UUID | None]
+    depends_on_asset_id: Mapped[uuid.UUID | None]
+    relationship: Mapped[str] = mapped_column(Text)
+    provenance: Mapped[str] = mapped_column(Text, server_default="manual")
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AssetLink(Base):
+    """An asset linked to knowledge, a case or a task."""
+
+    __tablename__ = "asset_link"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "asset_id"],
+            ["catalog.asset.tenant_id", "catalog.asset.id"],
+            name="fk_asset_link_asset",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "knowledge_item_id"],
+            ["catalog.knowledge_item.tenant_id", "catalog.knowledge_item.id"],
+            name="fk_asset_link_knowledge_item",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "case_id"],
+            ["continuity.continuity_case.tenant_id", "continuity.continuity_case.id"],
+            name="fk_asset_link_case",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "task_id"],
+            ["continuity.case_task.tenant_id", "continuity.case_task.id"],
+            name="fk_asset_link_task",
+        ),
+        CheckConstraint("num_nonnulls(knowledge_item_id, case_id, task_id) = 1", name="one_target"),
+        Index(None, "tenant_id", "asset_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    asset_id: Mapped[uuid.UUID]
+    knowledge_item_id: Mapped[uuid.UUID | None]
+    case_id: Mapped[uuid.UUID | None]
+    task_id: Mapped[uuid.UUID | None]
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

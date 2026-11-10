@@ -9,14 +9,14 @@
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
-from relay.governance.models import WorkspacePolicy
+from relay.governance.models import CriticalityPolicy, WorkspacePolicy
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
@@ -120,3 +120,93 @@ async def update_policy(access: WorkspaceAccess, data: PolicyUpdate) -> PolicyVi
             },
         )
     return await _view(access, row)
+
+
+# ---------------------------------------------------------------- criticality tiers
+
+
+@dataclass(frozen=True, slots=True)
+class Tier:
+    requires_backup: bool
+    review_days: int
+    requires_accountable_contact: bool
+
+
+Criticality = Literal["critical", "high", "standard", "low"]
+DEFAULT_TIERS: dict[str, Tier] = {
+    "critical": Tier(requires_backup=True, review_days=90, requires_accountable_contact=True),
+    "high": Tier(requires_backup=True, review_days=180, requires_accountable_contact=False),
+    "standard": Tier(requires_backup=False, review_days=365, requires_accountable_contact=False),
+    "low": Tier(requires_backup=False, review_days=365, requires_accountable_contact=False),
+}
+
+
+class TierView(BaseModel):
+    criticality: Criticality
+    requires_backup: bool
+    review_days: int
+    requires_accountable_contact: bool
+    customised: bool
+
+
+class TierUpdate(StrictInput):
+    requires_backup: bool
+    review_days: Annotated[int, Field(ge=7, le=730)]
+    requires_accountable_contact: bool
+
+
+async def criticality_tiers(session: AsyncSession) -> dict[str, Tier]:
+    """Coverage policy per criticality (RLS scopes rows to the tenant); defaults otherwise."""
+    tiers = dict(DEFAULT_TIERS)
+    for row in await session.scalars(select(CriticalityPolicy)):
+        tiers[row.criticality] = Tier(
+            row.requires_backup, row.review_days, row.requires_accountable_contact
+        )
+    return tiers
+
+
+async def list_tiers(access: WorkspaceAccess) -> list[TierView]:
+    authorize(access, Permission.WORKSPACE_READ)
+    custom = set(await access.session.scalars(select(CriticalityPolicy.criticality)))
+    tiers = await criticality_tiers(access.session)
+    return [
+        TierView(
+            criticality=c,
+            requires_backup=t.requires_backup,
+            review_days=t.review_days,
+            requires_accountable_contact=t.requires_accountable_contact,
+            customised=c in custom,
+        )
+        for c, t in tiers.items()
+    ]
+
+
+async def update_tier(
+    access: WorkspaceAccess, criticality: Criticality, data: TierUpdate
+) -> list[TierView]:
+    authorize(access, Permission.POLICY_MANAGE)
+    row = await access.session.scalar(
+        select(CriticalityPolicy)
+        .where(CriticalityPolicy.criticality == criticality)
+        .with_for_update()
+    )
+    if row is None:
+        row = CriticalityPolicy(
+            tenant_id=access.tenant_id, criticality=criticality, updated_by=access.user_id
+        )
+        access.session.add(row)
+    row.requires_backup = data.requires_backup
+    row.review_days = data.review_days
+    row.requires_accountable_contact = data.requires_accountable_contact
+    row.updated_by, row.updated_at = access.user_id, func.now()
+    await access.session.flush()
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="policy.tier_updated",
+        actor_user_id=access.user_id,
+        target_type="criticality_policy",
+        target_id=row.id,
+        details={"criticality": criticality, **{k: str(v) for k, v in data.model_dump().items()}},
+    )
+    return await list_tiers(access)

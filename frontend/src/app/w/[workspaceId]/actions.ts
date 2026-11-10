@@ -31,6 +31,27 @@ async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise
   return {};
 }
 
+/** Governance fields shared by create and edit; one line per procedure/prerequisite. */
+function stewardshipFields(fd: FormData) {
+  const lines = (key: string) =>
+    text(fd, key)
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  const days = text(fd, "review_cadence_days");
+  return {
+    restricted: fd.get("restricted") === "on",
+    needs_verification: fd.get("needs_verification") === "on",
+    type_id: optional(fd, "type_id") ?? null,
+    escalation_path: text(fd, "escalation_path"),
+    escalation_contact: text(fd, "escalation_contact"),
+    review_cadence_days: days ? Number(days) : null,
+    procedures: lines("procedures"),
+    access_prerequisites: lines("access_prerequisites"),
+    accountable_person_id: optional(fd, "accountable_person_id") ?? null,
+  };
+}
+
 export async function createResponsibilityAction(
   workspaceId: string,
   _state: ActionState,
@@ -43,6 +64,7 @@ export async function createResponsibilityAction(
       description: optional(fd, "description"),
       category: optional(fd, "category"),
       criticality: text(fd, "criticality") || "standard",
+      ...stewardshipFields(fd),
     });
     id = created.id;
   });
@@ -63,6 +85,7 @@ export async function updateResponsibilityAction(
       description: text(fd, "description"),
       category: text(fd, "category"),
       criticality: text(fd, "criticality"),
+      ...stewardshipFields(fd),
     }),
   );
   if (result.error) return result;
@@ -227,6 +250,130 @@ export async function setDepartmentAction(
   return mutate(workspaceId, () =>
     api.send(workspaceId, "PATCH", `/${kind}/${id}`, {
       department_id: optional(fd, "department_id") ?? null,
+    }),
+  );
+}
+
+export async function createResponsibilityTypeAction(
+  workspaceId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const days = text(fd, "review_cadence_days");
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", "/responsibilities/types", {
+      name: text(fd, "name"),
+      description: optional(fd, "description"),
+      review_cadence_days: days ? Number(days) : null,
+    }),
+  );
+}
+
+export async function reviewResponsibilityAction(
+  workspaceId: string,
+  responsibilityId: string,
+  verified: boolean,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(
+      workspaceId,
+      "POST",
+      `/responsibilities/${responsibilityId}/review?verified=${verified}`,
+    ),
+  );
+}
+
+export async function addDependencyAction(
+  workspaceId: string,
+  responsibilityId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const [kind, id] = text(fd, "target").split(":");
+  if (!id) return { error: "Choose what it depends on." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/responsibilities/${responsibilityId}/dependencies`, {
+      depends_on_responsibility_id: kind === "responsibility" ? id : undefined,
+      depends_on_asset_id: kind === "asset" ? id : undefined,
+      relationship: text(fd, "relationship") || "depends_on",
+      note: optional(fd, "note"),
+    }),
+  );
+}
+
+export async function removeDependencyAction(
+  workspaceId: string,
+  responsibilityId: string,
+  dependencyId: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(
+      workspaceId,
+      "DELETE",
+      `/responsibilities/${responsibilityId}/dependencies/${dependencyId}`,
+    ),
+  );
+}
+
+export async function grantAccessAction(
+  workspaceId: string,
+  responsibilityId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const userId = text(fd, "user_id");
+  if (!userId) return { error: "Choose a member." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/responsibilities/${responsibilityId}/access`, {
+      user_id: userId,
+    }),
+  );
+}
+
+export async function revokeAccessAction(
+  workspaceId: string,
+  responsibilityId: string,
+  userId: string,
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "DELETE", `/responsibilities/${responsibilityId}/access/${userId}`),
+  );
+}
+
+export async function correctAssignmentAction(
+  workspaceId: string,
+  responsibilityId: string,
+  assignmentId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const reason = text(fd, "reason");
+  const from = optional(fd, "valid_from");
+  if (!reason || !from) return { error: "Give the corrected start and a reason." };
+  return mutate(workspaceId, () =>
+    api.send(
+      workspaceId,
+      "POST",
+      `/responsibilities/${responsibilityId}/assignments/${assignmentId}/correct`,
+      { valid_from: from, valid_to: optional(fd, "valid_to") ?? null, reason },
+    ),
+  );
+}
+
+export async function updateTierAction(
+  workspaceId: string,
+  criticality: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PUT", `/policy/tiers/${criticality}`, {
+      requires_backup: fd.get("requires_backup") === "on",
+      review_days: Number(text(fd, "review_days")),
+      requires_accountable_contact: fd.get("requires_accountable_contact") === "on",
     }),
   );
 }

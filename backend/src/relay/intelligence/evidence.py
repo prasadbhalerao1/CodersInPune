@@ -167,6 +167,8 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
             source_type="responsibility",
             source_id=str(resp.id),
             title=resp.name,
+            # Restricted responsibilities never reach a member-facing claim or capsule.
+            audience="managers" if resp.restricted else "workspace",
             revision=f"v{resp.version}",
             source_ts=resp.updated_at,
             excerpt=(
