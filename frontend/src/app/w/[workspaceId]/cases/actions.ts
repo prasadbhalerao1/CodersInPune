@@ -497,3 +497,36 @@ export async function setEmergencyAction(
     api.send(workspaceId, "POST", casePath(caseId, "/emergency"), { emergency, reason }),
   );
 }
+
+export async function configurePrivacyAction(
+  workspaceId: string,
+  caseId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const included = new Set(fd.getAll("source").map(String));
+  const connected = fd.getAll("connected").map(String);
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PUT", casePath(caseId, "/privacy"), {
+      excluded_sources: connected.filter((source) => !included.has(source)),
+      acknowledge_notice: fd.get("acknowledge") === "on",
+    }),
+  );
+}
+
+export async function decideReviewItemAction(
+  workspaceId: string,
+  itemId: string,
+  decision: "confirmed" | "corrected" | "disputed",
+  _state: ActionState,
+  fd?: FormData,
+): Promise<ActionState> {
+  const note = fd ? optional(fd, "note") : undefined;
+  if (decision !== "confirmed" && !note) return { error: "Add what should change, or why." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/review-items/${encodeURIComponent(itemId)}/decision`, {
+      decision,
+      note,
+    }),
+  );
+}

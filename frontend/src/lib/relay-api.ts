@@ -34,6 +34,8 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  PrivacyView,
+  ReviewItemView,
   KnowledgeCompareView,
   KnowledgeGovernanceView,
   ResponsibilityTypeView,
@@ -241,6 +243,9 @@ export const api = {
     relayFetch<TaskDetail>(
       `${ws(id)}/cases/${encodeURIComponent(caseId)}/tasks/${encodeURIComponent(taskId)}`,
     ),
+  casePrivacy: (id: string, caseId: string) =>
+    relayFetch<PrivacyView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/privacy`),
+  reviewInbox: (id: string) => relayFetch<ReviewItemView[]>(`${ws(id)}/review-inbox`),
   caseImpact: (id: string, caseId: string) =>
     relayFetch<ImpactView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/impact`),
   caseParticipants: (id: string, caseId: string) =>

@@ -11,6 +11,7 @@ import type { CaseSummary, TaskView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { completeFollowUpAction } from "../automations/actions";
+import { ReviewItem } from "../cases/[caseId]/privacy";
 
 export const metadata: Metadata = { title: "My Work" };
 
@@ -85,10 +86,12 @@ export default async function MyWorkPage({
 }: PageProps<"/w/[workspaceId]/my-work">) {
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const filter = FILTERS.find((f) => f.key === query.show)?.key ?? "all";
-  const [work, followUps] = await Promise.all([
+  const [work, followUps, inbox] = await Promise.all([
     attempt(api.myWork(workspaceId)),
     attempt(api.followUps(workspaceId)),
+    attempt(api.reviewInbox(workspaceId)),
   ]);
+  const toReview = inbox.ok ? inbox.data : [];
   if (!work.ok) return <ApiErrorNotice error={work.error} />;
   const myFollowUps = followUps.ok ? followUps.data : [];
   const { emergencies, approvals, attention, mentions, reviews } = work.data;
@@ -107,7 +110,8 @@ export default async function MyWorkPage({
       myFollowUps.length +
       mentions.length +
       reviews.length +
-      asked.length ===
+      asked.length +
+      toReview.length ===
     0;
 
   return (
@@ -164,6 +168,18 @@ export default async function MyWorkPage({
               ))}
             </ul>
           </section>
+        ) : null}
+        {(filter === "all" || filter === "input") && toReview.length > 0 ? (
+          <Section
+            title="Review what will be shared"
+            description="You're handing over: check what each case will share and with whom."
+          >
+            <ul className="divide-y rounded-lg border">
+              {toReview.map((i) => (
+                <ReviewItem key={i.id} workspaceId={workspaceId} item={i} showCase />
+              ))}
+            </ul>
+          </Section>
         ) : null}
         {(filter === "all" || filter === "input") && asked.length > 0 ? (
           <Section

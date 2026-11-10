@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, status
 
-from relay.continuity import briefing, collaboration, impact, tasks, workflow
+from relay.continuity import briefing, collaboration, impact, privacy, tasks, workflow
 from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs.outbox import Jobs
@@ -288,3 +288,27 @@ async def set_step(
     body: tasks.StepIn,
 ) -> Detail:
     return await tasks.set_step(access, case_id, criterion_id, index, body)
+
+
+@router.get("/cases/{case_id}/privacy")
+async def case_privacy(access: CurrentWorkspace, case_id: uuid.UUID) -> privacy.PrivacyView:
+    return await privacy.privacy(access, case_id)
+
+
+@router.put("/cases/{case_id}/privacy")
+async def configure_privacy(
+    access: CurrentWorkspace, case_id: uuid.UUID, body: privacy.PrivacyIn
+) -> privacy.PrivacyView:
+    return await privacy.configure(access, case_id, body)
+
+
+@router.post("/review-items/{item_id}/decision")
+async def decide_review_item(
+    access: CurrentWorkspace, item_id: uuid.UUID, body: privacy.ReviewDecisionIn
+) -> privacy.ReviewItemView:
+    return await privacy.decide(access, item_id, body)
+
+
+@router.get("/review-inbox")
+async def review_inbox(access: CurrentWorkspace) -> list[privacy.ReviewItemView]:
+    return await privacy.inbox(access)

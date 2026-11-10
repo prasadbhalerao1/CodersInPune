@@ -8,6 +8,7 @@ import pytest
 
 from tests.api import OWNER, Api, Ws, add_member, make_api
 from tests.security.test_cases import iso, owned
+from tests.security.test_catalog_governance import set_member_email
 
 pytestmark = pytest.mark.anyio
 
@@ -124,3 +125,60 @@ async def test_knowledge_lifecycle_and_export(api: Api, ws: Ws) -> None:
     assert "“Month-end close” (disputed)" in text  # left out until resolved
     assert "“Old VPN” (expired)" in text
     assert "| Month-end close | v1 | person |" in text  # the verified duplicate
+
+
+async def test_outgoing_owner_reviews_what_a_case_shares(api: Api, ws: Ws) -> None:
+    await add_member(api, ws.id, "user_member", "member")
+    member = Ws(api, ws.id, "user_member")
+    leaver = await ws.call(
+        "POST", "/people", 201, json={"display_name": "Leaver", "email": "leaver@acme.test"}
+    )
+    set_member_email(ws, "leaver@acme.test")
+    rid = await owned(ws, "Payroll", leaver["id"])
+    note = await ws.call(
+        "POST",
+        f"/responsibilities/{rid}/knowledge",
+        201,
+        json={"kind": "note", "title": "Salary bands", "body": "Personal notes on bands"},
+    )
+    case = await ws.call(
+        "POST",
+        "/cases",
+        201,
+        json={
+            "case_type": "departure",
+            "title": "Leaver",
+            "affected_person_id": leaver["id"],
+            "starts_at": iso(),
+        },
+    )
+    await member.call("PUT", f"/cases/{case['id']}/privacy", 403, json={})
+    privacy = await ws.call(
+        "PUT",
+        f"/cases/{case['id']}/privacy",
+        json={"excluded_sources": ["linear"], "acknowledge_notice": True},
+    )
+    assert privacy["excluded_sources"] == ["linear"]
+    assert privacy["notice_acknowledged_at"]
+    assert {i["subject_type"] for i in privacy["items"]} == {"responsibility", "knowledge"}
+    assert privacy["reviewer_name"] == "Leaver"
+
+    inbox = await member.call("GET", "/review-inbox")
+    assert {i["summary"][:20] for i in inbox} == {
+        "“Payroll” (primary) ",
+        "Knowledge “Salary ba",
+    }
+    item = next(i for i in inbox if i["subject_id"] == note["id"])
+    await member.call(
+        "POST", f"/review-items/{item['id']}/decision", 422, json={"decision": "disputed"}
+    )
+    decided = await member.call(
+        "POST",
+        f"/review-items/{item['id']}/decision",
+        json={"decision": "disputed", "note": "Private, not for the successor"},
+    )
+    assert decided["decision"] == "disputed"
+    assert decided["decided_by_name"]
+    # The dispute narrows sharing; the knowledge itself is untouched.
+    assert (await ws.call("GET", f"/knowledge/{note['id']}"))["status"] == "active"
+    assert len(await member.call("GET", "/review-inbox")) == 1

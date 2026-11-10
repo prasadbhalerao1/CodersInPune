@@ -151,6 +151,10 @@ class ContinuityCase(Base):
     duplicate_override_reason: Mapped[str | None] = mapped_column(Text)
     reopen_count: Mapped[int] = mapped_column(server_default="0")
     blocked_from: Mapped[str | None] = mapped_column(Text)
+    # Connected systems left out of this case's evidence ("github", "linear", "notion").
+    excluded_sources: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'"))
+    privacy_notice_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    privacy_notice_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
 
 
 class CaseScopeItem(Base):
@@ -501,5 +505,44 @@ class CaseBlocker(Base):
     resolution: Mapped[str | None] = mapped_column(Text)
     resolved_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CaseReviewItem(Base):
+    """Something the case will share, with whom, and the outgoing owner's decision on it.
+    A dispute narrows sharing; it never deletes the source or its history."""
+
+    __tablename__ = "case_review_item"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "case_id", "subject_type", "subject_id"),
+        _tenant_fk(["case_id"], "continuity.continuity_case", "fk_case_review_item_case"),
+        _tenant_fk(["reviewer_person_id"], "directory.person", "fk_case_review_item_reviewer"),
+        CheckConstraint(
+            "subject_type IN ('responsibility', 'knowledge', 'source')", name="subject_type"
+        ),
+        CheckConstraint("audience IN ('case', 'workspace', 'managers')", name="audience"),
+        CheckConstraint(
+            "decision IN ('pending', 'confirmed', 'corrected', 'disputed')", name="decision"
+        ),
+        CheckConstraint(
+            "decision IN ('pending', 'confirmed') OR note IS NOT NULL", name="explained"
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    case_id: Mapped[uuid.UUID]
+    subject_type: Mapped[str] = mapped_column(Text)
+    subject_id: Mapped[str] = mapped_column(Text)
+    summary: Mapped[str] = mapped_column(Text)
+    audience: Mapped[str] = mapped_column(Text)
+    reviewer_person_id: Mapped[uuid.UUID | None]
+    decision: Mapped[str] = mapped_column(Text, server_default="pending")
+    note: Mapped[str | None] = mapped_column(Text)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

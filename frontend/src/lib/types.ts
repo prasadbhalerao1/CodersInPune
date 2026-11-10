@@ -1442,3 +1442,30 @@ export type ImpactItem = {
 };
 
 export type ImpactView = { items: ImpactItem[]; sources: SourceStatus[] };
+
+export type ReviewItemView = {
+  id: string;
+  case_id: string;
+  case_title: string | null;
+  subject_type: "responsibility" | "knowledge" | "source";
+  subject_id: string;
+  summary: string;
+  audience: "case" | "workspace" | "managers";
+  audience_label: string;
+  decision: "pending" | "confirmed" | "corrected" | "disputed";
+  note: string | null;
+  decided_by_name: string | null;
+  decided_at: string | null;
+  can_decide: boolean;
+};
+
+export type PrivacyView = {
+  notice: string;
+  notice_acknowledged_at: string | null;
+  excluded_sources: string[];
+  sources: { source: string; state: string }[];
+  reviewer_name: string | null;
+  items: ReviewItemView[];
+  pending: number;
+  can_manage: boolean;
+};

@@ -12,6 +12,7 @@ import { addCommentAction, caseCommandAction } from "../actions";
 import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
 import { CommentComposer } from "./comment-composer";
 import { ImpactPanel } from "./impact";
+import { PrivacyPanel } from "./privacy";
 import { KnowledgeHandover } from "./knowledge-handover";
 import { Blockers, OwnershipPlan } from "./ownership-plan";
 import { ApprovalPanel, ScopeSection } from "./sections";
@@ -282,10 +283,18 @@ async function PeopleTab({
   members: Awaited<ReturnType<typeof api.members>>;
   people: Awaited<ReturnType<typeof api.listPeople>>;
 }) {
-  const participants = await attempt(api.caseParticipants(ctx.workspaceId, ctx.caseId));
+  const [participants, privacy] = await Promise.all([
+    attempt(api.caseParticipants(ctx.workspaceId, ctx.caseId)),
+    attempt(api.casePrivacy(ctx.workspaceId, ctx.caseId)),
+  ]);
   if (!participants.ok) return <ApiErrorNotice error={participants.error} />;
   return (
-    <PeoplePanel {...ctx} participants={participants.data} members={members} people={people} />
+    <>
+      <PeoplePanel {...ctx} participants={participants.data} members={members} people={people} />
+      {privacy.ok ? (
+        <PrivacyPanel workspaceId={ctx.workspaceId} caseId={ctx.caseId} privacy={privacy.data} />
+      ) : null}
+    </>
   );
 }
 

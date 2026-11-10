@@ -29,6 +29,7 @@ from relay.continuity.models import (
     CaseTask,
     ContinuityCase,
 )
+from relay.continuity.privacy import narrowed_knowledge
 from relay.directory.models import Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
@@ -292,6 +293,7 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
             excerpt=f"[{k.kind}] {k.body or ''} {k.url or ''}",
             facts={
                 "kind": "knowledge",
+                "knowledge_id": str(k.id),
                 "responsibility_id": str(k.responsibility_id),
                 "stale": reviewed < cutoff,
                 "reviewed": k.last_reviewed_at is not None,
@@ -387,10 +389,21 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
             },
         )
 
+    # The case's privacy settings: excluded sources are left out entirely, and knowledge the
+    # outgoing owner disputed is narrowed to managers.
+    excluded = set(case.excluded_sources)
+    narrowed = await narrowed_knowledge(session, case.id)
+    items = []
+    for i in b.items:
+        if i.source_system in excluded:
+            continue
+        if i.facts.get("knowledge_id") in narrowed:
+            i.audience = "managers"
+        items.append(i)
     return Pool(
         case_id=case.id,
         case_title=case.title,
-        items=b.items,
+        items=items,
         partial_sources=await _partial_sources(access),
     )
 
