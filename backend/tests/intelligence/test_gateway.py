@@ -144,3 +144,16 @@ def test_no_providers_means_ai_is_off_and_config_is_validated() -> None:
         settings(llm_providers="openai")
     with pytest.raises(ValueError, match="fake provider"):
         settings(llm_providers="fake", environment="production")
+
+
+def test_tool_calls_are_recorded_by_name_only() -> None:
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+
+    from relay.intelligence.llm import _tool_calls
+
+    messages = [
+        ModelResponse(parts=[ToolCallPart("search_evidence", {"query": "secret text"})]),
+        ModelResponse(parts=[TextPart("x"), ToolCallPart("get_evidence", {"ref": "E1"})]),
+        ModelResponse(parts=[ToolCallPart("final_result", {"claims": []})]),
+    ]
+    assert _tool_calls(messages) == ("search_evidence", "get_evidence")  # type: ignore[arg-type]

@@ -428,6 +428,7 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
                 name,
                 "step_completed",
                 tokens=result.input_tokens + result.output_tokens,
+                tool_calls=list(result.tool_calls),
                 **counts,
             )
     run.step += 1
@@ -502,4 +503,4 @@ def _mark_failed(run: AgentRun, name: str, code: str | None = None) -> None:
         run.error_code = code
 
 
-outbox.register(STEP_EVENT, handle_step)
+outbox.register(STEP_EVENT, handle_step, serial="ai")

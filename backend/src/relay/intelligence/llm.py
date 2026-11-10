@@ -27,7 +27,7 @@ from pydantic_ai.exceptions import (
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import UsageLimits
@@ -70,6 +70,18 @@ class LLMResult[T]:
     output_tokens: int
     duration_ms: int
     cost_usd: Decimal
+    # Names of the evidence tools the model called, in order (never their arguments).
+    tool_calls: tuple[str, ...] = ()
+
+
+def _tool_calls(messages: list[ModelMessage]) -> tuple[str, ...]:
+    return tuple(
+        part.tool_name
+        for message in messages
+        if isinstance(message, ModelResponse)
+        for part in message.parts
+        if isinstance(part, ToolCallPart) and not part.tool_name.startswith("final_result")
+    )
 
 
 class LLMPort(Protocol):
@@ -236,5 +248,6 @@ class Gateway:
                 output_tokens=usage.output_tokens,
                 duration_ms=int((time.monotonic() - started) * 1000),
                 cost_usd=cost_of(model, usage.input_tokens, usage.output_tokens),
+                tool_calls=_tool_calls(result.all_messages()),
             )
         raise LLMError(last, transient=True)
