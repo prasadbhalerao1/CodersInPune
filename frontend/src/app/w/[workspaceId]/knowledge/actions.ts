@@ -76,3 +76,49 @@ export async function recordHandoverAction(
     }),
   );
 }
+
+export async function disputeKnowledgeAction(
+  workspaceId: string,
+  itemId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const reason = String(fd.get("reason") ?? "").trim();
+  if (!reason) return { error: "Say what is wrong." };
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/knowledge/${itemId}/dispute`, { reason }),
+  );
+}
+
+export async function knowledgeFeedbackAction(
+  workspaceId: string,
+  itemId: string,
+  kind: "stale" | "authoritative",
+  _state: ActionState,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/knowledge/${itemId}/feedback`, { kind }),
+  );
+}
+
+export async function updateKnowledgeAction(
+  workspaceId: string,
+  itemId: string,
+  _state: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const nullable = (key: string) => optional(fd, key) ?? null;
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "PATCH", `/knowledge/${itemId}`, {
+      title: text(fd, "title"),
+      body: text(fd, "body"),
+      change_note: nullable("change_note"),
+      steward_user_id: nullable("steward_user_id"),
+      valid_until: nullable("valid_until"),
+      applies_to: text(fd, "applies_to"),
+      decision_rationale: text(fd, "decision_rationale"),
+      decision_approver: nullable("decision_approver"),
+      superseded_by_id: nullable("superseded_by_id"),
+    }),
+  );
+}

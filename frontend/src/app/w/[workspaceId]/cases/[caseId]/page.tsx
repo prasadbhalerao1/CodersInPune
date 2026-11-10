@@ -241,6 +241,18 @@ async function KnowledgeTab({ workspaceId, caseId, detail: c }: Ctx) {
         canRecord={c.allowed_actions.includes("add_task")}
       />
       {briefing?.ok ? <BriefingSection briefing={briefing.data} /> : null}
+      <p className="text-sm">
+        <a
+          href={`/w/${workspaceId}/cases/${caseId}/export`}
+          className="font-medium underline-offset-2 hover:underline"
+        >
+          Download the handover pack (Markdown)
+        </a>
+        <span className="text-muted-foreground">
+          {" "}
+          · only what you can see, with an omissions report and the source versions used
+        </span>
+      </p>
       <p className="text-muted-foreground text-sm">
         Gaps only the person handing over can fill go in the{" "}
         <Link

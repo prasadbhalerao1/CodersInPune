@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
 import { formatDateTime } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
-import type { KnowledgeKind, KnowledgeView } from "@/lib/types";
+import type { KnowledgeKind, KnowledgeState, KnowledgeView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { addKnowledgeAction, archiveKnowledgeAction, reviewKnowledgeAction } from "./actions";
@@ -14,15 +14,34 @@ export const KIND_LABEL: Record<KnowledgeKind, string> = {
   link: "Link",
   document: "Document",
   context: "Context",
+  adr: "Decision (ADR)",
+  faq: "FAQ",
+  postmortem: "Postmortem",
+  escalation_contact: "Escalation contact",
+  onboarding_resource: "Onboarding resource",
+  project_overview: "Project overview",
+};
+
+const STATE: Record<
+  KnowledgeState,
+  { label: string; tone: "muted" | "warning" | "danger" | "neutral" }
+> = {
+  draft: { label: "Draft · unverified", tone: "warning" },
+  verified: { label: "Verified", tone: "neutral" },
+  disputed: { label: "Disputed", tone: "danger" },
+  stale: { label: "Needs review", tone: "warning" },
+  expired: { label: "Expired", tone: "muted" },
+  inaccessible: { label: "Source unavailable", tone: "danger" },
+  archived: { label: "Archived", tone: "muted" },
 };
 
 export function FreshnessBadge({ item }: { item: KnowledgeView }) {
-  return item.freshness === "stale" ? (
-    <Badge tone="warning">Needs review</Badge>
-  ) : (
+  return item.state === "verified" ? (
     <span className="text-muted-foreground text-xs">
-      Reviewed {formatDateTime(item.last_reviewed_at ?? item.created_at)}
+      Verified · reviewed {formatDateTime(item.last_reviewed_at ?? item.created_at)}
     </span>
+  ) : (
+    <Badge tone={STATE[item.state].tone}>{STATE[item.state].label}</Badge>
   );
 }
 
@@ -44,18 +63,21 @@ export function KnowledgeList({
         <li key={k.id} className="flex flex-col gap-1.5 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge tone="muted">{KIND_LABEL[k.kind]}</Badge>
+            <Link
+              href={`/w/${workspaceId}/knowledge/${k.id}`}
+              className="font-medium underline-offset-2 hover:underline"
+            >
+              {k.title}
+            </Link>
             {k.url ? (
-              <a
-                href={k.url}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium hover:underline"
-              >
-                {k.title} ↗
+              <a href={k.url} target="_blank" rel="noreferrer" className="text-xs hover:underline">
+                source ↗
               </a>
-            ) : (
-              <span className="font-medium">{k.title}</span>
-            )}
+            ) : null}
+            {k.version > 1 ? (
+              <span className="text-muted-foreground text-xs">v{k.version}</span>
+            ) : null}
+            {!k.current && k.kind === "adr" ? <Badge tone="muted">Superseded</Badge> : null}
             {k.origin === "notion" ? <Badge tone="muted">From Notion</Badge> : null}
             {k.visibility === "managers" ? <Badge tone="neutral">Managers only</Badge> : null}
             <span className="flex-1" />
@@ -81,10 +103,19 @@ export function KnowledgeList({
               </Link>
             ) : null}
             <span className="flex-1" />
-            {canWrite ? (
+            {k.dispute_reason ? (
+              <span className="text-red-700 dark:text-red-300">
+                Disputed{k.disputed_by_name ? ` by ${k.disputed_by_name}` : ""}: {k.dispute_reason}
+              </span>
+            ) : null}
+            {canWrite && (k.review_state === "verified" || k.can_verify) ? (
               <ActionForm action={reviewKnowledgeAction.bind(null, workspaceId, k.id)}>
                 <SubmitButton size="sm" variant="ghost" pendingLabel="…">
-                  {k.freshness === "stale" ? "Mark reviewed" : "Still accurate"}
+                  {k.review_state !== "verified"
+                    ? "Verify"
+                    : k.freshness === "stale"
+                      ? "Mark reviewed"
+                      : "Still accurate"}
                 </SubmitButton>
               </ActionForm>
             ) : null}

@@ -34,6 +34,8 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  KnowledgeCompareView,
+  KnowledgeGovernanceView,
   ResponsibilityTypeView,
   StewardshipView,
   TierView,
@@ -96,13 +98,13 @@ function withQuery(path: string, query?: Query): string {
   return qs ? `${path}?${qs}` : path;
 }
 
-export async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function relayResponse(path: string, init: RequestInit, accept: string): Promise<Response> {
   // Every Relay call is per-user data; render at request time (withAuth reads the clock).
   await connection();
   const { accessToken } = await withAuth({ ensureSignedIn: true });
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${accessToken}`);
-  headers.set("Accept", "application/json");
+  headers.set("Accept", accept);
   if (init.body) headers.set("Content-Type", "application/json");
 
   const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers, cache: "no-store" });
@@ -116,7 +118,17 @@ export async function relayFetch<T>(path: string, init: RequestInit = {}): Promi
       : problem.detail;
     throw new RelayApiError(response.status, problem.code, detail ?? `Request failed`);
   }
+  return response;
+}
+
+export async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await relayResponse(path, init, "application/json");
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
+/** Plain-text endpoints (e.g. Markdown exports). */
+export async function relayText(path: string): Promise<string> {
+  return (await relayResponse(path, {}, "text/plain")).text();
 }
 
 const ws = (workspaceId: string) => `/workspaces/${encodeURIComponent(workspaceId)}`;
@@ -203,6 +215,21 @@ export const api = {
     relayFetch<CaseSummary[]>(withQuery(`${ws(id)}/cases`, query)),
   getCase: (id: string, caseId: string) =>
     relayFetch<CaseDetail>(`${ws(id)}/cases/${encodeURIComponent(caseId)}`),
+  caseExport: (id: string, caseId: string) =>
+    relayText(`${ws(id)}/cases/${encodeURIComponent(caseId)}/export.md`),
+  knowledgeItem: (id: string, itemId: string) =>
+    relayFetch<KnowledgeView>(`${ws(id)}/knowledge/${encodeURIComponent(itemId)}`),
+  knowledgeGovernance: (id: string, itemId: string) =>
+    relayFetch<KnowledgeGovernanceView>(
+      `${ws(id)}/knowledge/${encodeURIComponent(itemId)}/governance`,
+    ),
+  knowledgeCompare: (id: string, itemId: string, from: number, to: number) =>
+    relayFetch<KnowledgeCompareView>(
+      withQuery(`${ws(id)}/knowledge/${encodeURIComponent(itemId)}/compare`, {
+        from_version: String(from),
+        to_version: String(to),
+      }),
+    ),
   responsibilityTypes: (id: string) =>
     relayFetch<ResponsibilityTypeView[]>(`${ws(id)}/responsibilities/types`),
   stewardship: (id: string, responsibilityId: string) =>

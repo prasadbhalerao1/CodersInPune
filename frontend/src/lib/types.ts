@@ -786,7 +786,20 @@ export type BulkResultView = {
   error: string | null;
 };
 
-export type KnowledgeKind = "note" | "link" | "document" | "procedure" | "context";
+export type KnowledgeKind =
+  | "note"
+  | "link"
+  | "document"
+  | "procedure"
+  | "context"
+  | "adr"
+  | "faq"
+  | "postmortem"
+  | "escalation_contact"
+  | "onboarding_resource"
+  | "project_overview";
+export type KnowledgeState =
+  "draft" | "verified" | "disputed" | "stale" | "expired" | "inaccessible" | "archived";
 
 export type KnowledgeView = {
   id: string;
@@ -797,7 +810,7 @@ export type KnowledgeView = {
   body: string | null;
   url: string | null;
   visibility: "workspace" | "managers";
-  origin: "person" | "notion";
+  origin: "person" | "notion" | "ai";
   status: "active" | "archived" | "withdrawn";
   author_name: string;
   created_at: string;
@@ -806,6 +819,61 @@ export type KnowledgeView = {
   last_reviewed_by_name: string | null;
   freshness: "fresh" | "stale";
   can_edit: boolean;
+  state: KnowledgeState;
+  review_state: "draft" | "verified" | "disputed";
+  version: number;
+  steward_user_id: string | null;
+  steward_name: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  applies_to: string | null;
+  decision_rationale: string | null;
+  decision_approver: string | null;
+  decided_at: string | null;
+  superseded_by_id: string | null;
+  current: boolean;
+  dispute_reason: string | null;
+  disputed_by_name: string | null;
+  disputed_at: string | null;
+  can_verify: boolean;
+};
+
+export type KnowledgeRelatedView = {
+  id: string;
+  title: string;
+  responsibility_name: string;
+  state: KnowledgeState;
+  updated_at: string;
+  last_reviewed_at: string | null;
+};
+
+export type KnowledgeGovernanceView = {
+  versions: {
+    version: number;
+    kind: KnowledgeKind;
+    title: string;
+    body: string | null;
+    url: string | null;
+    change_note: string | null;
+    changed_by_name: string;
+    changed_at: string;
+  }[];
+  feedback: {
+    kind: "stale" | "authoritative";
+    note: string | null;
+    user_name: string;
+    created_at: string;
+  }[];
+  duplicates: KnowledgeRelatedView[];
+  conflicts: KnowledgeRelatedView[];
+  superseded_by: KnowledgeRelatedView | null;
+};
+
+export type KnowledgeCompareView = {
+  from_version: number;
+  to_version: number;
+  title_changed: boolean;
+  diff: string[];
 };
 
 export type KnowledgeOverviewView = {

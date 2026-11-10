@@ -35,6 +35,19 @@ CRITICALITIES: Final = ("critical", "high", "standard", "low")
 ROLES: Final = ("primary", "co_owner", "backup", "temporary")
 CHANGE_TYPES: Final = ("assigned", "ended", "extended", "corrected")
 DEPENDENCY_TYPES: Final = ("depends_on", "feeds", "escalates_to", "shares_access")
+KNOWLEDGE_KINDS: Final = (
+    "note",
+    "link",
+    "document",
+    "procedure",
+    "context",
+    "adr",
+    "faq",
+    "postmortem",
+    "escalation_contact",
+    "onboarding_resource",
+    "project_overview",
+)
 PROVENANCES: Final = ("manual", "github", "linear", "notion", "import", "ai_accepted")
 
 
@@ -285,8 +298,23 @@ class KnowledgeItem(Base):
             ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
             name="fk_knowledge_item_responsibility",
         ),
+        ForeignKeyConstraint(
+            ["tenant_id", "superseded_by_id"],
+            ["catalog.knowledge_item.tenant_id", "catalog.knowledge_item.id"],
+            name="fk_knowledge_item_superseded_by",
+        ),
+        CheckConstraint(_in("kind", KNOWLEDGE_KINDS), name="kind"),
+        CheckConstraint("review_state IN ('draft', 'verified', 'disputed')", name="review_state"),
+        CheckConstraint("review_state <> 'disputed' OR dispute_reason IS NOT NULL", name="dispute"),
         CheckConstraint(
-            "kind IN ('note', 'link', 'document', 'procedure', 'context')", name="kind"
+            "valid_until IS NULL OR valid_from IS NULL OR valid_until > valid_from",
+            name="validity",
+        ),
+        CheckConstraint(
+            "superseded_by_id IS NULL OR superseded_by_id <> id", name="not_superseded_by_self"
+        ),
+        CheckConstraint(
+            "applies_to IS NULL OR char_length(applies_to) <= 500", name="applies_to_length"
         ),
         CheckConstraint("char_length(title) BETWEEN 1 AND 200", name="title_length"),
         CheckConstraint("body IS NULL OR char_length(body) <= 20000", name="body_length"),
@@ -318,6 +346,74 @@ class KnowledgeItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     search: Mapped[str | None] = mapped_column(TSVECTOR, Computed(KNOWLEDGE_SEARCH, persisted=True))
+    # Persisted review state; stale/expired/inaccessible are derived (catalog.knowledge).
+    review_state: Mapped[str] = mapped_column(Text, server_default="draft")
+    version: Mapped[int] = mapped_column(server_default="1")
+    steward_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("identity.user_account.id")
+    )
+    valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    applies_to: Mapped[str | None] = mapped_column(Text)
+    decision_rationale: Mapped[str | None] = mapped_column(Text)
+    decision_approver: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    superseded_by_id: Mapped[uuid.UUID | None]
+    dispute_reason: Mapped[str | None] = mapped_column(Text)
+    disputed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("identity.user_account.id"))
+    disputed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class KnowledgeVersion(Base):
+    """Immutable snapshot of each version of a knowledge item (no UPDATE grant)."""
+
+    __tablename__ = "knowledge_version"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "knowledge_item_id", "version"),
+        ForeignKeyConstraint(
+            ["tenant_id", "knowledge_item_id"],
+            ["catalog.knowledge_item.tenant_id", "catalog.knowledge_item.id"],
+            name="fk_knowledge_version_item",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    knowledge_item_id: Mapped[uuid.UUID]
+    version: Mapped[int]
+    kind: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    body: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    change_note: Mapped[str | None] = mapped_column(Text)
+    changed_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class KnowledgeFeedback(Base):
+    __tablename__ = "knowledge_feedback"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "knowledge_item_id"],
+            ["catalog.knowledge_item.tenant_id", "catalog.knowledge_item.id"],
+            name="fk_knowledge_feedback_item",
+        ),
+        CheckConstraint("kind IN ('stale', 'authoritative')", name="kind"),
+        CheckConstraint("note IS NULL OR char_length(note) <= 2000", name="note_length"),
+        Index(None, "tenant_id", "knowledge_item_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    knowledge_item_id: Mapped[uuid.UUID]
+    kind: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ResponsibilityType(Base):

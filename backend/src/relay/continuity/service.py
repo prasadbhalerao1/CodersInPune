@@ -1913,6 +1913,9 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
         for k in await knowledge.responsibility_knowledge_by_author(access, access.user_id)
         if k.freshness == "stale"
     ]
+    # Plus drafts and disputes waiting for me as steward.
+    seen = {k.id for k in stale}
+    stale += [k for k in await knowledge.stewarded_for_review(access) if k.id not in seen]
     return MyWorkView(
         emergencies=await _summaries(access, emergencies),
         tasks=await task_views(access, tasks, names, case_titles=titles),
