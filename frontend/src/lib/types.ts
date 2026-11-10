@@ -1589,3 +1589,21 @@ export type ConnectorView = {
     finished_at: string;
   }[];
 };
+
+export type MetricView = {
+  key: string;
+  name: string;
+  definition: string;
+  numerator: number;
+  denominator: number;
+  value: number | null;
+  unit: string;
+  sample_size: number;
+  coverage: string;
+  limitations: string;
+  distribution: Record<string, number>;
+};
+
+export type MetricsView = { period_start: string; period_end: string; metrics: MetricView[] };
+
+export type SnapshotView = MetricsView & { id: string; trigger: string; taken_at: string };

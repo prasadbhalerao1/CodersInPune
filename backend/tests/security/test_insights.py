@@ -158,3 +158,21 @@ async def test_insights_are_for_managers_and_auditors_only(api: Api, ws: Ws) -> 
     other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
     await ws.responsibility("Mine", "critical")
     assert (await other.call("GET", "/insights"))["coverage"]["responsibilities"] == 0
+
+
+async def test_trend_metrics_show_definitions_and_denominators(ws: Ws) -> None:
+    view = await ws.call("GET", "/insights/metrics", params={"days": 30})
+    keys = [m["key"] for m in view["metrics"]]
+    assert keys == [
+        "handover_cycle_time",
+        "readiness_completion",
+        "knowledge_gap_resolution",
+        "integration_failure_rate",
+        "agent_acceptance",
+    ]
+    for m in view["metrics"]:
+        assert m["definition"] and m["limitations"] and m["coverage"]
+        assert m["denominator"] == 0 and m["value"] is None  # no data: no invented number
+    snap = await ws.call("POST", "/insights/snapshots", 201, params={"days": 30})
+    assert [s["id"] for s in await ws.call("GET", "/insights/snapshots")] == [snap["id"]]
+    await ws.call("GET", "/insights/metrics", 422, params={"days": 2})

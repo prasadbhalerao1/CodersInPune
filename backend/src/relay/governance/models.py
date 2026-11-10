@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -15,6 +16,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from relay.shared.db.base import Base
@@ -111,3 +113,25 @@ class ConnectorRun(Base):
     finished_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class MetricSnapshot(Base):
+    """Metrics as computed at a moment, with definitions and denominators (append-only)."""
+
+    __tablename__ = "metric_snapshot"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("trigger IN ('manual', 'scheduled')", name="trigger"),
+        CheckConstraint("period_end > period_start", name="period"),
+        Index(None, "tenant_id", "taken_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    metrics: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    trigger: Mapped[str] = mapped_column(Text, server_default="manual")
+    taken_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("identity.user_account.id"))
+    taken_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

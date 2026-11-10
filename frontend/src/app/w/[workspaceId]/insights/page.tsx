@@ -47,7 +47,17 @@ export default async function InsightsPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="Insights" />
+      <PageHeader
+        title="Insights"
+        actions={
+          <Link
+            href={`/w/${workspaceId}/insights/trends`}
+            className="text-sm underline-offset-2 hover:underline"
+          >
+            Trends →
+          </Link>
+        }
+      />
       <div className="flex max-w-6xl flex-col gap-8 p-6">
         <form className="flex flex-wrap items-center gap-2" aria-label="Filters">
           <select
