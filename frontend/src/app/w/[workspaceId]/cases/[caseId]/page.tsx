@@ -195,6 +195,21 @@ export default async function CasePage({
                   </SubmitButton>
                 </ActionForm>
               ) : null}
+              {c.case_type === "coverage" &&
+              (c.status === "executing" ||
+                c.status === "verification" ||
+                c.status === "completed") ? (
+                <p className="text-sm">
+                  <Link
+                    href={`/w/${workspaceId}/cases/${caseId}/briefing`}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {c.status === "completed"
+                      ? "Open the return briefing →"
+                      : "Review the return briefing before cover ends →"}
+                  </Link>
+                </p>
+              ) : null}
               <BlockersPanel {...ctx} members={memberList} />
               <OwnershipPlan workspaceId={workspaceId} detail={c} />
               <ScopeSection

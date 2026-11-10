@@ -38,7 +38,10 @@ test("add people and a responsibility with an owner, and see the risk", async ({
   for (const person of [names.leaving, names.joining]) {
     await page.getByLabel("Name", { exact: true }).fill(person);
     await submitAndSettle(page, "Add person");
-    await expect(page.getByText(person, { exact: true })).toBeVisible();
+    // Names also appear as options in the "Reports to" pickers; check the visible row.
+    await expect(
+      page.getByText(person, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible();
   }
 
   await page.goto(`${base}/responsibilities/new`);
@@ -81,20 +84,30 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await submitAndSettle(page, "Save");
 
   // The responsibility's runbook is surfaced in the case; record that it was handed over.
+  await page.goto(`${caseUrl}?tab=knowledge`);
   await page.getByRole("button", { name: "Mark handed over" }).click();
   await expect(page.getByText("Handed over", { exact: true })).toBeVisible();
 
-  await page.getByLabel("New task").fill("Walk through the runbook");
+  await page.goto(`${caseUrl}?tab=tasks`);
+  await page.getByText("Add a task", { exact: true }).click();
+  await page.getByLabel("Title", { exact: true }).fill("Walk through the runbook");
   await submitAndSettle(page, "Add task");
+  await expect(page.getByRole("link", { name: "Walk through the runbook" })).toBeVisible();
 
   await submitAndSettle(page, "Submit for approval");
+  await expect(page.getByRole("status").first()).toContainText("Waiting for approval");
+  await page.goto(`${caseUrl}?tab=approvals`);
   await page.getByRole("button", { name: /^Approve v\d+$/ }).click();
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("status").first()).toContainText("ready");
   await submitAndSettle(page, "Execute handover");
+  await expect(page.getByRole("status").first()).toContainText("Readiness");
 
   // Complete the task (the checkbox button), then meet every readiness check.
+  await page.goto(`${caseUrl}?tab=tasks`);
   await page.getByRole("button", { name: "Complete Walk through the runbook" }).click();
-  await expect(page.getByRole("button", { name: "Reopen Walk through the runbook" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Complete Walk through the runbook" }),
+  ).toBeDisabled();
   const checks = page.getByLabel(/^Status for /);
   for (let i = 0; i < (await checks.count()); i++) {
     const form = page.locator("form").filter({ has: checks.nth(i) });
@@ -105,7 +118,7 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await expect(page.getByRole("status")).toContainText("Readiness is complete");
   await page.getByRole("button", { name: "Complete case" }).click();
   await expect(page.getByRole("status")).toContainText("Completed", { timeout: 15_000 });
-  await page.goto(caseUrl);
+  await page.goto(`${caseUrl}?tab=activity`);
   await expect(page.getByText("Case completed").first()).toBeVisible();
 
   await page.goto(`${base}/responsibilities`);
@@ -135,9 +148,13 @@ test("temporary coverage: plan, cover, briefing, early return", async ({ page })
   await expect(plan.first()).toContainText("back in charge");
 
   await submitAndSettle(page, "Submit for approval");
+  await expect(page.getByRole("status").first()).toContainText("Waiting for approval");
+  await page.goto(`${caseUrl}?tab=approvals`);
   await page.getByRole("button", { name: /^Approve v\d+$/ }).click();
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("status").first()).toContainText("ready");
   await submitAndSettle(page, "Execute handover");
+  await expect(page.getByRole("status").first()).toContainText("Readiness");
+  await page.goto(caseUrl);
   await expect(plan.first()).toContainText("covering until");
 
   await page.getByRole("link", { name: /review the return briefing/i }).click();
@@ -146,7 +163,7 @@ test("temporary coverage: plan, cover, briefing, early return", async ({ page })
   await expect(page.getByText("What was covered").first()).toBeVisible();
   await expect(page.getByText(names.duty).first()).toBeVisible();
 
-  await page.goto(caseUrl);
+  await page.goto(`${caseUrl}?tab=tasks`);
   const checks = page.getByLabel(/^Status for /);
   await expect(checks.first()).toBeVisible();
   for (let i = 0; i < (await checks.count()); i++) {
