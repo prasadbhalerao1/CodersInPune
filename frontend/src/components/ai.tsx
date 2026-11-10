@@ -87,6 +87,7 @@ export function EvidenceList({ evidence }: { evidence: EvidenceView[] }) {
               )}
               {e.audience === "managers" ? <Badge tone="warning">Managers only</Badge> : null}
               {e.status !== "active" ? <Badge tone="muted">Withdrawn</Badge> : null}
+              {e.changed ? <Badge tone="warning">Changed since cited</Badge> : null}
             </p>
             <p className="text-muted-foreground">
               {e.source_ts ? formatDateTime(e.source_ts) : "Date unknown"}

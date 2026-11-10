@@ -58,6 +58,8 @@ class EvidenceView(BaseModel):
     excerpt: str
     audience: str
     status: str
+    # The source has a newer revision than the one cited (Relay knowledge and Notion pages).
+    changed: bool = False
 
 
 class ClaimView(BaseModel):
@@ -174,28 +176,35 @@ async def current_evidence(
         by_type.setdefault(e.source_type, set()).add(e.source_id)
 
     knowledge: dict[str, tuple[str, str]] = {}
+    revisions: dict[tuple[str, str], str] = {}  # (source_type, source_id) -> current revision
     ids = [uuid.UUID(i) for i in by_type.get("knowledge", ())]
     if ids:
-        for kid, status, vis in await session.execute(
-            select(KnowledgeItem.id, KnowledgeItem.status, KnowledgeItem.visibility).where(
-                KnowledgeItem.id.in_(ids)
-            )
+        for kid, status, vis, updated in await session.execute(
+            select(
+                KnowledgeItem.id,
+                KnowledgeItem.status,
+                KnowledgeItem.visibility,
+                KnowledgeItem.updated_at,
+            ).where(KnowledgeItem.id.in_(ids))
         ):
             knowledge[str(kid)] = (status, vis)
+            revisions["knowledge", str(kid)] = updated.isoformat()
     notion: dict[str, tuple[str, str]] = {}
     if by_type.get("notion_page"):
-        for nid, page_status, k_status, vis in await session.execute(
+        for nid, page_status, k_status, vis, revision in await session.execute(
             select(
                 NotionPage.notion_id,
                 NotionPage.status,
                 KnowledgeItem.status,
                 KnowledgeItem.visibility,
+                NotionPage.revision,
             )
             .join(KnowledgeItem, KnowledgeItem.id == NotionPage.knowledge_item_id)
             .where(NotionPage.notion_id.in_(by_type["notion_page"]))
         ):
             ok = page_status == "active" and k_status == "active"
             notion[nid] = ("active" if ok else "withdrawn", vis)
+            revisions["notion_page", nid] = revision
     repos = {
         name: accessible
         for name, accessible in await session.execute(
@@ -228,7 +237,9 @@ async def current_evidence(
                 status = "withdrawn"
         elif e.source_system == "linear" and e.source_id not in linear:
             status = "withdrawn"
+        current = revisions.get((e.source_type, e.source_id))
         out[e.id] = EvidenceView(
+            changed=status == "active" and current is not None and current != e.revision,
             id=e.id,
             ref=e.ref,
             source_system=e.source_system,

@@ -109,6 +109,8 @@ class CapsuleView(BaseModel):
     can_approve: bool
     can_acknowledge: bool
     generating: bool
+    # Statements whose cited source changed after this version was written: review again.
+    changed_points: int = 0
 
 
 class CapsuleSummary(BaseModel):
@@ -427,7 +429,7 @@ async def view(
     editor = role_allows(access.role, Permission.AI_REVIEW)
     ids = {uuid.UUID(e) for s in v.sections for p in s["points"] for e in p["evidence_ids"]}
     evidence = await svc.current_evidence(access, await svc._evidence_rows(access, ids))
-    redacted, hidden, withdrawn = set(v.redactions), 0, 0
+    redacted, hidden, withdrawn, changed = set(v.redactions), 0, 0, 0
     sections: list[CapsuleSection] = []
     for s in v.sections:
         points = []
@@ -442,6 +444,7 @@ async def view(
             if p["key"] in redacted and not editor:
                 hidden += 1
                 continue
+            changed += any(e.changed for e in ev)
             points.append(
                 CapsulePoint(
                     key=p["key"],
@@ -503,6 +506,7 @@ async def view(
         can_approve=editor and latest and not recipient and v.approved_at is None,
         can_acknowledge=recipient and latest and capsule.status == "approved",
         generating=bool(generating),
+        changed_points=changed,
     )
 
 

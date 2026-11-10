@@ -137,6 +137,17 @@ export default async function CapsulePage({
                   : ""}
               </p>
             ) : null}
+            {c.changed_points > 0 ? (
+              <p
+                role="status"
+                className="mt-2 rounded-md border border-amber-600/20 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+              >
+                {c.changed_points === 1
+                  ? "1 statement cites a source that changed after this version was written."
+                  : `${c.changed_points} statements cite sources that changed after this version was written.`}{" "}
+                Re-run the analysis and review before relying on them.
+              </p>
+            ) : null}
             {c.generating ? (
               <div className="mt-2 flex flex-col gap-2">
                 <p role="status" className="flex items-center gap-2 text-sm">

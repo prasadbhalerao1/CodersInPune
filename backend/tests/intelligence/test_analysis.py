@@ -322,3 +322,52 @@ def test_same_topic_knowledge_written_together_is_flagged_as_a_conflict() -> Non
     pool = Pool(_uuid.uuid4(), "Case", [responsibility, *runbooks], [])
     conflicts = [c for c in deterministic.analyse(pool) if c.kind == "conflict"]
     assert [sorted(c.refs) for c in conflicts] == [["E2", "E3"]]
+
+
+async def test_evidence_edited_after_the_analysis_is_flagged_as_changed() -> None:
+    async with make_api() as api:
+        ws = Ws(api, await api.create_workspace(OWNER, "Acme"))
+        old = await ws.person("Old Owner")
+        rid = await ws.responsibility("Deploys", "critical")
+        await ws.call(
+            "POST",
+            f"/responsibilities/{rid}/assignments",
+            201,
+            json={"role": "primary", "person_id": old},
+        )
+        items = [
+            await ws.call(
+                "POST",
+                f"/responsibilities/{rid}/knowledge",
+                201,
+                json={"kind": "procedure", "title": title, "body": body},
+            )
+            for title, body in (
+                ("Deploy payments service", "Canary for 30 minutes."),
+                ("Deploy payments service (old)", "Promote directly."),
+            )
+        ]
+        starts = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
+        case = await ws.call(
+            "POST",
+            "/cases",
+            201,
+            json={
+                "case_type": "departure",
+                "title": "Old leaves",
+                "starts_at": starts,
+                "affected_person_id": old,
+            },
+        )
+        await ws.call("POST", f"/cases/{case['id']}/analysis", 202)
+        await drain(api, ws.id)
+
+        def conflict_evidence(analysis: dict[str, Any]) -> list[dict[str, Any]]:
+            [claim] = [c for c in analysis["claims"] if c["kind"] == "conflict"]
+            return list(claim["evidence"])
+
+        before = conflict_evidence(await ws.call("GET", f"/cases/{case['id']}/analysis"))
+        assert [e["changed"] for e in before] == [False, False]
+        await ws.call("PATCH", f"/knowledge/{items[1]['id']}", json={"body": "Use the canary."})
+        after = conflict_evidence(await ws.call("GET", f"/cases/{case['id']}/analysis"))
+        assert sorted(e["changed"] for e in after) == [False, True]

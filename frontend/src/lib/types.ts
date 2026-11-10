@@ -1310,6 +1310,7 @@ export type EvidenceView = {
   excerpt: string;
   audience: AiAudience;
   status: "active" | "stale" | "withdrawn";
+  changed: boolean;
 };
 
 export type ClaimView = {
@@ -1451,6 +1452,7 @@ export type CapsuleView = {
   can_approve: boolean;
   can_acknowledge: boolean;
   generating: boolean;
+  changed_points: number;
 };
 
 export type CapsuleSummary = {
