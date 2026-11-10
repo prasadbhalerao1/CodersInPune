@@ -21,7 +21,8 @@ import {
   type QuickCreateKind,
 } from "@/app/w/[workspaceId]/command-actions";
 import { ASSET_TYPE_LABEL, ASSET_TYPES } from "@/app/w/[workspaceId]/assets/labels";
-import type { SearchHit, SearchKind, WorkspaceRole } from "@/lib/types";
+import { hitPath, KIND_GROUP } from "@/lib/search";
+import type { SearchHit, WorkspaceRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const OPEN_COMMAND_MENU = "relay:open-command-menu";
@@ -35,37 +36,6 @@ type Item = {
   path?: string;
   create?: QuickCreateKind;
 };
-
-const KIND_GROUP: Record<SearchKind, string> = {
-  responsibility: "Responsibilities",
-  case: "Continuity cases",
-  person: "People",
-  team: "Teams",
-  department: "Departments",
-  asset: "Assets",
-  knowledge: "Knowledge",
-  risk: "Risks",
-};
-
-function hitPath(hit: SearchHit): string {
-  switch (hit.kind) {
-    case "responsibility":
-    case "knowledge":
-      return `/responsibilities/${hit.id}`;
-    case "case":
-      return `/cases/${hit.id}`;
-    case "person":
-      return `/people/${hit.id}`;
-    case "team":
-      return `/teams/${hit.id}`;
-    case "department":
-      return `/departments/${hit.id}`;
-    case "asset":
-      return `/assets/${hit.id}`;
-    case "risk":
-      return `/risks/${encodeURIComponent(hit.id)}`;
-  }
-}
 
 const RECENT_KEY = "relay:recent-searches";
 function readRecent(): string[] {
@@ -163,6 +133,14 @@ export function CommandMenu() {
         .join(" · "),
       path: hitPath(hit),
     }));
+    if (shown.length) {
+      results.push({
+        key: "all-results",
+        group: "Search",
+        label: `See all results for “${query.trim()}”`,
+        path: `/search?q=${encodeURIComponent(query.trim())}`,
+      });
+    }
     const create: Item[] = [
       ...(can(MANAGE)
         ? [

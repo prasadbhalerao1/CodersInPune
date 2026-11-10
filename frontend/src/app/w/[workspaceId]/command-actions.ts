@@ -9,7 +9,7 @@ export async function searchAction(workspaceId: string, q: string): Promise<Sear
   try {
     return await api.search(workspaceId, q);
   } catch (error) {
-    if (error instanceof RelayApiError) return { query: q, hits: [] };
+    if (error instanceof RelayApiError) return { query: q, hits: [], facets: {} };
     throw error;
   }
 }

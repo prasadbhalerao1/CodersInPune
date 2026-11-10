@@ -7,23 +7,38 @@ no permission for is simply absent. Matching is case-insensitive substring on na
 (PostgreSQL ILIKE) plus full-text search for knowledge content; no extra infrastructure.
 """
 
+import uuid
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel
 from sqlalchemy import ColumnElement, func, or_, select
 
 from relay.catalog.knowledge import readable as knowledge_readable
-from relay.catalog.models import Asset, KnowledgeItem, Responsibility
+from relay.catalog.models import Asset, KnowledgeItem, OwnershipAssignment, Responsibility
 from relay.continuity.models import ContinuityCase
 from relay.directory.models import Department, Person, Team
+from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
+from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
+from relay.integrations.linear.models import LinearIssue, LinearTeam
 from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.risks.models import RiskRecord
 
 Kind = Literal[
-    "responsibility", "person", "team", "department", "asset", "case", "knowledge", "risk"
+    "responsibility",
+    "person",
+    "team",
+    "department",
+    "asset",
+    "case",
+    "knowledge",
+    "risk",
+    "github",
+    "linear",
 ]
-PER_GROUP = 6
+PER_GROUP = 6  # the command-menu preview
+FULL_PAGE = 25  # the search page, per kind
 
 
 class SearchHit(BaseModel):
@@ -32,11 +47,29 @@ class SearchHit(BaseModel):
     title: str
     detail: str | None = None
     status: str | None = None
+    # External records link out; `updated_at` lets people judge freshness.
+    url: str | None = None
+    updated_at: datetime | None = None
 
 
 class SearchView(BaseModel):
     query: str
     hits: list[SearchHit]
+    # Hits per kind before any kind filter: the facet counts for this query.
+    facets: dict[str, int] = {}
+
+
+class Reason(BaseModel):
+    kind: Literal["owns", "wrote", "worked_on"]
+    text: str
+
+
+class ExpertView(BaseModel):
+    """Someone to ask, with the visible evidence why. Not a ranking or a score."""
+
+    person_id: uuid.UUID
+    name: str
+    reasons: list[Reason]
 
 
 def _like(column: Any, q: str) -> ColumnElement[bool]:
@@ -45,8 +78,13 @@ def _like(column: Any, q: str) -> ColumnElement[bool]:
     return result
 
 
-async def search(access: WorkspaceAccess, q: str) -> SearchView:
+async def search(
+    access: WorkspaceAccess, q: str, *, kinds: list[str] | None = None, full: bool = False
+) -> SearchView:
+    """`full` returns more per kind (the search page); `kinds` narrows the results while the
+    facets still count every kind."""
     authorize(access, Permission.WORKSPACE_READ)
+    limit = FULL_PAGE if full else PER_GROUP
     q = " ".join(q.split())[:100]
     if len(q) < 2:
         return SearchView(query=q, hits=[])
@@ -60,7 +98,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 or_(_like(Responsibility.name, q), _like(Responsibility.category, q)),
             )
             .order_by(Responsibility.status, Responsibility.name)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -78,7 +116,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 or_(_like(Asset.name, q), _like(Asset.url, q)),
             )
             .order_by(Asset.status, Asset.name)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -99,7 +137,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 or_(KnowledgeItem.search.op("@@")(tsquery), _like(KnowledgeItem.title, q)),
             )
             .order_by(func.ts_rank(KnowledgeItem.search, tsquery).desc(), KnowledgeItem.title)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -117,7 +155,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 or_(_like(RiskRecord.title, q), _like(RiskRecord.subject, q)),
             )
             .order_by(RiskRecord.severity, RiskRecord.title)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -142,7 +180,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 ),
             )
             .order_by(Person.status, Person.display_name)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -157,7 +195,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
             select(Team)
             .where(visible(access, Permission.DIRECTORY_READ, Team.tenant_id), _like(Team.name, q))
             .order_by(Team.status, Team.name)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(kind="team", id=str(t.id), title=t.name, detail="Team", status=t.status)
@@ -169,7 +207,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 _like(Department.name, q),
             )
             .order_by(Department.status, Department.name)
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -189,7 +227,7 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                 _like(ContinuityCase.title, q),
             )
             .order_by(ContinuityCase.created_at.desc())
-            .limit(PER_GROUP)
+            .limit(limit)
         ):
             hits.append(
                 SearchHit(
@@ -200,4 +238,151 @@ async def search(access: WorkspaceAccess, q: str) -> SearchView:
                     status=c.status,
                 )
             )
-    return SearchView(query=q, hits=hits)
+    if role_allows(access.role, Permission.RESPONSIBILITY_READ):
+        hits += await _external(access, q, limit)
+    facets: dict[str, int] = {}
+    for hit in hits:
+        facets[hit.kind] = facets.get(hit.kind, 0) + 1
+    if kinds:
+        hits = [h for h in hits if h.kind in kinds]
+    return SearchView(query=q, hits=hits, facets=facets)
+
+
+async def _external(access: WorkspaceAccess, q: str, limit: int) -> list[SearchHit]:
+    """GitHub and Linear records, only while their source is still connected and readable:
+    an unselected, archived or inaccessible repository, or a removed Linear team, hides them."""
+    session, hits = access.session, []
+    for item, repo in await session.execute(
+        select(GitHubWorkItem, GitHubRepository.full_name)
+        .join(GitHubRepository, GitHubRepository.id == GitHubWorkItem.repository_id)
+        .where(
+            visible(access, Permission.RESPONSIBILITY_READ, GitHubWorkItem.tenant_id),
+            GitHubRepository.accessible.is_(True),
+            GitHubRepository.selected.is_(True),
+            _like(GitHubWorkItem.title, q),
+        )
+        .order_by(GitHubWorkItem.gh_updated_at.desc())
+        .limit(limit)
+    ):
+        hits.append(
+            SearchHit(
+                kind="github",
+                id=str(item.id),
+                title=item.title,
+                detail=f"{repo} #{item.number} · {'PR' if item.kind == 'pull' else 'issue'}",
+                status=item.state,
+                url=item.html_url,
+                updated_at=item.gh_updated_at,
+            )
+        )
+    removed_teams = select(LinearTeam.linear_id).where(LinearTeam.removed.is_(True))
+    for issue in await session.scalars(
+        select(LinearIssue)
+        .where(
+            visible(access, Permission.RESPONSIBILITY_READ, LinearIssue.tenant_id),
+            or_(
+                LinearIssue.team_linear_id.is_(None),
+                LinearIssue.team_linear_id.not_in(removed_teams),
+            ),
+            or_(_like(LinearIssue.title, q), _like(LinearIssue.identifier, q)),
+        )
+        .order_by(LinearIssue.li_updated_at.desc())
+        .limit(limit)
+    ):
+        hits.append(
+            SearchHit(
+                kind="linear",
+                id=str(issue.id),
+                title=issue.title,
+                detail=f"{issue.identifier} · {issue.state_name or issue.state_type}",
+                status=issue.state_type,
+                url=issue.url,
+                updated_at=issue.li_updated_at,
+            )
+        )
+    return hits
+
+
+async def experts(access: WorkspaceAccess, q: str) -> list[ExpertView]:
+    """Who to ask about a topic, from transparent evidence the caller can already see:
+    current ownership of matching responsibilities, knowledge they wrote, and GitHub work
+    on matching items. People are listed with every reason; there is no score."""
+    authorize(access, Permission.RESPONSIBILITY_READ)
+    q = " ".join(q.split())[:100]
+    if len(q) < 2:
+        return []
+    session = access.session
+    found: dict[uuid.UUID, ExpertView] = {}
+    people = {
+        p.id: p
+        for p in await session.scalars(
+            select(Person).where(
+                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+                Person.status == "active",
+            )
+        )
+    }
+
+    def add(person_id: uuid.UUID | None, kind: str, text: str) -> None:
+        person = people.get(person_id) if person_id else None
+        if person is None:
+            return
+        view = found.setdefault(
+            person.id, ExpertView(person_id=person.id, name=person.display_name, reasons=[])
+        )
+        if len(view.reasons) < 6:
+            view.reasons.append(Reason(kind=kind, text=text))
+
+    now = datetime.now(UTC)
+    for role, name, person_id in await session.execute(
+        select(OwnershipAssignment.role, Responsibility.name, OwnershipAssignment.person_id)
+        .join(Responsibility, Responsibility.id == OwnershipAssignment.responsibility_id)
+        .where(
+            visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id),
+            Responsibility.status == "active",
+            OwnershipAssignment.person_id.is_not(None),
+            OwnershipAssignment.valid_from <= now,
+            or_(OwnershipAssignment.valid_to.is_(None), OwnershipAssignment.valid_to > now),
+            or_(_like(Responsibility.name, q), _like(Responsibility.description, q)),
+        )
+        .limit(50)
+    ):
+        add(person_id, "owns", f"{role.replace('_', '-').capitalize()} of “{name}”")
+    by_email = {p.email.lower(): p.id for p in people.values() if p.email}
+    tsquery = func.websearch_to_tsquery("english", q)
+    for title, email in await session.execute(
+        select(KnowledgeItem.title, Membership.email)
+        .join(Membership, Membership.user_id == KnowledgeItem.author_user_id)
+        .join(Responsibility, Responsibility.id == KnowledgeItem.responsibility_id)
+        .where(
+            knowledge_readable(access),
+            KnowledgeItem.status == "active",
+            or_(KnowledgeItem.search.op("@@")(tsquery), _like(KnowledgeItem.title, q)),
+        )
+        .limit(50)
+    ):
+        add(by_email.get((email or "").lower()), "wrote", f"Wrote “{title}”")
+    by_login = {p.github_login: p.id for p in people.values() if p.github_login}
+    for title, number, author, repo in await session.execute(
+        select(
+            GitHubWorkItem.title,
+            GitHubWorkItem.number,
+            GitHubWorkItem.author_login,
+            GitHubRepository.full_name,
+        )
+        .join(GitHubRepository, GitHubRepository.id == GitHubWorkItem.repository_id)
+        .where(
+            visible(access, Permission.RESPONSIBILITY_READ, GitHubWorkItem.tenant_id),
+            GitHubRepository.accessible.is_(True),
+            _like(GitHubWorkItem.title, q),
+        )
+        .order_by(GitHubWorkItem.gh_updated_at.desc())
+        .limit(50)
+    ):
+        add(
+            by_login.get((author or "").lower()),
+            "worked_on",
+            f"Opened {repo}#{number} “{title}”",
+        )
+    # Most evidence first; ties alphabetical. Order is for reading, not a judgement.
+    return sorted(found.values(), key=lambda e: (-len(e.reasons), e.name))

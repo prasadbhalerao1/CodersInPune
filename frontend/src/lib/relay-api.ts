@@ -34,6 +34,7 @@ import type {
   IdentityView,
   SignalView,
   AssetDetail,
+  ExpertView,
   ConnectorView,
   ExternalActionView,
   ExternalTargetsView,
@@ -205,6 +206,12 @@ export const api = {
       `${ws(id)}/responsibilities/${encodeURIComponent(rid)}/context`,
     ),
   search: (id: string, q: string) => relayFetch<SearchView>(withQuery(`${ws(id)}/search`, { q })),
+  searchFull: (id: string, q: string, kind?: string) =>
+    relayFetch<SearchView>(
+      withQuery(`${ws(id)}/search`, kind ? { q, full: "true", kind } : { q, full: "true" }),
+    ),
+  experts: (id: string, q: string) =>
+    relayFetch<ExpertView[]>(withQuery(`${ws(id)}/search/experts`, { q })),
   policy: (id: string) => relayFetch<PolicyView>(`${ws(id)}/policy`),
   notionPreview: (id: string, sourceId: string) =>
     relayFetch<NotionPreviewView>(

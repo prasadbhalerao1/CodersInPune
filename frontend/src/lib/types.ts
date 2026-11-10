@@ -1146,7 +1146,16 @@ export type PolicyView = {
 };
 
 export type SearchKind =
-  "responsibility" | "person" | "team" | "department" | "asset" | "case" | "knowledge" | "risk";
+  | "responsibility"
+  | "person"
+  | "team"
+  | "department"
+  | "asset"
+  | "case"
+  | "knowledge"
+  | "risk"
+  | "github"
+  | "linear";
 
 export type SearchHit = {
   kind: SearchKind;
@@ -1154,9 +1163,21 @@ export type SearchHit = {
   title: string;
   detail: string | null;
   status: string | null;
+  url: string | null;
+  updated_at: string | null;
 };
 
-export type SearchView = { query: string; hits: SearchHit[] };
+export type SearchView = {
+  query: string;
+  hits: SearchHit[];
+  facets: Partial<Record<SearchKind, number>>;
+};
+
+export type ExpertView = {
+  person_id: string;
+  name: string;
+  reasons: { kind: "owns" | "wrote" | "worked_on"; text: string }[];
+};
 
 export type ProfileRef = { id: string; name: string; detail: string | null };
 export type ProfileView = {

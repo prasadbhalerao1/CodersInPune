@@ -65,3 +65,30 @@ async def test_search_respects_visibility_and_tenants(api: Api, ws: Ws) -> None:
     assert (await kinds(ws, "bank"))["knowledge"] == ["Bank tokens"]
     other = Ws(api, await api.create_workspace("user_other", "Other"), "user_other")
     assert await kinds(other, "treasury") == {}
+
+
+async def test_full_search_facets_and_who_to_ask(ws: Ws) -> None:
+    asha = await ws.call(
+        "POST", "/people", 201, json={"display_name": "Asha", "email": "owner@x.test"}
+    )
+    rid = await ws.responsibility("Payments reconciliation")
+    await ws.call(
+        "POST",
+        f"/responsibilities/{rid}/assignments",
+        201,
+        json={"role": "primary", "person_id": asha["id"]},
+    )
+    await ws.call("POST", "/assets", 201, json={"name": "Payments API", "asset_type": "service"})
+    full = await ws.call("GET", "/search", params={"q": "payments", "full": "true"})
+    assert full["facets"] == {"responsibility": 1, "asset": 1}
+    only = await ws.call("GET", "/search", params={"q": "payments", "kind": "asset"})
+    assert [h["kind"] for h in only["hits"]] == ["asset"]
+    assert only["facets"]["responsibility"] == 1  # facets still count every kind
+    experts = await ws.call("GET", "/search/experts", params={"q": "reconciliation"})
+    assert experts == [
+        {
+            "person_id": asha["id"],
+            "name": "Asha",
+            "reasons": [{"kind": "owns", "text": "Primary of “Payments reconciliation”"}],
+        }
+    ]
