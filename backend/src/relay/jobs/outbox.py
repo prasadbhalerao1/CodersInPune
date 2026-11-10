@@ -27,6 +27,7 @@ from relay.audit import service as audit
 from relay.config import Settings
 from relay.jobs.models import OutboxEvent
 from relay.shared.db.session import unit_of_work
+from relay.shared.observability import REQUEST_ID
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,9 @@ async def emit(
         )
         .defer_async(tenant_id=str(tenant_id), event_id=str(event_id))
     )
+    # Logged under the request's correlation id; the job then logs under the event id, so a
+    # request can be followed into the work it queued.
+    logger.info("queued %s event %s", event_type, event_id.hex)
     return event_id
 
 
@@ -111,6 +115,7 @@ async def process(
     ctx: JobContext | None = None,
 ) -> bool:
     """Process one event. Returns False if it was already processed or is not visible."""
+    token = REQUEST_ID.set(event_id.hex)
     try:
         async with unit_of_work(factory, tenant_id) as session:
             event = await session.scalar(
@@ -139,6 +144,8 @@ async def process(
     except Exception as exc:
         await _record_failure(factory, tenant_id, event_id, exc)
         raise
+    finally:
+        REQUEST_ID.reset(token)
 
 
 async def _record_failure(
