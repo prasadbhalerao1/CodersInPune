@@ -271,3 +271,54 @@ async def test_cancel_kill_switch_and_withdrawn_evidence(api: Api, script: list[
     for c in stale:
         assert all(e["status"] == "withdrawn" for e in after[c["id"]]["evidence"])
         assert after[c["id"]]["supported"] is False
+
+
+def test_same_topic_knowledge_written_together_is_flagged_as_a_conflict() -> None:
+    """Relay-authored items saved in one transaction share a revision; content decides."""
+    import uuid as _uuid
+
+    from relay.intelligence import deterministic
+    from relay.intelligence.evidence import Pool, PoolItem
+
+    rid = str(_uuid.uuid4())
+    responsibility = PoolItem(
+        "E1",
+        "relay",
+        "responsibility",
+        rid,
+        "Deploys",
+        "critical",
+        facts={
+            "kind": "responsibility",
+            "responsibility_id": rid,
+            "recipient": True,
+            "exception": False,
+            "roles": ["primary", "backup"],
+            "criticality": "standard",
+        },
+    )
+    same = "2026-11-10T09:00:00+00:00"
+    runbooks = [
+        PoolItem(
+            f"E{n}",
+            "relay",
+            "knowledge",
+            str(n),
+            title,
+            body,
+            revision=same,
+            facts={
+                "kind": "knowledge",
+                "responsibility_id": rid,
+                "stale": False,
+                "reviewed": True,
+            },
+        )
+        for n, title, body in (
+            (2, "Deploy payments-api", "Run the canary for 30 minutes."),
+            (3, "Deploy payments-api (old runbook)", "Promote directly; no canary."),
+        )
+    ]
+    pool = Pool(_uuid.uuid4(), "Case", [responsibility, *runbooks], [])
+    conflicts = [c for c in deterministic.analyse(pool) if c.kind == "conflict"]
+    assert [sorted(c.refs) for c in conflicts] == [["E2", "E3"]]

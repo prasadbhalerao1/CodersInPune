@@ -99,7 +99,8 @@ def analyse(pool: Pool) -> list[ValidClaim]:
         for i, a in enumerate(mine):
             for b in mine[i + 1 :]:
                 wa, wb = _words(a.title), _words(b.title)
-                if wa and wb and len(wa & wb) / len(wa | wb) >= 0.6 and a.revision != b.revision:
+                # Compare content, not revisions: Relay items written together share one.
+                if wa and wb and len(wa & wb) / len(wa | wb) >= 0.6 and a.excerpt != b.excerpt:
                     claims.append(
                         _claim(
                             pool,
