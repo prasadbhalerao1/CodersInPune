@@ -19,6 +19,8 @@ RUN pnpm build
 FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+# The standalone server needs only node: drop npm, corepack and yarn (and their bundled deps).
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx            /usr/local/bin/corepack /opt/yarn* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 RUN useradd --system --uid 10001 --no-create-home relay
 COPY --from=build --chown=relay /app/.next/standalone ./
 COPY --from=build --chown=relay /app/.next/static ./.next/static
