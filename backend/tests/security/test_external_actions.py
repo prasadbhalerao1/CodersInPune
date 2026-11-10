@@ -138,3 +138,36 @@ async def test_connector_health_pause_and_run_history(api: Api, ext: FakeExterna
     [revoked] = await ws.call("GET", "/integrations/health")
     assert revoked["health"] == "revoked"
     assert "Reconnect" in revoked["advice"]
+
+
+async def test_github_issue_timeout_is_recovered_without_a_duplicate() -> None:
+    from tests.fakes import FakeRepo
+    from tests.security.test_members_and_github import connect, run_sync
+
+    ext = FakeExternal(repos=[FakeRepo(id=2, full_name="acme/website")])
+    async with make_api(ext, **ext.github_settings, github_issue_writes=True) as api:
+        ws = Ws(api, await api.create_workspace(OWNER, "Acme"))
+        assert (await connect(api, ws, ext))["status"] == 200
+        await run_sync(api, ws.id)
+        targets = await ws.call("GET", "/external-targets")
+        assert targets["github_enabled"]
+        assert "acme/website" in [t["target"] for t in targets["targets"]]
+        case_id, task_id = await task(ws)
+        content = {"provider": "github", "target": "acme/website", "title": "Rotate keys"}
+
+        ext.github_create_timeouts = 1  # GitHub creates the issue but the response is lost
+        await ws.call("POST", f"/cases/{case_id}/tasks/{task_id}/external", 201, json=content)
+        await drain(api, ws.id, "external.execute")
+        [uncertain] = await ws.call("GET", f"/cases/{case_id}/tasks/{task_id}/external")
+        assert uncertain["state"] == "uncertain"
+        await drain(api, ws.id, "external.execute")
+        [done] = await ws.call("GET", f"/cases/{case_id}/tasks/{task_id}/external")
+        assert done["state"] == "succeeded"
+        assert done["receipt"]["recovered_existing"] is True
+        assert len(ext.repos[0].issues) == 1  # no duplicate
+        assert "Created from Relay after approval" in ext.repos[0].issues[0]["body"]
+
+        ext.repos[0].issues[0]["state"] = "closed"
+        await ws.call("POST", f"/external-actions/{done['id']}/check")
+        detail = await ws.call("GET", f"/cases/{case_id}/tasks/{task_id}")
+        assert detail["task"]["status"] == "done"

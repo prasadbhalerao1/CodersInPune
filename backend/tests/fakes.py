@@ -58,6 +58,8 @@ class FakeExternal:
     teams: dict[str, list[str]] = field(default_factory=dict)  # slug -> member logins
     profiles: dict[str, dict[str, Any]] = field(default_factory=dict)  # login -> name/email
     activity_forbidden: bool = False  # simulate missing Pull requests/Issues permission
+    # GitHub issue writes: how many creates "time out" after GitHub accepted them.
+    github_create_timeouts: int = 0
     members_forbidden: bool = False  # simulate missing Organization > Members permission
     calls: list[str] = field(default_factory=list)
     # Resend: list of outcomes to return in order ("ok", "500", "422", "timeout"); then "ok".
@@ -341,6 +343,25 @@ class FakeExternal:
                 return httpx.Response(200, json=members if page == 1 else [])
         for repo in self.repos:
             prefix = f"/repos/{repo.full_name}"
+            if method == "POST" and path == f"{prefix}/issues":
+                data = json.loads(request.content)
+                number = len(repo.issues) + 1
+                issue = {
+                    "number": number,
+                    "html_url": f"https://github.com/{repo.full_name}/issues/{number}",
+                    "title": data["title"],
+                    "body": data.get("body", ""),
+                    "state": "open",
+                }
+                repo.issues.append(issue)
+                if self.github_create_timeouts:
+                    self.github_create_timeouts -= 1
+                    raise httpx.ReadTimeout("accepted, but the response was lost")
+                return httpx.Response(201, json=issue)
+            if path.startswith(f"{prefix}/issues/"):
+                number = int(path.rsplit("/", 1)[-1])
+                found = next((i for i in repo.issues if i.get("number") == number), None)
+                return httpx.Response(200, json=found) if found else httpx.Response(404)
             if path in (f"{prefix}/pulls", f"{prefix}/issues"):
                 if self.activity_forbidden:
                     return httpx.Response(403)
