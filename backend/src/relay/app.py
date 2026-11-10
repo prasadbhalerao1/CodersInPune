@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -5,6 +7,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay import health
 from relay.audit import service as audit
@@ -60,6 +63,22 @@ async def _handle_permission_denied(request: Request, exc: Exception) -> JSONRes
     return api_error_response(exc)
 
 
+async def _embedded_worker(
+    settings: Settings, session_factory: async_sessionmaker[AsyncSession], http: httpx.AsyncClient
+) -> None:
+    """The job worker inside the API process, for single-instance hosting without a
+    separate worker service. Jobs are idempotent, so a restart mid-job retries safely."""
+    jobs = create_job_app(
+        settings, session_factory, outbox.JobContext(http=http, settings=settings)
+    )
+    async with jobs.open_async():
+        await jobs.run_worker_async(
+            concurrency=settings.worker_concurrency,
+            shutdown_graceful_timeout=settings.worker_shutdown_seconds,
+            install_signal_handlers=False,
+        )
+
+
 def create_app(
     settings: Settings | None = None,
     http_transport: httpx.AsyncBaseTransport | None = None,
@@ -86,9 +105,18 @@ def create_app(
         app.state.jobs = create_job_app(
             resolved, session_factory, outbox.JobContext(http=http, settings=resolved)
         )
+        worker = (
+            asyncio.create_task(_embedded_worker(resolved, session_factory, http))
+            if resolved.embedded_worker
+            else None
+        )
         try:
             yield
         finally:
+            if worker is not None:
+                worker.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await worker
             await http.aclose()
             await engine.dispose()
 

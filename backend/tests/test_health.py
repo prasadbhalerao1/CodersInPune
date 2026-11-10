@@ -85,3 +85,8 @@ def test_the_app_role_cannot_use_the_ops_policies() -> None:
         conn.execute("SELECT set_config('app.ops', 'on', false)")
         assert conn.execute("SELECT count(*) FROM intelligence.agent_run").fetchone() == (0,)
         assert conn.execute("SELECT count(*) FROM platform.outbox_event").fetchone() == (0,)
+
+
+async def test_embedded_worker_starts_and_stops_with_the_api() -> None:
+    async for c in client_for(make_settings(embedded_worker=True, worker_shutdown_seconds=0)):
+        assert (await c.get("/health/ready")).status_code == 200

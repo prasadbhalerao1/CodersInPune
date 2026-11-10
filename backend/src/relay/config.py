@@ -108,6 +108,9 @@ class Settings(BaseSettings):
     # Activity window for PR/issue metadata and ownership signals.
     github_activity_days: int = Field(default=90, ge=7, le=365)
     worker_shutdown_seconds: float = Field(default=30.0, ge=0, le=600)
+    # Run the job worker inside the API process (single-instance free hosting only; a
+    # separate `relay-worker` process is the production setup).
+    embedded_worker: bool = False
 
     @field_validator("*", mode="before")
     @classmethod
