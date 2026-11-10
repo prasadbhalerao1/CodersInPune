@@ -80,7 +80,9 @@ async def ops(
     engine: AsyncEngine = request.app.state.engine
     try:
         async with asyncio.timeout(10), engine.connect() as conn:
-            counts = await conn.scalar(select(func.platform.ops_summary()))
+            counts: dict[str, int | None] = (
+                await conn.scalar(select(func.platform.ops_summary())) or {}
+            )
             await conn.commit()
     except Exception:
         logger.warning("ops summary failed: database unavailable", exc_info=True)
@@ -89,7 +91,7 @@ async def ops(
     alerts = [
         name
         for name, (key, limit) in THRESHOLDS.items()
-        if (counts.get(key) is None and name == "worker_down")
-        or (counts.get(key) is not None and counts[key] >= limit)
+        if ((value := counts.get(key)) is None and name == "worker_down")
+        or (value is not None and value >= limit)
     ]
     return OpsResponse(status="alert" if alerts else "ok", alerts=alerts, counts=counts)
