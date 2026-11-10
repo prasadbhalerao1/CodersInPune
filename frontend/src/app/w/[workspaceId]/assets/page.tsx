@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
+import { PageNav } from "@/components/page-nav";
 import { EmptyState, PageHeader, Section } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -29,12 +30,16 @@ export default async function AssetsPage({
     tag: pick("tag"),
     stewarded: pick("stewarded"),
   };
+  const after = pick("after");
   const [workspace, assets] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(
       api.assets(
         workspaceId,
-        Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) as Record<string, string>,
+        Object.fromEntries(Object.entries({ ...filters, after }).filter(([, v]) => v)) as Record<
+          string,
+          string
+        >,
       ),
     ),
   ]);
@@ -279,6 +284,7 @@ export default async function AssetsPage({
             </table>
           </div>
         )}
+        <PageNav base={base} query={filters} after={after} next={assets.data.nextCursor} />
       </div>
     </div>
   );

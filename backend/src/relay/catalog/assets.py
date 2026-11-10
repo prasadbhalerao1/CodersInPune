@@ -26,6 +26,7 @@ from relay.catalog.models import (
 from relay.continuity.models import CaseTask, ContinuityCase
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
+from relay.shared import pagination
 from relay.shared.api_types import LongText, Name, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
 
@@ -222,9 +223,14 @@ async def list_assets(
     lifecycle: Lifecycle | None = None,
     criticality: Criticality | None = None,
     stewarded: bool | None = None,
-) -> list[AssetSummary]:
+    after: str | None = None,
+    limit: int = pagination.MAX_PAGE,
+) -> tuple[list[AssetSummary], str | None]:
     authorize(access, Permission.RESPONSIBILITY_READ)
     stmt = select(Asset).where(visible(access, Permission.RESPONSIBILITY_READ, Asset.tenant_id))
+    keyset = pagination.after_key((Asset.name, Asset.id), after, (str, uuid.UUID))
+    if keyset is not None:
+        stmt = stmt.where(keyset)
     if status:
         stmt = stmt.where(Asset.status == status)
     if asset_type:
@@ -237,12 +243,16 @@ async def list_assets(
         stmt = stmt.where(Asset.criticality == criticality)
     if q:
         stmt = stmt.where(or_(Asset.name.ilike(_pattern(q)), Asset.description.ilike(_pattern(q))))
-    assets = list(await access.session.scalars(stmt.order_by(Asset.name, Asset.id).limit(500)))
+    assets, next_cursor = pagination.split(
+        list(await access.session.scalars(stmt.order_by(Asset.name, Asset.id).limit(limit + 1))),
+        limit,
+        lambda a: (a.name, a.id),
+    )
     counts = await _link_counts(access, [a.id for a in assets])
     summaries = [_summary(a, counts.get(a.id, (0, 0))) for a in assets]
     if stewarded is not None:
         summaries = [a for a in summaries if a.stewarded == stewarded]
-    return summaries
+    return summaries, next_cursor
 
 
 async def get_asset(access: WorkspaceAccess, asset_id: uuid.UUID) -> AssetDetail:

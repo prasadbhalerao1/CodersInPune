@@ -13,6 +13,7 @@ from relay.audit import service as audit
 from relay.directory.models import Department, DirectoryHistory, Person, Team, TeamMember
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, visible
+from relay.shared import pagination
 from relay.shared.api_types import Email, LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
 
@@ -216,8 +217,13 @@ async def list_people(
     q: str | None = None,
     include_archived: bool = False,
     department_id: uuid.UUID | None = None,
-) -> list[PersonView]:
+    after: str | None = None,
+    limit: int = pagination.MAX_PAGE,
+) -> tuple[list[PersonView], str | None]:
     stmt = select(Person).where(visible(access, Permission.DIRECTORY_READ, Person.tenant_id))
+    keyset = pagination.after_key((Person.display_name, Person.id), after, (str, uuid.UUID))
+    if keyset is not None:
+        stmt = stmt.where(keyset)
     if department_id:
         stmt = stmt.where(Person.department_id == department_id)
     if not include_archived:
@@ -226,9 +232,17 @@ async def list_people(
         stmt = stmt.where(
             or_(Person.display_name.ilike(_pattern(q)), Person.email.ilike(_pattern(q)))
         )
-    rows = await access.session.scalars(stmt.order_by(Person.display_name, Person.id).limit(500))
+    rows, next_cursor = pagination.split(
+        list(
+            await access.session.scalars(
+                stmt.order_by(Person.display_name, Person.id).limit(limit + 1)
+            )
+        ),
+        limit,
+        lambda p: (p.display_name, p.id),
+    )
     departments = await department_names(access)
-    return [_person_view(p, departments) for p in rows]
+    return [_person_view(p, departments) for p in rows], next_cursor
 
 
 async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:

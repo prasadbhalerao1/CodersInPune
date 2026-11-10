@@ -30,6 +30,7 @@ from relay.directory.models import Department, Person, Team, TeamMember
 from relay.identity.models import MembershipTeamScope
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.policy.permissions import Permission, authorize, role_allows, visible
+from relay.shared import pagination
 from relay.shared.api_types import LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
 
@@ -458,7 +459,9 @@ async def list_responsibilities(
     has_backup: bool | None = None,
     review: Literal["due", "ok"] | None = None,
     needs_verification: bool | None = None,
-) -> list[ResponsibilitySummary]:
+    after: str | None = None,
+    limit: int = pagination.MAX_PAGE,
+) -> tuple[list[ResponsibilitySummary], str | None]:
     now = utcnow()
     stmt = select(Responsibility).where(
         visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id)
@@ -500,10 +503,17 @@ async def list_responsibilities(
                 Responsibility.category.ilike(_pattern(q)),
             )
         )
-    responsibilities = list(
-        await access.session.scalars(
-            stmt.order_by(Responsibility.name, Responsibility.id).limit(500)
-        )
+    keyset = pagination.after_key((Responsibility.name, Responsibility.id), after, (str, uuid.UUID))
+    if keyset is not None:
+        stmt = stmt.where(keyset)
+    responsibilities, next_cursor = pagination.split(
+        list(
+            await access.session.scalars(
+                stmt.order_by(Responsibility.name, Responsibility.id).limit(limit + 1)
+            )
+        ),
+        limit,
+        lambda r: (r.name, r.id),
     )
     current = list(
         await access.session.scalars(
@@ -544,7 +554,7 @@ async def list_responsibilities(
                 last_reviewed_at=r.last_reviewed_at,
             )
         )
-    return summaries
+    return summaries, next_cursor
 
 
 async def get_responsibility(

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
+import { PageNav } from "@/components/page-nav";
 import { EmptyState, formatDateTime, PageHeader } from "@/components/page";
 import { SavedViews } from "@/components/saved-views";
 import { Badge, CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
@@ -35,10 +36,11 @@ export default async function CasesPage({
     if (typeof value === "string" && value) filters[key] = value;
   }
   const status = filters.status ?? "open";
+  const after = typeof query.after === "string" ? query.after : undefined;
   const current = new URLSearchParams(filters).toString();
   const [workspace, cases, people, teams, views] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
-    attempt(api.listCases(workspaceId, { ...filters, status })),
+    attempt(api.listCases(workspaceId, { ...filters, status, after })),
     attempt(api.listPeople(workspaceId)),
     attempt(api.listTeams(workspaceId)),
     attempt(api.savedViews(workspaceId, "cases")),
@@ -240,6 +242,7 @@ export default async function CasesPage({
             ))}
           </ul>
         )}
+        <PageNav base={base} query={filters} after={after} next={cases.data.nextCursor} />
       </div>
     </div>
   );

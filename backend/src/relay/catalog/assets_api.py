@@ -1,9 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from relay.catalog import assets as svc
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.shared import pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["assets"])
 
@@ -18,8 +19,12 @@ async def list_assets(
     lifecycle: svc.Lifecycle | None = None,
     criticality: svc.Criticality | None = None,
     stewarded: bool | None = None,
+    after: pagination.After = None,
+    limit: pagination.Limit = pagination.MAX_PAGE,
+    *,
+    response: Response,
 ) -> list[svc.AssetSummary]:
-    return await svc.list_assets(
+    items, next_cursor = await svc.list_assets(
         access,
         q=q,
         asset_type=asset_type,
@@ -28,7 +33,11 @@ async def list_assets(
         lifecycle=lifecycle,
         criticality=criticality,
         stewarded=stewarded,
+        after=after,
+        limit=limit,
     )
+    pagination.set_next(response, next_cursor)
+    return items
 
 
 @router.post("/assets", status_code=status.HTTP_201_CREATED)

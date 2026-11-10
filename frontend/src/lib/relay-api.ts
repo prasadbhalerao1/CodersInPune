@@ -136,6 +136,15 @@ export async function relayFetch<T>(path: string, init: RequestInit = {}): Promi
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
+/** A list page: the rows, plus the cursor for the next page (null on the last page). */
+export type Paged<T> = T[] & { nextCursor?: string | null };
+
+async function relayPaged<T>(path: string): Promise<Paged<T>> {
+  const response = await relayResponse(path, {}, "application/json");
+  const items = (await response.json()) as T[];
+  return Object.assign(items, { nextCursor: response.headers.get("X-Next-Cursor") });
+}
+
 /** Plain-text endpoints (e.g. Markdown exports). */
 export async function relayText(path: string): Promise<string> {
   return (await relayResponse(path, {}, "text/plain")).text();
@@ -165,7 +174,7 @@ export const api = {
   resolvedRisks: (id: string) => relayFetch<ResolvedRiskView[]>(`${ws(id)}/risks/resolved`),
 
   listResponsibilities: (id: string, query?: Query) =>
-    relayFetch<ResponsibilitySummary[]>(withQuery(`${ws(id)}/responsibilities`, query)),
+    relayPaged<ResponsibilitySummary>(withQuery(`${ws(id)}/responsibilities`, query)),
   getResponsibility: (id: string, rid: string, asOf?: string) =>
     relayFetch<ResponsibilityDetail>(
       withQuery(`${ws(id)}/responsibilities/${encodeURIComponent(rid)}`, { as_of: asOf }),
@@ -174,13 +183,13 @@ export const api = {
     relayFetch<ChangeView[]>(`${ws(id)}/responsibilities/${encodeURIComponent(rid)}/history`),
 
   listPeople: (id: string, query?: Query) =>
-    relayFetch<PersonView[]>(withQuery(`${ws(id)}/people`, query)),
+    relayPaged<PersonView>(withQuery(`${ws(id)}/people`, query)),
   listTeams: (id: string, query?: Query) =>
     relayFetch<TeamView[]>(withQuery(`${ws(id)}/teams`, query)),
   departments: (id: string, query?: Query) =>
     relayFetch<DepartmentView[]>(withQuery(`${ws(id)}/departments`, query)),
   assets: (id: string, query?: Query) =>
-    relayFetch<AssetSummary[]>(withQuery(`${ws(id)}/assets`, query)),
+    relayPaged<AssetSummary>(withQuery(`${ws(id)}/assets`, query)),
   getAsset: (id: string, assetId: string) =>
     relayFetch<AssetDetail>(`${ws(id)}/assets/${encodeURIComponent(assetId)}`),
 
@@ -228,7 +237,7 @@ export const api = {
     ),
   myWork: (id: string) => relayFetch<MyWorkView>(`${ws(id)}/my-work`),
   listCases: (id: string, query?: Query) =>
-    relayFetch<CaseSummary[]>(withQuery(`${ws(id)}/cases`, query)),
+    relayPaged<CaseSummary>(withQuery(`${ws(id)}/cases`, query)),
   getCase: (id: string, caseId: string) =>
     relayFetch<CaseDetail>(`${ws(id)}/cases/${encodeURIComponent(caseId)}`),
   caseExport: (id: string, caseId: string) =>

@@ -50,6 +50,7 @@ from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.notifications import service as notifications
 from relay.policy.permissions import Permission, authorize, role_allows, visible
+from relay.shared import pagination
 from relay.shared.api_types import LongText, Name, StrictInput
 from relay.shared.errors import ApiError
 
@@ -1582,8 +1583,13 @@ class CaseFilter(BaseModel):
 
 
 async def list_cases(
-    access: WorkspaceAccess, *, status: str | None = None, filters: CaseFilter | None = None
-) -> list[CaseSummary]:
+    access: WorkspaceAccess,
+    *,
+    status: str | None = None,
+    filters: CaseFilter | None = None,
+    after: str | None = None,
+    limit: int = 200,
+) -> tuple[list[CaseSummary], str | None]:
     authorize(access, Permission.CASE_READ)
     f = filters or CaseFilter(status=status)
     status = f.status
@@ -1612,15 +1618,23 @@ async def list_cases(
         )
     if f.due_before:
         stmt = stmt.where(ContinuityCase.due_at < f.due_before)
-    cases = list(
-        await access.session.scalars(
-            stmt.order_by(ContinuityCase.emergency.desc(), ContinuityCase.updated_at.desc()).limit(
-                200
+    order = (ContinuityCase.emergency, ContinuityCase.updated_at, ContinuityCase.id)
+    keyset = pagination.after_key(
+        order, after, (bool, datetime.fromisoformat, uuid.UUID), descending=True
+    )
+    if keyset is not None:
+        stmt = stmt.where(keyset)
+    cases, next_cursor = pagination.split(
+        list(
+            await access.session.scalars(
+                stmt.order_by(*(column.desc() for column in order)).limit(limit + 1)
             )
-        )
+        ),
+        limit,
+        lambda c: (c.emergency, c.updated_at.isoformat(), c.id),
     )
     summaries = await _summaries(access, cases)
-    return [c for c in summaries if c.overdue] if f.overdue else summaries
+    return ([c for c in summaries if c.overdue] if f.overdue else summaries), next_cursor
 
 
 async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:

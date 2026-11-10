@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from relay.continuity import (
     briefing,
@@ -16,6 +16,7 @@ from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs import outbox
 from relay.jobs.outbox import Jobs
+from relay.shared import pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["continuity"])
 Detail = svc.CaseDetail
@@ -28,9 +29,15 @@ async def my_work(access: CurrentWorkspace) -> svc.MyWorkView:
 
 @router.get("/cases")
 async def list_cases(
-    access: CurrentWorkspace, filters: Annotated[svc.CaseFilter, Query()]
+    access: CurrentWorkspace,
+    filters: Annotated[svc.CaseFilter, Query()],
+    response: Response,
+    after: pagination.After = None,
+    limit: pagination.Limit = 200,
 ) -> list[svc.CaseSummary]:
-    return await svc.list_cases(access, filters=filters)
+    items, next_cursor = await svc.list_cases(access, filters=filters, after=after, limit=limit)
+    pagination.set_next(response, next_cursor)
+    return items
 
 
 @router.post("/cases", status_code=status.HTTP_201_CREATED)

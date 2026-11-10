@@ -1,10 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from relay.directory import identities, profiles
 from relay.directory import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.shared import pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["directory"])
 
@@ -15,10 +16,21 @@ async def list_people(
     q: str | None = None,
     include_archived: bool = False,
     department_id: uuid.UUID | None = None,
+    after: pagination.After = None,
+    limit: pagination.Limit = pagination.MAX_PAGE,
+    *,
+    response: Response,
 ) -> list[svc.PersonView]:
-    return await svc.list_people(
-        access, q=q, include_archived=include_archived, department_id=department_id
+    items, next_cursor = await svc.list_people(
+        access,
+        q=q,
+        include_archived=include_archived,
+        department_id=department_id,
+        after=after,
+        limit=limit,
     )
+    pagination.set_next(response, next_cursor)
+    return items
 
 
 @router.post("/people", status_code=status.HTTP_201_CREATED)

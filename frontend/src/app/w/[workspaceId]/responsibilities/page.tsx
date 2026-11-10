@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
+import { PageNav } from "@/components/page-nav";
 import { EmptyState, PageHeader } from "@/components/page";
 import { SavedViews } from "@/components/saved-views";
 import { Badge, CriticalityBadge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ export default async function ResponsibilitiesPage({
     review: pick("review"),
     needs_verification: pick("needs_verification"),
   };
+  const after = pick("after");
   const currentQuery = new URLSearchParams(
     Object.entries(filters).filter((e): e is [string, string] => Boolean(e[1])),
   ).toString();
@@ -36,7 +38,10 @@ export default async function ResponsibilitiesPage({
     attempt(
       api.listResponsibilities(
         workspaceId,
-        Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) as Record<string, string>,
+        Object.fromEntries(Object.entries({ ...filters, after }).filter(([, v]) => v)) as Record<
+          string,
+          string
+        >,
       ),
     ),
     attempt(api.departments(workspaceId)),
@@ -273,6 +278,7 @@ export default async function ResponsibilitiesPage({
             </table>
           </div>
         )}
+        <PageNav base={base} query={filters} after={after} next={list.data.nextCursor} />
       </div>
     </div>
   );

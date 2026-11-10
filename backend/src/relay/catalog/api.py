@@ -1,12 +1,13 @@
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import AwareDatetime
 
 from relay.catalog import context, stewardship
 from relay.catalog import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.shared import pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/responsibilities", tags=["catalog"])
 Detail = svc.ResponsibilityDetail
@@ -24,8 +25,12 @@ async def list_responsibilities(
     has_backup: bool | None = None,
     review: Literal["due", "ok"] | None = None,
     needs_verification: bool | None = None,
+    after: pagination.After = None,
+    limit: pagination.Limit = pagination.MAX_PAGE,
+    *,
+    response: Response,
 ) -> list[svc.ResponsibilitySummary]:
-    return await svc.list_responsibilities(
+    items, next_cursor = await svc.list_responsibilities(
         access,
         q=q,
         criticality=criticality,
@@ -36,7 +41,11 @@ async def list_responsibilities(
         has_backup=has_backup,
         review=review,
         needs_verification=needs_verification,
+        after=after,
+        limit=limit,
     )
+    pagination.set_next(response, next_cursor)
+    return items
 
 
 @router.get("/types")

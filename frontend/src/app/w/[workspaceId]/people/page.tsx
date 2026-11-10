@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ActionForm, Field, inputClass, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
+import { PageNav } from "@/components/page-nav";
 import { EmptyState, PageHeader, Section } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
@@ -60,9 +61,10 @@ export default async function PeoplePage({
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const department = typeof query.department === "string" ? query.department : undefined;
   const filter = department ? { department_id: department } : {};
+  const after = typeof query.after === "string" ? query.after : undefined;
   const [workspace, people, teams, departments] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
-    attempt(api.listPeople(workspaceId, { include_archived: "true", ...filter })),
+    attempt(api.listPeople(workspaceId, { include_archived: "true", ...filter, after })),
     attempt(api.listTeams(workspaceId, filter)),
     attempt(api.departments(workspaceId)),
   ]);
@@ -337,6 +339,12 @@ export default async function PeoplePage({
                 ))}
               </ul>
             )}
+            <PageNav
+              base={base}
+              query={{ department }}
+              after={after}
+              next={people.data.nextCursor}
+            />
           </Section>
 
           <Section title="Teams" description="Teams can own responsibilities too.">
