@@ -76,7 +76,15 @@ shows logs (identifiers only; tokens and content are never logged).
 
 ## 5. Backups and restore
 
-The database is the only state. Back it up daily and before every upgrade:
+The database is the only state. The `backup` service writes a nightly dump
+(`RELAY_BACKUP_HOUR`, UTC, default 02) into the `relay-backups` volume and keeps 14 days.
+Copy that volume off the host. Prove the dumps restore with the drill, monthly:
+
+```sh
+sh deploy/restore-drill.sh   # restores the newest dump into a scratch database and checks it
+```
+
+Take an extra dump before every upgrade:
 
 ```sh
 docker compose -f deploy/docker-compose.prod.yml exec -T db \

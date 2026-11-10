@@ -46,3 +46,16 @@ async def test_readiness_returns_503_without_leaking_details() -> None:
         response = await client.get("/health/ready")
         assert response.status_code == 503
         assert response.json() == {"status": "unavailable", "checks": {"database": "unavailable"}}
+
+
+async def test_correlation_id_and_versioned_prefix() -> None:
+    from tests.api import make_api
+
+    async with make_api() as api:
+        live = await api.client.get(
+            "/api/v1/health/live", headers={"X-Request-ID": "trace-12345678"}
+        )
+        assert live.status_code == 200
+        assert live.headers["x-request-id"] == "trace-12345678"
+        unsafe = await api.client.get("/health/live", headers={"X-Request-ID": "<script>"})
+        assert unsafe.headers["x-request-id"] != "<script>"

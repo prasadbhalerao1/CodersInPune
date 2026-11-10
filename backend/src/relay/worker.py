@@ -1,7 +1,6 @@
 """Background worker: `uv run relay-worker`. One process, restricted app role."""
 
 import asyncio
-import logging
 import sys
 
 import httpx
@@ -10,6 +9,7 @@ from relay.config import Settings
 from relay.jobs import outbox
 from relay.jobs.app import create_job_app
 from relay.shared.db import create_engine, create_session_factory
+from relay.shared.observability import configure_logging
 
 
 async def run() -> None:
@@ -33,7 +33,7 @@ async def run() -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    configure_logging(Settings().json_logs)
     # psycopg async needs a selector loop on Windows (see relay/__main__.py).
     loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
     asyncio.run(run(), loop_factory=loop_factory)

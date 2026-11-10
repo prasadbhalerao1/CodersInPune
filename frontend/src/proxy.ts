@@ -5,7 +5,8 @@ import { authkitProxy } from "@workos-inc/authkit-nextjs";
 export default authkitProxy({
   middlewareAuth: {
     enabled: true,
-    unauthenticatedPaths: ["/", "/sign-in", "/callback"],
+    // The GitHub webhook is authenticated by its HMAC signature (verified by the API).
+    unauthenticatedPaths: ["/", "/sign-in", "/callback", "/integrations/github/webhook"],
   },
 });
 

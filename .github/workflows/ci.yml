@@ -79,3 +79,53 @@ jobs:
         run: docker build -t relay-backend:ci backend
       - name: Build web image
         run: docker build -t relay-web:ci --build-arg NEXT_PUBLIC_WORKOS_REDIRECT_URI=https://ci.example.com/callback frontend
+      # Supply chain: an SBOM per image, and the build fails on fixable critical/high CVEs.
+      - name: SBOM (backend image)
+        uses: anchore/sbom-action@v0
+        with:
+          image: relay-backend:ci
+          format: spdx-json
+          output-file: sbom-backend.spdx.json
+      - name: SBOM (web image)
+        uses: anchore/sbom-action@v0
+        with:
+          image: relay-web:ci
+          format: spdx-json
+          output-file: sbom-web.spdx.json
+      - name: Vulnerability scan (backend image)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: relay-backend:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Vulnerability scan (web image)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: relay-web:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+  licences:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # CLAUDE.md guardrail 10: no AGPL/GPL/SSPL/BSL/SUL production dependencies.
+      - name: Backend licences
+        working-directory: backend
+        run: |
+          uv sync --locked --no-dev
+          uv run --with pip-licenses pip-licenses --from=mixed \
+            --fail-on="GNU Affero General Public License v3 (AGPLv3);GNU General Public License v3 (GPLv3);GNU General Public License v2 (GPLv2);Server Side Public License (SSPL);Business Source License 1.1"
+      - name: Web licences
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile --prod
+          npx --yes license-checker-rseidelsohn --production --summary \
+            --failOn "AGPL-3.0;AGPL-3.0-only;AGPL-3.0-or-later;GPL-2.0;GPL-3.0;SSPL-1.0;BUSL-1.1"

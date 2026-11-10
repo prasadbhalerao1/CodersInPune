@@ -87,5 +87,30 @@ services:
       api:
         condition: service_healthy
 
+  # Nightly logical backup (kept 14 days) into the relay-backups volume; copy that volume
+  # off the host. deploy/restore-drill.sh proves a dump restores (run it monthly).
+  backup:
+    image: pgvector/pgvector:0.8.7-pg18
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD}
+      RELAY_BACKUP_HOUR: ${RELAY_BACKUP_HOUR:-2}
+    volumes:
+      - relay-backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          if [ "$$(date -u +%H)" -eq "$$RELAY_BACKUP_HOUR" ] && [ ! -f /backups/relay-$$(date -u +%F).dump ]; then
+            pg_dump -h db -U postgres -d relay --format=custom -f /backups/relay-$$(date -u +%F).dump.tmp               && mv /backups/relay-$$(date -u +%F).dump.tmp /backups/relay-$$(date -u +%F).dump               && echo "backup ok $$(date -u +%F)" || echo "backup FAILED $$(date -u +%F)"
+            find /backups -name 'relay-*.dump' -mtime +14 -delete
+          fi
+          sleep 600
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
+  relay-backups:
   relay-db:

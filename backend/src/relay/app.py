@@ -36,6 +36,7 @@ from relay.risks import api as risks_api
 from relay.search import api as search_api
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 from relay.shared.errors import api_error_response, register_error_handlers
+from relay.shared.observability import RequestContextMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ def create_app(
 
     app = FastAPI(title="Relay API", version="0.1.0", lifespan=lifespan)
     register_error_handlers(app)
+    app.add_middleware(RequestContextMiddleware)
     app.add_exception_handler(PermissionDenied, _handle_permission_denied)
     app.include_router(health.router)
     app.include_router(integrations_api.router)

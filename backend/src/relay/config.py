@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     # Fernet key for integration credentials stored at rest (Linear, Notion tokens).
     integration_encryption_key: SecretStr | None = None
+    # Structured JSON logs with correlation ids (recommended in production).
+    json_logs: bool = False
     # Approved external writes (create-only issues for Relay tasks). Off until the provider
     # permission exists: GitHub App "Issues: Read and write"; Linear OAuth scope that
     # includes "issues:create" (set RELAY_LINEAR_OAUTH_SCOPE and reconnect).
