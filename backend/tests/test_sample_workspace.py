@@ -1,6 +1,7 @@
 """Sample workspace: one-step synthetic organisation for new users and judges."""
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 import pytest
 
@@ -84,3 +85,29 @@ async def test_samples_can_be_turned_off() -> None:
         )
         assert response.status_code == 404
         assert response.json()["code"] == "not_found"
+
+
+async def test_sample_powers_the_round_three_features(api: Api) -> None:
+    created = await api.client.post("/workspaces/sample", headers=_headers(api, OWNER, "sample-r3"))
+    ws = f"/workspaces/{created.json()['id']}"
+
+    async def get(path: str) -> Any:
+        response = await api.client.get(ws + path, headers=api.as_user(OWNER))
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    resps = {r["name"]: r["id"] for r in await get("/responsibilities")}
+    timeline = await get(f"/responsibilities/{resps['Production deployments']}/timeline")
+    categories = {e["category"] for e in timeline["events"]}
+    assert {"incident", "bug_fix", "ownership_change", "decision"} <= categories
+    assert any(e["linked_events"] for e in timeline["events"])
+
+    people = {p["display_name"]: p["id"] for p in await get("/people")}
+    alone = await get(f"/simulation?person_id={people['Arjun Rao']}")
+    assert resps["Production deployments"] in alone["uncovered_responsibilities"]
+    assert {w["source"] for w in alone["open_work_without_cover"]} >= {"GitHub", "Relay task"}
+    covered = await get(
+        f"/simulation?person_id={people['Arjun Rao']}&backup_id={people['Dev Patel']}"
+    )
+    assert covered["uncovered_responsibilities"] == []
+    assert covered["readiness_score"] > alone["readiness_score"]

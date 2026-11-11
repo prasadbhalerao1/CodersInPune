@@ -37,8 +37,14 @@ from relay.directory import service as directory
 from relay.identity.models import Membership, UserAccount
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
-from relay.integrations.github.models import GitHubInstallation
-from relay.integrations.linear.models import LinearConnection, LinearIdentity
+from relay.integrations.github.models import GitHubInstallation, GitHubRepository, GitHubWorkItem
+from relay.integrations.linear.models import (
+    LinearConnection,
+    LinearIdentity,
+    LinearIssue,
+    LinearProject,
+)
+from relay.integrations.notion.models import NotionConnection, NotionPage, NotionSource
 from relay.intelligence import capsules, interviews, runs
 from relay.jobs.app import create_job_app
 from relay.platform import workspaces
@@ -275,6 +281,19 @@ async def _catalog(access: WorkspaceAccess, users: dict[str, uuid.UUID]) -> dict
     )
     await k.add_knowledge(
         access,
+        r["deploys"],
+        k.KnowledgeIn(
+            kind="adr",
+            title="Every payments-api deploy goes through a canary",
+            body="Promotion is blocked while the canary error rate is above baseline.",
+            decision_rationale="A release went straight to production and took checkout "
+            "down for 40 minutes.",
+            decision_approver="Maya Chen",
+            decided_at=NOW - timedelta(days=185),
+        ),
+    )
+    await k.add_knowledge(
+        access,
         r["oncall"],
         k.KnowledgeIn(
             kind="escalation_contact",
@@ -308,8 +327,10 @@ async def _catalog(access: WorkspaceAccess, users: dict[str, uuid.UUID]) -> dict
         .where(KnowledgeItem.id == stale.id)
         .values(last_reviewed_at=NOW - timedelta(days=200))
     )
+    calendar_id = uuid.uuid7()
     access.session.add(
         KnowledgeItem(
+            id=calendar_id,
             tenant_id=access.tenant_id,
             responsibility_id=r["deploys"],
             kind="document",
@@ -325,6 +346,7 @@ async def _catalog(access: WorkspaceAccess, users: dict[str, uuid.UUID]) -> dict
         **{f"p_{key}": v for key, v in people.items()},
         **{f"r_{key}": v for key, v in r.items()},
         "deploy_procedure": deploy_a.id,
+        "release_calendar": calendar_id,
         "team_platform": platform.id,
     }
 
@@ -352,17 +374,184 @@ async def _connectors(access: WorkspaceAccess, ids: dict[str, uuid.UUID]) -> Non
             match_reason="Several people match; choose one",
         )
     )
-    access.session.add(
-        GitHubInstallation(  # the deliberate failure path: access was lost
-            tenant_id=access.tenant_id,
-            installation_id=999000001,
-            account_login="northwind-demo",
-            account_type="Organization",
-            status="active",
-            connected_by=access.user_id,
-            last_synced_at=NOW - timedelta(hours=2),
-            last_sync_status="error",
-            last_sync_error="GitHub returned 403: the app lost access to some repositories",
+    github = GitHubInstallation(  # the deliberate failure path: access was lost
+        tenant_id=access.tenant_id,
+        installation_id=999000001,
+        account_login="northwind-demo",
+        account_type="Organization",
+        status="active",
+        connected_by=access.user_id,
+        last_synced_at=NOW - timedelta(hours=2),
+        last_sync_status="error",
+        last_sync_error="GitHub returned 403: the app lost access to some repositories",
+    )
+    access.session.add(github)
+    await access.session.flush()
+    await _history(access, ids, github.id, linear.id)
+
+
+# A year of synthetic work on the deploy pipeline, for Project Memory Replay and the
+# simulator's open work: (kind, number, title, labels, state, days ago, assignees).
+DEPLOY_HISTORY: tuple[tuple[str, int, str, list[str], str, int, list[str]], ...] = (
+    ("issue", 12, "Deploys time out on large services", ["bug"], "closed", 330, []),
+    ("pull_request", 14, "Raise deploy step timeout (fixes #12)", [], "merged", 328, []),
+    (
+        "pull_request",
+        21,
+        "Add canary stage to the payments-api pipeline",
+        ["feature"],
+        "merged",
+        260,
+        [],
+    ),
+    ("issue", 25, "Checkout outage after payments-api release", ["incident"], "closed", 190, []),
+    ("pull_request", 26, "Block promotion on canary errors (#25)", [], "merged", 186, []),
+    (
+        "pull_request",
+        31,
+        "Upgrade runner image to Ubuntu 24.04",
+        ["dependencies"],
+        "merged",
+        140,
+        [],
+    ),
+    ("pull_request", 34, "Document the rollback procedure", ["docs"], "merged", 95, []),
+    ("pull_request", 38, "One-click rollback for payments-api", [], "merged", 48, []),
+    ("issue", 41, "Rollback leaves feature flags enabled", ["bug"], "open", 9, ["arjun-nw"]),
+    (
+        "pull_request",
+        42,
+        "Move deploy secrets to the new vault path",
+        ["security"],
+        "open",
+        4,
+        ["arjun-nw"],
+    ),
+)
+PAYMENTS_ISSUES: tuple[tuple[str, list[str], str, int], ...] = (  # title, labels, state, days
+    ("Refund retries create duplicate refunds", ["bug"], "completed", 400),
+    ("Idempotency keys on every refund call", [], "completed", 380),
+    ("Stripe webhook backlog during the sale", ["incident"], "completed", 75),
+    ("Payout reconciliation report", [], "started", 6),
+)
+
+
+async def _history(
+    access: WorkspaceAccess,
+    ids: dict[str, uuid.UUID],
+    github_id: uuid.UUID,
+    linear_id: uuid.UUID,
+) -> None:
+    """Synthetic GitHub, Linear and Notion records: never synced, no tokens."""
+    session, tenant = access.session, access.tenant_id
+    repo = GitHubRepository(
+        id=uuid.uuid7(),
+        tenant_id=tenant,
+        installation_ref=github_id,
+        github_repo_id=990000001,
+        full_name="northwind/deploy-pipelines",
+        html_url="https://github.com/northwind/deploy-pipelines",
+        default_branch="main",
+        private=True,
+        archived=False,
+        audience="workspace",
+        responsibility_id=ids["r_deploys"],
+        last_synced_at=NOW - timedelta(hours=2),
+        pushed_at=NOW - timedelta(days=4),
+        last_activity_at=NOW - timedelta(days=4),
+    )
+    session.add(repo)
+    await session.flush()
+    for kind, number, title, labels, state, days, assignees in DEPLOY_HISTORY:
+        at = NOW - timedelta(days=days)
+        path = "pull" if kind == "pull_request" else "issues"
+        session.add(
+            GitHubWorkItem(
+                tenant_id=tenant,
+                repository_id=repo.id,
+                kind=kind,
+                number=number,
+                github_id=990000000 + number,
+                title=title,
+                state=state,
+                author_login="leo-nw" if number in (31, 34) else "arjun-nw",
+                assignee_logins=assignees,
+                labels=labels,
+                html_url=f"https://github.com/northwind/deploy-pipelines/{path}/{number}",
+                gh_created_at=at - timedelta(days=2),
+                gh_updated_at=at,
+                closed_at=at if state != "open" else None,
+                merged_at=at if state == "merged" else None,
+            )
+        )
+    session.add(
+        LinearProject(
+            tenant_id=tenant,
+            connection_ref=linear_id,
+            linear_id="demo-proj-payments",
+            name="Payments reliability",
+            state="started",
+            url="https://linear.app/northwind-demo/project/payments-reliability",
+            responsibility_id=ids["r_payments"],
+            audience="workspace",
+        )
+    )
+    for n, (title, labels, state, days) in enumerate(PAYMENTS_ISSUES, start=101):
+        at = NOW - timedelta(days=days)
+        session.add(
+            LinearIssue(
+                tenant_id=tenant,
+                connection_ref=linear_id,
+                linear_id=f"demo-iss-{n}",
+                identifier=f"PAY-{n}",
+                title=title,
+                state_type=state,
+                state_name="Done" if state == "completed" else "In Progress",
+                priority=1 if "incident" in labels else 3,
+                project_linear_id="demo-proj-payments",
+                labels=labels,
+                url=f"https://linear.app/northwind-demo/issue/PAY-{n}",
+                li_created_at=at - timedelta(days=3),
+                li_updated_at=at,
+                completed_at=at if state == "completed" else None,
+            )
+        )
+    notion = NotionConnection(
+        tenant_id=tenant,
+        workspace_id="demo-notion",
+        workspace_name="Northwind (demo Notion)",
+        status="active",
+        connected_by=access.user_id,
+        last_synced_at=NOW - timedelta(hours=5),
+        last_sync_status="ok",
+    )
+    session.add(notion)
+    await session.flush()
+    source = NotionSource(
+        tenant_id=tenant,
+        connection_ref=notion.id,
+        notion_id="demo-notion-release",
+        kind="page",
+        title="Release management",
+        url="https://www.notion.so/northwind-demo/release-management",
+        last_edited_at=NOW - timedelta(days=21),
+        responsibility_id=ids["r_deploys"],
+        visibility="workspace",
+        mapped_by=access.user_id,
+        mapped_at=NOW - timedelta(days=200),
+    )
+    session.add(source)
+    await session.flush()
+    session.add(
+        NotionPage(
+            tenant_id=tenant,
+            source_ref=source.id,
+            notion_id="demo-notion-calendar",
+            title="Release calendar",
+            url="https://www.notion.so/northwind-demo/release-calendar",
+            last_edited_at=NOW - timedelta(days=21),
+            revision="demo-rev-1",
+            knowledge_item_id=ids["release_calendar"],
         )
     )
 
