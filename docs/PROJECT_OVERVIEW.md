@@ -212,16 +212,16 @@ synthetic and generated in code (`backend/src/relay/demo/`, the eval dataset abo
 
 ## 11. Committed Improvements for Round 3
 
-Relay commits to three deliverable, high-impact improvements for Round 3, directly expanding existing architecture:
+Relay commits to three systemic, depth-oriented improvements for Round 3, solving hard engineering problems across core product capabilities:
 
-1. **Inbound Webhooks and Real-Time Sync for Linear and Notion:**
-   Replicate the proven GitHub webhook architecture (`WebhookDelivery`, signature verification, outbox event dispatch) for Linear and Notion. Inbound events (Linear issue status changes, assignee updates, Notion page edits) trigger instant incremental reconciliation, eliminating 6-hour polling delays and manual sync triggers.
+1. **Continuous Verification and Live Source Drift Detection:**
+   Transition Relay from periodic polling to an event-driven continuous verification system across GitHub, Linear, and Notion. Extends webhook intake and cryptographic revision hashing to automatically compare live source states against cited evidence. When code, tickets, or documentation change in connected systems, Relay dynamically flags affected knowledge and handovers with a "Changed since review" state, recalculates Continuity Debt, and surfaces targeted update proposals before stale context causes operational disruptions.
 
-2. **Verifiable Handover Dossier PDF and Markdown Export:**
-   Extend the existing case export service into a complete, downloadable Handover Dossier. Compiles approved context capsules, open work, readiness checklists, and reviewer signatures into a styled PDF alongside an omissions manifest and SHA-256 cryptographic provenance hash for compliance and HR audit archives.
+2. **Zero-Trust Permission Hardening and Multi-Source Access Lineage:**
+   Implement strict access lineage across all multi-source evidence, AI summaries, and context capsules. Every derived finding, proposal, and interview response inherits the cryptographic intersection of permissions from its originating sources. When an integration is disconnected, a repository turns private, or access is revoked, dependent views and derived context are instantly withdrawn from non-manager views, guaranteeing zero unauthorized data exposure across cross-functional teams.
 
-3. **AI-Assisted Rehearsal Checklist Generation and Guided Operational Drills:**
-   Leverage the existing `rehearsal` readiness criterion type in the continuity engine. During case planning, the AI Handover Planner automatically synthesizes concrete operational rehearsal steps from cited runbooks (e.g. verifying deploy access, executing dry-run rollbacks). The incoming owner works through the interactive checklist directly in Relay, recording execution notes and verification evidence before ownership transfer can be executed.
+3. **Verifiable Operational Rehearsal and Evidence-Backed Readiness Verification:**
+   Bridge the critical gap between passive documentation handover and demonstrable operational competence. Operationalize supervised rehearsal workflows directly linked to cited runbooks and tasks. The incoming owner executes structured operational drills (such as mock deployment dry-runs, access verification checks, and rollback procedures) under supervision, recording execution notes and test evidence. Completing these mandatory drills acts as an automated, audited gate before final ownership transfer can commit.
 
 ## 12. Repository map
 
