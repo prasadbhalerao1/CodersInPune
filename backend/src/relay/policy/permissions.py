@@ -36,6 +36,7 @@ class Permission(StrEnum):
     CASE_MANAGE = "case.manage"
     CASE_APPROVE = "case.approve"
     CASE_COMMENT = "case.comment"
+    CONTINUITY_SIMULATE = "continuity.simulate"
     KNOWLEDGE_WRITE = "knowledge.write"
     KNOWLEDGE_VERIFY = "knowledge.verify"
     MEMBER_MANAGE = "member.manage"
@@ -68,6 +69,7 @@ _MANAGE: Final = frozenset(
         Permission.CASE_MANAGE,
         Permission.CASE_APPROVE,
         Permission.CASE_COMMENT,
+        Permission.CONTINUITY_SIMULATE,
         Permission.KNOWLEDGE_WRITE,
         Permission.KNOWLEDGE_VERIFY,
         Permission.MEMBER_MANAGE,
@@ -103,6 +105,7 @@ ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
         Permission.CASE_MANAGE,
         Permission.CASE_APPROVE,
         Permission.CASE_COMMENT,
+        Permission.CONTINUITY_SIMULATE,
         Permission.KNOWLEDGE_WRITE,
         Permission.INSIGHTS_READ,
         Permission.AI_READ,

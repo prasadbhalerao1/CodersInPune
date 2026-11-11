@@ -9,6 +9,7 @@ from relay.continuity import (
     external,
     impact,
     privacy,
+    simulation,
     tasks,
     workflow,
 )
@@ -254,6 +255,14 @@ async def save_view(
 @router.delete("/saved-views/{view_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_view(access: CurrentWorkspace, view_id: uuid.UUID) -> None:
     await workflow.delete_view(access, view_id)
+
+
+@router.get("/simulation")
+async def simulate(
+    access: CurrentWorkspace, person_id: uuid.UUID, backup_id: uuid.UUID | None = None
+) -> simulation.SimulationView:
+    """What if this person became unavailable? Read-only; nothing is changed."""
+    return await simulation.simulate(access, person_id, backup_id)
 
 
 @router.get("/cases/{case_id}/impact")
