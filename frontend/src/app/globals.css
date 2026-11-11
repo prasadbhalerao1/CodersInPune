@@ -153,6 +153,8 @@
   }
   html {
     @apply font-sans;
+    /* Keep anchors and focused elements clear of the sticky page header. */
+    scroll-padding-top: 5rem;
   }
 }
 

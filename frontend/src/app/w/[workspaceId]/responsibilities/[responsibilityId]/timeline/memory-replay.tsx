@@ -229,31 +229,33 @@ export function MemoryReplay({
         {groups.length === 0 ? (
           <p className="text-muted-foreground px-1 text-sm">No events in this view.</p>
         ) : (
-          groups.map(([label, events]) => (
-            <section key={label} aria-label={label}>
-              <h2 className="bg-background/90 text-muted-foreground sticky top-14 z-[1] py-1.5 text-xs font-semibold tracking-wide uppercase backdrop-blur">
-                {label}
-              </h2>
-              <ol className="relative ml-2 border-l pl-5">
-                {events.map((e) => (
-                  <EventRow
-                    key={e.id}
-                    event={e}
-                    byId={byId}
-                    current={current?.id === e.id}
-                    focused={focus.has(e.id)}
-                    onJump={jump}
-                    onInspect={() => setSelected(e.id)}
-                    inspected={selected === e.id}
-                    register={(el) => {
-                      if (el) rows.current.set(e.id, el);
-                      else rows.current.delete(e.id);
-                    }}
-                  />
-                ))}
-              </ol>
-            </section>
-          ))
+          <div role="region" aria-label="Events" className="flex flex-col gap-4">
+            {groups.map(([label, events]) => (
+              <section key={label} aria-label={label}>
+                <h2 className="bg-background/90 text-muted-foreground sticky top-14 z-[1] py-1.5 text-xs font-semibold tracking-wide uppercase backdrop-blur">
+                  {label}
+                </h2>
+                <ol className="relative ml-2 border-l pl-5">
+                  {events.map((e) => (
+                    <EventRow
+                      key={e.id}
+                      event={e}
+                      byId={byId}
+                      current={current?.id === e.id}
+                      focused={focus.has(e.id)}
+                      onJump={jump}
+                      onInspect={() => setSelected(e.id)}
+                      inspected={selected === e.id}
+                      register={(el) => {
+                        if (el) rows.current.set(e.id, el);
+                        else rows.current.delete(e.id);
+                      }}
+                    />
+                  ))}
+                </ol>
+              </section>
+            ))}
+          </div>
         )}
         {timeline.truncated ? (
           <p className="text-muted-foreground text-xs">

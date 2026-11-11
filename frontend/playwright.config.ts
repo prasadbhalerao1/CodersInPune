@@ -25,5 +25,11 @@ export default defineConfig({
       testMatch: /smoke\.spec\.ts/,
       use: { ...chrome, storageState: "e2e/.auth/user.json" },
     },
+    {
+      // The judge journey through the Round 3 features (same saved session as smoke).
+      name: "round3",
+      testMatch: /round3\.spec\.ts/,
+      use: { ...chrome, storageState: "e2e/.auth/user.json" },
+    },
   ],
 });
