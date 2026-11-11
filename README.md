@@ -14,14 +14,17 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 
 | Doc | What's in it |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | System, security boundary, modules, data flows, API, inventory |
+| [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture, data flow, integrations, AI pipeline, quality evidence |
+| [docs/api-reference.md](docs/api-reference.md) | Full API endpoint listing, AI capabilities, external service config, library reference |
+| [docs/improvements.md](docs/improvements.md) | All five improvements: Round 2 delivery status and Round 3 acceptance criteria |
+| [docs/architecture.md](docs/architecture.md) | System boundary, modules, data flows, inventory |
 | [docs/ai.md](docs/ai.md) | AI-use disclosure: evidence pipeline, validation, injection handling, providers |
-| [docs/improvements.md](docs/improvements.md) | Status of the three committed improvements, with test references |
 | [docs/trust.md](docs/trust.md) | Privacy, security, accessibility, responsible design, limitations |
 | [docs/demo-script.md](docs/demo-script.md) | Scripted demo on the seeded organisation |
 | [deployment.md](deployment.md) | Deploying to Vercel + Render + Neon, or one Docker host |
 | [docs/sso.md](docs/sso.md), [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | SSO setup, incident response |
 | `docs/blueprint/`, `docs/adr/` | Decision Register, implementation plan, ADRs |
+| `docs/release-audit/` | Full release audit: traceability, security review, production readiness |
 
 Conventions for contributors: `CLAUDE.md`.
 

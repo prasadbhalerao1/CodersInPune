@@ -212,16 +212,31 @@ synthetic and generated in code (`backend/src/relay/demo/`, the eval dataset abo
 
 ## 11. Committed Improvements for Round 3
 
-Relay commits to three systemic, depth-oriented improvements for Round 3, solving hard engineering problems across core product capabilities:
+Relay commits to three improvements for Round 3. For full detail, evidence, and acceptance
+criteria see [docs/improvements.md](improvements.md).
 
-1. **Continuous Verification and Live Source Drift Detection:**
-   Transition Relay from periodic polling to an event-driven continuous verification system across GitHub, Linear, and Notion. Extends webhook intake and cryptographic revision hashing to automatically compare live source states against cited evidence. When code, tickets, or documentation change in connected systems, Relay dynamically flags affected knowledge and handovers with a "Changed since review" state, recalculates Continuity Debt, and surfaces targeted update proposals before stale context causes operational disruptions.
+1. **AI Handover Copilot.**
+   When a responsibility transfers, Relay generates a case-specific Handover Brief using
+   the responsibility, ownership history, connected GitHub/Linear/Notion evidence,
+   knowledge, open work, and existing risks. The incoming owner can ask questions about
+   the handover and receive answers grounded exclusively in the authorised evidence for
+   that case. This turns Relay's AI analysis pipeline into a complete, usable handover
+   experience rather than a backend diagnostic tool.
 
-2. **Zero-Trust Permission Hardening and Multi-Source Access Lineage:**
-   Implement strict access lineage across all multi-source evidence, AI summaries, and context capsules. Every derived finding, proposal, and interview response inherits the cryptographic intersection of permissions from its originating sources. When an integration is disconnected, a repository turns private, or access is revoked, dependent views and derived context are instantly withdrawn from non-manager views, guaranteeing zero unauthorized data exposure across cross-functional teams.
+2. **"What If?" Continuity Simulator.**
+   Managers select a person and immediately see what responsibilities, assets, risks, open
+   work, knowledge gaps, and single-person dependencies would be affected if that person
+   became unavailable. They can then select a potential backup and preview the resulting
+   coverage and remaining gaps, all without touching any real ownership records. This gives
+   organisations a practical way to test continuity readiness before an actual absence or
+   departure.
 
-3. **Verifiable Operational Rehearsal and Evidence-Backed Readiness Verification:**
-   Bridge the critical gap between passive documentation handover and demonstrable operational competence. Operationalize supervised rehearsal workflows directly linked to cited runbooks and tasks. The incoming owner executes structured operational drills (such as mock deployment dry-runs, access verification checks, and rollback procedures) under supervision, recording execution notes and test evidence. Completing these mandatory drills acts as an automated, audited gate before final ownership transfer can commit.
+3. **Continuous Verification and Live Source Drift Detection.**
+   Extend event-driven webhook processing to Linear and Notion. When code, tickets, or
+   runbooks change in connected systems, Relay flags affected handovers with a "Changed
+   since review" warning within seconds and re-queues analysis proposals for manager
+   review. Cryptographic SHA-256 comparison against stored evidence snapshots on every
+   sync, not only on demand.
 
 ## 12. Repository map
 
@@ -231,6 +246,9 @@ backend/migrations/     hand-written migrations 0001 to 0039
 backend/tests/          security, integration, AI evaluation, performance
 frontend/src/           Next.js app, components, typed API client
 deploy/                 Compose stack, role scripts, restore drill
-docs/                   blueprint, ADRs, runbooks, release audit
+docs/                   blueprint, ADRs, runbooks, release audit, API reference
 .github/workflows/      CI, migrate, monitor, backup, purge
 ```
+
+For the full API endpoint listing, AI pipeline details, external service configuration,
+and library reference see [docs/api-reference.md](api-reference.md).
