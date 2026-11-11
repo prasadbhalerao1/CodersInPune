@@ -14,12 +14,19 @@ export function CreateWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
     {},
   );
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form
+      action={formAction}
+      className="bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-xs"
+    >
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
-      <label htmlFor="workspace-name" className="text-sm font-medium">
+      <div>
+        <h2 className="text-sm font-semibold">Start your own</h2>
+        <p className="text-muted-foreground mt-0.5 text-xs">You will be its owner.</p>
+      </div>
+      <label htmlFor="workspace-name" className="sr-only">
         Workspace name
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         <input
           id="workspace-name"
           name="name"

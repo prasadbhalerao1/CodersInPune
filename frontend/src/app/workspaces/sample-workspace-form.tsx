@@ -14,10 +14,13 @@ export function SampleWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
     {},
   );
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-lg border p-4">
+    <form
+      action={formAction}
+      className="border-primary/25 bg-accent/50 flex flex-col gap-3 rounded-xl border p-4"
+    >
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <div>
-        <h2 className="text-sm font-semibold">Explore a sample organisation</h2>
+        <h2 className="text-sm font-semibold">Explore a sample organisation (recommended)</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Creates &ldquo;Northwind Labs (demo)&rdquo;: a fictional team with responsibilities,
           coverage gaps, an active departure and a handover waiting for your acknowledgement. No
@@ -25,7 +28,7 @@ export function SampleWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
         </p>
       </div>
       <div>
-        <Button type="submit" variant="outline" disabled={pending} aria-busy={pending}>
+        <Button type="submit" disabled={pending} aria-busy={pending} className="w-full">
           {pending ? "Setting up the sample…" : "Create sample workspace"}
         </Button>
       </div>
