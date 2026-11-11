@@ -394,3 +394,33 @@ class CapsuleAck(Base):
     version: Mapped[int] = mapped_column(Integer)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
     acknowledged_at: Mapped[datetime] = _now()
+
+
+class CapsuleQuestion(Base):
+    """The handover copilot thread: a question, its answer and the evidence cited."""
+
+    __tablename__ = "capsule_question"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _fk(["capsule_id"], "intelligence.capsule", "fk_capsule_question_capsule"),
+        _fk(["run_id"], "intelligence.agent_run", "fk_capsule_question_run"),
+        CheckConstraint("mode IN ('ai', 'search', 'not_found')", name="mode"),
+        CheckConstraint(
+            "confidence IS NULL OR confidence IN ('high', 'medium', 'low')", name="confidence"
+        ),
+        Index(None, "tenant_id", "capsule_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    capsule_id: Mapped[uuid.UUID]
+    version: Mapped[int] = mapped_column(Integer)
+    asked_by: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USER))
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    mode: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[str | None] = mapped_column(Text)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'"))
+    run_id: Mapped[uuid.UUID | None]
+    created_at: Mapped[datetime] = _now()

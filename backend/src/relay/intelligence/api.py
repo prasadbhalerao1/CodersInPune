@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Request
 
 from relay.identity.workspace_access import CurrentWorkspace
-from relay.intelligence import capsules, interviews, runs
+from relay.intelligence import capsules, copilot, interviews, memory, runs
 from relay.intelligence import service as svc
 from relay.jobs.outbox import Jobs
 from relay.shared.rate_limit import rate_limit
@@ -172,3 +172,31 @@ async def capsule_versions(
     access: CurrentWorkspace, capsule_id: uuid.UUID
 ) -> list[capsules.CapsuleVersionView]:
     return await capsules.versions(access, capsule_id)
+
+
+@router.post(
+    "/responsibilities/{responsibility_id}/timeline/narrative",
+    dependencies=[rate_limit("ai_run", 20, 600)],
+)
+async def narrate_timeline(
+    access: CurrentWorkspace, responsibility_id: uuid.UUID, request: Request
+) -> memory.NarrativeView:
+    return await memory.narrate(access, responsibility_id, request.app.state.settings)
+
+
+@router.get("/ai/capsules/{capsule_id}/questions")
+async def copilot_thread(
+    access: CurrentWorkspace, capsule_id: uuid.UUID
+) -> list[copilot.AnswerView]:
+    return await copilot.thread(access, capsule_id)
+
+
+@router.post(
+    "/ai/capsules/{capsule_id}/questions",
+    status_code=201,
+    dependencies=[rate_limit("ai_ask", 30, 600)],
+)
+async def copilot_ask(
+    access: CurrentWorkspace, capsule_id: uuid.UUID, body: copilot.AskIn, request: Request
+) -> copilot.AnswerView:
+    return await copilot.ask(access, capsule_id, body, request.app.state.settings)

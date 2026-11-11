@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from relay.audit import service as audit
 from relay.config import Settings
 from relay.continuity import service as continuity
+from relay.continuity.models import CaseTask
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import capabilities as caps
@@ -43,14 +44,16 @@ from relay.shared.api_types import StrictInput
 from relay.shared.errors import ApiError
 
 GENERATOR = "handover_generator"
+# The Handover Brief's sections (Round 3 commitment), in reading order.
 SECTIONS = (
     ("own", "What you now own"),
-    ("work", "Work in flight"),
+    ("work", "In-flight work"),
     ("decision", "Decisions already made"),
-    ("risk", "Risks and gaps"),
-    ("question", "Open questions"),
+    ("question", "Knowledge gaps and open questions"),
+    ("risk", "Risks and conflicts"),
     ("dependency", "Dependencies"),
     ("interview", "From the handover interview"),
+    ("steps", "Recommended first steps"),
     ("other", "Other findings"),
 )
 MANAGER_ROLES = ("owner", "admin")
@@ -62,7 +65,7 @@ def _section_of(kind: str, claim_type: str) -> str:
     return {
         "work": "work",
         "decision": "decision",
-        "missing": "risk",
+        "missing": "question",
         "conflict": "risk",
         "question": "question",
         "dependency": "dependency",
@@ -76,6 +79,7 @@ class CapsulePoint(BaseModel):
     claim_type: str
     confidence: str
     redacted: bool = False
+    changed: bool = False  # a cited source has a newer revision than this version used
     evidence: list[svc.EvidenceView] = []
 
 
@@ -111,6 +115,7 @@ class CapsuleView(BaseModel):
     generating: bool
     # Statements whose cited source changed after this version was written: review again.
     changed_points: int = 0
+    changed_sources: list[str] = []  # titles of cited sources edited since
 
 
 class CapsuleSummary(BaseModel):
@@ -232,6 +237,7 @@ async def _rules_version(
                 "evidence_ids": q.evidence_ids,
             }
         )
+    buckets["steps"] = await _first_steps(access, case_id, analysis)
     sections = [
         {"heading": heading, "points": buckets[key]} for key, heading in SECTIONS if buckets[key]
     ]
@@ -243,6 +249,40 @@ async def _rules_version(
     if withdrawn:
         omissions.append({"reason": "Source withdrawn since the analysis", "count": withdrawn})
     return sections, omissions
+
+
+async def _first_steps(
+    access: WorkspaceAccess, case_id: uuid.UUID, analysis: AgentRun | None
+) -> list[dict[str, Any]]:
+    """Open handover tasks, soonest first, cited by the analysis evidence for each task."""
+    session = access.session
+    cited: dict[str, str] = {}
+    if analysis is not None:
+        cited = {
+            source_id: str(evidence_id)
+            for evidence_id, source_id in await session.execute(
+                select(Evidence.id, Evidence.source_id).where(
+                    Evidence.run_id == analysis.id, Evidence.source_type == "task"
+                )
+            )
+        }
+    tasks = await session.scalars(
+        select(CaseTask)
+        .where(CaseTask.case_id == case_id, CaseTask.status == "open")
+        .order_by(CaseTask.due_at.asc().nulls_last(), CaseTask.created_at)
+        .limit(8)
+    )
+    return [
+        {
+            "key": f"t:{t.id}",
+            "text": t.title + (f" (due {t.due_at.date().isoformat()})" if t.due_at else ""),
+            "kind": "work",
+            "claim_type": "direct_fact",
+            "confidence": "high",
+            "evidence_ids": [cited[str(t.id)]] if str(t.id) in cited else [],
+        }
+        for t in tasks
+    ]
 
 
 async def _load(access: WorkspaceAccess, capsule_id: uuid.UUID, *, lock: bool = False) -> Capsule:
@@ -430,6 +470,7 @@ async def view(
     ids = {uuid.UUID(e) for s in v.sections for p in s["points"] for e in p["evidence_ids"]}
     evidence = await svc.current_evidence(access, await svc._evidence_rows(access, ids))
     redacted, hidden, withdrawn, changed = set(v.redactions), 0, 0, 0
+    changed_titles: set[str] = set()
     sections: list[CapsuleSection] = []
     for s in v.sections:
         points = []
@@ -445,6 +486,7 @@ async def view(
                 hidden += 1
                 continue
             changed += any(e.changed for e in ev)
+            changed_titles.update(e.title for e in ev if e.changed)
             points.append(
                 CapsulePoint(
                     key=p["key"],
@@ -453,6 +495,7 @@ async def view(
                     claim_type=p["claim_type"],
                     confidence=p["confidence"],
                     redacted=p["key"] in redacted,
+                    changed=any(e.changed for e in ev),
                     evidence=ev,
                 )
             )
@@ -507,6 +550,7 @@ async def view(
         can_acknowledge=recipient and latest and capsule.status == "approved",
         generating=bool(generating),
         changed_points=changed,
+        changed_sources=sorted(changed_titles),
     )
 
 
