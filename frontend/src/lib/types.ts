@@ -556,7 +556,16 @@ export type SuggestionView = {
   responsibility_id: string | null;
 };
 
+export type HandoverForMe = {
+  capsule_id: string;
+  case_id: string;
+  case_title: string;
+  status: "approved" | "acknowledged";
+  version: number;
+  updated_at: string;
+};
 export type MyWorkView = {
+  handovers: HandoverForMe[];
   emergencies: CaseSummary[];
   tasks: TaskView[];
   approvals: CaseSummary[];

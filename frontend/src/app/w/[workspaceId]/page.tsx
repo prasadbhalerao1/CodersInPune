@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
+import { HandoverBanner } from "@/components/handover-banner";
 import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/page";
 import { CaseStatusBadge, ROLE_LABEL, SeverityBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -9,11 +10,12 @@ import { api, canManage } from "@/lib/relay-api";
 
 export default async function OverviewPage({ params }: PageProps<"/w/[workspaceId]">) {
   const { workspaceId } = await params;
-  const [workspace, overview, openCases, accepted] = await Promise.all([
+  const [workspace, overview, openCases, accepted, mine] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.overview(workspaceId)),
     attempt(api.listCases(workspaceId, { status: "open" })),
     attempt(api.risks(workspaceId, "accepted")),
+    attempt(api.myWork(workspaceId)),
   ]);
   const seesInsights = workspace.ok && ["owner", "admin", "auditor"].includes(workspace.data.role);
   const insights = seesInsights ? await attempt(api.insights(workspaceId)) : null;
@@ -102,6 +104,7 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
     <div className="flex flex-1 flex-col">
       <PageHeader
         title={workspace.data.name}
+        description="Where continuity stands today: what needs attention, what is moving, and what changed."
         actions={
           canManage(workspace.data) ? (
             <Link href={`${base}/responsibilities/new`} className={buttonVariants({ size: "sm" })}>
@@ -111,6 +114,9 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
         }
       />
       <div className="flex flex-col gap-8 p-6">
+        {mine.ok ? (
+          <HandoverBanner workspaceId={workspaceId} handovers={mine.data.handovers} />
+        ) : null}
         {emergencies.length > 0 ? (
           <section
             aria-label="Emergency cases"

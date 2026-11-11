@@ -1,9 +1,11 @@
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { Walkthrough } from "@/components/landing/walkthrough";
+import { RelayMark } from "@/components/workspace-heading";
 
 export const metadata: Metadata = {
   title: "Relay — continuity when people and responsibilities change",
@@ -81,12 +83,7 @@ export default function HomePage() {
       <header className="bg-background/80 sticky top-0 z-20 border-b backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span
-              aria-hidden
-              className="bg-foreground text-background grid size-6 place-items-center rounded-md text-xs"
-            >
-              R
-            </span>
+            <RelayMark className="size-6" />
             Relay
           </Link>
           <nav aria-label="Sections" className="text-muted-foreground hidden gap-5 text-sm sm:flex">
@@ -226,6 +223,8 @@ export default function HomePage() {
 }
 
 async function PrimaryAction({ compact = false }: { compact?: boolean }) {
+  // withAuth reads the clock for token expiry: render this part at request time.
+  await connection();
   const { user } = await withAuth();
   const className = compact
     ? "bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium"

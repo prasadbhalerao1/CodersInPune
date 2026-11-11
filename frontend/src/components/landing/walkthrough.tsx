@@ -139,7 +139,7 @@ export function Walkthrough() {
           <ul className="divide-y rounded-lg border text-sm">
             {current.rows.map(([a, b, c]) => (
               <li
-                key={b}
+                key={`${a}:${b}:${c}`}
                 className="grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5"
               >
                 <span className={cn("font-medium", TONE[a] ?? "")}>{a}</span>

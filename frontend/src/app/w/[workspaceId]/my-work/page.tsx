@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
+import { HandoverBanner } from "@/components/handover-banner";
 import { EmptyState, formatDateTime, PageHeader, Section } from "@/components/page";
 import { Badge, CaseStatusBadge, EmergencyBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
@@ -110,14 +111,19 @@ export default async function MyWorkPage({
       myFollowUps.length +
       mentions.length +
       reviews.length +
+      work.data.handovers.length +
       asked.length +
       toReview.length ===
     0;
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="My Work" />
+      <PageHeader
+        title="My Work"
+        description="Everything waiting on you: handovers to read, tasks, approvals and questions."
+      />
       <div className="flex flex-col gap-6 p-6">
+        <HandoverBanner workspaceId={workspaceId} handovers={work.data.handovers} />
         <nav aria-label="Filter" className="flex gap-1 text-sm">
           {FILTERS.map((f) => (
             <Link

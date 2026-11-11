@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageSquareText, SendHorizontal } from "lucide-react";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { inputClass } from "@/components/action-form";
 import { EvidenceList } from "@/components/ai";
@@ -37,20 +37,22 @@ export function Copilot({
   initial: AnswerView[];
 }) {
   const [draft, setDraft] = useState("");
-  const end = useRef<HTMLDivElement>(null);
+
   const [state, action, pending] = useActionState<AskState & { thread: AnswerView[] }, FormData>(
     async (previous, formData) => {
       const result = await askCapsuleAction(workspaceId, capsuleId, {}, formData);
       if (!result.answer) return { ...result, thread: previous.thread };
       setDraft("");
-      requestAnimationFrame(() =>
-        end.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
-      );
       return { thread: [...previous.thread, result.answer] };
     },
     { thread: initial },
   );
   const thread = state.thread;
+  const log = useRef<HTMLDivElement>(null);
+  // Keep the newest answer in view once it has rendered (and while one is pending).
+  useEffect(() => {
+    log.current?.scrollTo({ top: log.current.scrollHeight, behavior: "smooth" });
+  }, [thread.length, pending]);
 
   return (
     <section
@@ -72,7 +74,7 @@ export function Copilot({
         </div>
       </div>
 
-      <div className="flex max-h-[32rem] flex-col gap-4 overflow-y-auto p-4">
+      <div ref={log} className="flex max-h-[32rem] flex-col gap-4 overflow-y-auto p-4">
         {thread.length === 0 ? (
           <div className="flex flex-col gap-2">
             <p className="text-muted-foreground text-xs">Try one of these:</p>
@@ -145,7 +147,6 @@ export function Copilot({
             Checking the handover&apos;s sources…
           </p>
         ) : null}
-        <div ref={end} />
       </div>
 
       <form action={action} className="flex flex-col gap-2 border-t p-3">
