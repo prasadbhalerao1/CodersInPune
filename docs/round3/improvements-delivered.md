@@ -61,7 +61,7 @@ left uncovered and the score rises.
 
 | Commitment | Status | Test (`backend/tests/test_simulation.py`) |
 |---|---|---|
-| `GET /workspaces/{id}/simulation?person_id=&backup_id=` | Done | all 8 |
+| `GET /workspaces/{id}/simulation?person_id=&backup_id=&days=` | Done | all 11 |
 | Correct impact for a person with known responsibilities | Done | `test_impact_of_removing_a_person` |
 | A backup covering everything leaves `uncovered_responsibilities` empty | Done | `test_a_backup_covering_everything_leaves_nothing_uncovered` |
 | Newly exposed single-person dependencies and undocumented work | Done | `test_exposed_risks_name_the_new_gaps` |
@@ -70,6 +70,14 @@ left uncovered and the score rises.
 | Inherits the caller's visibility; other workspaces return 404 | Done | `test_other_workspaces_and_bad_input_are_rejected` |
 | **No write reaches the database** | Done: verified with a SQLAlchemy cursor listener | `test_simulation_writes_nothing` |
 | Score explained and 100 when nothing is at stake | Done | `test_score_is_explained_and_full_for_someone_holding_nothing` |
+| "Why is this affected?": reasons per responsibility, each read from a record, plus the assets it looks after | Done | `test_reasons_explain_why_each_responsibility_is_affected` |
+| Absence duration: work falling due while the person is away is flagged | Done | `test_duration_flags_work_due_while_away` |
+| Cover candidates by deterministic signals (planned recipient, existing role, team, department), each simulated and compared with "no replacement" | Done | `test_candidates_are_compared_against_nobody_stepping_in`, `test_sample_powers_the_round_three_features` |
+
+Candidates are ranked first by whether they are connected to the work that would
+otherwise have nobody, then by how many recorded links they have. There is no AI score;
+the signals are shown next to each name. Entry points: the sidebar, the Overview's "Test
+your readiness" card, and "What if … is unavailable?" on each person's profile.
 
 The score is deliberately simple so a manager can argue with it: per affected
 responsibility, weighted by criticality, cover is 60%, usable (non-stale) knowledge 25%,
@@ -105,16 +113,41 @@ A chapter or link citing nothing, or an event that doesn't exist, is dropped and
 | Read-only | Done: no writes during a timeline read | `test_timeline_reads_without_writing` |
 | Inferred content always cites events; invented refs dropped | Done | `test_narrative_cites_events_and_drops_invented_ones` |
 | Clear message when AI is off or there is nothing to explain | Done | `test_narrative_without_ai_or_events_says_why` |
+| The reading is stored with the events it saw: the page opens without a model call, says when newer events exist, and never shows a member a chapter built on a source they can't see | Done | `test_narrative_is_stored_filtered_per_viewer_and_marked_outdated` |
+| "Ask about this history": answers cite events, invented citations are refused | Done | `test_history_questions_cite_events_or_say_not_found` |
+
+The page also shows a chapter axis (the project's span with chapters as bands and every
+event as a dot), an event inspector (provenance, how the category was derived, related
+events, the chapters citing it, a link to the source), and each handover brief links to
+the memory replay of every responsibility it covers.
 
 **Not done.** Commit-level history: Relay reads pull request and issue metadata, never
-commits or code, by design. The narrative is not cached; each request costs one model call
-(it shares the AI rate limit of 20 runs per 10 minutes per user).
+commits or code, by design. Historical state snapshots ("at this point there were N open
+issues") are not shown: the sources don't let Relay establish past counts reliably, and we
+would rather show nothing than an invented number. The timeline is per responsibility, not
+per repository or asset.
 
 ---
 
-## Design refresh
+## How the three connect
 
-The interface moved from the default grey theme to a calm neutral palette with a single
-teal accent, grouped navigation with icons, sticky page headers with a one-line purpose,
-and shared stat and panel components. Colour still carries meaning only: red means act
-now, amber needs attention, teal marks the current place and primary actions.
+Memory replay shows how a responsibility got here → the simulator shows what breaks if its
+owner is away and who could cover → "Prepare handover" starts the transfer → the handover
+brief links back to the memory replay and the Copilot answers questions from the same
+evidence. A recipient sees "A handover is waiting for you" on the Overview and My Work.
+
+## Brand and interface
+
+Relay now has a consistent identity: the relay mark (two strokes handing over), Instrument
+Serif for headlines, Geist for the interface, a deep teal for primary actions and a warm
+"baton" amber reserved for handover moments, and a relay-lines motif on the landing page,
+Workspaces and the Overview's continuity-health panel. The Overview is a dashboard (coverage
+ring, risk-severity bar, icon metrics, cases with people, an activity feed). Motion is short
+and quiet (page entrances, staggered lists, filling bars) and switches off for people who
+prefer reduced motion. Colour still carries meaning: red means act now, amber needs
+attention, teal marks the current place and primary actions.
+
+## Run it yourself
+
+`python scripts/setup.py` then `python scripts/dev.py` (see the README). Sign-in needs a
+free WorkOS staging account; AI features need a model key (a free Gemini key works).
