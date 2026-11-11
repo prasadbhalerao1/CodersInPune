@@ -173,6 +173,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Windows consoles and redirected output default to a legacy code page; tool output
+    # (e.g. Next.js) uses Unicode symbols.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     os.chdir(ROOT)
     try:
         main()
