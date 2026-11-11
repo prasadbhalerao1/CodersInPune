@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import type {
   AiAdminView,
   AnswerView,
+  HistoryAnswer,
   CandidatesView,
   NarrativeView,
   SimulationView,
@@ -349,6 +350,13 @@ export const api = {
         limit: "500",
       }),
     ),
+  storedNarrative: (id: string, responsibilityId: string) =>
+    relayFetch<NarrativeView>(`${ws(id)}/responsibilities/${responsibilityId}/timeline/narrative`),
+  askHistory: (id: string, responsibilityId: string, question: string) =>
+    relayFetch<HistoryAnswer>(`${ws(id)}/responsibilities/${responsibilityId}/timeline/questions`, {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }),
   narrateTimeline: (id: string, responsibilityId: string) =>
     relayFetch<NarrativeView>(`${ws(id)}/responsibilities/${responsibilityId}/timeline/narrative`, {
       method: "POST",

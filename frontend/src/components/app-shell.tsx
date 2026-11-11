@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
   return (
     <>
-      <div className="flex h-full">
+      <div className="flex min-h-full">
         {sidebar}
         <main className="flex min-h-dvh min-w-0 flex-1 flex-col">{children}</main>
       </div>

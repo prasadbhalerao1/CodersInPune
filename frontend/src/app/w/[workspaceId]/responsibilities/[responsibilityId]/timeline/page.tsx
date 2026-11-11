@@ -14,7 +14,10 @@ export default async function TimelinePage({
   params,
 }: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]/timeline">) {
   const { workspaceId, responsibilityId } = await params;
-  const timeline = await attempt(api.timeline(workspaceId, responsibilityId));
+  const [timeline, stored] = await Promise.all([
+    attempt(api.timeline(workspaceId, responsibilityId)),
+    attempt(api.storedNarrative(workspaceId, responsibilityId)),
+  ]);
   if (!timeline.ok) return <ApiErrorNotice error={timeline.error} />;
   const t = timeline.data;
   const base = `/w/${workspaceId}/responsibilities/${responsibilityId}`;
@@ -32,7 +35,11 @@ export default async function TimelinePage({
         }
         description="How this work got to where it is: rebuilt from GitHub, Linear, Notion and Relay every time you open it."
       />
-      <MemoryReplay workspaceId={workspaceId} timeline={t} />
+      <MemoryReplay
+        workspaceId={workspaceId}
+        timeline={t}
+        stored={stored.ok && stored.data.state === "ready" ? stored.data : null}
+      />
     </div>
   );
 }

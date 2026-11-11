@@ -1770,7 +1770,7 @@ export type NarrativeChapter = {
 };
 export type NarrativeView = {
   responsibility_id: string;
-  state: "ready" | "empty" | "unavailable";
+  state: "ready" | "empty" | "unavailable" | "none";
   reason: string | null;
   overview: string | null;
   overview_event_ids: string[];
@@ -1784,4 +1784,14 @@ export type NarrativeView = {
   events_considered: number;
   rejected: number;
   generated_at: string;
+  outdated: boolean;
+  withheld: number;
+};
+export type HistoryAnswer = {
+  question: string;
+  answer: string;
+  mode: "ai" | "search" | "not_found";
+  confidence: Confidence | null;
+  note: string | null;
+  event_ids: string[];
 };

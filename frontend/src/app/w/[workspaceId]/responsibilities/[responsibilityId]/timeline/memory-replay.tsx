@@ -8,16 +8,27 @@ import {
   Link2,
   Pause,
   Play,
+  MessageSquareText,
+  PanelRight,
   RotateCcw,
+  SendHorizontal,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { NarrativeView, TimelineCategory, TimelineEvent, TimelineView } from "@/lib/types";
+import { inputClass } from "@/components/action-form";
+import type {
+  HistoryAnswer,
+  NarrativeView,
+  TimelineCategory,
+  TimelineEvent,
+  TimelineView,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { narrateTimelineAction } from "./actions";
+import { askHistoryAction, narrateTimelineAction } from "./actions";
 
 const CATEGORY: Record<TimelineCategory, { label: string; dot: string }> = {
   incident: { label: "Incident", dot: "bg-red-600" },
@@ -43,15 +54,19 @@ const short = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric"
 export function MemoryReplay({
   workspaceId,
   timeline,
+  stored,
 }: {
   workspaceId: string;
   timeline: TimelineView;
+  /** The last persisted reading (already filtered to what this viewer may see). */
+  stored: NarrativeView | null;
 }) {
   const [filter, setFilter] = useState<TimelineCategory | null>(null);
   const [cursor, setCursor] = useState<number | null>(null); // replay position, oldest = 0
   const [playing, setPlaying] = useState(false);
   const [focus, setFocus] = useState<Set<string>>(new Set());
-  const [narrative, setNarrative] = useState<NarrativeView | null>(null);
+  const [narrative, setNarrative] = useState<NarrativeView | null>(stored);
+  const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const rows = useRef(new Map<string, HTMLLIElement>());
@@ -82,6 +97,7 @@ export function MemoryReplay({
 
   function jump(ids: string[]) {
     setFocus(new Set(ids));
+    if (ids.length === 1) setSelected(ids[0]);
     setFilter(null);
     setCursor(null);
     setPlaying(false);
@@ -202,6 +218,14 @@ export function MemoryReplay({
           </div>
         </div>
 
+        <ChapterAxis
+          events={chronological}
+          narrative={narrative?.state === "ready" ? narrative : null}
+          current={current?.id ?? null}
+          onSelect={(id) => jump([id])}
+          onChapter={(ids) => jump(ids)}
+        />
+
         {groups.length === 0 ? (
           <p className="text-muted-foreground px-1 text-sm">No events in this view.</p>
         ) : (
@@ -219,6 +243,8 @@ export function MemoryReplay({
                     current={current?.id === e.id}
                     focused={focus.has(e.id)}
                     onJump={jump}
+                    onInspect={() => setSelected(e.id)}
+                    inspected={selected === e.id}
                     register={(el) => {
                       if (el) rows.current.set(e.id, el);
                       else rows.current.delete(e.id);
@@ -237,6 +263,19 @@ export function MemoryReplay({
       </div>
 
       <aside className="flex flex-col gap-4 xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:self-start xl:overflow-y-auto">
+        {selected && byId.get(selected) ? (
+          <EventInspector
+            event={byId.get(selected)!}
+            byId={byId}
+            chapters={
+              narrative?.state === "ready"
+                ? narrative.chapters.filter((c) => c.event_ids.includes(selected))
+                : []
+            }
+            onJump={jump}
+            onClose={() => setSelected(null)}
+          />
+        ) : null}
         <div className="bg-card rounded-lg border p-4 shadow-xs">
           <p className="text-muted-foreground text-xs font-medium">Span</p>
           <p className="mt-1 text-sm font-medium">
@@ -261,7 +300,30 @@ export function MemoryReplay({
               {pending ? "Reading the history…" : "Explain this history"}
             </Button>
           ) : (
-            <Narrative narrative={narrative} byId={byId} onJump={jump} onRetry={explain} />
+            <>
+              {narrative.outdated ? (
+                <p
+                  role="status"
+                  className="rounded-md border border-amber-600/20 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+                >
+                  New events arrived after this reading was written. It may be incomplete.
+                </p>
+              ) : null}
+              <Narrative narrative={narrative} byId={byId} onJump={jump} onRetry={explain} />
+              {narrative.state === "ready" ? (
+                <div className="text-muted-foreground flex items-center justify-between gap-2 border-t pt-2 text-xs">
+                  <span>
+                    Written {new Date(narrative.generated_at).toLocaleDateString("en-GB")}
+                    {narrative.withheld
+                      ? ` · ${narrative.withheld} chapter${narrative.withheld === 1 ? "" : "s"} withheld (sources you can't see)`
+                      : ""}
+                  </span>
+                  <Button size="xs" variant="ghost" onClick={explain} disabled={pending}>
+                    {pending ? "Rewriting…" : "Regenerate"}
+                  </Button>
+                </div>
+              ) : null}
+            </>
           )}
           {error ? (
             <p role="alert" className="text-destructive text-sm">
@@ -269,6 +331,13 @@ export function MemoryReplay({
             </p>
           ) : null}
         </div>
+
+        <AskHistory
+          workspaceId={workspaceId}
+          responsibilityId={timeline.responsibility_id}
+          byId={byId}
+          onJump={jump}
+        />
 
         <div className="text-muted-foreground flex flex-col gap-1.5 px-1 text-xs">
           <p>
@@ -345,6 +414,8 @@ function EventRow({
   current,
   focused,
   onJump,
+  onInspect,
+  inspected,
   register,
 }: {
   event: TimelineEvent;
@@ -352,6 +423,8 @@ function EventRow({
   current: boolean;
   focused: boolean;
   onJump: (ids: string[]) => void;
+  onInspect: () => void;
+  inspected: boolean;
   register: (el: HTMLLIElement | null) => void;
 }) {
   const c = CATEGORY[e.category];
@@ -381,6 +454,18 @@ function EventRow({
           <span aria-hidden>·</span>
           <span>{e.source_system}</span>
           {e.significance === "high" ? <Badge tone="neutral">Key event</Badge> : null}
+          <button
+            type="button"
+            onClick={onInspect}
+            aria-pressed={inspected}
+            className={cn(
+              "hover:bg-muted ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5",
+              inspected && "bg-accent text-accent-foreground",
+            )}
+          >
+            <PanelRight aria-hidden className="size-3" />
+            Inspect
+          </button>
         </div>
         <p className="mt-1 text-sm font-medium">
           {e.source_url ? (
@@ -522,4 +607,308 @@ function groupByMonth(events: TimelineEvent[]): [string, TimelineEvent[]][] {
     else groups.push([label, [e]]);
   }
   return groups;
+}
+
+/** The project's span as one line: chapters as bands above, every event as a tick. */
+function ChapterAxis({
+  events,
+  narrative,
+  current,
+  onSelect,
+  onChapter,
+}: {
+  events: TimelineEvent[]; // oldest first
+  narrative: NarrativeView | null;
+  current: string | null;
+  onSelect: (id: string) => void;
+  onChapter: (ids: string[]) => void;
+}) {
+  if (events.length < 2) return null;
+  const start = new Date(events[0].occurred_at).getTime();
+  const end = new Date(events.at(-1)!.occurred_at).getTime();
+  const span = Math.max(end - start, 1);
+  const at = (iso: string) => ((new Date(iso).getTime() - start) / span) * 100;
+  const years: number[] = [];
+  for (let y = new Date(start).getFullYear() + 1; y <= new Date(end).getFullYear(); y++)
+    years.push(y);
+  return (
+    <div className="bg-card rounded-lg border px-4 pt-3 pb-2 shadow-xs">
+      <div className="text-muted-foreground mb-2 flex items-center justify-between text-xs">
+        <span>{short.format(new Date(start))}</span>
+        <span className="font-medium">
+          {narrative?.chapters.length
+            ? `${narrative.chapters.length} chapters · ${events.length} events`
+            : `${events.length} events`}
+        </span>
+        <span>{short.format(new Date(end))}</span>
+      </div>
+      <div className="relative h-7">
+        {narrative?.chapters.map((c, i) => {
+          const left = at(c.started_at);
+          const width = Math.max(at(c.ended_at) - left, 1.5);
+          return (
+            <button
+              key={i}
+              type="button"
+              title={`${c.title} (inferred)`}
+              onClick={() => onChapter(c.event_ids)}
+              className="bg-baton/25 hover:bg-baton/45 text-baton-foreground absolute top-0 h-6 truncate rounded px-1.5 text-left text-[11px] font-medium transition-colors dark:text-amber-100"
+              style={{ left: `${left}%`, width: `${width}%`, minWidth: "1.5rem" }}
+            >
+              {c.title}
+            </button>
+          );
+        })}
+      </div>
+      <div className="relative mt-1 h-6">
+        <div className="bg-border absolute inset-x-0 top-1/2 h-px" />
+        {years.map((y) => (
+          <span
+            key={y}
+            className="text-muted-foreground absolute top-0 -translate-x-1/2 text-[10px]"
+            style={{ left: `${at(new Date(y, 0, 1).toISOString())}%` }}
+          >
+            {y}
+          </span>
+        ))}
+        {events.map((e) => (
+          <button
+            key={e.id}
+            type="button"
+            title={`${day.format(new Date(e.occurred_at))} · ${e.title}`}
+            aria-label={e.title}
+            onClick={() => onSelect(e.id)}
+            className={cn(
+              "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[var(--card)] transition-transform hover:scale-150",
+              CATEGORY[e.category].dot,
+              e.significance === "high" ? "size-2.5" : "size-2",
+              current === e.id && "ring-primary/60 scale-150",
+            )}
+            style={{ left: `${at(e.occurred_at)}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EventInspector({
+  event: e,
+  byId,
+  chapters,
+  onJump,
+  onClose,
+}: {
+  event: TimelineEvent;
+  byId: Map<string, TimelineEvent>;
+  chapters: NarrativeView["chapters"];
+  onJump: (ids: string[]) => void;
+  onClose: () => void;
+}) {
+  return (
+    <section
+      aria-label="Event details"
+      className="bg-card animate-in fade-in slide-in-from-right-2 flex flex-col gap-3 rounded-lg border p-4 shadow-xs duration-200"
+    >
+      <div className="flex items-start gap-2">
+        <span
+          aria-hidden
+          className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", CATEGORY[e.category].dot)}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-muted-foreground text-xs">
+            {CATEGORY[e.category].label} · {e.source_system} ·{" "}
+            {new Date(e.occurred_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}
+          </p>
+          <h2 className="mt-0.5 text-sm font-semibold">{e.title}</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close event details"
+          className="text-muted-foreground hover:text-foreground rounded p-0.5"
+        >
+          <X aria-hidden className="size-4" />
+        </button>
+      </div>
+      <p className="text-sm">{e.summary}</p>
+      <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1.5 text-xs">
+        <dt className="text-muted-foreground">Provenance</dt>
+        <dd>
+          <Badge tone="neutral">Fact</Badge> read from the {e.source_system} record
+        </dd>
+        <dt className="text-muted-foreground">Category</dt>
+        <dd>{BASIS[e.category_basis]}</dd>
+        {e.actor ? (
+          <>
+            <dt className="text-muted-foreground">By</dt>
+            <dd>{e.actor}</dd>
+          </>
+        ) : null}
+        <dt className="text-muted-foreground">Importance</dt>
+        <dd className="capitalize">{e.significance}</dd>
+      </dl>
+      {e.linked_events.filter((id) => byId.has(id)).length ? (
+        <div>
+          <p className="text-muted-foreground mb-1 text-xs font-medium">Referenced in the record</p>
+          <ul className="flex flex-col gap-1 text-xs">
+            {e.linked_events
+              .filter((id) => byId.has(id))
+              .map((id) => (
+                <li key={id}>
+                  <button
+                    type="button"
+                    onClick={() => onJump([id])}
+                    className="text-primary text-left hover:underline"
+                  >
+                    {byId.get(id)?.title}
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
+      {chapters.length ? (
+        <div>
+          <p className="text-muted-foreground mb-1 text-xs font-medium">Part of (inferred)</p>
+          <ul className="flex flex-col gap-1 text-xs">
+            {chapters.map((c) => (
+              <li key={c.title}>
+                <button
+                  type="button"
+                  onClick={() => onJump(c.event_ids)}
+                  className="text-left hover:underline"
+                >
+                  {c.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {e.source_url ? (
+        <a
+          href={e.source_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
+        >
+          Open in {e.source_system}
+          <ExternalLink aria-hidden className="size-3" />
+        </a>
+      ) : null}
+    </section>
+  );
+}
+
+const ANSWER_MODE = {
+  ai: { label: "From the history", tone: "neutral" },
+  search: { label: "Search results, not an answer", tone: "warning" },
+  not_found: { label: "Not in the history", tone: "muted" },
+} as const;
+
+function AskHistory({
+  workspaceId,
+  responsibilityId,
+  byId,
+  onJump,
+}: {
+  workspaceId: string;
+  responsibilityId: string;
+  byId: Map<string, TimelineEvent>;
+  onJump: (ids: string[]) => void;
+}) {
+  const [question, setQuestion] = useState("");
+  const [answers, setAnswers] = useState<HistoryAnswer[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const q = question.trim();
+    if (q.length < 3) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await askHistoryAction(workspaceId, responsibilityId, q);
+      if (result.error) setError(result.error);
+      else if (result.answer) {
+        setAnswers((a) => [result.answer!, ...a]);
+        setQuestion("");
+      }
+    });
+  }
+  return (
+    <section
+      className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-xs"
+      aria-label="Ask about this history"
+    >
+      <div className="flex items-start gap-2">
+        <MessageSquareText aria-hidden className="text-muted-foreground mt-0.5 size-4" />
+        <div>
+          <h2 className="text-sm font-semibold">Ask about this history</h2>
+          <p className="text-muted-foreground text-xs">
+            Answered only from the events on this page, with the events cited.
+          </p>
+        </div>
+      </div>
+      <form onSubmit={submit} className="flex gap-2">
+        <label htmlFor="history-question" className="sr-only">
+          Your question
+        </label>
+        <input
+          id="history-question"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          maxLength={500}
+          placeholder="e.g. Why was the canary added?"
+          className={inputClass}
+        />
+        <Button
+          type="submit"
+          size="icon"
+          aria-label="Ask"
+          disabled={pending || question.trim().length < 3}
+        >
+          <SendHorizontal aria-hidden />
+        </Button>
+      </form>
+      {pending ? (
+        <p role="status" className="text-muted-foreground text-xs">
+          Reading the history…
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-destructive text-xs">
+          {error}
+        </p>
+      ) : null}
+      {answers.map((a, i) => (
+        <article
+          key={i}
+          className="animate-in fade-in flex flex-col gap-1.5 border-t pt-3 text-sm duration-300"
+        >
+          <p className="text-muted-foreground text-xs">{a.question}</p>
+          <Badge tone={ANSWER_MODE[a.mode].tone} className="self-start">
+            {ANSWER_MODE[a.mode].label}
+          </Badge>
+          <p>{a.answer}</p>
+          {a.note ? <p className="text-muted-foreground text-xs">{a.note}</p> : null}
+          {a.event_ids.length ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {a.event_ids.map((id) => (
+                <li key={id}>
+                  <button
+                    type="button"
+                    onClick={() => onJump([id])}
+                    className="bg-muted hover:bg-accent rounded px-1.5 py-0.5 text-left text-xs"
+                  >
+                    {byId.get(id)?.title ?? id}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </article>
+      ))}
+    </section>
+  );
 }
