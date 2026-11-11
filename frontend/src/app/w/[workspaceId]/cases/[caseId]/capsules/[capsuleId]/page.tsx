@@ -19,6 +19,7 @@ import {
   editCapsuleAction,
 } from "../../ai-actions";
 import { CapsuleStatusBadge } from "../status";
+import { Copilot } from "./copilot";
 
 export const metadata: Metadata = { title: "Handover capsule" };
 
@@ -42,6 +43,7 @@ function Sections({ capsule, editable }: { capsule: CapsuleView; editable: boole
                   <ClaimBadge kind={p.kind} type={p.claim_type} />
                   <ConfidenceNote value={p.confidence} />
                   {p.redacted ? <Badge tone="warning">Redacted for the recipient</Badge> : null}
+                  {p.changed ? <Badge tone="warning">Source changed since</Badge> : null}
                   {editable ? (
                     <label className="text-muted-foreground ml-auto flex items-center gap-1.5 text-xs">
                       <input
@@ -73,9 +75,10 @@ export default async function CapsulePage({
   const [{ workspaceId, caseId, capsuleId }, query] = await Promise.all([params, searchParams]);
   const requested = typeof query.version === "string" ? Number(query.version) : undefined;
   const version = requested && Number.isInteger(requested) ? requested : undefined;
-  const [capsule, versions] = await Promise.all([
+  const [capsule, versions, questions] = await Promise.all([
     attempt(api.capsule(workspaceId, capsuleId, version)),
     attempt(api.capsuleVersions(workspaceId, capsuleId)),
+    attempt(api.capsuleQuestions(workspaceId, capsuleId)),
   ]);
   if (!capsule.ok) return <ApiErrorNotice error={capsule.error} />;
   const c = capsule.data;
@@ -120,9 +123,9 @@ export default async function CapsulePage({
           </>
         }
       />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          <div className="flex flex-col gap-2 rounded-lg border p-4 text-sm">
+          <div className="bg-card flex flex-col gap-2 rounded-lg border p-4 text-sm shadow-xs">
             <p className="flex flex-wrap items-center gap-2">
               <CapsuleStatusBadge value={c.status} />
               <span className="text-muted-foreground text-xs">
@@ -146,6 +149,11 @@ export default async function CapsulePage({
                   ? "1 statement cites a source that changed after this version was written."
                   : `${c.changed_points} statements cite sources that changed after this version was written.`}{" "}
                 Re-run the analysis and review before relying on them.
+                {c.changed_sources.length > 0 ? (
+                  <span className="mt-1 block text-xs">
+                    Changed: {c.changed_sources.join(", ")}
+                  </span>
+                ) : null}
               </p>
             ) : null}
             {c.generating ? (
@@ -208,8 +216,13 @@ export default async function CapsulePage({
           </Section>
         </div>
 
-        <aside className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold">Versions</h2>
+        <aside className="flex flex-col gap-6 xl:sticky xl:top-20 xl:self-start">
+          {questions.ok ? (
+            <Copilot workspaceId={workspaceId} capsuleId={c.id} initial={questions.data} />
+          ) : (
+            <ApiErrorNotice error={questions.error} />
+          )}
+          <h2 className="-mb-3 text-sm font-semibold">Versions</h2>
           {versions.ok ? (
             <ol className="flex flex-col gap-1 text-sm">
               {versions.data.map((v) => (

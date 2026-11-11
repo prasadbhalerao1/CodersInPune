@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
 import { api, RelayApiError } from "@/lib/relay-api";
-import type { CapsuleView } from "@/lib/types";
+import type { AnswerView, CapsuleView } from "@/lib/types";
 
 async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
   try {
@@ -155,4 +155,22 @@ export async function acknowledgeCapsuleAction(
   return mutate(workspaceId, () =>
     api.send(workspaceId, "POST", `/ai/capsules/${capsuleId}/acknowledge`),
   );
+}
+
+export type AskState = { answer?: AnswerView; error?: string };
+
+export async function askCapsuleAction(
+  workspaceId: string,
+  capsuleId: string,
+  _state: AskState,
+  fd: FormData,
+): Promise<AskState> {
+  const question = text(fd, "question");
+  if (question.length < 3) return { error: "Ask a question of at least a few words." };
+  try {
+    return { answer: await api.askCapsule(workspaceId, capsuleId, question) };
+  } catch (error) {
+    if (error instanceof RelayApiError) return { error: error.message };
+    throw error;
+  }
 }
