@@ -11,9 +11,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-full">
       <aside
         aria-label="Primary"
-        className="bg-muted/40 hidden w-60 shrink-0 flex-col border-r md:flex"
+        className="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r md:flex"
       >
-        <div className="flex h-14 items-center border-b px-4">
+        <div className="flex h-14 items-center px-4">
           <Suspense fallback={<span className="text-sm font-semibold">Relay</span>}>
             <WorkspaceHeading />
           </Suspense>
@@ -24,13 +24,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Suspense fallback={<div className="flex-1" />}>
           <SidebarNav />
         </Suspense>
-        <div className="border-t p-4">
+        <div className="border-sidebar-border border-t p-3">
           <Suspense fallback={<span className="text-muted-foreground text-sm">…</span>}>
             <UserMenu />
           </Suspense>
         </div>
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+      <main className="flex min-h-dvh min-w-0 flex-1 flex-col">{children}</main>
       <Suspense fallback={null}>
         <CommandMenu />
       </Suspense>

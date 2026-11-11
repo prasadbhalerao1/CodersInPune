@@ -1428,6 +1428,7 @@ export type CapsulePoint = {
   claim_type: ClaimType;
   confidence: Confidence;
   redacted: boolean;
+  changed: boolean;
   evidence: EvidenceView[];
 };
 export type CapsuleSection = { heading: string; points: CapsulePoint[] };
@@ -1455,6 +1456,7 @@ export type CapsuleView = {
   can_acknowledge: boolean;
   generating: boolean;
   changed_points: number;
+  changed_sources: string[];
 };
 
 export type CapsuleSummary = {
@@ -1620,3 +1622,134 @@ export type MetricView = {
 export type MetricsView = { period_start: string; period_end: string; metrics: MetricView[] };
 
 export type SnapshotView = MetricsView & { id: string; trigger: string; taken_at: string };
+
+// Handover Copilot (relay.intelligence.copilot)
+export type AnswerView = {
+  id: string;
+  question: string;
+  answer: string;
+  mode: "ai" | "search" | "not_found";
+  confidence: Confidence | null;
+  note: string | null;
+  asked_by: string;
+  asked_at: string;
+  capsule_version: number;
+  evidence: EvidenceView[];
+  withdrawn_sources: number;
+};
+
+// "What if?" simulator (relay.continuity.simulation)
+export type SimulationCover = "covered" | "covered_by_backup" | "uncovered";
+export type SimulationHolder = { name: string; role: string; kind: "person" | "team" };
+export type SimulatedResponsibility = {
+  responsibility_id: string;
+  name: string;
+  criticality: Criticality;
+  role: Role;
+  cover: SimulationCover;
+  covered_by: SimulationHolder | null;
+  remaining_holders: SimulationHolder[];
+  knowledge_total: number;
+  knowledge_stale: number;
+  single_holder_after: boolean;
+};
+export type SimulationOpenWork = {
+  source: "Relay task" | "GitHub" | "Linear";
+  title: string;
+  url: string | null;
+  responsibility_name: string | null;
+};
+export type ExposedRisk = {
+  kind: "uncovered" | "single_holder" | "undocumented" | "stale_knowledge";
+  severity: Severity;
+  responsibility_id: string;
+  responsibility_name: string;
+  detail: string;
+};
+export type SimulationPersonRef = { id: string; name: string; title: string | null };
+export type SimulationRiskRef = {
+  key: string;
+  title: string;
+  severity: Severity;
+  status: string;
+  subject: string | null;
+};
+export type SimulationView = {
+  person: SimulationPersonRef;
+  backup: SimulationPersonRef | null;
+  affected_responsibilities: SimulatedResponsibility[];
+  covered_by_backup: string[];
+  uncovered_responsibilities: string[];
+  orphaned_knowledge_count: number;
+  open_work_without_cover: SimulationOpenWork[];
+  open_work_total: number;
+  existing_risks: SimulationRiskRef[];
+  exposed_risks: ExposedRisk[];
+  baseline_score: number;
+  readiness_score: number;
+  score_basis: string;
+  backup_load: { current_responsibilities: number; would_take_over: number } | null;
+  simulated_at: string;
+};
+
+// Project Memory Replay (relay.catalog.timeline, relay.intelligence.memory)
+export type TimelineCategory =
+  | "implementation"
+  | "bug_fix"
+  | "incident"
+  | "documentation"
+  | "technical_change"
+  | "decision"
+  | "ownership_change";
+export type TimelineEvent = {
+  id: string;
+  occurred_at: string;
+  category: TimelineCategory;
+  category_basis: "label" | "title" | "record" | "default";
+  title: string;
+  summary: string;
+  significance: Severity;
+  source_system: "Relay" | "GitHub" | "Linear" | "Notion";
+  source_url: string | null;
+  actor: string | null;
+  uncertainty_level: "factual";
+  linked_events: string[];
+};
+export type TimelineView = {
+  responsibility_id: string;
+  responsibility_name: string;
+  events: TimelineEvent[];
+  total: number;
+  counts: Record<TimelineCategory, number>;
+  truncated: boolean;
+  sources: SourceStatus[];
+  first_at: string | null;
+  last_at: string | null;
+};
+export type NarrativeChapter = {
+  title: string;
+  summary: string;
+  why_it_matters: string;
+  confidence: Confidence;
+  uncertainty_level: "inferred";
+  event_ids: string[];
+  started_at: string;
+  ended_at: string;
+};
+export type NarrativeView = {
+  responsibility_id: string;
+  state: "ready" | "empty" | "unavailable";
+  reason: string | null;
+  overview: string | null;
+  overview_event_ids: string[];
+  chapters: NarrativeChapter[];
+  links: {
+    from_event: string;
+    to_event: string;
+    relation: string;
+    uncertainty_level: "inferred";
+  }[];
+  events_considered: number;
+  rejected: number;
+  generated_at: string;
+};

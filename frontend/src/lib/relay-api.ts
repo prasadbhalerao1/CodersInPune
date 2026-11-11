@@ -5,6 +5,11 @@ import { connection } from "next/server";
 
 import type {
   AiAdminView,
+  AnswerView,
+  NarrativeView,
+  SimulationView,
+  TimelineCategory,
+  TimelineView,
   AnalysisView,
   CapsuleSummary,
   CapsuleVersionView,
@@ -321,6 +326,28 @@ export const api = {
     relayFetch<CapsuleView>(
       withQuery(`${ws(id)}/ai/capsules/${capsuleId}`, { version: version?.toString() }),
     ),
+  capsuleQuestions: (id: string, capsuleId: string) =>
+    relayFetch<AnswerView[]>(`${ws(id)}/ai/capsules/${capsuleId}/questions`),
+  askCapsule: (id: string, capsuleId: string, question: string) =>
+    relayFetch<AnswerView>(`${ws(id)}/ai/capsules/${capsuleId}/questions`, {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }),
+  simulation: (id: string, personId: string, backupId?: string) =>
+    relayFetch<SimulationView>(
+      withQuery(`${ws(id)}/simulation`, { person_id: personId, backup_id: backupId }),
+    ),
+  timeline: (id: string, responsibilityId: string, category?: TimelineCategory) =>
+    relayFetch<TimelineView>(
+      withQuery(`${ws(id)}/responsibilities/${responsibilityId}/timeline`, {
+        category,
+        limit: "500",
+      }),
+    ),
+  narrateTimeline: (id: string, responsibilityId: string) =>
+    relayFetch<NarrativeView>(`${ws(id)}/responsibilities/${responsibilityId}/timeline/narrative`, {
+      method: "POST",
+    }),
   capsuleVersions: (id: string, capsuleId: string) =>
     relayFetch<CapsuleVersionView[]>(`${ws(id)}/ai/capsules/${capsuleId}/versions`),
   aiOverview: (id: string) => relayFetch<AiAdminView>(`${ws(id)}/ai`),
