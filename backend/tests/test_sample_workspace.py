@@ -96,6 +96,11 @@ async def test_sample_powers_the_round_three_features(api: Api) -> None:
         assert response.status_code == 200, response.text
         return response.json()
 
+    # The owner is the recipient of an approved handover: My Work leads with it.
+    handovers = (await get("/my-work"))["handovers"]
+    assert [(h["case_title"], h["status"]) for h in handovers] == [
+        ("Arjun Rao is leaving Platform", "approved")
+    ]
     resps = {r["name"]: r["id"] for r in await get("/responsibilities")}
     timeline = await get(f"/responsibilities/{resps['Production deployments']}/timeline")
     categories = {e["category"] for e in timeline["events"]}
@@ -110,4 +115,6 @@ async def test_sample_powers_the_round_three_features(api: Api) -> None:
         f"/simulation?person_id={people['Arjun Rao']}&backup_id={people['Dev Patel']}"
     )
     assert covered["uncovered_responsibilities"] == []
+    # Work in a responsibility the backup now covers is no longer stalled.
+    assert {w["source"] for w in covered["open_work_without_cover"]} == {"Relay task"}
     assert covered["readiness_score"] > alone["readiness_score"]

@@ -233,7 +233,7 @@ async def simulate(
         w
         for w in open_work
         if w.responsibility_name is None
-        or any(s.name == w.responsibility_name and s.cover != "covered" for s in affected)
+        or any(s.name == w.responsibility_name and s.cover == "uncovered" for s in affected)
     ]
     backup_load = None
     if backup is not None:

@@ -401,6 +401,17 @@ class ReviewView(BaseModel):
     responsibility_name: str
 
 
+class HandoverForMe(BaseModel):
+    """An approved handover capsule addressed to me, on a case still in progress."""
+
+    capsule_id: uuid.UUID
+    case_id: uuid.UUID
+    case_title: str
+    status: str  # approved (awaiting my acknowledgement) | acknowledged
+    version: int
+    updated_at: datetime
+
+
 class MyWorkView(BaseModel):
     emergencies: list[CaseSummary]
     tasks: list[TaskView]
@@ -411,6 +422,7 @@ class MyWorkView(BaseModel):
     # Tasks where someone asked me a question, and my recently completed tasks.
     needs_input: list[TaskView] = []
     completed: list[TaskView] = []
+    handovers: list[HandoverForMe] = []
 
 
 # ---------------------------------------------------------------- helpers
@@ -2004,6 +2016,7 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
     seen = {k.id for k in stale}
     stale += [k for k in await knowledge.stewarded_for_review(access) if k.id not in seen]
     return MyWorkView(
+        handovers=await _handovers_for_me(access),
         emergencies=await _summaries(access, emergencies),
         tasks=await task_views(access, tasks, names, case_titles=titles),
         needs_input=await task_views(access, [t for t, _ in asked], names, case_titles=titles),
@@ -2031,3 +2044,34 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
             for k in stale[:20]
         ],
     )
+
+
+async def _handovers_for_me(access: WorkspaceAccess) -> list[HandoverForMe]:
+    """Handovers addressed to me that are approved: the first thing a recipient needs."""
+    from relay.intelligence.models import Capsule  # local: intelligence imports this module
+
+    if not role_allows(access.role, Permission.AI_READ):
+        return []
+    rows = await access.session.execute(
+        select(Capsule, ContinuityCase.title)
+        .join(ContinuityCase, ContinuityCase.id == Capsule.case_id)
+        .where(
+            visible(access, Permission.CASE_READ, ContinuityCase.tenant_id),
+            Capsule.recipient_user_id == access.user_id,
+            Capsule.status.in_(("approved", "acknowledged")),
+            ContinuityCase.status.in_(OPEN_STATUSES),
+        )
+        .order_by(Capsule.status, Capsule.updated_at.desc())
+        .limit(10)
+    )
+    return [
+        HandoverForMe(
+            capsule_id=c.id,
+            case_id=c.case_id,
+            case_title=title,
+            status=c.status,
+            version=c.current_version,
+            updated_at=c.updated_at,
+        )
+        for c, title in rows
+    ]
