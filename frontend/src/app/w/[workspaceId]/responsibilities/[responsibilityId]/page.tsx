@@ -1,3 +1,4 @@
+import { History } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -81,30 +82,39 @@ export default async function ResponsibilityPage({
       <PageHeader
         title={r.name}
         actions={
-          canManage(workspace.data) ? (
-            <>
-              {r.status === "active" ? (
-                <Link
-                  href={`${base}/edit`}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
+          <>
+            <Link
+              href={`${base}/timeline`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <History aria-hidden />
+              Memory replay
+            </Link>
+            {canManage(workspace.data) ? (
+              <>
+                {r.status === "active" ? (
+                  <Link
+                    href={`${base}/edit`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    Edit
+                  </Link>
+                ) : null}
+                <ActionForm
+                  action={setResponsibilityStatusAction.bind(
+                    null,
+                    workspaceId,
+                    responsibilityId,
+                    r.status === "active" ? "archive" : "restore",
+                  )}
                 >
-                  Edit
-                </Link>
-              ) : null}
-              <ActionForm
-                action={setResponsibilityStatusAction.bind(
-                  null,
-                  workspaceId,
-                  responsibilityId,
-                  r.status === "active" ? "archive" : "restore",
-                )}
-              >
-                <SubmitButton variant="ghost" size="sm" pendingLabel="…">
-                  {r.status === "active" ? "Archive" : "Restore"}
-                </SubmitButton>
-              </ActionForm>
-            </>
-          ) : null
+                  <SubmitButton variant="ghost" size="sm" pendingLabel="…">
+                    {r.status === "active" ? "Archive" : "Restore"}
+                  </SubmitButton>
+                </ActionForm>
+              </>
+            ) : null}
+          </>
         }
       />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
