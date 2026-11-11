@@ -161,6 +161,11 @@ export const api = {
       body: JSON.stringify({ name }),
       headers: { "Idempotency-Key": idempotencyKey },
     }),
+  createSampleWorkspace: (idempotencyKey: string) =>
+    relayFetch<WorkspaceView>("/workspaces/sample", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+    }),
 
   syncMyProfile: (displayName: string | undefined, email: string | undefined) =>
     relayFetch<void>("/me/profile", {

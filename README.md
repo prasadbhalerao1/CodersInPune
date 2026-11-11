@@ -10,6 +10,27 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 - **Live Deployment**: [https://relay-continuity-nine.vercel.app](https://relay-continuity-nine.vercel.app)
 - **Project Dossier (PDF)**: [`artifacts/Relay_Project_Overview_Round2.pdf`](artifacts/Relay_Project_Overview_Round2.pdf) (Round 2 publication build)
 
+## For judges: try it in five minutes
+
+**On the live deployment (no setup):**
+
+1. Open <https://relay-continuity-nine.vercel.app> and sign in (any email; WorkOS sends a code).
+   The API runs on a free Render instance: the first request after a quiet period can take
+   about 40 seconds while it wakes up.
+2. On **Workspaces**, click **Create sample workspace**. Relay builds "Northwind Labs (demo)",
+   a fictional organisation with responsibilities, coverage gaps, an active departure and an
+   approved handover addressed to you. All data is synthetic.
+3. Walk the core workflow: **Overview** (continuity risks) → **Cases** → the departure case
+   (scope, tasks, blocker, AI analysis with cited evidence) → **Handover capsule** →
+   acknowledge it. [docs/demo-script.md](docs/demo-script.md) has the full click path.
+4. To use your own data, create an empty workspace and open **Integrations** to connect
+   GitHub, Linear or Notion.
+
+**Locally from this repository:** follow [Local development](#local-development) and
+[WorkOS setup](#workos-setup-development), sign in, then either click **Create sample
+workspace** or run `uv run relay-demo-seed --owner <your WorkOS user id>` in `backend/`.
+GitHub, Linear and Notion are optional; each needs its own app credentials (see below).
+
 ## Documentation
 
 | Doc | What's in it |

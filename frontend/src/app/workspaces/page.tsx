@@ -5,6 +5,7 @@ import { ApiErrorNotice } from "@/components/api-error-notice";
 import { api, RelayApiError } from "@/lib/relay-api";
 
 import { CreateWorkspaceForm } from "./create-workspace-form";
+import { SampleWorkspaceForm } from "./sample-workspace-form";
 
 export default function WorkspacesPage() {
   return (
@@ -55,6 +56,7 @@ async function WorkspaceList() {
         </ul>
       )}
       <CreateWorkspaceForm idempotencyKey={crypto.randomUUID()} />
+      <SampleWorkspaceForm idempotencyKey={crypto.randomUUID()} />
     </>
   );
 }

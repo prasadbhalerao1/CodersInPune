@@ -16,6 +16,7 @@ from relay.catalog import api as catalog_api
 from relay.catalog import assets_api, knowledge_api
 from relay.config import Settings
 from relay.continuity import api as continuity_api
+from relay.demo import api as demo_api
 from relay.directory import api as directory_api
 from relay.identity import members_api, profile
 from relay.identity.tokens import WorkOSTokenVerifier
@@ -135,6 +136,7 @@ def create_app(
     app.add_exception_handler(PermissionDenied, _handle_permission_denied)
     app.include_router(health.router)
     app.include_router(integrations_api.router)
+    app.include_router(demo_api.router)  # before `workspaces` so /sample is not an id
     app.include_router(workspaces.router)
     app.include_router(catalog_api.router)
     app.include_router(assets_api.router)

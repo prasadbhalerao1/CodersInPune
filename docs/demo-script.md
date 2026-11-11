@@ -12,6 +12,11 @@ Everything shown is fictional.
 
 ## Setup (once)
 
+**On the live deployment:** sign in at https://relay-continuity-nine.vercel.app, then click
+**Create sample workspace** on the Workspaces page. Skip to section 1.
+
+**Locally:**
+
 ```sh
 docker compose up -d --wait
 cd backend && uv run alembic upgrade head
@@ -20,7 +25,8 @@ uv run relay-worker         # terminal 2
 cd ../frontend && pnpm build && pnpm start   # terminal 3
 ```
 
-1. Sign in at `http://localhost:3000` and copy your WorkOS user ID. It's on your profile, or in the `sub` of the access token.
+1. Sign in at `http://localhost:3000` and click **Create sample workspace**, or seed from the
+   command line: copy your WorkOS user ID. It's on your profile, or in the `sub` of the access token.
 2. Seed the demo organisation:
 
    ```sh

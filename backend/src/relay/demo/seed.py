@@ -1,9 +1,11 @@
 """Seed a synthetic demo organisation: `uv run relay-demo-seed --owner <workos_user_id>`.
 
-Creates a NEW workspace ("Northwind Labs (demo)") each run, so it never touches real data,
-and drives the real services (rules, audit, outbox) as synthetic members where a second
-person is needed. Everything is fictional; no credentials are stored: the connector rows
-exist only to demonstrate health states and are never synced.
+Also used by `POST /workspaces/sample` (relay.demo.api) so a new user can explore Relay
+without connecting real sources. Creates a NEW workspace ("Northwind Labs (demo)") each
+run, so it never touches real data, and drives the real services (rules, audit, outbox)
+as synthetic members where a second person is needed. Everything is fictional; no
+credentials are stored: the connector rows exist only to demonstrate health states and
+are never synced.
 
 What it sets up (SRS Appendix A/B):
 - 2 departments, 3 teams, 8 people, 8 synthetic members (owner + 7 who can't sign in)
@@ -40,9 +42,11 @@ from relay.integrations.linear.models import LinearConnection, LinearIdentity
 from relay.intelligence import capsules, interviews, runs
 from relay.jobs.app import create_job_app
 from relay.platform import workspaces
+from relay.platform.workspaces import WorkspaceView
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 
 NOW = datetime.now(UTC)
+SAMPLE_NAME = "Northwind Labs (demo)"
 DOMAIN = "northwind.example"  # reserved for documentation: never a real mailbox
 MEMBERS = {  # synthetic member id -> (role, display name)
     "demo_maya": ("admin", "Maya Chen"),
@@ -68,15 +72,29 @@ async def seed(owner: str) -> uuid.UUID:
     jobs = create_job_app(settings, factory)
     try:
         async with jobs.open_async():
-            return await _seed(owner, settings, factory, jobs)
+            workspace, _ = await seed_workspace(owner, settings, factory, jobs)
+            return workspace.id
     finally:
         await engine.dispose()
 
 
-async def _seed(owner: str, settings: Settings, factory, jobs: procrastinate.App) -> uuid.UUID:  # type: ignore[no-untyped-def]
-    ws, _ = await workspaces.create_workspace(
-        factory, jobs, _identity(owner), "Northwind Labs (demo)", f"demo-{uuid.uuid7()}"
+async def seed_workspace(  # type: ignore[no-untyped-def]
+    owner: str,
+    settings: Settings,
+    factory,
+    jobs: procrastinate.App,
+    idempotency_key: str | None = None,
+) -> tuple[WorkspaceView, bool]:
+    """Create and populate a sample workspace owned by `owner`.
+
+    Returns (workspace, created). Replaying the same idempotency key returns the original
+    workspace without seeding it a second time.
+    """
+    ws, created = await workspaces.create_workspace(
+        factory, jobs, _identity(owner), SAMPLE_NAME, idempotency_key or f"demo-{uuid.uuid7()}"
     )
+    if not created:
+        return ws, False
     tenant = ws.id
     users: dict[str, uuid.UUID] = {}
     for sub, (role, name) in MEMBERS.items():
@@ -122,7 +140,7 @@ async def _seed(owner: str, settings: Settings, factory, jobs: procrastinate.App
         )
     async with open_workspace_access(factory, _identity("demo_maya"), tenant) as maya:
         await capsules.approve(maya, capsule.id)
-    return tenant
+    return ws, True
 
 
 async def _owner_id(access: WorkspaceAccess) -> uuid.UUID:
