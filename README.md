@@ -6,33 +6,79 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 
 ## Demo
 
+- **Judges: start here →** [step-by-step walkthrough](#for-judges)
 - **Walkthrough Video**: [`artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4`](artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4) (1080p master recording)
 - **Live Deployment**: [https://relay-continuity-nine.vercel.app](https://relay-continuity-nine.vercel.app)
 - **Project Dossier (PDF)**: [`artifacts/Relay_Project_Overview_Round2.pdf`](artifacts/Relay_Project_Overview_Round2.pdf) (Round 2 publication build)
 
-## For judges: try it in five minutes
+## For judges
 
-**On the live deployment (no setup):**
+**Live product:** <https://relay-continuity-nine.vercel.app> · **No setup needed.** Every step
+below starts from that link and only uses buttons you can see. Allow about ten minutes.
 
-1. Open <https://relay-continuity-nine.vercel.app> and sign in (any email; WorkOS sends a code).
-   The API runs on a free Render instance: the first request after a quiet period can take
-   about 40 seconds while it wakes up.
-2. On **Workspaces**, click **Create sample workspace**. Relay builds "Northwind Labs (demo)",
-   a fictional organisation with responsibilities, coverage gaps, an active departure and an
-   approved handover addressed to you. All data is synthetic.
-3. Walk the core workflow: **Overview** (continuity risks) → **Cases** → the departure case
-   (scope, tasks, blocker, AI analysis with cited evidence) → **Handover capsule** →
-   acknowledge it. [docs/demo-script.md](docs/demo-script.md) has the full click path.
-4. Try the three Round 3 improvements ([what was delivered and how it is tested](docs/round3/improvements-delivered.md)):
-   - **What-if simulator** (sidebar): choose Arjun Rao, run, then add Dev Patel as backup.
-   - **Memory replay**: Responsibilities → Production deployments → Memory replay →
-     Replay history, then Explain this history.
-   - **Ask about this handover**: on your handover capsule, ask how to deploy payments-api.
-5. To use your own data, create an empty workspace and open **Integrations** to connect
-   GitHub, Linear or Notion.
+> The API runs on a free server that sleeps when idle: the first page after a quiet period
+> can take up to a minute. After that it is fast.
 
-**Locally from this repository:** see [Run it yourself](#run-it-yourself) below: two
-commands after a two-minute WorkOS sign-up.
+### 1. Get in (1 minute)
+
+1. Open <https://relay-continuity-nine.vercel.app> and click **Go to your workspaces**.
+2. Sign in with any email address. WorkOS emails you a one-time code; Relay never sees a
+   password.
+3. On **Workspaces**, click **Create sample workspace**. In a few seconds you are inside
+   *Northwind Labs (demo)*: eight fictional people, seven responsibilities, a year of
+   GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving. All of it is
+   synthetic.
+
+**Look for:** the Overview leads with *A handover is waiting for you*, a continuity-health
+ring, and the gaps that would hurt if someone left tomorrow.
+
+### 2. Understand the past: Project Memory Replay (3 minutes)
+
+1. In the sidebar, click **Responsibilities**, then **Production deployments**.
+2. Click **Memory replay** (top right).
+3. Press **Replay history** and watch the project evolve event by event; use the category
+   chips to filter (try **Incident**).
+4. Click **Explain this history**. The AI groups events into chapters on the time axis.
+5. Click **Inspect** on any event, then ask *"Why does every payments-api deploy need a
+   canary?"* under **Ask about this history**.
+
+**Look for:** every event is a **Fact** with its source; chapters are labelled
+**Inferred** and cite the events they rest on; the answer cites the outage and the decision.
+
+### 3. Simulate the future: What If? (2 minutes)
+
+1. Click **People & Teams**, then **Arjun Rao**, then **What if Arjun is unavailable?**
+2. Set **is unavailable for** to *2 weeks* and click **Run simulation**.
+3. Open **Why it is affected** under *Production deployments*.
+4. Scroll to **Who could cover?** and click **Simulate with Dev**.
+
+**Look for:** deployments are left with nobody, readiness is 55/100, one task falls due
+while he is away; Dev (the planned recipient) closes the gap and readiness rises. A banner
+confirms nothing in the workspace was changed.
+
+### 4. Execute a safer handover: Handover Copilot (3 minutes)
+
+1. Go back to **Overview** and click **Open handover**.
+2. Read the brief: *What you now own*, *Knowledge gaps and open questions*, *Risks and
+   conflicts*, *Recommended first steps*. Expand any **sources** link to see the evidence.
+3. In **Ask about this handover**, ask *"How should I deploy payments-api?"*, then ask
+   something the evidence cannot answer, such as *"What is the AWS root password recovery
+   process?"*
+4. Click **Open memory replay** under *Where this work came from*, then come back and click
+   **Acknowledge receipt**.
+
+**Look for:** the answer cites its sources and points out the conflicting old runbook; the
+second question gets *Not in the evidence* instead of an invented answer.
+
+### 5. Optional
+
+- **Your own data:** create an empty workspace and open **Integrations** to connect GitHub,
+  Linear or Notion (read-only).
+- **The code:** [docs/round3/improvements-delivered.md](docs/round3/improvements-delivered.md)
+  maps every Round 3 commitment to its code and tests;
+  [docs/demo-script.md](docs/demo-script.md) is the full scripted demo.
+- **Run it locally:** see [Run it yourself](#run-it-yourself): two commands after a free
+  WorkOS sign-up.
 
 ## Run it yourself
 
