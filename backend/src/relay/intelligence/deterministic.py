@@ -48,7 +48,7 @@ def analyse(pool: Pool) -> list[ValidClaim]:
     for r in by_kind.get("responsibility", []):
         f = r.facts
         rid = f["responsibility_id"]
-        claims.append(_claim(pool, "finding", "direct_fact", f"{r.title}: {r.excerpt[:280]}", [r]))
+        claims.append(_claim(pool, "finding", "direct_fact", _ownership_fact(r), [r]))
         if not f["recipient"] and not f["exception"]:
             claims.append(
                 _claim(pool, "missing", "rule", f"No one is planned to take over {r.title}.", [r])
@@ -130,3 +130,18 @@ def analyse(pool: Pool) -> list[ValidClaim]:
     for a in by_kind.get("approval", []):
         claims.append(_claim(pool, "decision", "human_decision", a.excerpt[:400], [a], a.source_ts))
     return claims
+
+
+def _ownership_fact(r: PoolItem) -> str:
+    """One readable sentence from the responsibility's recorded facts."""
+    f = r.facts
+    held = f.get("owners") or "nobody"
+    handover = (
+        f"It goes to {f['recipient']} in this handover"
+        if f.get("recipient")
+        else "No recipient is chosen yet"
+    )
+    notes = f" Notes: {f['notes']}" if f.get("notes") else ""
+    return (
+        f"{r.title} ({f['criticality']} criticality) is held today by {held}. {handover}.{notes}"
+    )[:600]

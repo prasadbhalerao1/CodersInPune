@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { Walkthrough } from "@/components/landing/walkthrough";
+import { RelayLines } from "@/components/brand";
 import { RelayMark } from "@/components/workspace-heading";
 
 export const metadata: Metadata = {
@@ -110,12 +111,17 @@ export default function HomePage() {
             aria-hidden
             className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)] [background-size:44px_44px] opacity-60"
           />
-          <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 pt-20 pb-16 sm:px-6 sm:pt-28">
-            <p className="text-muted-foreground rounded-full border px-3 py-1 text-xs">
+          <RelayLines
+            animated
+            className="absolute inset-y-0 right-0 hidden h-full w-[46%] lg:block"
+          />
+          <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 pt-20 pb-20 sm:px-6 sm:pt-28">
+            <p className="bg-card/80 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-xs backdrop-blur">
+              <span aria-hidden className="bg-baton size-1.5 rounded-full" />
               Organisational continuity, with evidence
             </p>
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-              When people move on, the work shouldn&apos;t stall.
+            <h1 className="font-display max-w-3xl text-5xl leading-[1.02] text-balance sm:text-7xl">
+              When people move on, <em className="text-primary">the work</em> shouldn&apos;t stall.
             </h1>
             <p className="text-muted-foreground max-w-2xl text-lg text-pretty">
               Relay finds everything someone owns, rebuilds the context from the tools you already
@@ -134,8 +140,11 @@ export default function HomePage() {
 
         <section className="border-b">
           <div className="mx-auto grid max-w-6xl gap-px overflow-hidden px-4 py-12 sm:grid-cols-3 sm:px-6">
-            {PROBLEMS.map((p) => (
+            {PROBLEMS.map((p, i) => (
               <div key={p.stat} className="flex flex-col gap-1 p-4">
+                <p className="font-display text-baton-foreground/70 dark:text-baton text-3xl">
+                  0{i + 1}
+                </p>
                 <p className="text-sm font-semibold">{p.stat}</p>
                 <p className="text-muted-foreground text-sm">{p.text}</p>
               </div>
@@ -146,7 +155,7 @@ export default function HomePage() {
         <section id="how" className="scroll-mt-16 border-b">
           <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-20 sm:px-6">
             <div className="max-w-2xl">
-              <h2 className="text-3xl font-semibold tracking-tight">
+              <h2 className="font-display text-4xl tracking-tight">
                 From a change to a reviewed handover
               </h2>
               <p className="text-muted-foreground mt-2">
@@ -159,7 +168,7 @@ export default function HomePage() {
 
         <section id="features" className="scroll-mt-16 border-b">
           <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-20 sm:px-6">
-            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight">
+            <h2 className="font-display max-w-2xl text-4xl tracking-tight">
               One place for who owns what, and how it moves
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -167,7 +176,7 @@ export default function HomePage() {
                 <div
                   key={f.title}
                   tabIndex={0}
-                  className="group hover:border-foreground/30 focus-visible:border-foreground/30 flex flex-col gap-2 rounded-xl border p-5 transition-colors outline-none"
+                  className="group bg-card lift hover:border-primary/30 focus-visible:border-primary/30 flex flex-col gap-2 rounded-xl border p-5 shadow-xs outline-none"
                 >
                   <p className="font-medium">{f.title}</p>
                   <p className="text-muted-foreground text-sm">{f.text}</p>
@@ -183,7 +192,7 @@ export default function HomePage() {
         <section id="trust" className="scroll-mt-16 border-b">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.4fr]">
             <div>
-              <h2 className="text-3xl font-semibold tracking-tight">Built to be trusted with it</h2>
+              <h2 className="font-display text-4xl tracking-tight">Built to be trusted with it</h2>
               <p className="text-muted-foreground mt-2">
                 Continuity data is sensitive. Relay is designed so the safe path is the only path.
               </p>
@@ -201,7 +210,7 @@ export default function HomePage() {
 
         <section>
           <div className="mx-auto flex max-w-6xl flex-col items-start gap-5 px-4 py-20 sm:px-6">
-            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight">
+            <h2 className="font-display max-w-2xl text-4xl tracking-tight">
               Start with one handover. Keep the habit.
             </h2>
             <Suspense fallback={null}>

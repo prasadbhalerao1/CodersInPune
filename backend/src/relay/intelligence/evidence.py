@@ -188,6 +188,9 @@ async def build_pool(access: WorkspaceAccess, case: ContinuityCase) -> Pool:
                 "recipient": recipient,
                 "scope_role": item.role,
                 "exception": bool(item.exception_reason),
+                # Plain-language pieces for the rule-based brief (no model involved).
+                "owners": ", ".join(f"{holder(o)} ({o.role.replace('_', '-')})" for o in current),
+                "notes": item.handover_notes or "",
             },
         )
 
