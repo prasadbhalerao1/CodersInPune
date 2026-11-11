@@ -11,7 +11,7 @@ cover counts 60%, usable (non-stale) knowledge 25%, and a second holder remainin
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from pydantic import BaseModel
@@ -19,14 +19,20 @@ from sqlalchemy import ColumnElement, and_, func, or_, select
 
 from relay.catalog.knowledge import readable as knowledge_readable
 from relay.catalog.knowledge import review_cutoff
-from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
-from relay.continuity.models import OPEN_STATUSES, CaseTask, ContinuityCase
+from relay.catalog.models import (
+    Asset,
+    KnowledgeItem,
+    OwnershipAssignment,
+    Responsibility,
+    ResponsibilityAsset,
+)
+from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, CaseTask, ContinuityCase
 from relay.directory.models import Person, Team, TeamMember
 from relay.directory.profiles import RiskRef, _member_user, _risks
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations.audience import linear_issue_shared, shared
 from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
-from relay.integrations.linear.models import LinearIdentity, LinearIssue
+from relay.integrations.linear.models import LinearIdentity, LinearIssue, LinearProject
 from relay.policy.permissions import Permission, authorize, visible
 from relay.shared.errors import ApiError
 
@@ -59,6 +65,9 @@ class SimulatedResponsibility(BaseModel):
     knowledge_total: int
     knowledge_stale: int
     single_holder_after: bool
+    assets: list[str] = []  # what it stewards: assets are reached through responsibilities
+    # Why it is affected and how exposed it is, each read from a record (no inference).
+    reasons: list[str] = []
 
 
 class OpenWork(BaseModel):
@@ -66,6 +75,8 @@ class OpenWork(BaseModel):
     title: str
     url: str | None
     responsibility_name: str | None = None
+    due_at: datetime | None = None
+    due_in_window: bool = False  # falls due while the person is away
 
 
 class ExposedRisk(BaseModel):
@@ -103,6 +114,27 @@ class SimulationView(BaseModel):
     score_basis: str
     backup_load: BackupLoad | None
     simulated_at: datetime
+    days: int | None = None  # how long the person is away, if given
+    affected_assets: list[str] = []
+    due_in_window: int = 0
+
+
+class Candidate(BaseModel):
+    person: PersonRef | None  # None: nobody steps in
+    signals: list[str]  # deterministic reasons this person could cover; no scores
+    covered: int  # affected responsibilities someone would hold
+    total: int
+    critical_gaps: int  # critical or high responsibilities left with nobody
+    knowledge_gaps: int  # affected responsibilities with no usable knowledge
+    remaining_risks: int
+    readiness_score: int
+    load_after: int | None  # responsibilities they would hold, including the takeover
+
+
+class CandidatesView(BaseModel):
+    person: PersonRef
+    candidates: list[Candidate]
+    basis: str
 
 
 async def _person(access: WorkspaceAccess, person_id: uuid.UUID, what: str) -> Person:
@@ -146,7 +178,10 @@ async def _team_members(
 
 
 async def simulate(
-    access: WorkspaceAccess, person_id: uuid.UUID, backup_id: uuid.UUID | None = None
+    access: WorkspaceAccess,
+    person_id: uuid.UUID,
+    backup_id: uuid.UUID | None = None,
+    days: int | None = None,
 ) -> SimulationView:
     authorize(access, Permission.CONTINUITY_SIMULATE)
     session, now = access.session, datetime.now(UTC)
@@ -226,9 +261,13 @@ async def simulate(
         )
 
     await _knowledge_counts(access, affected)
+    await _explain(access, affected, person.display_name, now)
     affected.sort(key=lambda s: (-WEIGHT.get(s.criticality, 1), s.cover != "uncovered", s.name))
     exposed = _exposed(affected)
     open_work = await _open_work(access, person, set(responsibility_ids))
+    until = now + timedelta(days=days) if days else None
+    for w in open_work:
+        w.due_in_window = bool(until and w.due_at and w.due_at <= until)
     without_cover = [
         w
         for w in open_work
@@ -266,6 +305,9 @@ async def simulate(
         score_basis=SCORE_BASIS,
         backup_load=backup_load,
         simulated_at=now,
+        days=days,
+        affected_assets=sorted({a for s in affected for a in s.assets}),
+        due_in_window=sum(1 for w in open_work if w.due_in_window),
     )
 
 
@@ -392,8 +434,8 @@ async def _open_work(
     work: list[OpenWork] = []
     user_id = await _member_user(access, person)
     if user_id is not None:
-        for title, case_title in await session.execute(
-            select(CaseTask.title, ContinuityCase.title)
+        for title, case_title, due_at in await session.execute(
+            select(CaseTask.title, ContinuityCase.title, CaseTask.due_at)
             .join(ContinuityCase, ContinuityCase.id == CaseTask.case_id)
             .where(
                 visible(access, Permission.CASE_READ, CaseTask.tenant_id),
@@ -404,7 +446,11 @@ async def _open_work(
             .order_by(CaseTask.due_at.asc().nulls_last())
             .limit(MAX_OPEN_WORK)
         ):
-            work.append(OpenWork(source="Relay task", title=f"{title} ({case_title})", url=None))
+            work.append(
+                OpenWork(
+                    source="Relay task", title=f"{title} ({case_title})", url=None, due_at=due_at
+                )
+            )
     resp_names = dict(
         (
             await session.execute(
@@ -456,3 +502,210 @@ async def _open_work(
                 OpenWork(source="Linear", title=f"{issue.identifier} {issue.title}", url=issue.url)
             )
     return work
+
+
+ROLE_WORDS = {"primary": "primary owner", "co_owner": "co-owner", "backup": "backup"}
+RECENT = timedelta(days=30)
+
+
+async def _explain(
+    access: WorkspaceAccess, affected: list[SimulatedResponsibility], who: str, now: datetime
+) -> None:
+    """Assets and plain reasons per affected responsibility, read from records."""
+    if not affected:
+        return
+    session = access.session
+    ids = [s.responsibility_id for s in affected]
+    readable = Permission.RESPONSIBILITY_READ
+    assets: dict[uuid.UUID, list[str]] = {}
+    for rid, name in await session.execute(
+        select(ResponsibilityAsset.responsibility_id, Asset.name)
+        .join(Asset, Asset.id == ResponsibilityAsset.asset_id)
+        .where(
+            visible(access, readable, Asset.tenant_id),
+            ResponsibilityAsset.responsibility_id.in_(ids),
+        )
+        .order_by(Asset.name)
+    ):
+        assets.setdefault(rid, []).append(name)
+    activity: dict[uuid.UUID | None, list[str]] = {}
+    for repo_rid, repo, n in await session.execute(
+        select(GitHubRepository.responsibility_id, GitHubRepository.full_name, func.count())
+        .join(GitHubWorkItem, GitHubWorkItem.repository_id == GitHubRepository.id)
+        .where(
+            visible(access, readable, GitHubRepository.tenant_id),
+            shared(access, GitHubRepository.audience),
+            GitHubRepository.responsibility_id.in_(ids),
+            GitHubWorkItem.gh_updated_at >= now - RECENT,
+        )
+        .group_by(GitHubRepository.responsibility_id, GitHubRepository.full_name)
+    ):
+        activity.setdefault(repo_rid, []).append(
+            f"{n} pull request{'s' if n != 1 else ''} or issue{'s' if n != 1 else ''} "
+            f"active in {repo} in the last 30 days"
+        )
+    for project_rid, project, n in await session.execute(
+        select(LinearProject.responsibility_id, LinearProject.name, func.count())
+        .join(LinearIssue, LinearIssue.project_linear_id == LinearProject.linear_id)
+        .where(
+            visible(access, readable, LinearProject.tenant_id),
+            shared(access, LinearProject.audience),
+            LinearProject.removed.is_(False),
+            LinearProject.responsibility_id.in_(ids),
+            LinearIssue.state_type.notin_(("completed", "canceled")),
+        )
+        .group_by(LinearProject.responsibility_id, LinearProject.name)
+    ):
+        activity.setdefault(project_rid, []).append(
+            f"{n} open Linear issue{'s' if n != 1 else ''} in {project}"
+        )
+    for s in affected:
+        s.assets = assets.get(s.responsibility_id, [])
+        reasons = [f"{who} is {ROLE_WORDS.get(s.role, s.role)}."]
+        if s.cover == "uncovered":
+            reasons.append("Nobody else holds it.")
+        elif s.cover == "covered_by_backup" and s.covered_by:
+            reasons.append(f"Only the simulated cover, {s.covered_by.name}, would hold it.")
+        elif s.single_holder_after and s.covered_by:
+            reasons.append(f"Only {s.covered_by.name} would be left.")
+        if s.knowledge_total == 0:
+            reasons.append("No knowledge is recorded for it.")
+        elif s.knowledge_stale == s.knowledge_total:
+            reasons.append(f"All {s.knowledge_total} knowledge items are due for review.")
+        if s.assets:
+            reasons.append(f"It looks after {', '.join(s.assets)}.")
+        reasons += [f"{a}." for a in activity.get(s.responsibility_id, [])]
+        s.reasons = reasons
+
+
+CANDIDATE_BASIS = (
+    "Candidates are people already connected to the affected work: they are its planned "
+    "recipient, hold another role on it, share a team with the person, or work in the same "
+    "department. People linked to work that would otherwise have nobody come first. Each is "
+    "simulated taking over that work. No ranking model is involved."
+)
+MAX_CANDIDATES = 4
+
+
+async def candidates(
+    access: WorkspaceAccess, person_id: uuid.UUID, days: int | None = None
+) -> CandidatesView:
+    """Who could cover, by deterministic signals, each compared against nobody stepping in."""
+    authorize(access, Permission.CONTINUITY_SIMULATE)
+    session, now = access.session, datetime.now(UTC)
+    person = await _person(access, person_id, "Person")
+    baseline = await simulate(access, person_id, None, days)
+    affected_ids = [s.responsibility_id for s in baseline.affected_responsibilities]
+    gaps = set(baseline.uncovered_responsibilities)
+    signals: dict[uuid.UUID, list[str]] = {}
+    weight: dict[uuid.UUID, int] = {}
+    on_gaps: dict[uuid.UUID, int] = {}  # links to work that would otherwise have nobody
+
+    def add(pid: uuid.UUID | None, text: str, w: int, rid: uuid.UUID | None = None) -> None:
+        if pid is None or pid == person.id:
+            return
+        if text not in signals.setdefault(pid, []):
+            signals[pid].append(text)
+            weight[pid] = weight.get(pid, 0) + w
+            on_gaps[pid] = on_gaps.get(pid, 0) + (rid in gaps)
+
+    if affected_ids:
+        names = dict(
+            (
+                await session.execute(
+                    select(Responsibility.id, Responsibility.name).where(
+                        Responsibility.id.in_(affected_ids)
+                    )
+                )
+            ).all()
+        )
+        for a in await session.scalars(
+            select(OwnershipAssignment).where(
+                visible(access, Permission.RESPONSIBILITY_READ, OwnershipAssignment.tenant_id),
+                OwnershipAssignment.responsibility_id.in_(affected_ids),
+                OwnershipAssignment.person_id.is_not(None),
+                *_current(now),
+            )
+        ):
+            add(
+                a.person_id,
+                f"Already {ROLE_WORDS.get(a.role, a.role)} of {names[a.responsibility_id]}",
+                3,
+                a.responsibility_id,
+            )
+    if affected_ids:
+        for pid, rid in await session.execute(
+            select(CaseScopeItem.recipient_person_id, CaseScopeItem.responsibility_id)
+            .join(ContinuityCase, ContinuityCase.id == CaseScopeItem.case_id)
+            .where(
+                visible(access, Permission.CASE_READ, ContinuityCase.tenant_id),
+                ContinuityCase.status.in_(OPEN_STATUSES),
+                CaseScopeItem.responsibility_id.in_(affected_ids),
+                CaseScopeItem.recipient_person_id.is_not(None),
+            )
+        ):
+            add(pid, f"Planned recipient of {names[rid]} in an open handover", 4, rid)
+    my_teams = list(
+        await session.scalars(select(TeamMember.team_id).where(TeamMember.person_id == person.id))
+    )
+    if my_teams:
+        for pid, team in await session.execute(
+            select(TeamMember.person_id, Team.name)
+            .join(Team, Team.id == TeamMember.team_id)
+            .where(
+                visible(access, Permission.DIRECTORY_READ, TeamMember.tenant_id),
+                TeamMember.team_id.in_(my_teams),
+            )
+        ):
+            add(pid, f"Same team ({team})", 2)
+    if person.department_id:
+        for pid in await session.scalars(
+            select(Person.id).where(
+                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+                Person.department_id == person.department_id,
+                Person.status == "active",
+            )
+        ):
+            add(pid, "Same department", 1)
+    active = set(
+        await session.scalars(
+            select(Person.id).where(
+                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+                Person.status == "active",
+            )
+        )
+    )
+    ranked = sorted(
+        (pid for pid in signals if pid in active),
+        key=lambda pid: (-on_gaps[pid], -weight[pid], str(pid)),
+    )[:MAX_CANDIDATES]
+
+    def row(view: SimulationView, who: PersonRef | None, why: list[str]) -> Candidate:
+        affected = view.affected_responsibilities
+        load = view.backup_load
+        return Candidate(
+            person=who,
+            signals=why,
+            covered=sum(1 for s in affected if s.cover != "uncovered"),
+            total=len(affected),
+            critical_gaps=sum(
+                1
+                for s in affected
+                if s.cover == "uncovered" and s.criticality in ("critical", "high")
+            ),
+            knowledge_gaps=sum(
+                1
+                for s in affected
+                if s.knowledge_total == 0 or s.knowledge_stale == s.knowledge_total
+            ),
+            remaining_risks=len(view.exposed_risks),
+            readiness_score=view.readiness_score,
+            load_after=load.current_responsibilities + load.would_take_over if load else None,
+        )
+
+    rows = []
+    for pid in ranked:
+        view = await simulate(access, person_id, pid, days)
+        rows.append(row(view, view.backup, signals[pid]))
+    rows.append(row(baseline, None, ["Nobody steps in"]))
+    return CandidatesView(person=_ref(person), candidates=rows, basis=CANDIDATE_BASIS)

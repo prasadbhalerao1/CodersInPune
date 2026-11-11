@@ -165,3 +165,38 @@ async def test_simulation_writes_nothing(api: Api) -> None:
     assert writes == []
     after = await ws.call("GET", f"/responsibilities/{ids['deploys']}")
     assert {**after, "as_of": None} == {**before, "as_of": None}
+
+
+async def test_reasons_explain_why_each_responsibility_is_affected(api: Api) -> None:
+    ws, ids = await org(api)
+    deploys = by_name(await simulate(ws, ids["Arjun"]))["Production deployments"]
+    assert deploys["reasons"][:2] == ["Arjun is primary owner.", "Nobody else holds it."]
+    assert "No knowledge is recorded for it." in deploys["reasons"]
+
+
+async def test_duration_flags_work_due_while_away(api: Api) -> None:
+    ws, ids = await org(api)
+    view = await ws.call("GET", f"/simulation?person_id={ids['Arjun']}&days=14")
+    assert view["days"] == 14
+    assert view["due_in_window"] == 0  # no dated tasks in this organisation
+    await ws.call("GET", f"/simulation?person_id={ids['Arjun']}&days=0", 422)
+
+
+async def test_candidates_are_compared_against_nobody_stepping_in(api: Api) -> None:
+    ws, ids = await org(api)
+    view = await ws.call("GET", f"/simulation/candidates?person_id={ids['Arjun']}")
+    rows = view["candidates"]
+    assert rows[-1]["person"] is None  # the "nobody" baseline is always last
+    nobody = rows[-1]
+    assert nobody["covered"] < nobody["total"]
+    leo = next(r for r in rows if r["person"] and r["person"]["name"] == "Leo")
+    assert "Already backup of Platform on-call" in leo["signals"]
+    assert leo["covered"] == leo["total"]
+    assert leo["critical_gaps"] == 0
+    assert leo["readiness_score"] > nobody["readiness_score"]
+    assert "No ranking model" in view["basis"]
+    # Candidates are simulated too: nothing was written.
+    owners = await ws.call("GET", f"/responsibilities/{ids['deploys']}")
+    assert [a["assignee"]["name"] for a in owners["assignments"] if a["state"] == "current"] == [
+        "Arjun"
+    ]

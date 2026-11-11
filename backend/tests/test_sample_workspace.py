@@ -111,6 +111,10 @@ async def test_sample_powers_the_round_three_features(api: Api) -> None:
     alone = await get(f"/simulation?person_id={people['Arjun Rao']}")
     assert resps["Production deployments"] in alone["uncovered_responsibilities"]
     assert {w["source"] for w in alone["open_work_without_cover"]} >= {"GitHub", "Relay task"}
+    options = await get(f"/simulation/candidates?person_id={people['Arjun Rao']}&days=14")
+    top = options["candidates"][0]
+    assert top["person"]["name"] == "Dev Patel"
+    assert "Planned recipient of Production deployments in an open handover" in top["signals"]
     covered = await get(
         f"/simulation?person_id={people['Arjun Rao']}&backup_id={people['Dev Patel']}"
     )

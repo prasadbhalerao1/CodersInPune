@@ -1,4 +1,12 @@
-import { ArrowRight, ExternalLink, FlaskConical, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarClock,
+  ChevronRight,
+  ExternalLink,
+  FlaskConical,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -9,7 +17,13 @@ import { Badge, CriticalityBadge, RoleBadge, SeverityBadge } from "@/components/
 import { Button } from "@/components/ui/button";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
-import type { ExposedRisk, SimulatedResponsibility, SimulationView } from "@/lib/types";
+import { Avatar } from "@/components/visual";
+import type {
+  CandidatesView,
+  ExposedRisk,
+  SimulatedResponsibility,
+  SimulationView,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "What-if simulator" };
@@ -30,10 +44,18 @@ export default async function SimulatorPage({
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const personId = one(query.person);
   const backupId = one(query.backup);
-  const [people, result] = await Promise.all([
+  const days = one(query.days);
+  const [people, result, candidates] = await Promise.all([
     attempt(api.listPeople(workspaceId)),
-    personId ? attempt(api.simulation(workspaceId, personId, backupId)) : null,
+    personId ? attempt(api.simulation(workspaceId, personId, backupId, days)) : null,
+    personId ? attempt(api.simulationCandidates(workspaceId, personId, days)) : null,
   ]);
+  const scenario = (backup?: string) =>
+    `?${new URLSearchParams({
+      person: personId ?? "",
+      ...(days ? { days } : {}),
+      ...(backup ? { backup } : {}),
+    })}`;
   if (!people.ok) return <ApiErrorNotice error={people.error} />;
   const active = people.data.filter((p) => p.status === "active");
 
@@ -45,9 +67,9 @@ export default async function SimulatorPage({
       />
       <div className="flex w-full max-w-6xl flex-col gap-6 p-6">
         <Panel className="p-4">
-          <form method="get" className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]">
+          <form method="get" className="grid items-end gap-3 md:grid-cols-[1.3fr_0.8fr_1.2fr_auto]">
             <label className="flex flex-col gap-1.5 text-xs font-medium">
-              If this person became unavailable
+              What if
               <select name="person" defaultValue={personId ?? ""} required className={inputClass}>
                 <option value="" disabled>
                   Choose a person…
@@ -61,7 +83,18 @@ export default async function SimulatorPage({
               </select>
             </label>
             <label className="flex flex-col gap-1.5 text-xs font-medium">
-              …and this person stepped in as backup (optional)
+              is unavailable for
+              <select name="days" defaultValue={days ?? ""} className={inputClass}>
+                <option value="">An open-ended period</option>
+                <option value="3">3 days</option>
+                <option value="7">1 week</option>
+                <option value="14">2 weeks</option>
+                <option value="30">1 month</option>
+                <option value="90">3 months</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs font-medium">
+              and is covered by
               <select name="backup" defaultValue={backupId ?? ""} className={inputClass}>
                 <option value="">Nobody: show the raw impact</option>
                 {active
@@ -88,7 +121,12 @@ export default async function SimulatorPage({
         ) : !result.ok ? (
           <ApiErrorNotice error={result.error} />
         ) : (
-          <Results workspaceId={workspaceId} view={result.data} />
+          <>
+            <Results workspaceId={workspaceId} view={result.data} />
+            {candidates?.ok && result.data.affected_responsibilities.length > 0 ? (
+              <Candidates view={candidates.data} current={backupId} link={scenario} />
+            ) : null}
+          </>
         )}
       </div>
     </div>
@@ -130,7 +168,11 @@ function Results({ workspaceId, view }: { workspaceId: string; view: SimulationV
           label="Open work without cover"
           value={view.open_work_without_cover.length}
           tone={view.open_work_without_cover.length ? "warning" : "default"}
-          hint={`${view.orphaned_knowledge_count} knowledge items lose their keeper`}
+          hint={
+            view.days
+              ? `${view.due_in_window} due within ${view.days} days`
+              : `${view.orphaned_knowledge_count} knowledge items lose their keeper`
+          }
         />
       </div>
 
@@ -214,6 +256,12 @@ function Results({ workspaceId, view }: { workspaceId: string; view: SimulationV
                     {w.source}
                   </Badge>
                   <span className="min-w-0 flex-1 truncate">{w.title}</span>
+                  {w.due_in_window ? (
+                    <Badge tone="warning" className="gap-1">
+                      <CalendarClock aria-hidden className="size-3" />
+                      Due while away
+                    </Badge>
+                  ) : null}
                   {w.url ? (
                     <a
                       href={w.url}
@@ -305,9 +353,36 @@ function Row({ workspaceId, s }: { workspaceId: string; s: SimulatedResponsibili
         >
           {s.name}
         </Link>
-        <div className="mt-1">
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <CriticalityBadge value={s.criticality} />
+          {s.assets.map((a) => (
+            <Badge key={a} tone="muted">
+              {a}
+            </Badge>
+          ))}
         </div>
+        {s.reasons.length ? (
+          <details className="group mt-1.5 text-xs">
+            <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1 select-none">
+              <ChevronRight
+                aria-hidden
+                className="size-3 transition-transform group-open:rotate-90"
+              />
+              Why it is affected
+            </summary>
+            <ul className="text-muted-foreground mt-1 flex flex-col gap-0.5 border-l pl-3">
+              {s.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+        <Link
+          href={`/w/${workspaceId}/responsibilities/${s.responsibility_id}/timeline`}
+          className="text-primary mt-1 inline-block text-xs hover:underline"
+        >
+          See its history
+        </Link>
       </td>
       <td className="px-4 py-2.5">
         <RoleBadge value={s.role} />
@@ -341,5 +416,112 @@ function Row({ workspaceId, s }: { workspaceId: string; s: SimulatedResponsibili
         )}
       </td>
     </tr>
+  );
+}
+
+function Candidates({
+  view,
+  current,
+  link,
+}: {
+  view: CandidatesView;
+  current?: string;
+  link: (backup?: string) => string;
+}) {
+  const rows: { label: string; value: (c: CandidatesView["candidates"][number]) => string }[] = [
+    {
+      label: "Responsibilities with someone holding them",
+      value: (c) => `${c.covered} of ${c.total}`,
+    },
+    { label: "Critical or high left with nobody", value: (c) => String(c.critical_gaps) },
+    { label: "Without usable knowledge", value: (c) => String(c.knowledge_gaps) },
+    { label: "Gaps remaining", value: (c) => String(c.remaining_risks) },
+    { label: "Readiness", value: (c) => `${c.readiness_score} / 100` },
+    {
+      label: "Responsibilities they would hold",
+      value: (c) => (c.load_after === null ? "—" : String(c.load_after)),
+    },
+  ];
+  return (
+    <Section
+      title="Who could cover?"
+      description={`Each option is simulated with the same scenario. ${view.basis}`}
+    >
+      {view.candidates.length === 1 ? (
+        <p className="text-muted-foreground flex items-center gap-2 text-sm">
+          <Users aria-hidden className="size-4" />
+          Nobody is connected to this work yet: no team-mates, co-owners or backups to suggest.
+        </p>
+      ) : (
+        <Panel className="overflow-x-auto">
+          <table className="w-full min-w-[40rem] text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-muted-foreground w-56 px-4 py-3 text-left text-xs font-medium">
+                  Option
+                </th>
+                {view.candidates.map((c) => {
+                  const selected = c.person ? c.person.id === current : !current;
+                  return (
+                    <th
+                      key={c.person?.id ?? "nobody"}
+                      className={cn(
+                        "px-4 py-3 text-left align-top font-normal",
+                        selected && "bg-accent/60",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        {c.person ? <Avatar name={c.person.name} size="sm" /> : null}
+                        <span className="font-medium">
+                          {c.person ? c.person.name : "No replacement"}
+                        </span>
+                      </div>
+                      <ul className="text-muted-foreground mt-1 flex flex-col gap-0.5 text-xs">
+                        {c.signals.map((sig) => (
+                          <li key={sig}>{sig}</li>
+                        ))}
+                      </ul>
+                      {c.person && !selected ? (
+                        <Link
+                          href={link(c.person.id)}
+                          className="text-primary mt-1.5 inline-block text-xs font-medium hover:underline"
+                        >
+                          Simulate with {c.person.name.split(" ")[0]}
+                        </Link>
+                      ) : selected ? (
+                        <span className="text-accent-foreground mt-1.5 inline-block text-xs font-medium">
+                          Shown above
+                        </span>
+                      ) : null}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {rows.map((r) => (
+                <tr key={r.label}>
+                  <td className="text-muted-foreground px-4 py-2.5 text-xs">{r.label}</td>
+                  {view.candidates.map((c) => {
+                    const selected = c.person ? c.person.id === current : !current;
+                    return (
+                      <td
+                        key={c.person?.id ?? "nobody"}
+                        className={cn(
+                          "tabular px-4 py-2.5 font-medium",
+                          selected && "bg-accent/60",
+                        )}
+                      >
+                        {r.value(c)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      )}
+    </Section>
   );
 }

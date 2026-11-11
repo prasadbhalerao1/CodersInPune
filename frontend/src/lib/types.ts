@@ -1661,12 +1661,16 @@ export type SimulatedResponsibility = {
   knowledge_total: number;
   knowledge_stale: number;
   single_holder_after: boolean;
+  assets: string[];
+  reasons: string[];
 };
 export type SimulationOpenWork = {
   source: "Relay task" | "GitHub" | "Linear";
   title: string;
   url: string | null;
   responsibility_name: string | null;
+  due_at: string | null;
+  due_in_window: boolean;
 };
 export type ExposedRisk = {
   kind: "uncovered" | "single_holder" | "undocumented" | "stale_knowledge";
@@ -1699,6 +1703,25 @@ export type SimulationView = {
   score_basis: string;
   backup_load: { current_responsibilities: number; would_take_over: number } | null;
   simulated_at: string;
+  days: number | null;
+  affected_assets: string[];
+  due_in_window: number;
+};
+export type SimulationCandidate = {
+  person: SimulationPersonRef | null;
+  signals: string[];
+  covered: number;
+  total: number;
+  critical_gaps: number;
+  knowledge_gaps: number;
+  remaining_risks: number;
+  readiness_score: number;
+  load_after: number | null;
+};
+export type CandidatesView = {
+  person: SimulationPersonRef;
+  candidates: SimulationCandidate[];
+  basis: string;
 };
 
 // Project Memory Replay (relay.catalog.timeline, relay.intelligence.memory)

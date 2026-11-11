@@ -257,12 +257,26 @@ async def delete_view(access: CurrentWorkspace, view_id: uuid.UUID) -> None:
     await workflow.delete_view(access, view_id)
 
 
+Days = Annotated[int | None, Query(ge=1, le=365)]
+
+
 @router.get("/simulation")
 async def simulate(
-    access: CurrentWorkspace, person_id: uuid.UUID, backup_id: uuid.UUID | None = None
+    access: CurrentWorkspace,
+    person_id: uuid.UUID,
+    backup_id: uuid.UUID | None = None,
+    days: Days = None,
 ) -> simulation.SimulationView:
     """What if this person became unavailable? Read-only; nothing is changed."""
-    return await simulation.simulate(access, person_id, backup_id)
+    return await simulation.simulate(access, person_id, backup_id, days)
+
+
+@router.get("/simulation/candidates")
+async def simulation_candidates(
+    access: CurrentWorkspace, person_id: uuid.UUID, days: Days = None
+) -> simulation.CandidatesView:
+    """Who could cover them, each simulated and compared with nobody stepping in."""
+    return await simulation.candidates(access, person_id, days)
 
 
 @router.get("/cases/{case_id}/impact")

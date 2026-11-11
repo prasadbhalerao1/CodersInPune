@@ -1,3 +1,5 @@
+import { FlaskConical } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -64,7 +66,16 @@ function Facts({ items }: { items: [string, ReactNode][] }) {
 }
 
 /** Person, team and department detail: structure and continuity context, never performance. */
-export function Profile({ workspaceId, p }: { workspaceId: string; p: ProfileView }) {
+export function Profile({
+  workspaceId,
+  p,
+  canSimulate = false,
+}: {
+  workspaceId: string;
+  p: ProfileView;
+  /** Mirrors `continuity.simulate`: owners, admins and continuity managers. */
+  canSimulate?: boolean;
+}) {
   const base = `/w/${workspaceId}`;
   const current = p.roles.filter((r) => r.state === "current");
   const scheduled = p.roles.filter((r) => r.state === "scheduled");
@@ -79,6 +90,17 @@ export function Profile({ workspaceId, p }: { workspaceId: string; p: ProfileVie
             <span className="text-muted-foreground">/</span>
             <span className="truncate">{p.name}</span>
           </span>
+        }
+        actions={
+          canSimulate && p.kind === "person" && current.length > 0 ? (
+            <Link
+              href={`${base}/simulator?person=${p.id}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <FlaskConical aria-hidden />
+              What if {p.name.split(" ")[0]} is unavailable?
+            </Link>
+          ) : null
         }
       />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_22rem]">

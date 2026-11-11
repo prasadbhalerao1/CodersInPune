@@ -5,7 +5,12 @@ import { api } from "@/lib/relay-api";
 
 export default async function Page({ params }: PageProps<"/w/[workspaceId]/people/[personId]">) {
   const { workspaceId, personId } = await params;
-  const profile = await attempt(api.profile(workspaceId, "people", personId));
+  const [profile, workspace] = await Promise.all([
+    attempt(api.profile(workspaceId, "people", personId)),
+    attempt(api.getWorkspace(workspaceId)),
+  ]);
   if (!profile.ok) return <ApiErrorNotice error={profile.error} />;
-  return <Profile workspaceId={workspaceId} p={profile.data} />;
+  const canSimulate =
+    workspace.ok && ["owner", "admin", "continuity_manager"].includes(workspace.data.role);
+  return <Profile workspaceId={workspaceId} p={profile.data} canSimulate={canSimulate} />;
 }

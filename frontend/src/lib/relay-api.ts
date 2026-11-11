@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import type {
   AiAdminView,
   AnswerView,
+  CandidatesView,
   NarrativeView,
   SimulationView,
   TimelineCategory,
@@ -333,9 +334,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ question }),
     }),
-  simulation: (id: string, personId: string, backupId?: string) =>
+  simulation: (id: string, personId: string, backupId?: string, days?: string) =>
     relayFetch<SimulationView>(
-      withQuery(`${ws(id)}/simulation`, { person_id: personId, backup_id: backupId }),
+      withQuery(`${ws(id)}/simulation`, { person_id: personId, backup_id: backupId, days }),
+    ),
+  simulationCandidates: (id: string, personId: string, days?: string) =>
+    relayFetch<CandidatesView>(
+      withQuery(`${ws(id)}/simulation/candidates`, { person_id: personId, days }),
     ),
   timeline: (id: string, responsibilityId: string, category?: TimelineCategory) =>
     relayFetch<TimelineView>(
