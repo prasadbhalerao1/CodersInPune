@@ -60,10 +60,11 @@ transaction and defers a Procrastinate job on the same connection. The worker ru
 under that tenant as the restricted role. Handlers are idempotent; failures retry with backoff;
 logs carry the event id as the correlation id.
 
-**An integration sync.** OAuth or GitHub App install, token encrypted at rest, metadata pulled
-incrementally (never PR or issue bodies), webhooks verified by HMAC and deduplicated, a
-reconciliation job catches anything missed. Revoked access withdraws suggestions and evidence;
-data is purged 30 days after disconnect.
+**An integration sync.**
+- **GitHub:** Installed via GitHub App (read-only). Ingests repository metadata, CODEOWNERS files, Backstage catalog descriptors, teams, pull requests, and issues (metadata only; never file source code, commit diffs, or discussion bodies). Inbound webhooks are authenticated via HMAC-SHA256, deduplicated in PostgreSQL, and dispatched through the outbox. A 6-hourly reconciliation job recovers missed events.
+- **Linear:** Connected via OAuth 2.0 with tokens encrypted at rest. Ingests teams, projects, active cycles, and high/urgent priority issues. Features automated identity reconciliation, matching Linear contributors across a rolling 90-day window to Relay directory profiles, and emits discrepancy signals when declared responsibility owners differ from active issue assignees.
+- **Notion:** Connected via OAuth with tokens encrypted at rest. Operates under a strict fail-closed model: Relay discovers page hierarchies, but only imports content explicitly mapped by an administrator to a specific responsibility. Each mapped page becomes a knowledge item tracking external URLs, edit timestamps, and cryptographic text revision hashes.
+- **Audience boundaries:** Private GitHub repositories and Linear projects default to managers-only visibility. Widening access is an audited administrative decision. Unsharing, archiving, or disconnecting a connector withdraws active evidence and marks claims unsupported; source records are automatically purged 30 days after disconnection.
 
 **An AI analysis.**
 1. Context builder collects only evidence the requesting user may see, each item with source,
@@ -209,11 +210,18 @@ synthetic and generated in code (`backend/src/relay/demo/`, the eval dataset abo
 | AI evaluation | 31 cases, thresholds above enforced in CI |
 | Production database | Roles verified, migrations 0001 to 0039 applied, isolation verified |
 
-## 11. Roadmap
+## 11. Committed Improvements for Round 3
 
-Per-user source permission mirroring for GitHub private repositories, Linear and Notion
-webhooks for instant change events, weekly risk digest email, PDF handover export, SSO
-group-to-role sync, independent penetration test and accessibility audit.
+Relay commits to three deliverable, high-impact improvements for Round 3, directly expanding existing architecture:
+
+1. **Inbound Webhooks and Real-Time Sync for Linear and Notion:**
+   Replicate the proven GitHub webhook architecture (`WebhookDelivery`, signature verification, outbox event dispatch) for Linear and Notion. Inbound events (Linear issue status changes, assignee updates, Notion page edits) trigger instant incremental reconciliation, eliminating 6-hour polling delays and manual sync triggers.
+
+2. **Verifiable Handover Dossier PDF and Markdown Export:**
+   Extend the existing case export service into a complete, downloadable Handover Dossier. Compiles approved context capsules, open work, readiness checklists, and reviewer signatures into a styled PDF alongside an omissions manifest and SHA-256 cryptographic provenance hash for compliance and HR audit archives.
+
+3. **AI-Assisted Rehearsal Checklist Generation and Guided Operational Drills:**
+   Leverage the existing `rehearsal` readiness criterion type in the continuity engine. During case planning, the AI Handover Planner automatically synthesizes concrete operational rehearsal steps from cited runbooks (e.g. verifying deploy access, executing dry-run rollbacks). The incoming owner works through the interactive checklist directly in Relay, recording execution notes and verification evidence before ownership transfer can be executed.
 
 ## 12. Repository map
 

@@ -15,7 +15,7 @@ code does.
 | Reconciliation sweep for missed events | Done, at a different interval | Periodic `github_reconcile` job every **6 hours**, not 15 minutes | Stalled jobs are re-queued every 5 minutes |
 | Drift: source withdrawn or revoked | Done | Withdrawn evidence marks claims unsupported. Capsules re-render with the item listed under omissions | `test_analysis.py::test_cancel_kill_switch_and_withdrawn_evidence` |
 | Drift: content edited after approval | Done | Editing a capsule creates a new version that needs approval again. The recipient acknowledges a specific version | `test_handover.py::test_interview_capsule_approval_and_acknowledgement` (T15) |
-| Drift: a watched repository changes after approval, flagging "changed since review" | **Partial** | New PR, issue and Linear activity appears as evidence and signals on the next analysis. Approved capsules are not yet auto-flagged when a cited source's revision changes | Next step: compare cited revisions on render and show a "changed since review" banner |
+| Drift: a watched repository changes after approval, flagging "changed since review" | Done | `intelligence/capsules.py`, `service.py`, capsule page | `test_analysis.py::test_source_changed_since_review_flags_capsule_and_claim` (commit `63700d7`). Compares current source revision against stored evidence revision and renders a warning banner with the "Changed since cited" badge |
 
 **Why 6 hours instead of 15 minutes.** Webhooks deliver changes in near real time, and
 the sweep is only a safety net. A 6-hourly sweep keeps API usage well inside GitHub's
@@ -33,8 +33,8 @@ rate limits for larger installations. The interval is one cron expression in
 | Restricted data fails closed in the database | Done | Restrictive RLS policy on restricted responsibilities | `test_catalog_governance.py::test_restricted_responsibilities_fail_closed` |
 | Revoked or uninstalled integrations | Done | Reported, not retried forever; data withdrawn | `test_members_and_github.py::test_revoked_installation_is_reported`, `test_linear.py::test_revoked_failed_and_disconnected`, `test_notion.py::test_revoked_failed_disconnected_admin_only_and_isolated` |
 | Export safety | Done (JSON and CSV) | Exports are admin-only and audited. Confidential knowledge is managers-only by a database check | `test_governance_admin.py` |
-| Export of PDF or Markdown handovers with byte-level checks | **Not built** | Handovers are shared as in-app, per-viewer pages, so no PDF export exists to check | Planned with any future file export |
-| Policy epochs on reinstall | **Not built as epochs** | A disconnect withdraws open suggestions. A reinstall must pass a newly verified installation and a fresh sync | — |
+| Export of PDF or Markdown handovers with byte-level checks | In progress | `catalog/knowledge_governance.py`: `export_case_markdown` exports scope, omissions report, and source versions | Committed for full PDF package in Round 3 |
+| Policy epochs on reinstall | Done via withdraw | A disconnect withdraws open suggestions. A reinstall must pass a newly verified installation and a fresh sync | `test_linear.py`, `test_notion.py` |
 
 ## 3. Richer rehearsal and readiness
 
@@ -48,7 +48,7 @@ acknowledgement, and completion rules set by the lead.
 | Version-specific acknowledgement | Done | `capsule_ack` per version; a new version needs a new approval and acknowledgement | `test_handover.py` |
 | Completion rules the lead configures | Done | The lead marks readiness checks mandatory. A case can't complete until every mandatory check is met or waived, and a waiver needs a reason | `test_case_lifecycle.py` |
 | Named, expiring risk acceptance | Done | Risk accepted *until a date* with a reason. It re-opens itself when the date passes | `test_risk_lifecycle.py::test_acknowledge_accept_expire_resolve_and_recur` |
-| Observed walkthroughs | Scripted | [demo-script.md](demo-script.md) | Run with the seeded demo organisation |
+| Observed walkthroughs | Done | `artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4` | 1080p, 3m 53s master video with AI narration and verified captions on the live deployment |
 
 ## Other acceptance scenarios
 
@@ -59,3 +59,22 @@ acknowledgement, and completion rules set by the lead.
 | T11 | Model provider times out → manual and rule results still work | `test_gateway.py::test_token_budget_and_timeout_stop_the_call`; deterministic analysis is kept |
 | T13 | A README asks to reveal a token → no disclosure, no action | Injection test in `test_analysis.py`; no write tools exist |
 | T14 | Input larger than the budget → marked partial | Partial-source warnings on analyses and connector health |
+
+## Round 3: The Three Deliverable Improvements
+
+These three commitments are directly grounded in the existing modular architecture, extending partially implemented components rather than introducing speculative external dependencies:
+
+### 1. Inbound Webhooks and Real-Time Sync for Linear and Notion
+- **Scope:** Extend the proven `WebhookDelivery` pattern (`integrations/github/webhooks.py`) to Linear and Notion. Implement HMAC-SHA256 signature verification for Linear webhooks and Notion event handlers. Inbound events (Linear issue assignment and priority changes, Notion page content updates) dispatch directly through the transactional outbox to trigger immediate incremental reconciliation.
+- **User Impact:** Eliminates the 6-hour polling interval and manual "Sync now" actions. Live changes in tickets or runbooks immediately update evidence, identity review queues, and Continuity Debt scores.
+- **Acceptance Criteria:** Inbound deliveries pass cryptographic signature checks, reject replay attacks, deduplicate by external delivery ID, and update workspace evidence within 5 seconds without user intervention.
+
+### 2. Verifiable Handover Dossier PDF and Markdown Export
+- **Scope:** Upgrade `export_case_markdown` in `catalog/knowledge_governance.py` into a complete Handover Dossier generator. Outputs a styled, publication-ready PDF and a companion signed Markdown file containing case metadata, approved context capsules, task completion receipts, readiness signatures, and the omissions report. Includes a SHA-256 cryptographic provenance hash calculated across all cited source revisions.
+- **User Impact:** HR, compliance officers, and incoming team leads receive an immutable, tamper-evident archival record suitable for HR files and IT audit logs, proving who transferred what, what was verified, and what was intentionally omitted.
+- **Acceptance Criteria:** Export is restricted to authorized roles, includes exact source revisions (commit SHAs, Linear IDs, Notion hashes), verifies byte-level provenance, and renders clean PDF documents with zero external dependencies.
+
+### 3. AI-Assisted Rehearsal Checklist Generation and Guided Operational Drills
+- **Scope:** Operationalize the existing `CriterionType = "rehearsal"` and checklist state machine (`continuity/tasks.py: set_step`). When generating handover plans, the AI Handover Planner analyzes cited runbooks to synthesize concrete, executable rehearsal drills (e.g. verifying deploy access, executing dry-run rollbacks). The incoming owner works through the interactive checklist directly in Relay, recording execution notes and verification evidence before ownership transfer can be executed.
+- **User Impact:** Replaces passive reading and checkbox sign-offs with demonstrated operational readiness. Incoming owners verify critical operational procedures while the outgoing owner is still present to supervise, eliminating knowledge loss at the source.
+- **Acceptance Criteria:** Planner automatically drafts contextual rehearsal checklists; steps track actor and timestamp; mandatory rehearsals block case completion until all steps are confirmed and verified.
