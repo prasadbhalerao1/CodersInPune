@@ -23,7 +23,12 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 3. Walk the core workflow: **Overview** (continuity risks) → **Cases** → the departure case
    (scope, tasks, blocker, AI analysis with cited evidence) → **Handover capsule** →
    acknowledge it. [docs/demo-script.md](docs/demo-script.md) has the full click path.
-4. To use your own data, create an empty workspace and open **Integrations** to connect
+4. Try the three Round 3 improvements ([what was delivered and how it is tested](docs/round3/improvements-delivered.md)):
+   - **What-if simulator** (sidebar): choose Arjun Rao, run, then add Dev Patel as backup.
+   - **Memory replay**: Responsibilities → Production deployments → Memory replay →
+     Replay history, then Explain this history.
+   - **Ask about this handover**: on your handover capsule, ask how to deploy payments-api.
+5. To use your own data, create an empty workspace and open **Integrations** to connect
    GitHub, Linear or Notion.
 
 **Locally from this repository:** follow [Local development](#local-development) and
@@ -37,6 +42,7 @@ GitHub, Linear and Notion are optional; each needs its own app credentials (see 
 |---|---|
 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture, data flow, integrations, AI pipeline, quality evidence |
 | [docs/api-reference.md](docs/api-reference.md) | Full API endpoint listing, AI capabilities, external service config, library reference |
+| [docs/round3/improvements-delivered.md](docs/round3/improvements-delivered.md) | Round 3: the three improvements as delivered, with the tests that prove each commitment |
 | [docs/improvements.md](docs/improvements.md) | Round 3 improvements (AI Handover Copilot, "What If?" Simulator, Project Memory Replay) with acceptance criteria, plus Round 2 delivery status |
 | [docs/architecture.md](docs/architecture.md) | System boundary, modules, data flows, inventory |
 | [docs/ai.md](docs/ai.md) | AI-use disclosure: evidence pipeline, validation, injection handling, providers |
