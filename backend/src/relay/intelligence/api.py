@@ -174,6 +174,26 @@ async def capsule_versions(
     return await capsules.versions(access, capsule_id)
 
 
+@router.get("/responsibilities/{responsibility_id}/timeline/narrative")
+async def stored_narrative(
+    access: CurrentWorkspace, responsibility_id: uuid.UUID
+) -> memory.NarrativeView:
+    return await memory.latest(access, responsibility_id)
+
+
+@router.post(
+    "/responsibilities/{responsibility_id}/timeline/questions",
+    dependencies=[rate_limit("ai_ask", 30, 600)],
+)
+async def ask_history(
+    access: CurrentWorkspace,
+    responsibility_id: uuid.UUID,
+    body: memory.HistoryQuestionIn,
+    request: Request,
+) -> memory.HistoryAnswer:
+    return await memory.ask(access, responsibility_id, body, request.app.state.settings)
+
+
 @router.post(
     "/responsibilities/{responsibility_id}/timeline/narrative",
     dependencies=[rate_limit("ai_run", 20, 600)],

@@ -50,6 +50,7 @@ async def call[T](
     extra: str,
     output_type: type[T],
     case_id: uuid.UUID | None = None,
+    checkpoint: dict[str, object] | None = None,
 ) -> Outcome[T]:
     spec = capability(name)
     session = access.session
@@ -69,7 +70,13 @@ async def call[T](
         requested_by=access.user_id,
         state="running",
         input_hash=pool.input_hash(),
-        checkpoint={"steps": [name], "ai": "on", "interactive": True, "evidence": len(pool.items)},
+        checkpoint={
+            "steps": [name],
+            "ai": "on",
+            "interactive": True,
+            "evidence": len(pool.items),
+            **(checkpoint or {}),
+        },
         started_at=runs._now(),
     )
     session.add(run)

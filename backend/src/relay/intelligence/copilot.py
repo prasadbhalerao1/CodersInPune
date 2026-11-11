@@ -33,6 +33,7 @@ from relay.shared.api_types import StrictInput
 NAME = "handover_copilot"
 MAX_SOURCES = 3
 NOT_FOUND = "This isn't answered by the evidence attached to this handover."
+NOT_FOUND_HISTORY = "No event in this history answers that."
 _STOP = frozenset(
     [
         "the",

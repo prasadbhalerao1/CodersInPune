@@ -323,3 +323,74 @@ async def test_narrative_without_ai_or_events_says_why(api: Api) -> None:
     disabled = await ws.call("POST", f"/responsibilities/{rid}/timeline/narrative")
     assert disabled["state"] == "unavailable"
     assert "switched off" in disabled["reason"]
+
+
+async def test_narrative_is_stored_filtered_per_viewer_and_marked_outdated(
+    api: Api, script: list[Script]
+) -> None:
+    ws, rid = await history(api)
+    none = await ws.call("GET", f"/responsibilities/{rid}/timeline/narrative")
+    assert none["state"] == "none"
+
+    def narrator(refs: dict[str, str]) -> dict[str, Any]:
+        public = next(r for r, t in refs.items() if t == "Add canary stage")
+        secret = next(r for r, t in refs.items() if t == "Rotate signing key")
+        return {
+            "chapters": [
+                {"title": "Canary", "summary": "Canary added.", "events": [public]},
+                {"title": "Keys", "summary": "Keys rotated.", "events": [secret]},
+            ]
+        }
+
+    script.append(narrator)
+    made = await ws.call("POST", f"/responsibilities/{rid}/timeline/narrative")
+    assert len(made["chapters"]) == 2
+    stored = await ws.call("GET", f"/responsibilities/{rid}/timeline/narrative")
+    assert [c["title"] for c in stored["chapters"]] == ["Canary", "Keys"]
+    assert stored["outdated"] is False
+
+    # A member never sees a chapter built on a managers-only source.
+    await add_member(api, ws.id, "user_member", "member")
+    member = await Ws(api, ws.id, "user_member").call(
+        "GET", f"/responsibilities/{rid}/timeline/narrative"
+    )
+    assert [c["title"] for c in member["chapters"]] == ["Canary"]
+    assert member["withheld"] == 1
+
+    # New history after the reading: it says so instead of pretending to be complete.
+    await ws.call(
+        "POST",
+        f"/responsibilities/{rid}/knowledge",
+        201,
+        json={"kind": "procedure", "title": "Rollback", "body": "Use the one-click rollback."},
+    )
+    later = await ws.call("GET", f"/responsibilities/{rid}/timeline/narrative")
+    assert later["outdated"] is True
+    runs = await ws.call("GET", "/ai/runs")
+    assert any(r["capability"] == "memory_narrator" for r in runs)
+
+
+async def test_history_questions_cite_events_or_say_not_found(
+    api: Api, script: list[Script]
+) -> None:
+    ws, rid = await history(api)
+    script.append(
+        lambda refs: {
+            "found": True,
+            "answer": "Because of the checkout outage.",
+            "evidence": [next(r for r, t in refs.items() if t == "Postmortem: checkout outage")],
+        }
+    )
+    why = await ws.call(
+        "POST",
+        f"/responsibilities/{rid}/timeline/questions",
+        json={"question": "Why was the canary stage added?"},
+    )
+    assert why["mode"] == "ai"
+    assert why["event_ids"] == ["gh:acme/deploy#9"]
+    script.append(lambda refs: {"found": True, "answer": "Mars.", "evidence": ["E999"]})
+    invented = await ws.call(
+        "POST", f"/responsibilities/{rid}/timeline/questions", json={"question": "Where is prod?"}
+    )
+    assert invented["mode"] == "not_found"
+    assert "Mars" not in invented["answer"]
