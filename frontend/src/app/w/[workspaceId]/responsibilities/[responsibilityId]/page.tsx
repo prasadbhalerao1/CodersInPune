@@ -1,4 +1,4 @@
-import { History } from "lucide-react";
+import { ArrowLeftRight, History } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -90,6 +90,15 @@ export default async function ResponsibilityPage({
               <History aria-hidden />
               Memory replay
             </Link>
+            {manage && r.status === "active" ? (
+              <Link
+                href={`/w/${workspaceId}/cases/new?type=transfer`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <ArrowLeftRight aria-hidden />
+                Prepare handover
+              </Link>
+            ) : null}
             {canManage(workspace.data) ? (
               <>
                 {r.status === "active" ? (

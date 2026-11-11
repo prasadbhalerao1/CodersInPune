@@ -253,6 +253,8 @@ export type RecipientView = { type: "person" | "team"; id: string; name: string 
 
 export type ScopeItemView = {
   id: string;
+  /** Restricted responsibility the viewer can't open: shown by count only. */
+  hidden?: boolean;
   responsibility_id: string;
   responsibility_name: string;
   criticality: Criticality;

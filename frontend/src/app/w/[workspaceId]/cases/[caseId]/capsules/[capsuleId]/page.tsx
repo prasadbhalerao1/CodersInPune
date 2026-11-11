@@ -1,3 +1,4 @@
+import { History } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -75,11 +76,13 @@ export default async function CapsulePage({
   const [{ workspaceId, caseId, capsuleId }, query] = await Promise.all([params, searchParams]);
   const requested = typeof query.version === "string" ? Number(query.version) : undefined;
   const version = requested && Number.isInteger(requested) ? requested : undefined;
-  const [capsule, versions, questions] = await Promise.all([
+  const [capsule, versions, questions, detail] = await Promise.all([
     attempt(api.capsule(workspaceId, capsuleId, version)),
     attempt(api.capsuleVersions(workspaceId, capsuleId)),
     attempt(api.capsuleQuestions(workspaceId, capsuleId)),
+    attempt(api.getCase(workspaceId, caseId)),
   ]);
+  const scope = detail.ok ? detail.data.scope.filter((s) => !s.hidden) : [];
   if (!capsule.ok) return <ApiErrorNotice error={capsule.error} />;
   const c = capsule.data;
   const base = `/w/${workspaceId}/cases/${caseId}/capsules/${capsuleId}`;
@@ -196,6 +199,30 @@ export default async function CapsulePage({
           ) : (
             <Sections capsule={c} editable={false} />
           )}
+
+          {scope.length > 0 ? (
+            <Section
+              title="Where this work came from"
+              description="The history behind each responsibility in this handover: decisions, incidents and changes, with their sources."
+            >
+              <ul className="bg-card divide-y rounded-lg border text-sm shadow-xs">
+                {scope.map((s) => (
+                  <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <History aria-hidden className="text-muted-foreground size-4" />
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {s.responsibility_name}
+                    </span>
+                    <Link
+                      href={`/w/${workspaceId}/responsibilities/${s.responsibility_id}/timeline`}
+                      className="text-primary text-xs font-medium hover:underline"
+                    >
+                      Open memory replay
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
 
           <Section
             title="Omissions"
