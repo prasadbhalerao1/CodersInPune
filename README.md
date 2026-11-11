@@ -31,10 +31,40 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 5. To use your own data, create an empty workspace and open **Integrations** to connect
    GitHub, Linear or Notion.
 
-**Locally from this repository:** follow [Local development](#local-development) and
-[WorkOS setup](#workos-setup-development), sign in, then either click **Create sample
-workspace** or run `uv run relay-demo-seed --owner <your WorkOS user id>` in `backend/`.
-GitHub, Linear and Notion are optional; each needs its own app credentials (see below).
+**Locally from this repository:** see [Run it yourself](#run-it-yourself) below: two
+commands after a two-minute WorkOS sign-up.
+
+## Run it yourself
+
+You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/),
+Node.js 22+ and pnpm 10 (`corepack enable`). Relay never handles passwords, so sign-in goes
+through [WorkOS](https://workos.com), which is free for development:
+
+1. Create a WorkOS account and open the **Staging** environment.
+2. Under **Authentication**, enable **AuthKit** (email code sign-in is enough).
+3. Under **Redirects**, set the redirect URI to `http://localhost:3000/callback`, the
+   initiate-login URI to `http://localhost:3000/sign-in` and the sign-out redirect to
+   `http://localhost:3000/`.
+4. Under **API keys**, copy the **client ID** and the **API key**.
+
+Then, from the repository root:
+
+```bash
+python scripts/setup.py   # asks for the two WorkOS values (and an optional Gemini key),
+                          # writes the env files, starts PostgreSQL, installs, migrates
+python scripts/dev.py     # runs the API and the web app; Ctrl+C stops both
+```
+
+Open <http://localhost:3000>, sign in with any email (WorkOS sends a code), go to your
+workspaces and click **Create sample workspace**. Everything in it is synthetic.
+
+- **AI features** (Handover Copilot answers, Memory Replay narratives, case analysis) need a
+  model key. A free [Gemini API key](https://aistudio.google.com/apikey) works; give it to
+  the setup script or set `RELAY_LLM_PROVIDERS=gemini` and `RELAY_GEMINI_KEY_1` in
+  `backend/.env`. Without one, Relay says AI is not configured and everything else works:
+  the simulator, timelines and rule-based analysis are deterministic.
+- **GitHub, Linear and Notion** are optional and need your own app credentials (below).
+- The setup script is safe to re-run: it keeps values you already set.
 
 ## Documentation
 
