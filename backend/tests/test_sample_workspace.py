@@ -51,8 +51,10 @@ async def test_replaying_the_key_returns_the_same_sample_without_reseeding(api: 
 async def test_another_user_cannot_see_someone_elses_sample(api: Api) -> None:
     created = await api.client.post("/workspaces/sample", headers=_headers(api, OWNER, "sample-3"))
     workspace = created.json()["id"]
+    await api.create_workspace("user_other", "Other's own")  # provisions user_other
     other = await api.client.get(f"/workspaces/{workspace}", headers=api.as_user("user_other"))
     assert other.status_code == 404
+    assert other.json()["code"] == "workspace_not_found"
 
 
 async def test_sample_requires_authentication_and_an_idempotency_key(api: Api) -> None:
@@ -64,9 +66,13 @@ async def test_sample_requires_authentication_and_an_idempotency_key(api: Api) -
 
 async def test_samples_are_rate_limited_per_user(api: Api) -> None:
     for i in range(3):
-        ok = await api.client.post("/workspaces/sample", headers=_headers(api, OWNER, f"lim-{i}xx"))
+        ok = await api.client.post(
+            "/workspaces/sample", headers=_headers(api, OWNER, f"limit-{i}-key")
+        )
         assert ok.status_code == 201
-    blocked = await api.client.post("/workspaces/sample", headers=_headers(api, OWNER, "lim-4xxx"))
+    blocked = await api.client.post(
+        "/workspaces/sample", headers=_headers(api, OWNER, "limit-4-key")
+    )
     assert blocked.status_code == 429
     assert blocked.json()["code"] == "rate_limited"
 
