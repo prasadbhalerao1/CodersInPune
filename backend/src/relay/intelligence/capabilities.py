@@ -113,9 +113,23 @@ FOCUS: dict[str, str] = {
         "deadlines, unwritten decisions. Each question explains why it is asked."
     ),
     "handover_generator": (
-        "Write a handover capsule for the recipient: a short summary and sections such as "
-        "'What you now own', 'In flight', 'Decisions already made', 'Risks and gaps', "
-        "'Open questions'. Every point cites evidence. Do not include anything uncited."
+        "Write a handover brief for the incoming owner: a short summary and these sections, "
+        "in this order, leaving out any with nothing cited: 'What you now own', 'In-flight "
+        "work', 'Decisions already made', 'Knowledge gaps and open questions', 'Changed "
+        "sources', 'Recommended first steps'. Every point cites evidence and carries a "
+        "confidence. Do not include anything uncited."
+    ),
+    "handover_copilot": (
+        "Answer the incoming owner's question using only the evidence. Cite the refs that "
+        "support each part of the answer. If the evidence does not answer it, set found to "
+        "false and say what is missing; never answer from general knowledge."
+    ),
+    "memory_narrator": (
+        "The evidence is a timeline of events on one responsibility. Explain how the work "
+        "evolved: group related events into a few chapters (what happened, why it matters), "
+        "and link events that clearly relate (a fix to its incident, a decision to the work "
+        "it shaped). Cite event refs for every chapter and link. Where you infer a reason "
+        "the events do not state, lower the confidence."
     ),
 }
 

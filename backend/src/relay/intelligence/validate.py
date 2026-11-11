@@ -65,6 +65,9 @@ def _split_refs(text: str) -> tuple[str, list[str]]:
     return " ".join(_INLINE_REFS.sub("", text).split()), found
 
 
+split_refs = _split_refs  # shared with the copilot and the memory narrator
+
+
 def normalise(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
 

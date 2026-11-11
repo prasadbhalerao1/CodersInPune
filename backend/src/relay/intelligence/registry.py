@@ -90,6 +90,24 @@ CAPABILITIES: Final = {
             ("handover_content",),
             token_budget=80_000,
         ),
+        Capability(
+            "handover_copilot",
+            1,
+            "Handover Copilot",
+            "Answers the incoming owner's questions from the handover's evidence only.",
+            ("answer",),
+            timeout_seconds=45.0,
+            token_budget=30_000,
+        ),
+        Capability(
+            "memory_narrator",
+            1,
+            "Memory Narrator",
+            "Explains how a responsibility's work evolved, citing timeline events.",
+            ("narrative",),
+            timeout_seconds=60.0,
+            token_budget=40_000,
+        ),
     )
 }
 # One "Analyse case" run: the deterministic step, then these capabilities in order.

@@ -46,6 +46,7 @@ def script() -> Iterator[list[Script]]:
         output = answers.pop(0)(refs) if answers else {"claims": [], "proposals": []}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, output)])
 
+    llm.Gateway._cooldown.clear()  # earlier tests may leave the fake provider cooling down
     llm.fake_handler = respond
     yield answers
     llm.fake_handler = None

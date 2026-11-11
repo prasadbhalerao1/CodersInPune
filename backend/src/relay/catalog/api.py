@@ -4,7 +4,7 @@ from typing import Literal
 from fastapi import APIRouter, Response, status
 from pydantic import AwareDatetime
 
-from relay.catalog import context, stewardship
+from relay.catalog import context, stewardship, timeline
 from relay.catalog import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.shared import pagination
@@ -175,3 +175,17 @@ async def revoke_access(
     access: CurrentWorkspace, responsibility_id: uuid.UUID, user_id: uuid.UUID
 ) -> stewardship.StewardshipView:
     return await stewardship.revoke_access(access, responsibility_id, user_id)
+
+
+@router.get("/{responsibility_id}/timeline")
+async def responsibility_timeline(
+    access: CurrentWorkspace,
+    responsibility_id: uuid.UUID,
+    category: timeline.Category | None = None,
+    before: AwareDatetime | None = None,
+    limit: int = 200,
+) -> timeline.TimelineView:
+    """Project Memory Replay: the responsibility's history, rebuilt from live data."""
+    return await timeline.responsibility_timeline(
+        access, responsibility_id, category=category, before=before, limit=limit
+    )
