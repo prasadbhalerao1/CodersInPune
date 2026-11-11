@@ -16,7 +16,7 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 |---|---|
 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture, data flow, integrations, AI pipeline, quality evidence |
 | [docs/api-reference.md](docs/api-reference.md) | Full API endpoint listing, AI capabilities, external service config, library reference |
-| [docs/improvements.md](docs/improvements.md) | All five improvements: Round 2 delivery status and Round 3 acceptance criteria |
+| [docs/improvements.md](docs/improvements.md) | Round 3 improvements (AI Handover Copilot, "What If?" Simulator, Project Memory Replay) with acceptance criteria, plus Round 2 delivery status |
 | [docs/architecture.md](docs/architecture.md) | System boundary, modules, data flows, inventory |
 | [docs/ai.md](docs/ai.md) | AI-use disclosure: evidence pipeline, validation, injection handling, providers |
 | [docs/trust.md](docs/trust.md) | Privacy, security, accessibility, responsible design, limitations |

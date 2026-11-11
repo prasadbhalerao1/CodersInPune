@@ -796,3 +796,4 @@ The audit log table (`audit.event`) has:
 
 This guarantees that any committed business operation has a corresponding, immutable
 audit record, and that no application code path can silently rewrite history.
+

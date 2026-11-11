@@ -231,12 +231,14 @@ criteria see [docs/improvements.md](improvements.md).
    organisations a practical way to test continuity readiness before an actual absence or
    departure.
 
-3. **Continuous Verification and Live Source Drift Detection.**
-   Extend event-driven webhook processing to Linear and Notion. When code, tickets, or
-   runbooks change in connected systems, Relay flags affected handovers with a "Changed
-   since review" warning within seconds and re-queues analysis proposals for manager
-   review. Cryptographic SHA-256 comparison against stored evidence snapshots on every
-   sync, not only on demand.
+3. **Project Memory Replay.**
+   An interactive timeline that reconstructs how a project evolved from authorised GitHub,
+   Linear and Notion data. Commits, pull requests, issues and linked documents are grouped
+   into events (implementations, technical changes, bug fixes, incidents, documentation
+   updates). AI explains what happened, why it matters and how events connect, with links to
+   the original sources and clear uncertainty labels. Users can browse chronologically,
+   filter by category, play back the project's evolution and inspect the evidence behind
+   each event, so an incoming owner learns how the project reached its current state.
 
 ## 12. Repository map
 
