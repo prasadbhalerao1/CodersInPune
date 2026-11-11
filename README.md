@@ -4,6 +4,11 @@ Relay keeps work moving when people and responsibilities change. It finds what s
 owns, rebuilds the context from GitHub, Linear and Notion with cited evidence, and moves
 ownership through reviewed, audited handovers. AI only proposes; people decide.
 
+## Demo
+
+- **Walkthrough Video**: [`artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4`](artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4) (1080p master recording)
+- **Live Deployment**: [https://relay-continuity-nine.vercel.app](https://relay-continuity-nine.vercel.app)
+
 ## Documentation
 
 | Doc | What's in it |

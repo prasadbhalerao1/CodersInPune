@@ -19,3 +19,7 @@ __pycache__/
 !.env.production.example
 test-results/
 playwright-report/
+
+# Artifacts
+artifacts/
+
