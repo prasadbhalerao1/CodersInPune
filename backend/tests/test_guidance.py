@@ -18,7 +18,7 @@ def tours(view: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def linear(view: dict[str, Any]) -> str:
-    return next(i["state"] for i in view["integrations"] if i["provider"] == "linear")
+    return str(next(i["state"] for i in view["integrations"] if i["provider"] == "linear"))
 
 
 async def test_tours_unlock_with_the_workspace(api: Api, ws: Ws) -> None:
