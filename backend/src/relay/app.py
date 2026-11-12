@@ -18,6 +18,7 @@ from relay.config import Settings
 from relay.continuity import api as continuity_api
 from relay.demo import api as demo_api
 from relay.directory import api as directory_api
+from relay.guidance import api as guidance_api
 from relay.identity import members_api, profile
 from relay.identity.tokens import WorkOSTokenVerifier
 from relay.identity.workos_api import WorkOSClient
@@ -139,6 +140,7 @@ def create_app(
     app.include_router(demo_api.router)  # before `workspaces` so /sample is not an id
     app.include_router(workspaces.router)
     app.include_router(catalog_api.router)
+    app.include_router(guidance_api.router)
     app.include_router(assets_api.router)
     app.include_router(knowledge_api.router)
     app.include_router(imports_api.router)

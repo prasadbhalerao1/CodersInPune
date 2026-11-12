@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Final
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -20,6 +21,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from relay.shared.db.base import Base
@@ -161,3 +163,25 @@ class MembershipTeamScope(Base):
     team_id: Mapped[uuid.UUID]
     granted_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GuidanceState(Base):
+    """One member's product guidance: the automatic-guidance switch, finished and dismissed
+    tours or tips, and where an interrupted tour stopped. No row means guidance is on."""
+
+    __tablename__ = "guidance_state"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "user_id"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    completed: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'"))
+    dismissed: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'"))
+    # tour id -> the step index to resume from
+    progress: Mapped[dict[str, int]] = mapped_column(JSONB, server_default=text("'{}'"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
