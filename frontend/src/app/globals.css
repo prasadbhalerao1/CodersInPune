@@ -1,0 +1,414 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-syne), var(--font-sans);
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-syne: var(--font-syne);
+  --font-script: var(--font-great-vibes), cursive;
+  --font-bebas: var(--font-bebas-neue), var(--font-syne), sans-serif;
+  --color-obsidian: #06070b;
+  --color-charcoal: #0e1118;
+  --color-crimson: #7e1520;
+  --color-chartreuse: #d2ff00;
+  --color-emerald: #00f5a0;
+  --color-copper: #f59e0b;
+  --color-baton: var(--baton);
+  --color-baton-foreground: var(--baton-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Default to Sovereign Obsidian Void */
+  --background: #06070b;
+  --foreground: #f5f5f7;
+  --card: #0e1118;
+  --card-foreground: #f5f5f7;
+  --popover: #0e1118;
+  --popover-foreground: #f5f5f7;
+  --primary: #d2ff00;
+  --primary-foreground: #06070b;
+  --secondary: #161a23;
+  --secondary-foreground: #f5f5f7;
+  --muted: #12151e;
+  --muted-foreground: #8e92a4;
+  --accent: #7e1520;
+  --accent-foreground: #ffffff;
+  --destructive: #ff334b;
+  --success: #00f5a0;
+  --baton: #f59e0b;
+  --baton-foreground: #06070b;
+  --warning: #f59e0b;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #d2ff00;
+  --chart-1: #d2ff00;
+  --chart-2: #00f5a0;
+  --chart-3: #f59e0b;
+  --chart-4: #7e1520;
+  --chart-5: #8e92a4;
+  --radius: 0.5rem;
+  --sidebar: #0a0c11;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #d2ff00;
+  --sidebar-primary-foreground: #06070b;
+  --sidebar-accent: #161a23;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #d2ff00;
+}
+
+.dark {
+  --background: #06070b;
+  --foreground: #f5f5f7;
+  --card: #0e1118;
+  --card-foreground: #f5f5f7;
+  --popover: #0e1118;
+  --popover-foreground: #f5f5f7;
+  --primary: #d2ff00;
+  --primary-foreground: #06070b;
+  --secondary: #161a23;
+  --secondary-foreground: #f5f5f7;
+  --muted: #12151e;
+  --muted-foreground: #8e92a4;
+  --accent: #7e1520;
+  --accent-foreground: #ffffff;
+  --destructive: #ff334b;
+  --success: #00f5a0;
+  --baton: #f59e0b;
+  --baton-foreground: #06070b;
+  --warning: #f59e0b;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #d2ff00;
+  --chart-1: #d2ff00;
+  --chart-2: #00f5a0;
+  --chart-3: #f59e0b;
+  --chart-4: #7e1520;
+  --chart-5: #8e92a4;
+  --sidebar: #0a0c11;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #d2ff00;
+  --sidebar-primary-foreground: #06070b;
+  --sidebar-accent: #161a23;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #d2ff00;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+  }
+  .font-display {
+    letter-spacing: -0.01em;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  html {
+    @apply font-sans;
+    /* Keep anchors and focused elements clear of the sticky page header. */
+    scroll-padding-top: 5rem;
+  }
+}
+
+/* Motion: short, quiet, and only where it explains a change (something arrived, moved
+   or responded). Durations stay under 300 ms; everything is off for reduced motion. */
+@keyframes relay-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes relay-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes relay-ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-c);
+  }
+}
+@keyframes relay-baton {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  62% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  72%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+@keyframes relay-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@layer utilities {
+  .motion-page {
+    animation: relay-rise 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .motion-stagger > * {
+    animation: relay-rise 280ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .motion-stagger > :nth-child(2) {
+    animation-delay: 30ms;
+  }
+  .motion-stagger > :nth-child(3) {
+    animation-delay: 60ms;
+  }
+  .motion-stagger > :nth-child(4) {
+    animation-delay: 90ms;
+  }
+  .motion-stagger > :nth-child(5) {
+    animation-delay: 120ms;
+  }
+  .motion-stagger > :nth-child(6) {
+    animation-delay: 150ms;
+  }
+  .motion-stagger > :nth-child(7) {
+    animation-delay: 180ms;
+  }
+  .motion-stagger > :nth-child(n + 8) {
+    animation-delay: 200ms;
+  }
+  .motion-fill {
+    transform-origin: left;
+    animation: relay-fill 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .ring-draw {
+    animation: relay-ring-draw 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .relay-baton {
+    offset-rotate: 0deg;
+    animation: relay-baton 5.5s cubic-bezier(0.45, 0, 0.25, 1) 0.6s infinite;
+  }
+  .motion-ping {
+    animation: relay-pulse-ring 1.2s ease-out 2;
+  }
+  .lift {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px -6px color-mix(in oklch, var(--foreground) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Guided tours: the highlighted element stays bright, the rest of the page dims. */
+.tour-spotlight {
+  box-shadow:
+    0 0 0 2px var(--primary),
+    0 0 0 9999px rgb(0 0 0 / 0.28);
+  transition:
+    top 200ms ease,
+    left 200ms ease,
+    width 200ms ease,
+    height 200ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   LUXURY CYBER-ORGANIC & EDITORIAL UTILITIES (GROUND TRUTH VISUAL DNA)
+   ========================================================================== */
+
+.font-syne {
+  font-family: var(--font-syne), var(--font-geist-sans), sans-serif;
+}
+
+.font-script {
+  font-family: var(--font-great-vibes), cursive, serif;
+}
+
+.font-bebas {
+  font-family: var(--font-bebas-neue), var(--font-syne), sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* Haute-Horlogerie Smoked Obsidian Capsule Button */
+.luxury-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 2.75rem;
+  padding: 0 1.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(26, 31, 42, 0.85) 0%, rgba(10, 13, 19, 0.95) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 28px -6px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f5f5f7;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  user-select: none;
+}
+
+.luxury-btn:hover {
+  transform: translateY(-1px);
+  border-top-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 16px 36px -6px rgba(0, 0, 0, 0.85),
+    0 0 24px rgba(210, 255, 0, 0.18);
+  color: #ffffff;
+}
+
+.luxury-btn:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 6px 14px -3px rgba(0, 0, 0, 0.9);
+}
+
+/* Monumental Display Outline Typography */
+.display-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.08em;
+  user-select: none;
+}
+
+/* Micro Glowing Jewel Beads */
+.jewel-emerald {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #00f5a0;
+  box-shadow:
+    0 0 8px 1px #00f5a0,
+    0 0 16px 2px rgba(0, 245, 160, 0.4);
+  animation: pulse-jewel 2.4s ease-in-out infinite;
+}
+
+.jewel-chartreuse {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #d2ff00;
+  box-shadow:
+    0 0 8px 1px #d2ff00,
+    0 0 16px 2px rgba(210, 255, 0, 0.4);
+  animation: pulse-jewel 2.4s ease-in-out infinite 0.6s;
+}
+
+.jewel-crimson {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #ff334b;
+  box-shadow:
+    0 0 8px 1px #ff334b,
+    0 0 16px 2px rgba(255, 51, 75, 0.4);
+  animation: pulse-jewel 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-jewel {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+}
