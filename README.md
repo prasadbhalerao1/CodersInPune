@@ -6,7 +6,7 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 
 ## Demo
 
-- **Judges: start here →** [step-by-step walkthrough](#for-judges)
+- **Judges: start here →** [step-by-step walkthrough](#for-judges) · [judge guide with evidence matrix](docs/JUDGE_GUIDE.md) · [documentation index](docs/README.md)
 - **Walkthrough Video**: [`artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4`](artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4) (1080p master recording)
 - **Live Deployment**: [https://relay-continuity-nine.vercel.app](https://relay-continuity-nine.vercel.app)
 - **Project Dossier (PDF)**: [`artifacts/Relay_Project_Overview_Round2.pdf`](artifacts/Relay_Project_Overview_Round2.pdf) (Round 2 publication build)
@@ -65,7 +65,8 @@ confirms nothing in the workspace was changed.
 ### 4. Execute a safer handover: Handover Copilot (3 minutes)
 
 1. Go back to **Overview** and click **Open handover**.
-2. Read the brief: *What you now own*, *Knowledge gaps and open questions*, *Risks and
+2. Check **Brief coverage**: which responsibilities have cited evidence and which critical
+   ones still need an answer from the current owner. Read the brief: *What you now own*, *Knowledge gaps and open questions*, *Risks and
    conflicts*, *Recommended first steps*. Expand any **sources** link to see the evidence.
 3. In **Ask about this handover**, ask *"How should I deploy payments-api?"*, then ask
    something the evidence cannot answer, such as *"What is the AWS root password recovery
@@ -169,6 +170,9 @@ in [docs/ai.md](docs/ai.md).
 
 | Doc | What's in it |
 |---|---|
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/JUDGE_GUIDE.md](docs/JUDGE_GUIDE.md) | Problem, continuity lifecycle, implementation-evidence matrix, judging criteria |
+| [docs/competitive-analysis.md](docs/competitive-analysis.md) | Adjacent products and the gaps adopted, adapted, deferred or rejected |
 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture, data flow, integrations, AI pipeline, quality evidence |
 | [docs/api-reference.md](docs/api-reference.md) | Full API endpoint listing, AI capabilities, external service config, library reference |
 | [docs/openapi.json](docs/openapi.json) | OpenAPI schema generated from the code (every route, request and response) |

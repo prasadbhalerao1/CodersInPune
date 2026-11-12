@@ -50,6 +50,14 @@ editors can retry, stalled runs are closed first and a live draft is never dupli
 recipient sees their open tasks in the case, what they are taking over with links to its
 history, the case status, and where to ask.
 
+**Brief coverage.** Above the brief, every responsibility in the case's scope is listed as
+*backed by evidence*, *mentioned without a source* or *not covered*, critical first, with a
+link to the handover interview to close the gaps. The rule is deterministic: a statement
+covers a responsibility when it names it, and is backed when it cites an active source.
+Redacted or withheld statements don't count for a viewer who cannot see them
+(`capsules.py::_coverage`, asserted in
+`test_interview_capsule_approval_and_acknowledgement`).
+
 ---
 
 ## 2. "What If?" Continuity Simulator
