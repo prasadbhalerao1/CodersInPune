@@ -10,8 +10,8 @@ again; the recipient acknowledges the approved version.
 """
 
 import uuid
-from datetime import datetime
-from typing import Annotated, Any
+from datetime import datetime, timedelta
+from typing import Annotated, Any, Literal
 
 import procrastinate
 from pydantic import BaseModel, Field, StringConstraints
@@ -44,6 +44,11 @@ from relay.shared.api_types import StrictInput
 from relay.shared.errors import ApiError
 
 GENERATOR = "handover_generator"
+# An AI draft normally lands within a minute; after this the page says it is slow, and after
+# runs.RUN_TIME_LIMIT it is stalled: no longer counted as in progress and safe to retry.
+GENERATION_SLOW = timedelta(minutes=2)
+Generation = Literal["idle", "running", "slow", "stalled", "failed"]
+FAILED = ("failed", "timed_out", "cancelled")
 # The Handover Brief's sections (Round 3 commitment), in reading order.
 SECTIONS = (
     ("own", "What you now own"),
@@ -113,6 +118,7 @@ class CapsuleView(BaseModel):
     can_approve: bool
     can_acknowledge: bool
     generating: bool
+    generation: Generation = "idle"
     # Statements whose cited source changed after this version was written: review again.
     changed_points: int = 0
     changed_sources: list[str] = []  # titles of cited sources edited since
@@ -337,6 +343,49 @@ def _new_version(
     )
 
 
+def _runs_for(capsule: Capsule) -> Any:
+    return (
+        select(AgentRun)
+        .where(
+            AgentRun.capability == GENERATOR,
+            AgentRun.case_id == capsule.case_id,
+            AgentRun.checkpoint["capsule_id"].astext == str(capsule.id),
+        )
+        .order_by(AgentRun.created_at.desc())
+    )
+
+
+async def _generation(session: AsyncSession, capsule: Capsule) -> Generation:
+    """State of the newest AI draft for this capsule, judged by its age (read-only)."""
+    run = await session.scalar(_runs_for(capsule).limit(1))
+    if run is None:
+        return "idle"
+    if run.state in runs.ACTIVE:
+        age = runs._now() - (run.started_at or run.created_at)
+        if age > runs.RUN_TIME_LIMIT:
+            return "stalled"
+        return "slow" if age > GENERATION_SLOW else "running"
+    newer_ai = await session.scalar(
+        select(func.count()).where(
+            CapsuleVersion.capsule_id == capsule.id,
+            CapsuleVersion.source == "ai",
+            CapsuleVersion.created_at >= run.created_at,
+        )
+    )
+    return "failed" if run.state in FAILED and not newer_ai else "idle"
+
+
+async def _retire_stalled(session: AsyncSession, capsule: Capsule) -> bool:
+    """Close drafts past the time limit; True when a live draft is still on its way."""
+    live = False
+    for run in await session.scalars(_runs_for(capsule).where(AgentRun.state.in_(runs.ACTIVE))):
+        if runs._now() - (run.started_at or run.created_at) > runs.RUN_TIME_LIMIT:
+            runs.finish(run, "timed_out", "run_time_limit")
+        else:
+            live = True
+    return live
+
+
 async def generate(
     access: WorkspaceAccess,
     case_id: uuid.UUID,
@@ -373,7 +422,11 @@ async def generate(
         created_by=access.user_id,
     )
     gateway = runs.gateway_for(settings)
-    if gateway.configured and await runs.ai_enabled(session, GENERATOR):
+    if (
+        gateway.configured
+        and await runs.ai_enabled(session, GENERATOR)
+        and not await _retire_stalled(session, capsule)
+    ):
         pool = await build_pool(access, case)
         run = AgentRun(
             id=uuid.uuid7(),
@@ -519,14 +572,7 @@ async def view(
         )
     )
     case = await continuity._load(access, capsule.case_id)
-    generating = await session.scalar(
-        select(func.count()).where(
-            AgentRun.capability == GENERATOR,
-            AgentRun.case_id == capsule.case_id,
-            AgentRun.state.in_(runs.ACTIVE),
-            AgentRun.checkpoint["capsule_id"].astext == str(capsule.id),
-        )
-    )
+    generation = await _generation(session, capsule)
     recipient = capsule.recipient_user_id == access.user_id
     latest = v.version == capsule.current_version
     return CapsuleView(
@@ -548,7 +594,8 @@ async def view(
         can_edit=editor and latest,
         can_approve=editor and latest and not recipient and v.approved_at is None,
         can_acknowledge=recipient and latest and capsule.status == "approved",
-        generating=bool(generating),
+        generating=generation in ("running", "slow"),
+        generation=generation,
         changed_points=changed,
         changed_sources=sorted(changed_titles),
     )

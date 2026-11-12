@@ -166,3 +166,47 @@ async def test_interview_capsule_approval_and_acknowledgement(
     assert [c["recipient_user_id"] for c in await member.call("GET", f"/cases/{cid}/capsules")] == [
         recipient
     ]
+
+
+async def test_a_stalled_ai_draft_is_reported_and_can_be_retried(
+    api: Api, script: list[Script]
+) -> None:
+    ws, _, cid = await case_with_knowledge(api)
+    script.append(lambda refs: {"claims": []})
+    await ws.call("POST", f"/cases/{cid}/analysis", 202)
+    await drain(api, ws.id)
+    recipient = await member_id(ws)
+    body = {"recipient_user_id": recipient}
+
+    capsule = await ws.call("POST", f"/cases/{cid}/capsules", 201, json=body)
+    assert (capsule["generating"], capsule["generation"]) == (True, "running")
+    # Asking again while the draft is on its way does not start a second one.
+    await ws.call("POST", f"/cases/{cid}/capsules", 201, json=body)
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(ws.id),))
+        key = (ws.id, "handover_generator")
+        count = conn.execute(
+            "SELECT count(*) FROM intelligence.agent_run WHERE tenant_id = %s AND capability = %s",
+            key,
+        ).fetchone()
+        assert count == (1,)
+        # The worker never picked it up: past the time limit it is stalled, not spinning.
+        conn.execute(
+            "UPDATE intelligence.agent_run SET started_at = now() - interval '20 minutes' "
+            "WHERE tenant_id = %s AND capability = %s",
+            key,
+        )
+
+    stalled = await ws.call("GET", f"/ai/capsules/{capsule['id']}")
+    assert (stalled["generating"], stalled["generation"]) == (False, "stalled")
+
+    retried = await ws.call("POST", f"/cases/{cid}/capsules", 201, json=body)
+    assert retried["generation"] == "running"
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(ws.id),))
+        states = conn.execute(
+            "SELECT state FROM intelligence.agent_run WHERE tenant_id = %s AND capability = %s "
+            "ORDER BY created_at",
+            key,
+        ).fetchall()
+    assert [s for (s,) in states] == ["timed_out", "running"]
