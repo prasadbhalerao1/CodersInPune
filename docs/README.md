@@ -25,6 +25,7 @@ criteria) or the **[ten-minute walkthrough](../README.md#for-judges)** on the li
 | [ai.md](ai.md) | Evidence retrieval, citation validation, injection handling, providers and budgets |
 | [trust.md](trust.md) | Privacy, security, accessibility, responsible design |
 | [sso.md](sso.md) | Enterprise SSO through WorkOS |
+| [environment-setup.md](environment-setup.md) | Every environment variable, where to get each value, step by step (WorkOS, GitHub, Linear, Notion, Gemini, Resend, Neon, Render, Vercel) |
 | [../deployment.md](../deployment.md) | Vercel + Render + Neon deployment, migrations, backups |
 | [runbooks/incident-response.md](runbooks/incident-response.md) | Incident response |
 | [adr/](adr/) and [blueprint/](blueprint/) | Architecture decisions and the Decision Register |
