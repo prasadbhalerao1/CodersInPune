@@ -8,10 +8,10 @@ the restricted `relay_app` role, so row-level security is exercised on every que
 
 | Suite | Where | Count | Result |
 |---|---|---:|---|
-| Backend (API, services, security, AI validation) | `backend/tests` | 291 (+2 opt-in) | All pass |
-| of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `test_sample_workspace.py` | 37 | All pass |
+| Backend (API, services, security, AI validation) | `backend/tests` | 297 (+2 opt-in) | All pass (2026-11-12, 7 min) |
+| of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `intelligence/test_handover.py`, `test_guidance.py`, `test_sample_workspace.py` | 45 | All pass |
 | Browser journeys, public (no account) | `frontend/e2e/public.spec.ts` | CI | Pass |
-| Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 15 | Run locally before release |
+| Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 12 + 5 | All pass locally (2026-11-12) |
 | Static checks | ruff, mypy (strict), ESLint, TypeScript, Prettier | | Clean |
 
 The two opt-in tests call a live model (`RELAY_EVAL_LIVE=1`) and measure API latency at
@@ -31,7 +31,10 @@ Each journey starts at the landing page and clicks through the app the way a jud
    run, open "Why it is affected", compare cover candidates and simulate with Dev. Then
    open the real responsibility and confirm Dev is **not** an owner: the simulation changed
    nothing.
-4. **Handover Copilot.** Open the handover, ask an answerable question (cited answer) and
+4. **Guidance.** Switch automatic guidance off (the Overview shows no prompts), start a
+   tour from Learn Relay anyway, skip at step 2, resume at step 2, finish, see it marked
+   for replay, switch guidance back on (the Overview offers the next tour).
+5. **Handover Copilot.** Open the handover, ask an answerable question (cited answer) and
    an unanswerable one ("Not in the evidence"), then follow the link into Memory Replay.
 
 The existing smoke journey (`smoke.spec.ts`) covers the Round 2 workflow end to end:
@@ -53,6 +56,9 @@ deletion.
 | Someone holds nothing | Simulator says so; score 100 | `test_score_is_explained_and_full_for_someone_holding_nothing` |
 | Bad input (unknown ids, zero-day absence, same person as backup, too-short questions, extra fields) | 404 / 422 with a plain message | `test_other_workspaces_and_bad_input_are_rejected`, `test_duration_flags_work_due_while_away`, `test_only_the_recipient_and_editors_can_ask` |
 | Too many sample workspaces or AI questions | Rate limited with a clear message | `test_samples_are_rate_limited_per_user` |
+| The AI draft never finishes (worker down, provider hang) | "Taking longer than expected" after 2 minutes; after the 15-minute limit "did not finish in time" with a retry; the rule-based brief stays usable; retrying never queues a duplicate | `test_a_stalled_ai_draft_is_reported_and_can_be_retried` |
+| An integration is connected but its sync is queued, failing or broken | Shown as syncing, retrying or needs attention; tours that need its data stay locked until the first sync finished and no sync is pending | `test_an_integration_is_ready_only_after_its_sync_finishes` |
+| Guidance switched off, tour interrupted, bad tour ids | No prompts, tutorials still start, resume at the saved step, 422 for unknown ids or fields | `test_switch_progress_resume_and_reset` |
 
 ## Permissions
 
@@ -77,7 +83,10 @@ deletion.
   simulated quota error cannot fail another.
 - **Simulator correctness**: work in a responsibility that a backup covers no longer counts
   as stalled; candidates connected to the uncovered work are ranked first.
-- **Found by clicking through as a user** and fixed: the landing page showed the app
+- **Found by clicking through as a user** and fixed: on People, the department and manager
+  controls covered the person's name so it couldn't be clicked (this was the "What If?"
+  journey timeout); the Workspaces page raised a prerender error from per-request keys; a
+  tour anchored to the hidden copy of a previously visited page. Earlier: the landing page showed the app
   sidebar and raised a prerender error; the recipient's handover was hidden behind the last
   tab; the sidebar scrolled away on long pages; anchors scrolled under the sticky header;
   the local dev script could stall on Windows when a tool printed Unicode.
