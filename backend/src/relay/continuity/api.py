@@ -7,6 +7,7 @@ from relay.continuity import (
     briefing,
     collaboration,
     external,
+    follow_through,
     impact,
     privacy,
     simulation,
@@ -277,6 +278,13 @@ async def simulation_candidates(
 ) -> simulation.CandidatesView:
     """Who could cover them, each simulated and compared with nobody stepping in."""
     return await simulation.candidates(access, person_id, days)
+
+
+@router.get("/cases/{case_id}/follow-through")
+async def case_follow_through(
+    access: CurrentWorkspace, case_id: uuid.UUID
+) -> follow_through.FollowThroughView:
+    return await follow_through.case_follow_through(access, case_id)
 
 
 @router.get("/cases/{case_id}/impact")

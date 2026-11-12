@@ -8693,6 +8693,64 @@
     }
    }
   },
+  "/workspaces/{workspace_id}/cases/{case_id}/follow-through": {
+   "get": {
+    "tags": [
+     "continuity"
+    ],
+    "summary": "Case Follow Through",
+    "operationId": "case_follow_through_workspaces__workspace_id__cases__case_id__follow_through_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "case_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Case Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FollowThroughView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/workspaces/{workspace_id}/cases/{case_id}/impact": {
    "get": {
     "tags": [
@@ -20633,6 +20691,136 @@
     ],
     "title": "FeedbackView"
    },
+   "FollowThroughItem": {
+    "properties": {
+     "scope_item_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Scope Item Id"
+     },
+     "responsibility_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Responsibility Id"
+     },
+     "responsibility_name": {
+      "type": "string",
+      "title": "Responsibility Name"
+     },
+     "criticality": {
+      "type": "string",
+      "title": "Criticality"
+     },
+     "recipient_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recipient Name"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "not_in_place",
+       "settling",
+       "check_in",
+       "settled"
+      ],
+      "title": "State"
+     },
+     "holder_since": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder Since"
+     },
+     "reviewed_since": {
+      "type": "boolean",
+      "title": "Reviewed Since"
+     },
+     "activity_since": {
+      "type": "integer",
+      "title": "Activity Since"
+     },
+     "last_activity_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Activity At"
+     },
+     "open_tasks": {
+      "type": "integer",
+      "title": "Open Tasks"
+     },
+     "overdue_tasks": {
+      "type": "integer",
+      "title": "Overdue Tasks"
+     }
+    },
+    "type": "object",
+    "required": [
+     "scope_item_id",
+     "responsibility_id",
+     "responsibility_name",
+     "criticality",
+     "recipient_name",
+     "state",
+     "holder_since",
+     "reviewed_since",
+     "activity_since",
+     "last_activity_at",
+     "open_tasks",
+     "overdue_tasks"
+    ],
+    "title": "FollowThroughItem"
+   },
+   "FollowThroughView": {
+    "properties": {
+     "applies": {
+      "type": "boolean",
+      "title": "Applies"
+     },
+     "rule": {
+      "type": "string",
+      "title": "Rule",
+      "default": "Settled: the new holder is recorded, the responsibility was reviewed or shows recorded activity since they took it on, and the case's tasks for it are closed. Check in: 14 days without a review or any recorded activity, or open tasks past due. Activity counts events from any source and any person: this checks that the work is moving, not who did it."
+     },
+     "settled": {
+      "type": "integer",
+      "title": "Settled",
+      "default": 0
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/FollowThroughItem"
+      },
+      "type": "array",
+      "title": "Items",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "applies"
+    ],
+    "title": "FollowThroughView"
+   },
    "FollowUpView": {
     "properties": {
      "id": {
@@ -21845,6 +22033,14 @@
       },
       "type": "array",
       "title": "Debt"
+     },
+     "key_people": {
+      "items": {
+       "$ref": "#/components/schemas/KeyPerson"
+      },
+      "type": "array",
+      "title": "Key People",
+      "default": []
      }
     },
     "type": "object",
@@ -22053,6 +22249,44 @@
      "expires_at"
     ],
     "title": "InvitationView"
+   },
+   "KeyPerson": {
+    "properties": {
+     "person_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Person Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "sole_critical": {
+      "type": "integer",
+      "title": "Sole Critical"
+     },
+     "sole_total": {
+      "type": "integer",
+      "title": "Sole Total"
+     },
+     "responsibilities": {
+      "items": {
+       "$ref": "#/components/schemas/DebtItem"
+      },
+      "type": "array",
+      "title": "Responsibilities"
+     }
+    },
+    "type": "object",
+    "required": [
+     "person_id",
+     "name",
+     "sole_critical",
+     "sole_total",
+     "responsibilities"
+    ],
+    "title": "KeyPerson",
+    "description": "Someone whose absence would leave work with nobody: the only active holder of it."
    },
    "KnowledgeCount": {
     "properties": {

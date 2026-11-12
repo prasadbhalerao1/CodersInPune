@@ -101,6 +101,10 @@ test("run a transfer case end to end and verify the ownership change", async ({ 
   await expect(page.getByRole("status").first()).toContainText("ready");
   await submitAndSettle(page, "Execute handover");
   await expect(page.getByRole("status").first()).toContainText("Readiness");
+  // Once executed, the overview follows whether the transfer takes hold.
+  await page.goto(caseUrl);
+  await expect(page.getByRole("heading", { name: "Follow-through" })).toBeVisible();
+  await expect(page.getByText("Settling in").first()).toBeVisible();
 
   // Complete the task (the checkbox button), then meet every readiness check.
   await page.goto(`${caseUrl}?tab=tasks`);

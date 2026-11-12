@@ -11,6 +11,7 @@ import type { CaseDetail } from "@/lib/types";
 import { addCommentAction, caseCommandAction, caseShortcutAction } from "../actions";
 import { ActivityPanel, BriefingSection, EmergencyBanner, EmergencyControl } from "./collaboration";
 import { CommentComposer } from "./comment-composer";
+import { FollowThrough } from "./follow-through";
 import { ImpactPanel } from "./impact";
 import { PrivacyPanel } from "./privacy";
 import { KnowledgeHandover } from "./knowledge-handover";
@@ -48,12 +49,13 @@ export default async function CasePage({
     people: tab === "overview" || tab === "people",
     members: ["overview", "tasks", "people", "activity"].includes(tab),
   };
-  const [detail, people, teams, members, responsibilities] = await Promise.all([
+  const [detail, people, teams, members, responsibilities, followThrough] = await Promise.all([
     attempt(api.getCase(workspaceId, caseId)),
     needs.people ? attempt(api.listPeople(workspaceId)) : null,
     tab === "overview" || tab === "tasks" ? attempt(api.listTeams(workspaceId)) : null,
     needs.members ? attempt(api.members(workspaceId)) : null,
     tab === "overview" ? attempt(api.listResponsibilities(workspaceId)) : null,
+    tab === "overview" ? attempt(api.caseFollowThrough(workspaceId, caseId)) : null,
   ]);
   if (!detail.ok) return <ApiErrorNotice error={detail.error} />;
   for (const r of [people, teams, members, responsibilities]) {
@@ -211,6 +213,9 @@ export default async function CasePage({
                 </p>
               ) : null}
               <BlockersPanel {...ctx} members={memberList} />
+              {followThrough?.ok ? (
+                <FollowThrough workspaceId={workspaceId} view={followThrough.data} />
+              ) : null}
               <OwnershipPlan workspaceId={workspaceId} detail={c} />
               <ScopeSection
                 {...ctx}

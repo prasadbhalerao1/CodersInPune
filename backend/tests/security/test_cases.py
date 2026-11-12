@@ -11,6 +11,7 @@ from typing import Any
 import anyio
 import pytest
 
+from relay.continuity import follow_through
 from tests.api import OWNER, Api, Ws, add_member, make_api
 from tests.db import count_rows
 
@@ -456,3 +457,49 @@ async def test_profile_sync_names_members(api: Api, ws: Ws) -> None:
         headers=api.as_user(OWNER),
     )
     assert spoof.status_code == 422
+
+
+async def test_follow_through_shows_whether_each_transfer_took_hold(
+    ws: Ws, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    old, bea, cy = await ws.person("Old"), await ws.person("Bea"), await ws.person("Cy")
+    deploys, billing = await owned(ws, "Deploys", old), await owned(ws, "Billing", old)
+    case = await ws.call(
+        "POST",
+        "/cases",
+        201,
+        json={
+            "case_type": "transfer",
+            "title": "Old moves on",
+            "starts_at": iso(timedelta(minutes=-1)),
+        },
+    )
+    cid = case["id"]
+    for rid in (deploys, billing):
+        case = await ws.call("POST", f"/cases/{cid}/scope", 201, json={"responsibility_id": rid})
+    recipients = {deploys: bea, billing: cy}
+    for item in case["scope"]:
+        await ws.call(
+            "PATCH",
+            f"/cases/{cid}/scope/{item['id']}",
+            json={"recipient_person_id": recipients[item["responsibility_id"]]},
+        )
+    await ws.call("POST", f"/cases/{cid}/submit")
+    assert (await ws.call("GET", f"/cases/{cid}/follow-through"))["applies"] is False
+
+    await approve_and_execute(ws, cid)
+    fresh = await ws.call("GET", f"/cases/{cid}/follow-through")
+    assert {i["state"] for i in fresh["items"]} == {"settling"}  # just handed over
+
+    await ws.call("POST", f"/responsibilities/{deploys}/review", 204, params={"verified": "true"})
+    monkeypatch.setattr(follow_through, "CHECK_IN_AFTER", timedelta(0))  # time has passed
+    view = await ws.call("GET", f"/cases/{cid}/follow-through")
+    states = {i["responsibility_name"]: i for i in view["items"]}
+    assert view["applies"]
+    assert view["settled"] == 1
+    assert view["rule"]
+    # Reviewed since the handover: the work is being looked after.
+    assert (states["Deploys"]["state"], states["Deploys"]["reviewed_since"]) == ("settled", True)
+    # No review and no recorded activity once the check-in period has passed.
+    assert states["Billing"]["state"] == "check_in"
+    assert (states["Billing"]["recipient_name"], states["Billing"]["activity_since"]) == ("Cy", 0)

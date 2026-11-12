@@ -59,6 +59,7 @@ import type {
   StewardshipView,
   TierView,
   TaskDetail,
+  FollowThroughView,
   ImpactView,
   ParticipantView,
   SavedPage,
@@ -294,6 +295,8 @@ export const api = {
     relayFetch<ExternalActionView[]>(
       `${ws(id)}/cases/${encodeURIComponent(caseId)}/tasks/${encodeURIComponent(taskId)}/external`,
     ),
+  caseFollowThrough: (id: string, caseId: string) =>
+    relayFetch<FollowThroughView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/follow-through`),
   caseImpact: (id: string, caseId: string) =>
     relayFetch<ImpactView>(`${ws(id)}/cases/${encodeURIComponent(caseId)}/impact`),
   caseParticipants: (id: string, caseId: string) =>

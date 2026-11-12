@@ -1557,6 +1557,31 @@ export type ImpactItem = {
 
 export type ImpactView = { items: ImpactItem[]; sources: SourceStatus[] };
 
+export type FollowState = "not_in_place" | "settling" | "check_in" | "settled";
+
+/** Whether one transferred responsibility took hold after the case was executed. */
+export type FollowThroughItem = {
+  scope_item_id: string;
+  responsibility_id: string;
+  responsibility_name: string;
+  criticality: Criticality;
+  recipient_name: string | null;
+  state: FollowState;
+  holder_since: string | null;
+  reviewed_since: boolean;
+  activity_since: number;
+  last_activity_at: string | null;
+  open_tasks: number;
+  overdue_tasks: number;
+};
+
+export type FollowThroughView = {
+  applies: boolean;
+  rule: string;
+  settled: number;
+  items: FollowThroughItem[];
+};
+
 export type ReviewItemView = {
   id: string;
   case_id: string;
