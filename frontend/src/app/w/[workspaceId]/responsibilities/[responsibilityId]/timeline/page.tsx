@@ -12,10 +12,16 @@ export const metadata: Metadata = { title: "Memory replay" };
 
 export default async function TimelinePage({
   params,
+  searchParams,
 }: PageProps<"/w/[workspaceId]/responsibilities/[responsibilityId]/timeline">) {
-  const { workspaceId, responsibilityId } = await params;
+  const [{ workspaceId, responsibilityId }, query] = await Promise.all([params, searchParams]);
+  // Large histories are read 200 events at a time, newest first.
+  const before =
+    typeof query.before === "string" && !Number.isNaN(Date.parse(query.before))
+      ? query.before
+      : undefined;
   const [timeline, stored] = await Promise.all([
-    attempt(api.timeline(workspaceId, responsibilityId)),
+    attempt(api.timeline(workspaceId, responsibilityId, undefined, before)),
     attempt(api.storedNarrative(workspaceId, responsibilityId)),
   ]);
   if (!timeline.ok) return <ApiErrorNotice error={timeline.error} />;
@@ -38,6 +44,12 @@ export default async function TimelinePage({
       <MemoryReplay
         workspaceId={workspaceId}
         timeline={t}
+        olderHref={
+          t.truncated && t.events.length > 0
+            ? `${base}/timeline?before=${encodeURIComponent(t.events[t.events.length - 1].occurred_at)}`
+            : null
+        }
+        latestHref={before ? `${base}/timeline` : null}
         stored={stored.ok && stored.data.state === "ready" ? stored.data : null}
       />
     </div>

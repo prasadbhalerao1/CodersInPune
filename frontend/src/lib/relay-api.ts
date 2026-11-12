@@ -351,11 +351,12 @@ export const api = {
     relayFetch<CandidatesView>(
       withQuery(`${ws(id)}/simulation/candidates`, { person_id: personId, days }),
     ),
-  timeline: (id: string, responsibilityId: string, category?: TimelineCategory) =>
+  timeline: (id: string, responsibilityId: string, category?: TimelineCategory, before?: string) =>
     relayFetch<TimelineView>(
       withQuery(`${ws(id)}/responsibilities/${responsibilityId}/timeline`, {
         category,
-        limit: "500",
+        before,
+        limit: "200",
       }),
     ),
   storedNarrative: (id: string, responsibilityId: string) =>

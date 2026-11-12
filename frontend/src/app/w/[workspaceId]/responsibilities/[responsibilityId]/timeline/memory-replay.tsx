@@ -14,6 +14,7 @@ import {
   SendHorizontal,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -55,11 +56,16 @@ export function MemoryReplay({
   workspaceId,
   timeline,
   stored,
+  olderHref = null,
+  latestHref = null,
 }: {
   workspaceId: string;
   timeline: TimelineView;
   /** The last persisted reading (already filtered to what this viewer may see). */
   stored: NarrativeView | null;
+  /** Paging through large histories (200 events per page). */
+  olderHref?: string | null;
+  latestHref?: string | null;
 }) {
   const [filter, setFilter] = useState<TimelineCategory | null>(null);
   const [cursor, setCursor] = useState<number | null>(null); // replay position, oldest = 0
@@ -257,9 +263,22 @@ export function MemoryReplay({
             ))}
           </div>
         )}
-        {timeline.truncated ? (
-          <p className="text-muted-foreground text-xs">
-            Showing the most recent {timeline.events.length} of {timeline.total} events.
+        {olderHref || latestHref ? (
+          <p className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
+            <span>
+              Showing {timeline.events.length} of {timeline.total} events
+              {latestHref ? ", older part of the history" : ", most recent first"}.
+            </span>
+            {latestHref ? (
+              <Link href={latestHref} className="text-primary font-medium hover:underline">
+                Back to the latest events
+              </Link>
+            ) : null}
+            {olderHref ? (
+              <Link href={olderHref} className="text-primary font-medium hover:underline">
+                Show older events
+              </Link>
+            ) : null}
           </p>
         ) : null}
       </div>
