@@ -17741,6 +17741,14 @@
       "type": "array",
       "title": "Changed Sources",
       "default": []
+     },
+     "coverage": {
+      "items": {
+       "$ref": "#/components/schemas/CoverageItem"
+      },
+      "type": "array",
+      "title": "Coverage",
+      "default": []
      }
     },
     "type": "object",
@@ -19278,6 +19286,41 @@
      "single_person_dependencies"
     ],
     "title": "CoverageInsight"
+   },
+   "CoverageItem": {
+    "properties": {
+     "responsibility_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Responsibility Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "criticality": {
+      "type": "string",
+      "title": "Criticality"
+     },
+     "statements": {
+      "type": "integer",
+      "title": "Statements"
+     },
+     "cited": {
+      "type": "integer",
+      "title": "Cited"
+     }
+    },
+    "type": "object",
+    "required": [
+     "responsibility_id",
+     "name",
+     "criticality",
+     "statements",
+     "cited"
+    ],
+    "title": "CoverageItem",
+    "description": "How well the brief covers one responsibility in the case's scope."
    },
    "CoverageView": {
     "properties": {

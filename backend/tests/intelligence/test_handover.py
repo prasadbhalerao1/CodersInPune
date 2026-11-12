@@ -142,6 +142,10 @@ async def test_interview_capsule_approval_and_acknowledgement(
     assert [p["text"] for s in capsule["sections"] for p in s["points"]] == [
         "Payments on-call is yours."
     ]
+    # Coverage: the one responsibility in scope is named by a cited statement.
+    assert [
+        (c["name"], c["criticality"], c["statements"], c["cited"]) for c in capsule["coverage"]
+    ] == [("Payments on-call", "critical", 1, 1)]
 
     # Redact the AI point: editors still see it marked, the recipient doesn't.
     key = capsule["sections"][0]["points"][0]["key"]
@@ -150,6 +154,7 @@ async def test_interview_capsule_approval_and_acknowledgement(
     assert edited["sections"][0]["points"][0]["redacted"]
     seen = await member.call("GET", f"/ai/capsules/{capsule['id']}")
     assert seen["sections"] == []
+    assert seen["coverage"][0]["statements"] == 0  # redacted points don't count for them
     assert seen["can_acknowledge"] is False
     assert any(o["reason"].startswith("Withheld") for o in seen["omissions"])
 

@@ -19,9 +19,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
+from relay.catalog.models import Responsibility
 from relay.config import Settings
 from relay.continuity import service as continuity
-from relay.continuity.models import CaseTask
+from relay.continuity.models import CaseScopeItem, CaseTask
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import capabilities as caps
@@ -98,6 +99,16 @@ class CapsuleOmission(BaseModel):
     count: int
 
 
+class CoverageItem(BaseModel):
+    """How well the brief covers one responsibility in the case's scope."""
+
+    responsibility_id: uuid.UUID
+    name: str
+    criticality: str
+    statements: int  # statements naming this responsibility
+    cited: int  # of those, statements backed by active evidence
+
+
 class CapsuleView(BaseModel):
     id: uuid.UUID
     case_id: uuid.UUID
@@ -122,6 +133,8 @@ class CapsuleView(BaseModel):
     # Statements whose cited source changed after this version was written: review again.
     changed_points: int = 0
     changed_sources: list[str] = []  # titles of cited sources edited since
+    # Each responsibility in scope and whether the brief says anything cited about it.
+    coverage: list[CoverageItem] = []
 
 
 class CapsuleSummary(BaseModel):
@@ -572,6 +585,7 @@ async def view(
         )
     )
     case = await continuity._load(access, capsule.case_id)
+    coverage = await _coverage(session, capsule.case_id, sections)
     generation = await _generation(session, capsule)
     recipient = capsule.recipient_user_id == access.user_id
     latest = v.version == capsule.current_version
@@ -598,7 +612,38 @@ async def view(
         generation=generation,
         changed_points=changed,
         changed_sources=sorted(changed_titles),
+        coverage=coverage,
     )
+
+
+async def _coverage(
+    session: AsyncSession, case_id: uuid.UUID, sections: list[CapsuleSection]
+) -> list[CoverageItem]:
+    """Deterministic coverage: a statement covers a responsibility when it names it, and is
+    cited when it rests on active evidence. Uncovered critical work is what to ask about."""
+    rows = (
+        await session.execute(
+            select(Responsibility.id, Responsibility.name, Responsibility.criticality)
+            .join(CaseScopeItem, CaseScopeItem.responsibility_id == Responsibility.id)
+            .where(CaseScopeItem.case_id == case_id)
+            .order_by(Responsibility.name)
+        )
+    ).all()
+    points = [p for s in sections for p in s.points]
+    items = []
+    for rid, name, criticality in rows:
+        naming = [p for p in points if name.casefold() in p.text.casefold()]
+        cited = [p for p in naming if any(e.status == "active" for e in p.evidence)]
+        items.append(
+            CoverageItem(
+                responsibility_id=rid,
+                name=name,
+                criticality=criticality,
+                statements=len(naming),
+                cited=len(cited),
+            )
+        )
+    return items
 
 
 async def list_for_case(access: WorkspaceAccess, case_id: uuid.UUID) -> list[CapsuleSummary]:

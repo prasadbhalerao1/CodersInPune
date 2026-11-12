@@ -22,6 +22,7 @@ import {
 } from "../../ai-actions";
 import { CapsuleStatusBadge } from "../status";
 import { Copilot } from "./copilot";
+import { BriefCoverage } from "./coverage";
 import { NextSteps } from "./next-steps";
 import { VersionDiff } from "./version-diff";
 
@@ -203,6 +204,10 @@ export default async function CapsulePage({
             {c.summary ? <p className="mt-1 text-base">{c.summary}</p> : null}
           </div>
 
+          <BriefCoverage
+            capsule={c}
+            interviewHref={`/w/${workspaceId}/cases/${caseId}/interview`}
+          />
           {c.acknowledged_at && detail.ok ? (
             <NextSteps workspaceId={workspaceId} capsule={c} detail={detail.data} />
           ) : null}

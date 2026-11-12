@@ -1446,6 +1446,15 @@ export type CapsuleSection = { heading: string; points: CapsulePoint[] };
 export type CapsuleOmission = { reason: string; count: number };
 export type CapsuleStatus = "draft" | "approved" | "acknowledged" | "superseded";
 
+/** How well a handover brief covers one responsibility in its case's scope. */
+export type CoverageItem = {
+  responsibility_id: string;
+  name: string;
+  criticality: Criticality;
+  statements: number;
+  cited: number;
+};
+
 export type CapsuleView = {
   id: string;
   case_id: string;
@@ -1469,6 +1478,7 @@ export type CapsuleView = {
   generation: "idle" | "running" | "slow" | "stalled" | "failed";
   changed_points: number;
   changed_sources: string[];
+  coverage: CoverageItem[];
 };
 
 export type CapsuleSummary = {
