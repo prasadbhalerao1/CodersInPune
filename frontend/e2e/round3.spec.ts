@@ -127,7 +127,7 @@ test("what if: Arjun away for two weeks, compare cover, nothing changes", async 
 });
 
 test("handover copilot: cited answer, honest not-found, history link", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   await page.goto(overview);
   await sidebar(page, "Cases");
   await page
@@ -145,21 +145,32 @@ test("handover copilot: cited answer, honest not-found, history link", async ({ 
   await page.getByRole("link", { name: /^For / }).filter({ visible: true }).first().click();
   await settle(page);
   await expect(page.getByRole("heading", { name: "What you now own" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Brief coverage" })).toBeVisible();
+  await expect(
+    page.getByText(/\d+ of \d+ responsibilities backed by cited evidence/),
+  ).toBeVisible();
 
   const copilot = page.getByRole("region", { name: "Ask about this handover" });
-  await copilot.getByLabel("Your question").fill("How should I deploy payments-api?");
-  await copilot.getByRole("button", { name: "Ask" }).click();
-  await expect(
-    copilot
-      .getByText(/Answer from the evidence|Search results, not an answer|Not in the evidence/)
-      .first(),
-  ).toBeVisible({ timeout: 90_000 });
+  // A reused sample keeps earlier answers: wait for each new one, not any match.
+  const answers = copilot.getByRole("article");
+  const ask = async (question: string, expected: RegExp) => {
+    const before = await answers.count();
+    await copilot.getByLabel("Your question").fill(question);
+    await copilot.getByRole("button", { name: "Ask" }).click();
+    await expect(answers).toHaveCount(before + 1, { timeout: 90_000 });
+    await expect(answers.last()).toContainText(expected, { timeout: 90_000 });
+  };
+  await ask(
+    "How should I deploy payments-api?",
+    /Answer from the evidence|Search results, not an answer|Not in the evidence/,
+  );
+  await ask("What is the zebra quokka escalation code?", /Not in the evidence/);
 
-  await copilot.getByLabel("Your question").fill("What is the zebra quokka escalation code?");
-  await copilot.getByRole("button", { name: "Ask" }).click();
-  await expect(copilot.getByText("Not in the evidence").last()).toBeVisible({ timeout: 90_000 });
-
-  await page.getByRole("link", { name: "Open memory replay" }).first().click();
+  await page
+    .getByRole("link", { name: "Open memory replay" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await page.waitForURL(/\/timeline$/);
 });
 
@@ -178,8 +189,11 @@ test("guidance: switch off and on, start, skip, resume and finish a tour", async
   await expect(page.getByRole("region", { name: "Getting started" })).toHaveCount(0);
   await sidebar(page, "Learn Relay");
 
+  // Restart clears earlier runs' progress, so the tour begins fresh.
   const basics = page.getByRole("listitem").filter({ hasText: "Find your way around" });
-  await basics.getByRole("link", { name: /Start|Resume|Replay/ }).click();
+  await page.getByRole("button", { name: "Restart tutorial progress" }).click();
+  await expect(basics.getByRole("link", { name: "Start" })).toBeVisible();
+  await basics.getByRole("link", { name: "Start" }).click();
   const tour = page.getByRole("dialog");
   await expect(tour.getByText("Continuity health", { exact: true })).toBeVisible();
   await tour.getByRole("button", { name: "Next" }).click();

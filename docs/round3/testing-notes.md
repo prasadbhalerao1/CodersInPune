@@ -8,9 +8,9 @@ the restricted `relay_app` role, so row-level security is exercised on every que
 
 | Suite | Where | Count | Result |
 |---|---|---:|---|
-| Backend (API, services, security, AI validation) | `backend/tests` | 297 (+2 opt-in) | All pass (2026-11-12, 7 min) |
+| Backend (API, services, security, AI validation) | `backend/tests` | 297 (+2 opt-in) | All pass (2026-11-12, 4 min) |
 | of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `intelligence/test_handover.py`, `test_guidance.py`, `test_sample_workspace.py` | 45 | All pass |
-| Browser journeys, public (no account) | `frontend/e2e/public.spec.ts` | CI | Pass |
+| Browser journeys, public (no account) | `frontend/e2e/public.spec.ts` | 6 | Pass (CI and locally) |
 | Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 12 + 5 | All pass locally (2026-11-12) |
 | Static checks | ruff, mypy (strict), ESLint, TypeScript, Prettier | | Clean |
 
@@ -57,6 +57,8 @@ deletion.
 | Bad input (unknown ids, zero-day absence, same person as backup, too-short questions, extra fields) | 404 / 422 with a plain message | `test_other_workspaces_and_bad_input_are_rejected`, `test_duration_flags_work_due_while_away`, `test_only_the_recipient_and_editors_can_ask` |
 | Too many sample workspaces or AI questions | Rate limited with a clear message | `test_samples_are_rate_limited_per_user` |
 | The AI draft never finishes (worker down, provider hang) | "Taking longer than expected" after 2 minutes; after the 15-minute limit "did not finish in time" with a retry; the rule-based brief stays usable; retrying never queues a duplicate | `test_a_stalled_ai_draft_is_reported_and_can_be_retried` |
+| The brief says nothing cited about a responsibility in scope | **Brief coverage** lists it as *not covered* or *mentioned without a source*, critical first, and links to the handover interview; statements hidden from a viewer don't count for them | `test_interview_capsule_approval_and_acknowledgement`, `e2e/round3.spec.ts` |
+| A reused sample workspace already holds earlier Copilot answers | The browser journey waits for each *new* answer instead of matching an old one | `e2e/round3.spec.ts` |
 | An integration is connected but its sync is queued, failing or broken | Shown as syncing, retrying or needs attention; tours that need its data stay locked until the first sync finished and no sync is pending | `test_an_integration_is_ready_only_after_its_sync_finishes` |
 | Guidance switched off, tour interrupted, bad tour ids | No prompts, tutorials still start, resume at the saved step, 422 for unknown ids or fields | `test_switch_progress_resume_and_reset` |
 
