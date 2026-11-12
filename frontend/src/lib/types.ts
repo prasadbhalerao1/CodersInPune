@@ -1108,6 +1108,16 @@ export type InsightsView = {
   };
   continuity_debt: number;
   debt: DebtComponent[];
+  key_people: KeyPerson[];
+};
+
+/** Someone who is the only active holder of some work (a bus factor of one). */
+export type KeyPerson = {
+  person_id: string;
+  name: string;
+  sole_critical: number;
+  sole_total: number;
+  responsibilities: DebtItem[];
 };
 
 export type AutomationTemplate =

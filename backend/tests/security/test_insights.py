@@ -179,3 +179,28 @@ async def test_trend_metrics_show_definitions_and_denominators(ws: Ws) -> None:
     snap = await ws.call("POST", "/insights/snapshots", 201, params={"days": 30})
     assert [s["id"] for s in await ws.call("GET", "/insights/snapshots")] == [snap["id"]]
     await ws.call("GET", "/insights/metrics", 422, params={"days": 2})
+
+
+async def test_key_people_are_the_only_holders_of_work_ranked_by_criticality(ws: Ws) -> None:
+    ada, bo, cy = await ws.person("Ada"), await ws.person("Bo"), await ws.person("Cy")
+    payroll = await ws.responsibility("Payroll", "critical")
+    audit = await ws.responsibility("Audit export", "low")
+    deploys = await ws.responsibility("Deploys", "high")
+    vendor = await ws.responsibility("Vendor portal", "high")
+    await assign(ws, payroll, "primary", ada)  # Ada alone: critical
+    await assign(ws, audit, "primary", ada)  # Ada alone: low
+    await assign(ws, deploys, "primary", bo)  # Bo alone: high
+    await assign(ws, vendor, "primary", cy)
+    await assign(ws, vendor, "backup", bo)  # shared: nobody is exposed on it
+
+    people = (await ws.call("GET", "/insights"))["key_people"]
+    assert [(p["name"], p["sole_critical"], p["sole_total"]) for p in people] == [
+        ("Ada", 1, 2),
+        ("Bo", 1, 1),
+    ]
+    assert [r["label"] for r in people[0]["responsibilities"]] == ["Payroll", "Audit export"]
+
+    # A backup removes the exposure; the list follows the records.
+    await assign(ws, deploys, "backup", cy)
+    people = (await ws.call("GET", "/insights"))["key_people"]
+    assert [p["name"] for p in people] == ["Ada"]

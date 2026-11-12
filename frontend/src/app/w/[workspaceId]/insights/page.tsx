@@ -170,6 +170,51 @@ export default async function InsightsPage({
           </div>
         </Section>
 
+        <Section
+          title="Key-person exposure"
+          description="People who are the only active holder of some work: if they were away tomorrow, it would have nobody. Teams count as shared cover."
+        >
+          {insights.data.key_people.length ? (
+            <ul className="divide-y rounded-lg border text-sm">
+              {insights.data.key_people.map((p) => (
+                <li key={p.person_id} className="flex flex-wrap items-start gap-3 px-4 py-3">
+                  <span className="min-w-0 flex-1">
+                    <Link
+                      href={`/w/${workspaceId}/people/${p.person_id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                    <span className="text-muted-foreground block text-xs">
+                      Only holder of {p.sole_total} responsibilit{p.sole_total === 1 ? "y" : "ies"}
+                      {p.sole_critical ? `, ${p.sole_critical} critical or high` : ""}:{" "}
+                      {p.responsibilities.map((r, i) => (
+                        <span key={r.id}>
+                          {i ? ", " : ""}
+                          <Link href={itemHref(workspaceId, r)} className="hover:underline">
+                            {r.label}
+                          </Link>
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                  <Link
+                    href={`/w/${workspaceId}/simulator?person=${p.person_id}`}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  >
+                    What if {p.name.split(" ")[0]} is away?
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground rounded-lg border p-4 text-sm">
+              Every responsibility in this view has more than one holder or a team. Nobody is a
+              single point of failure.
+            </p>
+          )}
+        </Section>
+
         <Section title="Coverage" description="Who is accountable, and who steps in.">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Stat label="Active responsibilities" value={c.responsibilities} />

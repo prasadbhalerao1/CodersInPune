@@ -84,6 +84,16 @@ class OperationsInsight(BaseModel):
     accepted_risks: int
 
 
+class KeyPerson(BaseModel):
+    """Someone whose absence would leave work with nobody: the only active holder of it."""
+
+    person_id: uuid.UUID
+    name: str
+    sole_critical: int  # critical or high responsibilities only they hold
+    sole_total: int
+    responsibilities: list[DebtItem]  # the work only they hold, most critical first
+
+
 class InsightsView(BaseModel):
     generated_at: datetime
     filters: dict[str, str | None]
@@ -93,6 +103,8 @@ class InsightsView(BaseModel):
     operations: OperationsInsight
     continuity_debt: int
     debt: list[DebtComponent]
+    # Key-person exposure (bus factor of one), ranked; teams count as shared coverage.
+    key_people: list[KeyPerson] = []
 
 
 def _component(key: str, label: str, rule: str, items: list[DebtItem]) -> DebtComponent:
@@ -170,6 +182,7 @@ async def insights(
 
     # ------------------------------------------------------------ coverage
     roles: dict[uuid.UUID, set[str]] = defaultdict(set)
+    holders: dict[uuid.UUID, set[uuid.UUID | None]] = defaultdict(set)
     for a in await session.scalars(
         select(OwnershipAssignment).where(
             visible(access, Permission.RESPONSIBILITY_READ, OwnershipAssignment.tenant_id),
@@ -178,6 +191,8 @@ async def insights(
         )
     ):
         roles[a.responsibility_id].add(a.role)
+        # A team assignment is shared coverage: record it as a holder that is not one person.
+        holders[a.responsibility_id].add(a.person_id if a.team_id is None else None)
     detected = await risks_service.compute_risks(access, statuses=None)
 
     def in_scope(risk: risks_service.RiskView) -> bool:
@@ -391,4 +406,55 @@ async def insights(
         operations=operations,
         continuity_debt=sum(c.points for c in debt),
         debt=debt,
+        key_people=await _key_people(access, responsibilities, holders),
     )
+
+
+SEVERE = ("critical", "high")
+_RANK = {"critical": 0, "high": 1, "standard": 2, "low": 3}
+
+
+async def _key_people(
+    access: WorkspaceAccess,
+    responsibilities: dict[uuid.UUID, Responsibility],
+    holders: dict[uuid.UUID, set[uuid.UUID | None]],
+    limit: int = 5,
+) -> list[KeyPerson]:
+    """People who are the only active holder of a responsibility, most exposed first."""
+    sole: dict[uuid.UUID, list[Responsibility]] = defaultdict(list)
+    for rid, held in holders.items():
+        if len(held) == 1 and (person := next(iter(held))) is not None:
+            sole[person].append(responsibilities[rid])
+    if not sole:
+        return []
+    names = dict(
+        (
+            await access.session.execute(
+                select(Person.id, Person.display_name).where(
+                    visible(access, Permission.RESPONSIBILITY_READ, Person.tenant_id),
+                    Person.id.in_(sole),
+                )
+            )
+        ).all()
+    )
+    people = [
+        KeyPerson(
+            person_id=pid,
+            name=names.get(pid, "Unknown person"),
+            sole_critical=sum(1 for r in held if r.criticality in SEVERE),
+            sole_total=len(held),
+            responsibilities=[
+                DebtItem(
+                    label=r.name,
+                    detail=r.criticality,
+                    kind="responsibility",
+                    id=r.id,
+                    points=0,
+                )
+                for r in sorted(held, key=lambda r: (_RANK[r.criticality], r.name))
+            ],
+        )
+        for pid, held in sole.items()
+    ]
+    people.sort(key=lambda k: (-k.sole_critical, -k.sole_total, k.name))
+    return people[:limit]
