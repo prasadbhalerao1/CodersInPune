@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { ApiErrorNotice } from "@/components/api-error-notice";
@@ -13,6 +14,17 @@ import { CreateWorkspaceForm } from "./create-workspace-form";
 import { SampleWorkspaceForm } from "./sample-workspace-form";
 
 export const metadata: Metadata = { title: "Workspaces" };
+
+// Each render gets fresh idempotency keys, so it must happen per request, not at build time.
+async function WorkspaceForms() {
+  await connection();
+  return (
+    <>
+      <SampleWorkspaceForm idempotencyKey={crypto.randomUUID()} />
+      <CreateWorkspaceForm idempotencyKey={crypto.randomUUID()} />
+    </>
+  );
+}
 
 export default function WorkspacesPage() {
   return (
@@ -42,8 +54,9 @@ export default function WorkspacesPage() {
           <WorkspaceList />
         </Suspense>
         <div className="flex flex-col gap-4">
-          <SampleWorkspaceForm idempotencyKey={crypto.randomUUID()} />
-          <CreateWorkspaceForm idempotencyKey={crypto.randomUUID()} />
+          <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+            <WorkspaceForms />
+          </Suspense>
         </div>
       </section>
     </div>
