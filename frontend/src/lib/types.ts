@@ -1466,6 +1466,7 @@ export type CapsuleView = {
   can_approve: boolean;
   can_acknowledge: boolean;
   generating: boolean;
+  generation: "idle" | "running" | "slow" | "stalled" | "failed";
   changed_points: number;
   changed_sources: string[];
 };
@@ -1796,4 +1797,56 @@ export type HistoryAnswer = {
   confidence: Confidence | null;
   note: string | null;
   event_ids: string[];
+};
+
+export type TourId =
+  | "basics"
+  | "ownership"
+  | "integrations"
+  | "memory_replay"
+  | "what_if"
+  | "copilot"
+  | "recipient"
+  | "verify";
+
+export type IntegrationReadiness = {
+  provider: "github" | "linear" | "notion";
+  state: "not_connected" | "sync_pending" | "syncing" | "retrying" | "attention" | "ready";
+  detail: string;
+};
+
+export type ChecklistItem = {
+  key: string;
+  label: string;
+  essential: boolean;
+  done: boolean;
+  detail: string;
+  path: string;
+};
+
+export type TourView = {
+  id: TourId;
+  eligible: boolean;
+  reason: string | null;
+  path: string | null;
+  completed: boolean;
+  resume_step: number | null;
+};
+
+export type GuidanceView = {
+  enabled: boolean;
+  checklist_dismissed: boolean;
+  dismissed: string[];
+  checklist: ChecklistItem[];
+  integrations: IntegrationReadiness[];
+  tours: TourView[];
+  suggested: TourId | null;
+};
+
+export type GuidanceUpdate = {
+  enabled?: boolean;
+  complete?: TourId;
+  dismiss?: string;
+  progress?: [TourId, number];
+  reset?: boolean;
 };

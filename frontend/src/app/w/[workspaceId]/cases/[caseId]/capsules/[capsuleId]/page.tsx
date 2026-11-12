@@ -18,9 +18,12 @@ import {
   acknowledgeCapsuleAction,
   approveCapsuleAction,
   editCapsuleAction,
+  generateCapsuleAction,
 } from "../../ai-actions";
 import { CapsuleStatusBadge } from "../status";
 import { Copilot } from "./copilot";
+import { NextSteps } from "./next-steps";
+import { VersionDiff } from "./version-diff";
 
 export const metadata: Metadata = { title: "Handover capsule" };
 
@@ -76,12 +79,15 @@ export default async function CapsulePage({
   const [{ workspaceId, caseId, capsuleId }, query] = await Promise.all([params, searchParams]);
   const requested = typeof query.version === "string" ? Number(query.version) : undefined;
   const version = requested && Number.isInteger(requested) ? requested : undefined;
+  const against = typeof query.compare === "string" ? Number(query.compare) : undefined;
+  const compare = against && Number.isInteger(against) ? against : undefined;
   const [capsule, versions, questions, detail] = await Promise.all([
     attempt(api.capsule(workspaceId, capsuleId, version)),
     attempt(api.capsuleVersions(workspaceId, capsuleId)),
     attempt(api.capsuleQuestions(workspaceId, capsuleId)),
     attempt(api.getCase(workspaceId, caseId)),
   ]);
+  const previous = compare ? await attempt(api.capsule(workspaceId, capsuleId, compare)) : null;
   const scope = detail.ok ? detail.data.scope.filter((s) => !s.hidden) : [];
   if (!capsule.ok) return <ApiErrorNotice error={capsule.error} />;
   const c = capsule.data;
@@ -89,7 +95,7 @@ export default async function CapsulePage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <AutoRefresh active={c.generating} every={2000} />
+      <AutoRefresh active={c.generating} every={c.generation === "slow" ? 10000 : 2000} />
       <PageHeader
         title={
           <span className="flex items-center gap-2">
@@ -166,14 +172,47 @@ export default async function CapsulePage({
                     aria-hidden
                     className="border-muted-foreground/30 border-t-foreground inline-block size-3.5 animate-spin rounded-full border-2"
                   />
-                  Writing an AI draft from the cited evidence. It appears here as a new version; the
-                  rule-based version below stays usable meanwhile.
+                  {c.generation === "slow"
+                    ? "The AI draft is taking longer than expected (the model or the background worker may be busy). The rule-based version below is complete and usable."
+                    : "Writing an AI draft from the cited evidence. It appears here as a new version; the rule-based version below stays usable meanwhile."}
                 </p>
                 <PendingRows rows={2} label="AI draft in progress" />
               </div>
             ) : null}
+            {c.generation === "stalled" || c.generation === "failed" ? (
+              <div
+                role="status"
+                className="mt-2 flex flex-wrap items-center gap-3 rounded-md border border-amber-600/20 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+              >
+                <span className="min-w-0 flex-1">
+                  {c.generation === "stalled"
+                    ? "The AI draft did not finish in time and was abandoned."
+                    : "The AI draft could not be written (AI switched off, over budget or the provider failed)."}{" "}
+                  This rule-based version is complete and cites its evidence.
+                </span>
+                {c.can_edit ? (
+                  <ActionForm action={generateCapsuleAction.bind(null, workspaceId, caseId)}>
+                    <input type="hidden" name="recipient_user_id" value={c.recipient_user_id} />
+                    <SubmitButton size="sm" variant="outline" pendingLabel="Retrying…">
+                      Try the AI draft again
+                    </SubmitButton>
+                  </ActionForm>
+                ) : null}
+              </div>
+            ) : null}
             {c.summary ? <p className="mt-1 text-base">{c.summary}</p> : null}
           </div>
+
+          {c.acknowledged_at && detail.ok ? (
+            <NextSteps workspaceId={workspaceId} capsule={c} detail={detail.data} />
+          ) : null}
+          {previous?.ok ? (
+            <VersionDiff
+              from={previous.data}
+              to={c}
+              closeHref={version ? `${base}?version=${version}` : base}
+            />
+          ) : null}
 
           {c.can_edit ? (
             <ActionForm action={editCapsuleAction.bind(null, workspaceId, c.id)} className="gap-6">
@@ -249,16 +288,18 @@ export default async function CapsulePage({
           ) : (
             <ApiErrorNotice error={questions.error} />
           )}
-          <h2 className="-mb-3 text-sm font-semibold">Versions</h2>
+          <h2 className="-mb-3 text-sm font-semibold" data-tour="capsule-versions">
+            Versions
+          </h2>
           {versions.ok ? (
             <ol className="flex flex-col gap-1 text-sm">
               {versions.data.map((v) => (
-                <li key={v.version}>
+                <li key={v.version} className="group flex items-center gap-1">
                   <Link
                     href={`${base}?version=${v.version}`}
                     aria-current={v.version === c.version ? "page" : undefined}
                     className={cn(
-                      "block rounded-md px-2.5 py-1.5",
+                      "block flex-1 rounded-md px-2.5 py-1.5",
                       v.version === c.version ? "bg-foreground/[0.06]" : "hover:bg-muted",
                     )}
                   >
@@ -269,6 +310,15 @@ export default async function CapsulePage({
                       {v.acknowledged ? " · acknowledged" : ""}
                     </span>
                   </Link>
+                  {v.version !== c.version ? (
+                    <Link
+                      href={`${base}?${version ? `version=${version}&` : ""}compare=${v.version}`}
+                      className="text-primary shrink-0 px-1 text-xs font-medium hover:underline"
+                      aria-label={`Compare v${v.version} with v${c.version}`}
+                    >
+                      Compare
+                    </Link>
+                  ) : null}
                 </li>
               ))}
             </ol>
