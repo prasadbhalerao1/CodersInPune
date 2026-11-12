@@ -39,7 +39,7 @@ function TourCard({ id, start }: { id: TourId; start: number }) {
     let tries = 0;
     const measure = () => setRect(element ? element.getBoundingClientRect() : null);
     const find = window.setInterval(() => {
-      element = step.target ? document.querySelector(step.target) : null;
+      element = step.target ? firstVisible(step.target) : null;
       if (element || ++tries > 10) {
         window.clearInterval(find);
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -161,6 +161,15 @@ function TourCard({ id, start }: { id: TourId; start: number }) {
       </div>
     </>
   );
+}
+
+// Layouts render some regions twice (phone and desktop): use the one actually on screen.
+function firstVisible(selector: string): Element | null {
+  for (const el of document.querySelectorAll(selector)) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return el;
+  }
+  return null;
 }
 
 // Below the element when there is room, otherwise above it; centred with no element.

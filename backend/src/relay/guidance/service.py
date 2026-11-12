@@ -40,6 +40,7 @@ _SYNC = {
     "linear": ("linear.sync_requested", "connection_ref"),
     "notion": ("notion.sync_requested", "connection_ref"),
 }
+_NAME = {"github": "GitHub", "linear": "Linear", "notion": "Notion"}
 _BROKEN = {
     "revoked",
     "paused",
@@ -187,7 +188,7 @@ async def guidance(access: WorkspaceAccess) -> GuidanceView:
         ChecklistItem(key="knowledge", label="Knowledge recorded", essential=True,
                       done=knowledge > 0, detail=f"{knowledge} items", path="/knowledge"),
         *(
-            ChecklistItem(key=i.provider, label=f"{i.provider.title()} connected and synced",
+            ChecklistItem(key=i.provider, label=f"{_NAME[i.provider]} connected and synced",
                           essential=False, done=i.state == "ready", detail=i.detail,
                           path="/integrations")
             for i in integrations

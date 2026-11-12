@@ -163,10 +163,12 @@ export function Checklist({ items }: { items: ChecklistItem[] }) {
                       className="text-muted-foreground/50 size-4 shrink-0"
                     />
                   )}
-                  <span className={cn("flex-1", i.done && "text-muted-foreground")}>{i.label}</span>
-                  {i.detail && !i.done ? (
-                    <span className="text-muted-foreground truncate text-xs">{i.detail}</span>
-                  ) : null}
+                  <span className={cn("min-w-0 flex-1", i.done && "text-muted-foreground")}>
+                    {i.label}
+                    {i.detail && !i.done ? (
+                      <span className="text-muted-foreground block text-xs">{i.detail}</span>
+                    ) : null}
+                  </span>
                 </Link>
               </li>
             ))}
