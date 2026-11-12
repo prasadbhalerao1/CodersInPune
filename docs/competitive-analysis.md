@@ -49,6 +49,11 @@ the Relay way. **Defer**: worthwhile, not worth its cost now. **Reject**: outsid
 | Chat-first workflows | incident.io and Rootly run from Slack | Email notifications and in-app inbox | No Slack app | **Defer** (roadmap) |
 | HR system triggers | Offboarding tools start from the HR termination event | Cases are started by managers or self-requested by the person | No HRIS connector | **Defer** (roadmap: planned leave feeding the simulator) |
 | Org-wide enterprise search | Glean indexes everything a company uses | Search across Relay's own records and imported evidence only | Not an enterprise search engine | **Reject** (different product; would dilute the continuity focus) |
+| Blast radius | Port: `dependsOn` relations traversed for blast radius; catalogues map component dependencies (Compass: depends on / contains) | Responsibility and asset dependencies (depends on, feeds, escalates to, shares access); the simulator propagates an absence across them | Dependencies are recorded by hand, not discovered | Have; discovery from code **Defer** |
+| Knowledge concentration (bus factor) | Bus-factor tools (Truck-Factor, Bus Factor Analyzer, Swimm guidance) estimate it from git authorship | **Key-person exposure**: people who are the only holder of work, ranked by criticality, from accountability records rather than code authorship; one click to simulate their absence | Was a count only, not a named, actionable list | **Adapt** (shipped) |
+| Did the handover take hold? | Not found in any product reviewed; offboarding tools stop at the checklist, catalogues at the owner field | **Follow-through** on executed cases: per responsibility, is the new holder recorded, reviewed or active since, tasks closed; *settled / settling in / check in / new holder not recorded* | Was missing; all five council advisors named it the main gap | **Build** (shipped) |
+| Capture from departing staff | Sensay and Enterprise Knowledge use AI adaptive interviews | Handover interview: AI proposes questions from evidence gaps; answers are reviewed and can become knowledge | — | Have |
+| Catalogue migration | Atlassian is moving Compass's catalogue and scorecards to DX (Atlassian docs); a Cortex blog says access ends 31 Dec 2027 (vendor claim) | Relay reads CODEOWNERS and `catalog-info.yaml` as ownership evidence | No Compass or DX importer | **Defer** (a migration window, not a reason to build a catalogue) |
 
 ## What we changed because of this research
 
@@ -64,6 +69,68 @@ the Relay way. **Defer**: worthwhile, not worth its cost now. **Reject**: outsid
    and a connector counts as ready only after its first sync drains. Common onboarding tools
    unlock on page visits; we tied it to real state instead. (`backend/src/relay/guidance/`)
 
+5. **Key-person exposure** on Insights names the people whose absence would leave work with
+   nobody, critical first, each with a *What if … is away?* link into the simulator. Visible
+   only to owners, admins and auditors. (`relay/insights/service.py::_key_people`,
+   `tests/security/test_insights.py`)
+6. **Follow-through** on executed cases checks whether each transfer took hold, measuring the
+   responsibility (holder recorded, reviewed or recorded activity from any source and person,
+   tasks closed), never an individual's output. (`relay/continuity/follow_through.py`,
+   `test_follow_through_shows_whether_each_transfer_took_hold`, `e2e/smoke.spec.ts`)
+7. **Readable by crawlers and AI agents**: `robots.txt`, `sitemap.xml`, `llms.txt`, canonical and
+   Open Graph metadata, and schema.org structured data on the public landing page; workspaces
+   stay private and disallowed. (`frontend/src/app/robots.ts`, `sitemap.ts`, `public/llms.txt`)
+
+## Council review
+
+We put the question *"How can Relay become a differentiated, indispensable continuity platform,
+and why would an engineering manager choose it over Jira + Confluence + Backstage + an AI
+assistant?"* to an [LLM Council](https://github.com/YonasValentin/llm-council): five advisors
+with different thinking styles, then five anonymous peer reviewers. Full transcript and
+report: [`research/council/2026-11-12-175825/`](research/council/2026-11-12-175825/).
+
+**Where it agreed.** All five advisors: Relay predicts risk and writes a brief but never proved
+that a handover worked; closing that loop is the differentiator and the outcome measure. Four
+of five: ownership data entered by hand decays, so every score is only as good as its upkeep.
+Relay needs a dated trigger (notice period, planned leave) instead of relying on someone
+remembering to open it.
+
+**Where it clashed.** One advisor wanted HRIS integrations, Slack and Teams, compliance
+packaging and a catalogue "land grab"; all five reviewers called that the biggest blind spot
+for a one-person build judged on reliability and usability.
+
+**What the reviewers said everyone missed.** Privacy: ranking named people and watching a
+successor's commits reads as surveillance. Accuracy: nobody proposed measuring whether rules
+and briefs are right on real data. Demo reliability on a sleeping free host.
+
+**Fact check against the code.** Several "missing" items already exist: CSV import with
+preview and commit (`relay/imports`), self-requested coverage cases for planned absence, email
+notifications and automation rules. People-level scores were already restricted to managers
+and auditors.
+
+## Decisions
+
+| Finding | Decision | What we did |
+|---|---|---|
+| No proof a handover took hold | **BUILD** | Follow-through per transferred responsibility, measuring the work, not the person |
+| Single points of failure are counted, not named | **BUILD** | Key-person exposure with a direct link into the simulator, managers and auditors only |
+| Public site invisible to crawlers and AI agents | **FIX** | robots, sitemap, llms.txt, structured data, canonical metadata |
+| Deterministic simulation, cited AI, "Not in the evidence", permission filtering before retrieval | **KEEP** | Unchanged |
+| Ownership data decays | **KEEP + next** | Review cadences and stale-knowledge risks exist; next: drift view comparing Relay owners with CODEOWNERS |
+| No dated trigger | **FIX next** | Planned leave dates on a person feeding the simulator and risks |
+| Watching an individual's commits after a transfer | **REJECT** | Follow-through counts activity from any person on the responsibility |
+| HRIS suites, compliance packaging, Jira connector, Slack bot | **REJECT for now** | Revisit after a real-team trial |
+
+## Roadmap from this analysis
+
+1. **Now:** run Relay on one real team's repositories and record where risks, suggestions and
+   briefs are wrong; publish the error list.
+2. **Next:** planned-leave dates as a trigger; an ownership drift view (Relay owner vs
+   CODEOWNERS / catalog-info); a weekly outbound digest of check-ins and critical exposure.
+3. **Later:** dependency discovery from code and tickets; a catalogue importer for teams leaving
+   Compass; HR-system leave feeds once privacy rules for people-level data are documented with
+   customers.
+
 ## Sources
 
 - Cortex ownership: <https://www.cortex.io/products/ownership>, <https://redesign-docs.cortex.io/ingesting-data-into-cortex/entities/ownership>
@@ -73,6 +140,12 @@ the Relay way. **Defer**: worthwhile, not worth its cost now. **Reject**: outsid
 - Rootly on-call Gap Finder: <https://rootly.com/changelog/2024-05-16-on-call-schedule-owners-gap-finder>
 - Rootly catalog: <https://rootly.com/catalog>
 - Offboarding practice: <https://asana.com/resources/employee-offboarding>, <https://kayako.com/blog/employee-offboarding-best-practices/>
+- Atlassian Compass: <https://support.atlassian.com/compass/docs/add-component-dependencies/>, <https://support.atlassian.com/compass/docs/what-is-compass/>; end-of-life claim: <https://www.cortex.io/post/atlassian-compass-end-of-life-what-to-do-next>
+- Port blast radius: <https://www.port.io/blog/context-layer-for-ai-sdlc>; critique: <https://dev.to/danielwe/inferred-context-is-not-a-dependency-graph-22j2>
+- Bus factor: <https://docs.swimm.io/use-case-guides/increasing-bus-factor>
+- AI knowledge transfer: <https://www.barchart.com/story/news/36018738/sensay-launches-worlds-first-ai-offboarding-platform-for-knowledge-transfer>, <https://www.apqc.org/resource-library/resource/navigating-great-retirement-current-state-knowledge-capture-transfer> (statistics cited secondhand, not verified at source)
+- Glean: <https://techcrunch.com/2024/02/27/glean-wants-to-beat-chatgpt-at-its-own-game-in-the-enterprise>, <https://bloomfire.com/resources/what-is-glean/>
+- Research wiki with per-topic notes and verified-vs-claimed markers: [`research/wiki/`](research/wiki/)
 
 Vendor material describes vendors' own products; we have not used these products against
 Relay's sample data, and nothing here claims Relay is better than them at what they do.

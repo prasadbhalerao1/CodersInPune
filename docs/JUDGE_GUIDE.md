@@ -56,6 +56,8 @@ Each arrow is a link in the product:
 | Brief coverage gap | Interview | **Asking the current owner in the handover interview** link |
 | Acknowledged brief | Recipient work | **Next steps**: open tasks, inherited responsibilities with history links, case status |
 | Executed case | Verification | Separation-of-duties check on completion; ownership history per responsibility |
+| Executed case | Follow-through | Per responsibility: settled, settling in or check in, with a link back to Memory Replay |
+| Insights | What If? | **What if … is away?** on every person in Key-person exposure |
 
 ## Why the approach matters
 
@@ -92,6 +94,8 @@ relative to `backend/tests/` unless they start with `e2e/` (Playwright, in `fron
 | Copilot Q&A | Answers only from authorised brief evidence; invented or missing citations rejected; *Not in the evidence* otherwise | `relay/intelligence/copilot.py` | `POST /ai/capsules/{id}/questions` | `intelligence/test_copilot.py` (8) |
 | AI off | Labelled search results and rule-based briefs; nothing breaks | gateway and fallbacks | — | `test_without_ai_the_reply_is_a_labelled_search`, `test_narrative_without_ai_or_events_says_why` |
 | Prompt-injection resistance | Evidence text treated as data; restricted data never reaches the model for that viewer | `relay/intelligence/evidence.py`, `validate.py` | — | `test_injection_in_evidence_does_not_leak_restricted_data`, `test_eval.py` |
+| Key-person exposure | People who are the only holder of work, critical first, with a link to simulate their absence; managers and auditors only | `relay/insights/service.py::_key_people` | `GET /insights` (`key_people`) | `test_key_people_are_the_only_holders_of_work_ranked_by_criticality`, `test_insights_are_for_managers_and_auditors_only` |
+| Follow-through after a handover | Per transferred responsibility: holder recorded, reviewed or recorded activity since, tasks closed; settled / settling in / check in; measures the work, not the person | `relay/continuity/follow_through.py`, `cases/[caseId]/follow-through.tsx` | `GET /cases/{id}/follow-through` | `test_follow_through_shows_whether_each_transfer_took_hold`, `e2e/smoke.spec.ts` |
 | Guidance and tutorials | Per-user switch; tours unlock from workspace state; resume/replay/reset | `relay/guidance/`, `components/tour.tsx` | `GET/PATCH /guidance` | `test_guidance.py` (4), `e2e/round3.spec.ts` |
 | Integration readiness | Ready only after first sync drains; retrying and attention states from the outbox and connector health | `relay/guidance/service.py` | `GET /guidance` | `test_guidance.py` (Linear syncing → retrying → ready → attention) |
 | Connectors | GitHub App, Linear and Notion, read-only, encrypted credentials, signed webhooks | `relay/integrations/` | `/integrations/*` | `security/test_github_evidence.py`, `test_linear.py`, `test_notion.py`, `e2e/public.spec.ts` |

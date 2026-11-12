@@ -19,7 +19,7 @@ The live product is at https://relay-continuity-nine.vercel.app (sign-in require
 - Project Memory Replay: merged, cited history per responsibility; AI chapters labelled Inferred; cited Q&A
 - What If? simulator: deterministic, read-only impact of an absence, cover candidates with overload flags
 - Handover Copilot: per-recipient brief with Fact / Rule / AI inference labels, brief coverage, version comparison, approval and acknowledgement, cited Q&A that answers "Not in the evidence" rather than guessing
-- Audited handover cases: plan, approve, execute and verify with separation of duties
+- Audited handover cases: plan, approve, execute and verify with separation of duties, then follow-through that checks each transfer took hold (measuring the work, not the person)
 
 ## Technical
 

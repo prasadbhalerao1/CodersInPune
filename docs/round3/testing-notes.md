@@ -8,10 +8,10 @@ the restricted `relay_app` role, so row-level security is exercised on every que
 
 | Suite | Where | Count | Result |
 |---|---|---:|---|
-| Backend (API, services, security, AI validation) | `backend/tests` | 297 (+2 opt-in) | All pass (2026-11-12, 4 min) |
+| Backend (API, services, security, AI validation) | `backend/tests` | 299 (+2 opt-in) | All pass (2026-11-12, 4 min) |
 | of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `intelligence/test_handover.py`, `test_guidance.py`, `test_sample_workspace.py` | 45 | All pass |
 | Browser journeys, public (no account) | `frontend/e2e/public.spec.ts` | 6 | Pass (CI and locally) |
-| Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 12 + 5 | All pass locally (2026-11-12) |
+| Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 12 + 5 (+ 6 public) | All pass locally (2026-11-12) |
 | Static checks | ruff, mypy (strict), ESLint, TypeScript, Prettier | | Clean |
 
 The two opt-in tests call a live model (`RELAY_EVAL_LIVE=1`) and measure API latency at

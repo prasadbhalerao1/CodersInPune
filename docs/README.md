@@ -10,6 +10,7 @@ criteria) or the **[ten-minute walkthrough](../README.md#for-judges)** on the li
 | [JUDGE_GUIDE.md](JUDGE_GUIDE.md) | Why Relay exists, the continuity lifecycle, implementation evidence and the five criteria |
 | [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | Executive overview: what Relay does, architecture, data flow, AI evaluation, operations |
 | [competitive-analysis.md](competitive-analysis.md) | Adjacent products, Relay's position, and the gaps we adopted, adapted, deferred or rejected |
+| [research/](research/) | Sourced research wiki (verified facts vs vendor claims) and the LLM Council transcript behind the decisions |
 | [improvements.md](improvements.md) | The three Round 3 improvements as committed, with acceptance criteria |
 | [round3/improvements-delivered.md](round3/improvements-delivered.md) | Each Round 3 commitment as delivered, with code and tests |
 | [demo-script.md](demo-script.md) | Scripted demo on the sample workspace (*Northwind Labs*, all synthetic) |
