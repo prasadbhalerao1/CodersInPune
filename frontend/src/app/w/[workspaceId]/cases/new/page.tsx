@@ -116,7 +116,11 @@ export default async function NewCasePage({
                 id="person"
                 name="affected_person_id"
                 required={needsPerson}
-                defaultValue=""
+                defaultValue={
+                  typeof query.person === "string" && people.data.some((p) => p.id === query.person)
+                    ? query.person
+                    : ""
+                }
                 className={inputClass}
               >
                 <option value="" disabled={needsPerson}>

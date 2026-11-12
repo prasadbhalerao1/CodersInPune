@@ -290,7 +290,7 @@ function Results({ workspaceId, view }: { workspaceId: string; view: SimulationV
           <p className="text-muted-foreground text-xs">How the score works: {view.score_basis}</p>
         </div>
         <Link
-          href={`/w/${workspaceId}/cases/new?type=departure`}
+          href={`/w/${workspaceId}/cases/new?type=${view.days ? "coverage" : "departure"}&person=${view.person.id}`}
           className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
         >
           Plan a real handover
@@ -443,7 +443,10 @@ function Candidates({
     { label: "Readiness", value: (c) => `${c.readiness_score} / 100` },
     {
       label: "Responsibilities they would hold",
-      value: (c) => (c.load_after === null ? "—" : String(c.load_after)),
+      value: (c) =>
+        c.load_after === null
+          ? "—"
+          : `${c.load_after}${c.overloaded ? ` · overloaded (typical ${view.typical_load})` : ""}`,
     },
   ];
   return (
@@ -485,6 +488,11 @@ function Candidates({
                           <li key={sig}>{sig}</li>
                         ))}
                       </ul>
+                      {c.overloaded ? (
+                        <span className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                          Would be overloaded
+                        </span>
+                      ) : null}
                       {c.person && !selected ? (
                         <Link
                           href={link(c.person.id)}

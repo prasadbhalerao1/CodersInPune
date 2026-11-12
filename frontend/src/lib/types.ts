@@ -1720,11 +1720,13 @@ export type SimulationCandidate = {
   remaining_risks: number;
   readiness_score: number;
   load_after: number | null;
+  overloaded: boolean;
 };
 export type CandidatesView = {
   person: SimulationPersonRef;
   candidates: SimulationCandidate[];
   basis: string;
+  typical_load: number;
 };
 
 // Project Memory Replay (relay.catalog.timeline, relay.intelligence.memory)

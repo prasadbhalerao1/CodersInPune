@@ -195,8 +195,24 @@ async def test_candidates_are_compared_against_nobody_stepping_in(api: Api) -> N
     assert leo["critical_gaps"] == 0
     assert leo["readiness_score"] > nobody["readiness_score"]
     assert "No ranking model" in view["basis"]
+    # Arjun 3, Leo 1, Maya 2: Leo taking over Arjun's work is busy but not overloaded.
+    assert view["typical_load"] == 2.0
+    assert not leo["overloaded"]
     # Candidates are simulated too: nothing was written.
     owners = await ws.call("GET", f"/responsibilities/{ids['deploys']}")
     assert [a["assignee"]["name"] for a in owners["assignments"] if a["state"] == "current"] == [
         "Arjun"
     ]
+
+
+async def test_candidates_already_carrying_a_lot_are_flagged_as_overloaded(api: Api) -> None:
+    ws, ids = await org(api)
+    leo = await ws.call("GET", "/people")
+    leo_id = next(p["id"] for p in leo if p["display_name"] == "Leo")
+    for n in range(6):
+        rid = await ws.responsibility(f"Leo's duty {n}")
+        await assign(ws, rid, "primary", leo_id)
+    view = await ws.call("GET", f"/simulation/candidates?person_id={ids['Arjun']}")
+    row = next(r for r in view["candidates"] if r["person"] and r["person"]["name"] == "Leo")
+    assert row["load_after"] >= 2 * view["typical_load"]
+    assert row["overloaded"]

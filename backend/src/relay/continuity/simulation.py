@@ -129,12 +129,14 @@ class Candidate(BaseModel):
     remaining_risks: int
     readiness_score: int
     load_after: int | None  # responsibilities they would hold, including the takeover
+    overloaded: bool = False  # load_after well above the workspace's typical holder
 
 
 class CandidatesView(BaseModel):
     person: PersonRef
     candidates: list[Candidate]
     basis: str
+    typical_load: float  # average responsibilities held by people who hold any
 
 
 async def _person(access: WorkspaceAccess, person_id: uuid.UUID, what: str) -> Person:
@@ -582,7 +584,8 @@ CANDIDATE_BASIS = (
     "Candidates are people already connected to the affected work: they are its planned "
     "recipient, hold another role on it, share a team with the person, or work in the same "
     "department. People linked to work that would otherwise have nobody come first. Each is "
-    "simulated taking over that work. No ranking model is involved."
+    "simulated taking over that work. No ranking model is involved. A candidate is flagged "
+    "as overloaded when they would hold at least twice the typical load (and 3 more)."
 )
 MAX_CANDIDATES = 4
 
@@ -683,6 +686,7 @@ async def candidates(
     def row(view: SimulationView, who: PersonRef | None, why: list[str]) -> Candidate:
         affected = view.affected_responsibilities
         load = view.backup_load
+        after = load.current_responsibilities + load.would_take_over if load else None
         return Candidate(
             person=who,
             signals=why,
@@ -700,12 +704,28 @@ async def candidates(
             ),
             remaining_risks=len(view.exposed_risks),
             readiness_score=view.readiness_score,
-            load_after=load.current_responsibilities + load.would_take_over if load else None,
+            load_after=after,
+            overloaded=after is not None and after >= max(2 * typical, typical + 3),
         )
 
+    held = list(
+        await session.scalars(
+            select(func.count(func.distinct(OwnershipAssignment.responsibility_id)))
+            .where(
+                visible(access, Permission.RESPONSIBILITY_READ, OwnershipAssignment.tenant_id),
+                OwnershipAssignment.person_id.is_not(None),
+                OwnershipAssignment.valid_from <= now,
+                or_(OwnershipAssignment.valid_to.is_(None), OwnershipAssignment.valid_to > now),
+            )
+            .group_by(OwnershipAssignment.person_id)
+        )
+    )
+    typical = round(sum(held) / len(held), 1) if held else 0.0
     rows = []
     for pid in ranked:
         view = await simulate(access, person_id, pid, days)
         rows.append(row(view, view.backup, signals[pid]))
     rows.append(row(baseline, None, ["Nobody steps in"]))
-    return CandidatesView(person=_ref(person), candidates=rows, basis=CANDIDATE_BASIS)
+    return CandidatesView(
+        person=_ref(person), candidates=rows, basis=CANDIDATE_BASIS, typical_load=typical
+    )
