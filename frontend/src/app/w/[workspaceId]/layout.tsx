@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { MobileSearchButton } from "@/components/command-menu";
 import { formatDateTime } from "@/components/page";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { TourRunner } from "@/components/tour";
 import { WorkspaceContextBridge } from "@/components/workspace-context";
 import { api } from "@/lib/relay-api";
 import type { WorkspaceRole } from "@/lib/types";
@@ -56,6 +57,9 @@ export default function WorkspaceLayout({ children, params }: LayoutProps<"/w/[w
         <WorkspaceChrome params={params} />
       </Suspense>
       {children}
+      <Suspense fallback={null}>
+        <TourRunner />
+      </Suspense>
     </>
   );
 }

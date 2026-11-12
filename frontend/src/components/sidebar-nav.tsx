@@ -78,7 +78,7 @@ const GROUPS: readonly { label: string | null; items: readonly Item[] }[] = [
       { label: "Import", path: "/import", icon: Upload, roles: ADMIN_ROLES },
       { label: "Audit log", path: "/audit", icon: FileClock, roles: [...ADMIN_ROLES, "auditor"] },
       { label: "Settings", path: "/settings", icon: Settings },
-      { label: "Help", path: "/help", icon: HelpCircle },
+      { label: "Learn Relay", path: "/help", icon: HelpCircle },
     ],
   },
 ];

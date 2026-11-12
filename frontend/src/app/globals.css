@@ -267,3 +267,20 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Guided tours: the highlighted element stays bright, the rest of the page dims. */
+.tour-spotlight {
+  box-shadow:
+    0 0 0 2px var(--primary),
+    0 0 0 9999px rgb(0 0 0 / 0.28);
+  transition:
+    top 200ms ease,
+    left 200ms ease,
+    width 200ms ease,
+    height 200ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight {
+    transition: none;
+  }
+}

@@ -67,7 +67,11 @@ export default async function SimulatorPage({
       />
       <div className="flex w-full max-w-6xl flex-col gap-6 p-6">
         <Panel className="p-4">
-          <form method="get" className="grid items-end gap-3 md:grid-cols-[1.3fr_0.8fr_1.2fr_auto]">
+          <form
+            method="get"
+            data-tour="simulator-form"
+            className="grid items-end gap-3 md:grid-cols-[1.3fr_0.8fr_1.2fr_auto]"
+          >
             <label className="flex flex-col gap-1.5 text-xs font-medium">
               What if
               <select name="person" defaultValue={personId ?? ""} required className={inputClass}>

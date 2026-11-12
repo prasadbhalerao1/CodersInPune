@@ -16,6 +16,8 @@ import type {
   CapsuleSummary,
   CapsuleVersionView,
   CapsuleView,
+  GuidanceUpdate,
+  GuidanceView,
   InterviewView,
   RunDetail,
   RunView,
@@ -328,6 +330,12 @@ export const api = {
     relayFetch<CapsuleView>(
       withQuery(`${ws(id)}/ai/capsules/${capsuleId}`, { version: version?.toString() }),
     ),
+  guidance: (id: string) => relayFetch<GuidanceView>(`${ws(id)}/guidance`),
+  updateGuidance: (id: string, body: GuidanceUpdate) =>
+    relayFetch<GuidanceView>(`${ws(id)}/guidance`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   capsuleQuestions: (id: string, capsuleId: string) =>
     relayFetch<AnswerView[]>(`${ws(id)}/ai/capsules/${capsuleId}/questions`),
   askCapsule: (id: string, capsuleId: string, question: string) =>

@@ -448,6 +448,7 @@ export function CommandTrigger() {
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_MENU))}
+        data-tour="search"
         className="text-muted-foreground hover:text-foreground hover:bg-muted flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm"
       >
         <span aria-hidden>⌕</span>

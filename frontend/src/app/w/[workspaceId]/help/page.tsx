@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ApiErrorNotice } from "@/components/api-error-notice";
+import { Checklist, GuidanceSwitch, IntegrationStatus, TourList } from "@/components/guidance";
 import { PageHeader, Section } from "@/components/page";
+import { attempt } from "@/lib/attempt";
+import { api } from "@/lib/relay-api";
 
-export const metadata: Metadata = { title: "Help" };
+export const metadata: Metadata = { title: "Learn Relay" };
 
 const START = [
   {
@@ -65,11 +69,42 @@ export default async function HelpPage({ params }: PageProps<"/w/[workspaceId]/h
   const { workspaceId } = await params;
   const base = `/w/${workspaceId}`;
   const feedback = process.env.RELAY_FEEDBACK_EMAIL;
+  const guidance = await attempt(api.guidance(workspaceId));
 
   return (
     <div className="flex flex-1 flex-col">
-      <PageHeader title="Help" />
+      <PageHeader
+        title="Learn Relay"
+        description="Short guided tours, your setup checklist and help. Tours unlock as your workspace has the data they show."
+      />
       <div className="flex max-w-4xl flex-col gap-8 p-6">
+        {guidance.ok ? (
+          <>
+            <div id="learn" className="flex scroll-mt-20 flex-col gap-8">
+              <GuidanceSwitch workspaceId={workspaceId} enabled={guidance.data.enabled} />
+              <Section
+                title="Tutorials"
+                description="Start, resume or replay any tour. Close one at any step and it resumes where you left off."
+              >
+                <TourList workspaceId={workspaceId} tours={guidance.data.tours} />
+              </Section>
+            </div>
+            <Section
+              title="Setup checklist"
+              description="What makes continuity work here. Connecting tools is optional: Relay is useful without them."
+            >
+              <Checklist items={guidance.data.checklist} />
+            </Section>
+            <Section
+              title="Connected tools"
+              description="A tool counts as ready only once its first sync has finished and no sync is still queued or retrying."
+            >
+              <IntegrationStatus guidance={guidance.data} />
+            </Section>
+          </>
+        ) : (
+          <ApiErrorNotice error={guidance.error} />
+        )}
         <Section title="Get started" description="The four things most teams do first.">
           <div className="grid gap-3 sm:grid-cols-2">
             {START.map((s) => (

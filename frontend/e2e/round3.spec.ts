@@ -162,3 +162,45 @@ test("handover copilot: cited answer, honest not-found, history link", async ({ 
   await page.getByRole("link", { name: "Open memory replay" }).first().click();
   await page.waitForURL(/\/timeline$/);
 });
+
+test("guidance: switch off and on, start, skip, resume and finish a tour", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto(overview);
+  await sidebar(page, "Learn Relay");
+  await expect(page.getByRole("heading", { name: "Learn Relay" })).toBeVisible();
+  const toggle = page.getByRole("switch", { name: "Product guidance" });
+
+  // Off: the Overview shows no prompts, but every tutorial still starts.
+  if ((await toggle.getAttribute("aria-checked")) === "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  await settle(page);
+  await sidebar(page, "Overview");
+  await expect(page.getByRole("region", { name: "Getting started" })).toHaveCount(0);
+  await sidebar(page, "Learn Relay");
+
+  const basics = page.getByRole("listitem").filter({ hasText: "Find your way around" });
+  await basics.getByRole("link", { name: /Start|Resume|Replay/ }).click();
+  const tour = page.getByRole("dialog");
+  await expect(tour.getByText("Continuity health", { exact: true })).toBeVisible();
+  await tour.getByRole("button", { name: "Next" }).click();
+  await expect(tour.getByText(/2 of 4/)).toBeVisible();
+  await tour.getByRole("button", { name: "Skip" }).click();
+  await expect(tour).toHaveCount(0);
+
+  // Resume continues at the step where it was closed.
+  await sidebar(page, "Learn Relay");
+  await basics.getByRole("link", { name: "Resume" }).click();
+  await expect(page.getByRole("dialog").getByText(/2 of 4/)).toBeVisible();
+  for (let i = 0; i < 2; i++)
+    await page.getByRole("dialog").getByRole("button", { name: "Next" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+  await sidebar(page, "Learn Relay");
+  await expect(basics.getByRole("link", { name: "Replay" })).toBeVisible();
+
+  // On again: the Overview offers the next tour and the setup checklist.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await settle(page);
+  await sidebar(page, "Overview");
+  await expect(page.getByRole("region", { name: "Getting started" })).toBeVisible();
+});

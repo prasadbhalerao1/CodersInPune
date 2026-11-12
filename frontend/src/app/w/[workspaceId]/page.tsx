@@ -17,6 +17,7 @@ import Link from "next/link";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { RelayLines } from "@/components/brand";
 import { HandoverBanner } from "@/components/handover-banner";
+import { GettingStarted } from "@/components/guidance";
 import { EmptyState, PageHeader, Section } from "@/components/page";
 import { CaseStatusBadge, ROLE_LABEL, SeverityBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -45,12 +46,13 @@ type Metric = {
 
 export default async function OverviewPage({ params }: PageProps<"/w/[workspaceId]">) {
   const { workspaceId } = await params;
-  const [workspace, overview, openCases, accepted, mine] = await Promise.all([
+  const [workspace, overview, openCases, accepted, mine, guidance] = await Promise.all([
     attempt(api.getWorkspace(workspaceId)),
     attempt(api.overview(workspaceId)),
     attempt(api.listCases(workspaceId, { status: "open" })),
     attempt(api.risks(workspaceId, "accepted")),
     attempt(api.myWork(workspaceId)),
+    attempt(api.guidance(workspaceId)),
   ]);
   const seesInsights = workspace.ok && ["owner", "admin", "auditor"].includes(workspace.data.role);
   const insights = seesInsights ? await attempt(api.insights(workspaceId)) : null;
@@ -190,6 +192,7 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
         {mine.ok ? (
           <HandoverBanner workspaceId={workspaceId} handovers={mine.data.handovers} />
         ) : null}
+        {guidance.ok ? <GettingStarted workspaceId={workspaceId} guidance={guidance.data} /> : null}
         {emergencies.length > 0 ? (
           <section
             aria-label="Emergency cases"

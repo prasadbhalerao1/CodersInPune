@@ -78,7 +78,11 @@ export default async function ResponsibilitiesPage({
               >
                 Import CSV
               </Link>
-              <Link href={`${base}/new`} className={buttonVariants({ size: "sm" })}>
+              <Link
+                href={`${base}/new`}
+                className={buttonVariants({ size: "sm" })}
+                data-tour="new-responsibility"
+              >
                 New responsibility
               </Link>
             </>
@@ -211,7 +215,7 @@ export default async function ResponsibilitiesPage({
           />
         ) : (
           <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" data-tour="responsibility-table">
               <thead className="text-muted-foreground bg-muted/40 text-left text-xs">
                 <tr>
                   <th className="px-4 py-2 font-medium">Name</th>

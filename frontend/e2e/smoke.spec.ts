@@ -298,7 +298,7 @@ test("another workspace cannot be reached", async ({ page }) => {
 
 test("help explains the product and links back into it", async ({ page }) => {
   await page.goto(`${base}/help`);
-  await expect(page.getByRole("heading", { name: "Help" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Learn Relay" })).toBeVisible();
   await page.getByRole("link", { name: /Review risks/ }).click();
   await page.waitForURL(/\/risks$/);
 });

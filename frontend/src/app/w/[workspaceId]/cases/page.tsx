@@ -193,7 +193,7 @@ export default async function CasesPage({
             }
           />
         ) : (
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y rounded-lg border" data-tour="case-list">
             {cases.data.map((c) => (
               <li key={c.id}>
                 <Link

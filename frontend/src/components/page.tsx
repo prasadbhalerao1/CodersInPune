@@ -85,7 +85,10 @@ export function Section({
   aside?: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section
+      className="flex flex-col gap-3"
+      data-section={typeof title === "string" ? title : undefined}
+    >
       <div className="flex items-end justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold">{title}</h2>
