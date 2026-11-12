@@ -256,8 +256,8 @@ export default async function PeoplePage({
             ) : (
               <ul className="divide-y rounded-lg border">
                 {people.data.map((p) => (
-                  <li key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <span className="min-w-0 flex-1">
+                  <li key={p.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
+                    <span className="min-w-48 flex-1">
                       <Link
                         href={`/w/${workspaceId}/people/${p.id}`}
                         className="font-medium hover:underline"
@@ -283,7 +283,7 @@ export default async function PeoplePage({
                     {manage && p.status === "active" && departments.data.length > 0 ? (
                       <ActionForm
                         action={setDepartmentAction.bind(null, workspaceId, "people", p.id)}
-                        className="flex-row items-center gap-1"
+                        className="w-52 flex-row items-center gap-1"
                       >
                         <DepartmentSelect
                           id={`dept-${p.id}`}
@@ -421,7 +421,7 @@ export default async function PeoplePage({
                         {manage && departments.data.length > 0 ? (
                           <ActionForm
                             action={setDepartmentAction.bind(null, workspaceId, "teams", t.id)}
-                            className="flex-row items-center gap-1"
+                            className="w-52 shrink-0 flex-row items-center gap-1"
                           >
                             <DepartmentSelect
                               id={`team-dept-${t.id}`}
