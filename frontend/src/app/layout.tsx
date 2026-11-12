@@ -2,6 +2,8 @@ import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 
+import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,9 +24,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Relay", template: "%s · Relay" },
-  description:
-    "Relay keeps work moving when people move on: who owns what, the context behind it, and a reviewed handover that cites its sources.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "Relay: organisational continuity", template: "%s · Relay" },
+  description: SITE_DESCRIPTION,
+  applicationName: "Relay",
+  keywords: [
+    "organisational continuity",
+    "handover",
+    "ownership",
+    "knowledge transfer",
+    "bus factor",
+    "offboarding",
+  ],
+  alternates: { canonical: "/", types: { "text/plain": "/llms.txt" } },
+  openGraph: {
+    type: "website",
+    siteName: "Relay",
+    title: "Relay: keep work moving when people move on",
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  twitter: { card: "summary", title: "Relay", description: SITE_DESCRIPTION },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -7,12 +7,33 @@ import { Suspense } from "react";
 import { Walkthrough } from "@/components/landing/walkthrough";
 import { RelayLines } from "@/components/brand";
 import { RelayMark } from "@/components/workspace-heading";
+import { REPO_URL, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Relay — continuity when people and responsibilities change",
   description:
     "Relay finds what someone owns, reconstructs the context from your tools with cited evidence, and moves ownership through reviewed, auditable handovers.",
 };
+
+// Structured data so search and AI crawlers can tell what the product is and does.
+const STRUCTURED_DATA = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Relay",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  sameAs: [REPO_URL],
+  featureList: [
+    "Responsibility ownership with primary owners, co-owners and backups",
+    "Continuity risks and key-person exposure from explainable rules",
+    "Project Memory Replay: cited history of a responsibility from GitHub, Linear and Notion",
+    "What If? simulator: deterministic, read-only absence impact and cover candidates",
+    "AI Handover Copilot: evidence-backed handover briefs, coverage, versions and cited Q&A",
+    "Audited handover cases with approval, acknowledgement and verification",
+  ],
+}).replace(/</g, "\\u003c");
 
 const PROBLEMS = [
   {
@@ -106,6 +127,7 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
         <section className="relative overflow-hidden border-b">
           <div
             aria-hidden

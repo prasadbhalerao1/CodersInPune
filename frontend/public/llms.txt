@@ -1,0 +1,35 @@
+# Relay
+
+> Relay is an organisational continuity platform. It records who is accountable for what (people and teams, primary owners and backups, any kind of work), rebuilds the context behind that work from GitHub, Linear and Notion with cited evidence, forecasts what an absence would break, and moves ownership through reviewed, audited handovers. The database is the source of truth; AI only proposes evidence-backed drafts and answers, and never changes ownership, approvals or source records.
+
+The live product is at https://relay-continuity-nine.vercel.app (sign-in required past the landing page; a synthetic sample workspace is one click away). Source code and documentation: https://github.com/prasadbhalerao1/CodersInPune
+
+## Product
+
+- [Judge guide](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/JUDGE_GUIDE.md): the problem, the continuity lifecycle, an implementation-evidence matrix and the judging criteria
+- [README and ten-minute walkthrough](https://github.com/prasadbhalerao1/CodersInPune/blob/main/README.md): what to click on the live product
+- [Project overview](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/PROJECT_OVERVIEW.md): capabilities, architecture, AI evaluation, operations
+- [Competitive analysis](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/competitive-analysis.md): service catalogues, knowledge tools, offboarding and incident tools compared, with sources
+- [Round 3 improvements delivered](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/round3/improvements-delivered.md): AI Handover Copilot, What If? simulator and Project Memory Replay, mapped to code and tests
+
+## Core capabilities
+
+- Responsibilities with primary owners, co-owners and backups; ownership history; review cadences
+- Continuity risks from explainable rules (no owner, no backup, single holder, stale knowledge) and key-person exposure
+- Project Memory Replay: merged, cited history per responsibility; AI chapters labelled Inferred; cited Q&A
+- What If? simulator: deterministic, read-only impact of an absence, cover candidates with overload flags
+- Handover Copilot: per-recipient brief with Fact / Rule / AI inference labels, brief coverage, version comparison, approval and acknowledgement, cited Q&A that answers "Not in the evidence" rather than guessing
+- Audited handover cases: plan, approve, execute and verify with separation of duties
+
+## Technical
+
+- [Architecture](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/architecture.md): FastAPI, PostgreSQL with forced row-level security, transactional outbox, Next.js
+- [API reference](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/api-reference.md) and [OpenAPI schema](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/openapi.json)
+- [AI use and guardrails](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/ai.md): permission filtering before retrieval, citation validation, injection handling
+- [Trust: privacy, security, accessibility](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/trust.md)
+- [Testing notes](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/round3/testing-notes.md)
+
+## Optional
+
+- [Documentation index](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/README.md)
+- [Deployment](https://github.com/prasadbhalerao1/CodersInPune/blob/main/deployment.md)
