@@ -30,7 +30,9 @@ below starts from that link and only uses buttons you can see. Allow about ten m
    synthetic.
 
 **Look for:** the Overview leads with *A handover is waiting for you*, a continuity-health
-ring, and the gaps that would hurt if someone left tomorrow.
+ring, a setup checklist with the next useful tour, and the gaps that would hurt if someone
+left tomorrow. New to Relay? Click **Take the tour**, or open **Learn Relay** in the sidebar
+for every tutorial. Tours can be skipped, resumed and replayed; guidance can be switched off.
 
 ### 2. Understand the past: Project Memory Replay (3 minutes)
 
@@ -50,7 +52,11 @@ ring, and the gaps that would hurt if someone left tomorrow.
 1. Click **People & Teams**, then **Arjun Rao**, then **What if Arjun is unavailable?**
 2. Set **is unavailable for** to *2 weeks* and click **Run simulation**.
 3. Open **Why it is affected** under *Production deployments*.
-4. Scroll to **Who could cover?** and click **Simulate with Dev**.
+4. Scroll to **Who could cover?**: each candidate is simulated and compared with nobody
+   stepping in; anyone who would carry far more than the team's typical load is flagged
+   *Would be overloaded*. Click **Simulate with Dev**.
+5. Click **Plan a real handover**: the case form opens with Arjun already selected. Starting
+   a real case is a separate, audited step.
 
 **Look for:** deployments are left with nobody, readiness is 55/100, one task falls due
 while he is away; Dev (the planned recipient) closes the gap and readiness rises. A banner
@@ -64,11 +70,15 @@ confirms nothing in the workspace was changed.
 3. In **Ask about this handover**, ask *"How should I deploy payments-api?"*, then ask
    something the evidence cannot answer, such as *"What is the AWS root password recovery
    process?"*
-4. Click **Open memory replay** under *Where this work came from*, then come back and click
+4. Under **Versions**, click **Compare** on an earlier version to see what changed.
+5. Click **Open memory replay** under *Where this work came from*, then come back and click
    **Acknowledge receipt**.
 
 **Look for:** the answer cites its sources and points out the conflicting old runbook; the
-second question gets *Not in the evidence* instead of an invented answer.
+second question gets *Not in the evidence* instead of an invented answer. After you
+acknowledge, the brief shows **your next steps**: your open tasks, what you are taking over
+(each with its history), the case status and where to ask. If the AI draft is slow or
+fails, the page says so and offers a retry; the rule-based brief is always usable.
 
 ### 5. Optional
 
@@ -112,12 +122,57 @@ workspaces and click **Create sample workspace**. Everything in it is synthetic.
 - **GitHub, Linear and Notion** are optional and need your own app credentials (below).
 - The setup script is safe to re-run: it keeps values you already set.
 
+## Known limitations
+
+- **Sample data is synthetic.** The sample workspace's GitHub, Linear and Notion records are
+  seeded rows, labelled as such. Live connectors work (read-only) but are verified with
+  faked provider APIs in tests, not against every provider edge case.
+- **History depth.** Memory Replay reads pull request, issue, project and page metadata,
+  never commits or code (by design), and works per responsibility rather than per
+  repository. It does not reconstruct past states it cannot prove.
+- **AI.** Answers and drafts depend on a configured model (Gemini by default). Without one,
+  Relay falls back to labelled keyword search and rule-based briefs; nothing breaks, but
+  there is no prose. Quality beyond citation validity is measured on a 31-case evaluation
+  set, not on every answer.
+- **Free hosting.** The API sleeps when idle; the first request after a quiet period can take
+  up to a minute.
+- **Backups.** Neon point-in-time restore protects production. The nightly encrypted dump in
+  GitHub Actions currently fails because the owner role (deliberately) cannot bypass forced
+  row-level security; it needs a dedicated read-only backup role with BYPASSRLS, which only
+  the database admin can create.
+- **Signed-in browser journeys** run locally before each release, not in CI (they need a
+  real WorkOS session).
+
+## Roadmap
+
+1. **Next:** a dedicated backup role so the nightly dump and restore drill run again;
+   repository- and asset-level Memory Replay; side-by-side brief diffs at sentence level.
+2. **Soon:** calendar and HR-system signals (planned leave feeding the simulator
+   automatically); Slack and Jira connectors; scheduled continuity reviews per team.
+3. **Later:** organisation-wide resilience trends; SCIM provisioning; self-hosted model
+   support for regulated customers.
+
+## Team and contributions
+
+Team **Midnight Ciphers** (CodersInPune Hackathon, Round 3 finalist).
+
+| Member | Contribution |
+|---|---|
+| Prasad Bhalerao | Backend and trust: API, tenancy and row-level security, permissions, audit, continuity cases, the What If? simulator, deployment |
+| Ayush | Integration and intelligence: GitHub, Linear and Notion connectors, the evidence pipeline, Handover Copilot and Memory Replay AI |
+| Vipul Nanaware | Product and experience: user journeys, interface and brand, onboarding and tutorials, testing with users, presentation |
+
+AI coding assistants were used throughout; how AI is used inside the product is disclosed
+in [docs/ai.md](docs/ai.md).
+
 ## Documentation
 
 | Doc | What's in it |
 |---|---|
 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture, data flow, integrations, AI pipeline, quality evidence |
 | [docs/api-reference.md](docs/api-reference.md) | Full API endpoint listing, AI capabilities, external service config, library reference |
+| [docs/openapi.json](docs/openapi.json) | OpenAPI schema generated from the code (every route, request and response) |
+| [docs/round3/testing-notes.md](docs/round3/testing-notes.md) | Round 3 testing: journeys, failure cases, permissions, reliability |
 | [docs/round3/improvements-delivered.md](docs/round3/improvements-delivered.md) | Round 3: the three improvements as delivered, with the tests that prove each commitment |
 | [docs/improvements.md](docs/improvements.md) | Round 3 improvements (AI Handover Copilot, "What If?" Simulator, Project Memory Replay) with acceptance criteria, plus Round 2 delivery status |
 | [docs/architecture.md](docs/architecture.md) | System boundary, modules, data flows, inventory |

@@ -41,9 +41,14 @@ is recorded as an agent run with tokens and cost, so it counts against the works
 monthly AI budget and shows on the AI agents page. Storage: migration `0040`
 (`intelligence.capsule_question`, tenant RLS, append-only for the app role).
 
-**Not done.** A diff view between brief versions. Every version is kept and can be
-opened, and statements whose sources changed are flagged, but there is no line-by-line
-comparison yet.
+**Versions, drafts and the recipient's next steps.** Every version is kept; **Compare**
+shows the statements added and removed between any two versions, section by section. The
+AI draft reports its state honestly (`running`, then "taking longer than expected" after
+two minutes, `stalled` after the 15-minute run limit, or `failed`) instead of spinning;
+editors can retry, stalled runs are closed first and a live draft is never duplicated
+(`test_a_stalled_ai_draft_is_reported_and_can_be_retried`). After acknowledging, the
+recipient sees their open tasks in the case, what they are taking over with links to its
+history, the case status, and where to ask.
 
 ---
 
@@ -75,7 +80,11 @@ left uncovered and the score rises.
 | Cover candidates by deterministic signals (planned recipient, existing role, team, department), each simulated and compared with "no replacement" | Done | `test_candidates_are_compared_against_nobody_stepping_in`, `test_sample_powers_the_round_three_features` |
 
 Candidates are ranked first by whether they are connected to the work that would
-otherwise have nobody, then by how many recorded links they have. There is no AI score;
+otherwise have nobody, then by how many recorded links they have. A candidate who would hold
+at least twice the workspace's typical load (and three more) is flagged as overloaded
+(`test_candidates_already_carrying_a_lot_are_flagged_as_overloaded`). **Plan a real
+handover** opens the case form with the person pre-selected: acting on a simulation is a
+separate, authorised and audited step. There is no AI score;
 the signals are shown next to each name. Entry points: the sidebar, the Overview's "Test
 your readiness" card, and "What if … is unavailable?" on each person's profile.
 
@@ -135,6 +144,21 @@ Memory replay shows how a responsibility got here → the simulator shows what b
 owner is away and who could cover → "Prepare handover" starts the transfer → the handover
 brief links back to the memory replay and the Copilot answers questions from the same
 evidence. A recipient sees "A handover is waiting for you" on the Overview and My Work.
+
+## Onboarding that follows the workspace
+
+**Learn Relay** (sidebar) holds eight short tours: basics, ownership, connected evidence,
+Memory Replay, What If?, Handover Copilot, recipient next steps and verifying a transfer.
+Each unlocks only when the workspace has what it demonstrates (`relay/guidance/service.py`):
+for example the What If? tour needs ownership records and a role that may simulate, and the
+connected-evidence tour needs a provider whose first sync finished with no sync job still
+queued or retrying. A tour spotlights the real element, can be skipped at any step, resumes
+where it was closed and can be replayed. A per-member **Product guidance** switch turns off
+the Overview's setup checklist and tour suggestions; tutorials stay available. State is
+stored per member (migration `0041`, tenant RLS). Tests: `tests/test_guidance.py` (switch,
+resume, reset, per-member isolation, input validation, and Linear moving through
+syncing → retrying → ready → attention) and the browser journey "guidance" in
+`frontend/e2e/round3.spec.ts`.
 
 ## Brand and interface
 

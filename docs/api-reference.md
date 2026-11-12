@@ -393,6 +393,26 @@ Rate limit: 20 AI runs per 10 minutes per workspace (token-bucket in PostgreSQL)
 
 ---
 
+### 3.8 Round 3 APIs: Copilot, simulator, memory replay, guidance
+
+All routes are under `/workspaces/{workspace_id}`, need a verified WorkOS token and an active
+membership, and check permissions inside the service. The full machine-readable schema for
+every route is [docs/openapi.json](openapi.json) (generated from the code; regenerate with
+`cd backend && uv run python -c "import json; from relay.app import create_app; print(json.dumps(create_app().openapi(), indent=1))" > ../docs/openapi.json`).
+Development servers also serve it interactively at `/docs`.
+
+| Method | Path | Permission | What it does |
+|---|---|---|---|
+| GET | `/simulation?person_id=&backup_id=&days=` | `continuity.simulate` | Read-only absence simulation: affected responsibilities with reasons, cover, knowledge, open work, work due in the window, new single-person dependencies, readiness score and its formula. `days` 1–365. |
+| GET | `/simulation/candidates?person_id=&days=` | `continuity.simulate` | Cover candidates from recorded relationships, each simulated with the same rules and compared with nobody stepping in; `load_after`, `overloaded` against `typical_load`. |
+| GET | `/responsibilities/{id}/timeline?category=&before=&limit=` | `responsibility.read` | Factual history (ownership periods, GitHub, Linear, Notion, knowledge and decisions), each event with source and how its category was derived; paginated with `before`. |
+| POST / GET | `/responsibilities/{id}/timeline/narrative` | `ai.run` / `ai.read` | Write or read the stored AI reading (chapters and links that cite events); filtered per viewer and flagged `outdated` when newer events exist. |
+| POST | `/responsibilities/{id}/timeline/questions` | `ai.read` | Question about the history; answers cite events or say they're not in the history. |
+| GET / POST | `/ai/capsules/{id}/questions` | recipient or capsule editor | Handover Copilot thread. Answers cite the brief's evidence (re-checked per viewer); invented citations are rejected; 30 questions per 10 minutes. |
+| GET | `/ai/capsules/{id}?version=` | `ai.read` | A brief version, including `generation`: `idle`, `running`, `slow`, `stalled` or `failed`. |
+| POST | `/cases/{id}/capsules` | `ai.run` | Build (or rebuild) a brief: a rule-based version immediately, then an AI draft. Stalled drafts are closed and retried; a live draft is never duplicated. |
+| GET / PATCH | `/guidance` | `workspace.read` | The member's guidance: switch, setup checklist, per-provider readiness (`not_connected`, `sync_pending`, `syncing`, `retrying`, `attention`, `ready`) and tours with eligibility. PATCH takes `enabled`, `complete`, `progress`, `dismiss` or `reset`. |
+
 ## 4. AI Pipeline
 
 ### Model and Provider Configuration
