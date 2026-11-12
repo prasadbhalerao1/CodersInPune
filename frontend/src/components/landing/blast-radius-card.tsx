@@ -7,7 +7,7 @@ const ROWS: ReadonlyArray<readonly [label: string, value: string]> = [
 /** Frosted telemetry readout anchored to the hero capsule. Decorative sample data. */
 export function BlastRadiusCard() {
   return (
-    <div className="relative w-44 rounded-xl border border-white/20 bg-white/[0.04] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.25)] backdrop-blur-xl select-none sm:w-48 sm:p-4.5">
+    <div className="glass-clear relative w-44 p-4 select-none sm:w-48">
       {/* Card Header */}
       <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2.5">
         <span className="font-mono text-[10px] font-medium tracking-[0.22em] text-zinc-400 uppercase">

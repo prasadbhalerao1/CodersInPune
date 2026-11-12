@@ -12,7 +12,6 @@
   --font-heading: var(--font-syne), var(--font-sans);
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
   --font-syne: var(--font-syne);
-  --font-script: var(--font-great-vibes), cursive;
   --font-bebas: var(--font-bebas-neue), var(--font-syne), sans-serif;
   --color-obsidian: #06070b;
   --color-charcoal: #0e1118;
@@ -64,80 +63,80 @@
 
 :root {
   /* Default to Sovereign Obsidian Void */
-  --background: #06070b;
+  --background: #04060f;
   --foreground: #f5f5f7;
-  --card: #0e1118;
+  --card: #0a1028;
   --card-foreground: #f5f5f7;
-  --popover: #0e1118;
+  --popover: #0a1028;
   --popover-foreground: #f5f5f7;
-  --primary: #d2ff00;
-  --primary-foreground: #06070b;
-  --secondary: #161a23;
+  --primary: #b8ff3c;
+  --primary-foreground: #04060f;
+  --secondary: #111a3d;
   --secondary-foreground: #f5f5f7;
-  --muted: #12151e;
-  --muted-foreground: #8e92a4;
-  --accent: #7e1520;
+  --muted: #0d1430;
+  --muted-foreground: #94a3c8;
+  --accent: #14204f;
   --accent-foreground: #ffffff;
   --destructive: #ff334b;
-  --success: #00f5a0;
+  --success: #b8ff3c;
   --baton: #f59e0b;
   --baton-foreground: #06070b;
   --warning: #f59e0b;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
-  --ring: #d2ff00;
-  --chart-1: #d2ff00;
-  --chart-2: #00f5a0;
-  --chart-3: #f59e0b;
-  --chart-4: #7e1520;
-  --chart-5: #8e92a4;
+  --ring: #b8ff3c;
+  --chart-1: #b8ff3c;
+  --chart-2: #8fa8ff;
+  --chart-3: #3b5bff;
+  --chart-4: #5b7cfa;
+  --chart-5: #94a3c8;
   --radius: 0.5rem;
-  --sidebar: #0a0c11;
+  --sidebar: #060a1e;
   --sidebar-foreground: #f5f5f7;
-  --sidebar-primary: #d2ff00;
-  --sidebar-primary-foreground: #06070b;
-  --sidebar-accent: #161a23;
+  --sidebar-primary: #b8ff3c;
+  --sidebar-primary-foreground: #04060f;
+  --sidebar-accent: #111a3d;
   --sidebar-accent-foreground: #f5f5f7;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #d2ff00;
+  --sidebar-ring: #b8ff3c;
 }
 
 .dark {
-  --background: #06070b;
+  --background: #04060f;
   --foreground: #f5f5f7;
-  --card: #0e1118;
+  --card: #0a1028;
   --card-foreground: #f5f5f7;
-  --popover: #0e1118;
+  --popover: #0a1028;
   --popover-foreground: #f5f5f7;
-  --primary: #d2ff00;
-  --primary-foreground: #06070b;
-  --secondary: #161a23;
+  --primary: #b8ff3c;
+  --primary-foreground: #04060f;
+  --secondary: #111a3d;
   --secondary-foreground: #f5f5f7;
-  --muted: #12151e;
-  --muted-foreground: #8e92a4;
-  --accent: #7e1520;
+  --muted: #0d1430;
+  --muted-foreground: #94a3c8;
+  --accent: #14204f;
   --accent-foreground: #ffffff;
   --destructive: #ff334b;
-  --success: #00f5a0;
+  --success: #b8ff3c;
   --baton: #f59e0b;
   --baton-foreground: #06070b;
   --warning: #f59e0b;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
-  --ring: #d2ff00;
-  --chart-1: #d2ff00;
-  --chart-2: #00f5a0;
-  --chart-3: #f59e0b;
-  --chart-4: #7e1520;
-  --chart-5: #8e92a4;
-  --sidebar: #0a0c11;
+  --ring: #b8ff3c;
+  --chart-1: #b8ff3c;
+  --chart-2: #8fa8ff;
+  --chart-3: #3b5bff;
+  --chart-4: #5b7cfa;
+  --chart-5: #94a3c8;
+  --sidebar: #060a1e;
   --sidebar-foreground: #f5f5f7;
-  --sidebar-primary: #d2ff00;
-  --sidebar-primary-foreground: #06070b;
-  --sidebar-accent: #161a23;
+  --sidebar-primary: #b8ff3c;
+  --sidebar-primary-foreground: #04060f;
+  --sidebar-accent: #111a3d;
   --sidebar-accent-foreground: #f5f5f7;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #d2ff00;
+  --sidebar-ring: #b8ff3c;
 }
 
 @layer base {
@@ -301,10 +300,6 @@
   font-family: var(--font-syne), var(--font-geist-sans), sans-serif;
 }
 
-.font-script {
-  font-family: var(--font-great-vibes), cursive, serif;
-}
-
 .font-bebas {
   font-family: var(--font-bebas-neue), var(--font-syne), sans-serif;
   letter-spacing: 0.02em;
@@ -410,5 +405,214 @@
   50% {
     opacity: 0.6;
     transform: scale(0.85);
+  }
+}
+
+/* ==========================================================================
+   Landing sections: shared glass card, scroll reveal, marquee
+   ========================================================================== */
+
+.glass-card {
+  position: relative;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 48px -28px rgba(0, 0, 0, 0.9);
+  transition:
+    border-color 250ms ease,
+    transform 250ms ease,
+    box-shadow 250ms ease;
+}
+.glass-card:hover {
+  border-color: rgba(210, 255, 0, 0.32);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 28px 56px -28px rgba(0, 0, 0, 0.95);
+}
+
+/* Scroll reveal, progressively enhanced: browsers without scroll-driven animations
+   simply show the content. */
+@keyframes landing-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: landing-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+  .marquee-track {
+    animation: none !important;
+  }
+}
+
+@keyframes landing-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: landing-marquee 40s linear infinite;
+}
+
+/* Manifesto: words fill in as the section scrolls through the viewport. */
+.manifesto {
+  view-timeline: --manifesto block;
+}
+@keyframes landing-word-fill {
+  from {
+    color: rgba(241, 237, 230, 0.13);
+  }
+  to {
+    color: #f1ede6;
+  }
+}
+@supports (animation-timeline: view()) {
+  .word-fill {
+    color: rgba(241, 237, 230, 0.13);
+    animation: landing-word-fill linear both;
+    animation-timeline: --manifesto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-fill {
+    animation: none;
+    color: #f1ede6;
+  }
+}
+
+/* ==========================================================================
+   Glass. Needs something behind it to refract: the blue half paints petals and
+   lime orbs underneath, and these surfaces blur, tint and edge-light them.
+   ========================================================================== */
+
+.glass,
+.glass-clear,
+.glass-dark {
+  position: relative;
+  border-radius: 1.25rem;
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+}
+.glass {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.03) 50%,
+      rgba(255, 255, 255, 0.07)
+    ),
+    rgba(8, 14, 40, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 30px 60px -28px rgba(0, 0, 12, 0.85);
+}
+.glass-clear {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 55%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 20px 40px -24px rgba(0, 0, 12, 0.7);
+}
+.glass-dark {
+  background:
+    radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 55%),
+    rgba(6, 10, 28, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 40px 80px -30px rgba(0, 0, 12, 0.9);
+}
+/* Edge light: a 1px gradient border, bright top-left, a hint of lime bottom-right. */
+.glass::before,
+.glass-clear::before,
+.glass-dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.06) 32%,
+    rgba(255, 255, 255, 0.04) 68%,
+    rgba(184, 255, 60, 0.4)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Smoothness: no layout jumps, eased entrances, cheaper glass
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Hero entrance: copy rises in once, in sequence, instead of popping. */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+.hero-in {
+  animation: hero-rise 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.hero-in-2 {
+  animation-delay: 120ms;
+}
+.hero-in-3 {
+  animation-delay: 240ms;
+}
+.hero-in-4 {
+  animation-delay: 360ms;
+}
+
+/* Static decoration is isolated for painting. (No will-change: a 16,000px-tall layer would be a huge texture.) */
+.layer {
+  contain: paint;
+}
+
+/* A lighter blur is visually the same on a dark page and far cheaper to scroll. */
+.glass,
+.glass-clear,
+.glass-dark {
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-in {
+    animation: none;
   }
 }

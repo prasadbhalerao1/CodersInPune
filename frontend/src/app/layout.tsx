@@ -1,13 +1,6 @@
 import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
-import {
-  Great_Vibes,
-  Bebas_Neue,
-  Geist,
-  Geist_Mono,
-  Instrument_Serif,
-  Syne,
-} from "next/font/google";
+import { Bebas_Neue, Geist, Geist_Mono, Instrument_Serif, Syne } from "next/font/google";
 
 import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
@@ -39,11 +32,6 @@ const geistMono = Geist_Mono({
 
 // Landing-page display faces (script lead-in and condensed headline). Self-hosted via
 // next/font so they neither block rendering nor shift layout.
-const greatVibes = Great_Vibes({
-  variable: "--font-great-vibes",
-  subsets: ["latin"],
-  weight: "400",
-});
 
 const bebasNeue = Bebas_Neue({
   variable: "--font-bebas-neue",
@@ -79,7 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${syne.variable} ${greatVibes.variable} ${bebasNeue.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${syne.variable} ${bebasNeue.variable} dark h-full antialiased`}
     >
       <body className="h-full bg-[#06070B] text-[#F5F5F7]">
         <AuthKitProvider>{children}</AuthKitProvider>

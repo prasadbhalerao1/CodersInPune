@@ -1,129 +1,96 @@
 "use client";
 
-import React, { useState } from "react";
-import { GitPullRequest, Bookmark, FileText, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+
+import { cn } from "@/lib/utils";
 
 interface Milestone {
   id: string;
-  tag: string;
   date: string;
   title: string;
   summary: string;
-  citations: Array<{ source: string; ref: string }>;
+  sources: Array<{ kind: "GitHub" | "Linear" | "Notion"; ref: string }>;
 }
 
 const MILESTONES: Milestone[] = [
   {
     id: "m1",
-    tag: "SYS.01",
     date: "14 Oct 2025",
-    title: "PostgreSQL 17 Forced RLS Enforcement",
+    title: "Forced row-level security on every tenant table",
     summary:
-      "Hardened tenant boundaries against bypass by superusers. Applied Row Level Security across 84 core tables with zero regression.",
-    citations: [
-      { source: "github", ref: "PR #388 (Merged)" },
-      { source: "linear", ref: "SEC-104 (Done)" },
+      "Tenant boundaries hardened so even application bugs cannot cross them. Applied across the schema with no regressions.",
+    sources: [
+      { kind: "GitHub", ref: "PR #388, merged" },
+      { kind: "Linear", ref: "SEC-104, done" },
     ],
   },
   {
     id: "m2",
-    tag: "SYS.02",
     date: "12 Dec 2025",
-    title: "Stripe Webhook Idempotency Layer",
+    title: "Idempotent webhook delivery",
     summary:
-      "Reconstructed webhook delivery retry mechanism using transactional outbox leases and database temporal GiST constraints.",
-    citations: [
-      { source: "github", ref: "PR #412 (Merged)" },
-      { source: "notion", ref: "RFC: Payment Redundancy" },
+      "Retry logic rebuilt around transactional outbox leases and database constraints so a replayed webhook is harmless.",
+    sources: [
+      { kind: "GitHub", ref: "PR #412, merged" },
+      { kind: "Notion", ref: "RFC: Payment redundancy" },
     ],
   },
   {
     id: "m3",
-    tag: "SYS.03",
     date: "28 Jan 2026",
-    title: "Zero-Downtime Blue/Green Secrets Mesh",
+    title: "Zero-downtime secrets rotation",
     summary:
-      "Automated secret rotation protocol without pod cycling. Documented failover runbook and escalation contact chains.",
-    citations: [
-      { source: "github", ref: "PR #495 (Merged)" },
-      { source: "linear", ref: "OPS-220 (Closed)" },
-      { source: "notion", ref: "SOP-Runbook v4" },
+      "Secrets rotate without cycling pods. The failover runbook and escalation contacts were written down alongside it.",
+    sources: [
+      { kind: "GitHub", ref: "PR #495, merged" },
+      { kind: "Linear", ref: "OPS-220, closed" },
+      { kind: "Notion", ref: "Runbook v4" },
     ],
   },
 ];
 
 export function MemoryReplayPreview() {
   const [activeId, setActiveId] = useState("m2");
-  const active = MILESTONES.find((m) => m.id === activeId) || MILESTONES[1];
+  const active = MILESTONES.find((m) => m.id === activeId) ?? MILESTONES[1];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0B0E16] p-4 text-left">
-      {/* DAW-style Timeline Ribbon */}
-      <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-        <span className="font-mono text-[9px] tracking-widest text-[#D2FF00] uppercase">
-          PROJECT MEMORY REPLAY // CITED EVIDENCE SCRUBBER
-        </span>
-        <span className="font-mono text-[9px] text-zinc-500">100% CITED · 0% SPECULATION</span>
-      </div>
+    <div className="rounded-xl border border-white/15 bg-black/25 p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
+      <p className="text-sm font-medium text-zinc-300">Production deployments · history</p>
 
-      {/* Scrub Track */}
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <ol className="mt-4 space-y-1 border-l border-white/10">
         {MILESTONES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setActiveId(m.id)}
-            aria-pressed={activeId === m.id}
-            className={`flex flex-col gap-1 rounded-lg border p-2 text-left transition-all ${
-              activeId === m.id
-                ? "border-[#D2FF00]/50 bg-[#141A28] shadow-[0_0_15px_rgba(210,255,0,0.1)]"
-                : "border-white/5 bg-white/[0.02] text-zinc-400 hover:border-white/20"
-            }`}
-          >
-            <div className="flex items-center justify-between font-mono text-[8px]">
-              <span className={activeId === m.id ? "font-bold text-[#D2FF00]" : "text-zinc-500"}>
-                {m.tag}
-              </span>
-              <span className="text-zinc-500">{m.date}</span>
-            </div>
-            <span className="truncate text-xs font-medium text-white">{m.title}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Active Synthesized Intelligence Card */}
-      <div className="mt-3 rounded-lg border border-white/10 bg-black/40 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <span className="font-mono text-[10px] text-zinc-400">
-              {active.date} · {active.tag}
-            </span>
-            <h4 className="text-sm font-semibold text-white">{active.title}</h4>
-          </div>
-          <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-300">
-            <CheckCircle2 className="h-3 w-3" /> VERIFIED
-          </span>
-        </div>
-
-        <p className="mt-2 text-xs leading-relaxed text-zinc-300">{active.summary}</p>
-
-        {/* Citations Proof Rail */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-2.5">
-          <span className="font-mono text-[9px] tracking-wider text-zinc-500 uppercase">
-            PROVEN SOURCES:
-          </span>
-          {active.citations.map((c, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 rounded border border-white/10 bg-[#161C2A] px-2 py-0.5 font-mono text-[9px] text-zinc-200"
+          <li key={m.id}>
+            <button
+              type="button"
+              onClick={() => setActiveId(m.id)}
+              aria-pressed={activeId === m.id}
+              className={cn(
+                "-ml-px flex w-full items-baseline gap-4 border-l-2 py-2 pl-4 text-left transition-colors",
+                activeId === m.id
+                  ? "border-[#C4FF00] text-white"
+                  : "border-transparent text-zinc-400 hover:text-zinc-200",
+              )}
             >
-              {c.source === "github" && <GitPullRequest className="h-2.5 w-2.5 text-purple-400" />}
-              {c.source === "linear" && <Bookmark className="h-2.5 w-2.5 text-blue-400" />}
-              {c.source === "notion" && <FileText className="h-2.5 w-2.5 text-emerald-400" />}
-              <span>{c.ref}</span>
-            </span>
+              <span className="w-24 shrink-0 text-xs text-zinc-500 tabular-nums">{m.date}</span>
+              <span className="text-sm font-medium">{m.title}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4">
+        <p className="text-sm leading-relaxed text-zinc-200">{active.summary}</p>
+        <p className="mt-4 text-xs font-medium text-zinc-500">Sources</p>
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {active.sources.map((s) => (
+            <li
+              key={s.ref}
+              className="rounded-md border border-white/10 px-2.5 py-1 text-xs text-zinc-300"
+            >
+              <span className="text-zinc-500">{s.kind}</span> · {s.ref}
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );

@@ -86,13 +86,13 @@ export function Walkthrough() {
 
   return (
     <div
-      className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]"
+      className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <ol className="flex gap-2 overflow-x-auto lg:flex-col" aria-label="Workflow steps">
+      <ol className="flex gap-2 overflow-x-auto lg:flex-col lg:gap-1" aria-label="Workflow steps">
         {STEPS.map((s, i) => (
           <li key={s.key}>
             <button
@@ -100,33 +100,35 @@ export function Walkthrough() {
               onClick={() => setStep(i)}
               aria-current={i === step ? "step" : undefined}
               className={cn(
-                "group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors",
-                i === step
-                  ? "bg-foreground/[0.06] font-medium"
-                  : "text-muted-foreground hover:bg-muted",
+                "group flex w-full items-center gap-4 rounded-xl px-4 py-3 text-left whitespace-nowrap transition-colors",
+                i === step ? "bg-white/[0.06]" : "hover:bg-white/[0.03]",
               )}
             >
               <span
                 aria-hidden
                 className={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full border text-[11px] tabular-nums transition-colors",
-                  i < step && "bg-foreground text-background border-foreground",
-                  i === step && "border-foreground",
+                  "font-bebas text-4xl leading-none tracking-wider transition-colors",
+                  i === step
+                    ? "text-[#C4FF00]"
+                    : i < step
+                      ? "text-zinc-300"
+                      : "text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.35)]",
                 )}
               >
-                {i < step ? "✓" : i + 1}
+                {String(i + 1).padStart(2, "0")}
               </span>
-              {s.label}
+              <span
+                className={cn("text-sm", i === step ? "font-medium text-white" : "text-zinc-400")}
+              >
+                {s.label}
+              </span>
             </button>
           </li>
         ))}
       </ol>
-      <div className="bg-background relative overflow-hidden rounded-xl border shadow-sm">
-        <div className="flex items-center gap-1.5 border-b px-4 py-2.5">
-          <span className="size-2.5 rounded-full bg-red-400/70" aria-hidden />
-          <span className="size-2.5 rounded-full bg-amber-400/70" aria-hidden />
-          <span className="size-2.5 rounded-full bg-emerald-400/70" aria-hidden />
-          <span className="text-muted-foreground ml-3 text-xs">relay · Northwind Labs</span>
+      <div className="glass relative overflow-hidden">
+        <div className="border-b border-white/10 px-5 py-3 text-sm text-zinc-400">
+          Northwind Labs
         </div>
         <div
           key={current.key}
