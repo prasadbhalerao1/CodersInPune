@@ -104,7 +104,7 @@ export function HeroSandbox() {
   }
 
   return (
-    <div className="glass-dark overflow-hidden">
+    <div className="glass-dark overflow-clip">
       {/* Who */}
       <div className="border-line/10 flex items-center gap-4 border-b px-6 py-5">
         <span className="bg-line/10 text-fg-soft grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-semibold">
@@ -161,14 +161,14 @@ export function HeroSandbox() {
           </div>
           <p className="text-fg-mute max-w-[16rem] text-right text-sm leading-snug">{summary}</p>
         </div>
-        <div className="bg-line/10 mt-4 h-1.5 overflow-hidden rounded-full">
+        <div className="bg-line/10 mt-4 h-1.5 overflow-clip rounded-full">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{ width: `${score}%`, background: v.color }}
           />
         </div>
         {cand?.overloaded ? (
-          <p className="mt-3 text-sm text-amber-400">
+          <p className="text-warn mt-3 text-sm">
             {cand.name} is already overloaded, so readiness drops by {OVERLOAD_PENALTY} points.
           </p>
         ) : null}
@@ -191,11 +191,7 @@ export function HeroSandbox() {
                 <span
                   className={cn(
                     "shrink-0 text-xs font-medium",
-                    covered
-                      ? "text-emerald-400"
-                      : w.level === "Critical"
-                        ? "text-rose-600 dark:text-rose-400"
-                        : "text-fg-mute",
+                    covered ? "text-good" : w.level === "Critical" ? "text-bad" : "text-fg-mute",
                   )}
                 >
                   {covered ? `Covered by ${cand!.name.split(" ")[0]}` : "No backup"}

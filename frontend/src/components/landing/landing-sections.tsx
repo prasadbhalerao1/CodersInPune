@@ -109,18 +109,20 @@ export function LandingSections() {
   return (
     <>
       {/* MANIFESTO */}
-      <section className="manifesto relative h-[220svh] snap-start snap-always">
-        <div className="sticky top-0 flex h-svh items-center">
+      <section className="manifesto relative">
+        <div className="flex min-h-svh items-center">
           <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12">
             <span className="text-ac mb-8 block text-sm font-medium">The problem</span>
             <p className="scrim font-display text-[clamp(2.8rem,6.6vw,6rem)] leading-[1.02] tracking-[-0.01em]">
               {words.map((w, i) => {
-                const a = 8 + (i / words.length) * 52;
+                // One screen tall: arriving with the section at the top is cover 50%, so the last word
+                // finishes exactly on arrival and the fill plays while the section slides in.
+                const a = 12 + (i / words.length) * 30;
                 return (
                   <span
                     key={i}
                     className="word-fill text-strong"
-                    style={{ animationRange: `cover ${a}% cover ${a + 9}%` }}
+                    style={{ animationRange: `cover ${a}% cover ${a + 8}%` }}
                   >
                     {w}{" "}
                   </span>
@@ -132,10 +134,7 @@ export function LandingSections() {
       </section>
 
       {/* WHAT GOES WRONG */}
-      <section
-        id="exposure"
-        className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-      >
+      <section id="exposure" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <SectionHeading
             theme="blue"
@@ -171,10 +170,7 @@ export function LandingSections() {
       </section>
 
       {/* THE GAP */}
-      <section
-        id="gap"
-        className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-      >
+      <section id="gap" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
         <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
           <div className="lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
@@ -236,7 +232,7 @@ export function LandingSections() {
       </section>
 
       {/* THE JOURNEY */}
-      <section className="relative snap-start snap-always py-20 md:py-24">
+      <section className="relative py-20 md:py-24">
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <SectionHeading
@@ -251,35 +247,37 @@ export function LandingSections() {
               is a link in the product.
             </p>
           </div>
-          <ol className="relative mt-12 grid gap-10 md:mt-14 md:grid-cols-5 md:gap-5">
+          <div className="glass relative mt-12 p-6 md:mt-14 md:p-8">
             <div
               aria-hidden
-              className="from-ac via-peri to-ac absolute top-[22px] right-[10%] left-[10%] hidden h-px bg-gradient-to-r opacity-40 md:block"
+              className="from-ac via-peri to-ac absolute top-[54px] right-[12%] left-[12%] hidden h-px bg-gradient-to-r opacity-40 md:block"
             />
-            {JOURNEY.map((j, i) => (
-              <li key={j.phase} className="reveal relative">
-                <span
-                  className="font-display bg-page/60 relative z-10 grid h-11 w-11 place-items-center rounded-full border text-2xl backdrop-blur-md"
-                  style={{
-                    color: j.tone,
-                    borderColor: j.tone,
-                    boxShadow: `0 0 22px -4px ${j.tone}`,
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <h3 className="font-display text-strong mt-5 text-3xl">{j.phase}</h3>
-                <ul className="text-fg-mute mt-3 space-y-2 text-sm">
-                  {j.steps.map((s) => (
-                    <li key={s} className="flex gap-2">
-                      <span className="mt-2 h-px w-3 shrink-0" style={{ background: j.tone }} />
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ol>
+            <ol className="relative grid gap-10 md:grid-cols-5 md:gap-5">
+              {JOURNEY.map((j, i) => (
+                <li key={j.phase} className="reveal relative">
+                  <span
+                    className="font-display bg-page/60 relative z-10 grid h-11 w-11 place-items-center rounded-full border text-2xl backdrop-blur-md"
+                    style={{
+                      color: j.tone,
+                      borderColor: j.tone,
+                      boxShadow: `0 0 22px -4px ${j.tone}`,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <h3 className="font-display text-strong mt-5 text-3xl">{j.phase}</h3>
+                  <ul className="text-fg-mute mt-3 space-y-2 text-sm">
+                    {j.steps.map((s) => (
+                      <li key={s} className="flex gap-2">
+                        <span className="mt-2 h-px w-3 shrink-0" style={{ background: j.tone }} />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 

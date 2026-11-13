@@ -12,7 +12,7 @@ export function HeroReadout() {
           At risk
         </span>
       </p>
-      <div className="bg-line/10 mt-3 h-1 overflow-hidden rounded-full">
+      <div className="bg-line/10 mt-3 h-1 overflow-clip rounded-full">
         <div className="h-full w-[55%] rounded-full" style={{ background: "var(--bad)" }} />
       </div>
       <p className="text-fg-soft mt-3 text-xs leading-snug">

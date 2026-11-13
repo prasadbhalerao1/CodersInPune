@@ -672,11 +672,11 @@ html {
   --line: #0b1230;
   --sunk: #ffffff;
   --ac: #2540c8;
-  --peri: #3f58d6;
-  --coral: #c62a44;
-  --good: #0e8f5a;
-  --warn: #b45309;
-  --bad: #c62a44;
+  --peri: #3a46c2;
+  --coral: #ad1f37;
+  --good: #0a7347;
+  --warn: #9a4507;
+  --bad: #ad1f37;
 
   --glass-tint: rgba(255, 255, 255, 0.5);
   --glass-tint-strong: rgba(255, 255, 255, 0.74);
@@ -724,6 +724,9 @@ html {
   --color-ac: var(--ac);
   --color-peri: var(--peri);
   --color-coral: var(--coral);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
 }
 
 /* Glass, driven by the variables above. */
@@ -856,21 +859,6 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .wordmark {
     animation: none;
-  }
-}
-
-/* ==========================================================================
-   Constrained browsers (hardware acceleration off, data saver, low memory, or
-   a reduced-transparency preference): drop blur and decoration, keep the content.
-   ========================================================================== */
-
-@media (prefers-reduced-transparency: reduce) {
-  .glass,
-  .glass-clear,
-  .glass-dark {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: var(--glass-tint-strong);
   }
 }
 
@@ -1062,12 +1050,20 @@ html {
   --cr-edge-b: rgba(110, 140, 255, 0.45);
   --cr-edge-c: rgba(170, 130, 255, 0.4);
   --scrim: 30%;
-  --glass-tint: rgba(255, 255, 255, 0.52);
-  --glass-tint-strong: rgba(255, 255, 255, 0.78);
+  --glass-tint: rgba(255, 255, 255, 0.6);
+  --glass-tint-strong: rgba(255, 255, 255, 0.82);
 }
 
 .scrim::before {
   background: color-mix(in srgb, var(--page) var(--scrim), transparent);
+}
+/* On narrow screens the petal clusters span the whole text column, so the patch behind each
+   text block is denser there. The petals around the text are untouched. */
+@media (max-width: 1023px) {
+  :root:not(.dark),
+  :root.dark {
+    --scrim: 74%;
+  }
 }
 
 /* Crystal: sharper radius, a refractive backdrop, hard-edged light streaks, a prismatic
@@ -1152,8 +1148,16 @@ html {
   backdrop-filter: blur(26px) saturate(185%) brightness(1.08);
 }
 .dark {
-  --glass-tint: rgba(8, 14, 40, 0.3);
-  --glass-tint-strong: rgba(6, 10, 28, 0.55);
+  --glass-tint: rgba(8, 14, 40, 0.36);
+  --glass-tint-strong: rgba(6, 10, 28, 0.6);
+}
+/* On navy the petals behind a card are the brightest thing on the page; dimming what the glass
+   refracts (not the petals themselves) keeps their colour showing while light text stays legible. */
+.dark .glass,
+.dark .glass-clear,
+.dark .glass-dark {
+  -webkit-backdrop-filter: blur(26px) saturate(170%) brightness(0.78);
+  backdrop-filter: blur(26px) saturate(170%) brightness(0.78);
 }
 
 /* The hero word crosses a pale page, the cobalt slash and pale petals in one line, so a single
@@ -1173,27 +1177,24 @@ html {
   --ho-halo: rgba(4, 6, 15, 0.9);
 }
 
-/* ==========================================================================
-   Landing scroll behaviour. Sections are snap points and every snap point is a mandatory
-   stop, so a hard flick (or a fast trackpad) can never skip over a section: one gesture
-   lands on the next one, however far it was thrown. Scoped to the landing page; off for
-   reduced motion.
-   ========================================================================== */
-
-html:has(.landing-snap) {
-  scroll-padding-top: 0;
-}
-/* Touch: native scrolling with mandatory snapping. Mouse and trackpad: ScrollPaging. */
-@media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
-  html:has(.landing-snap) {
-    scroll-snap-type: y mandatory;
-  }
-}
-
 /* Keyboard focus: a clear ring in the theme's accent. */
-.landing-snap a:focus-visible,
-.landing-snap button:focus-visible,
-.landing-snap [tabindex]:focus-visible {
+.landing-root a:focus-visible,
+.landing-root button:focus-visible,
+.landing-root [tabindex]:focus-visible {
   outline: 2px solid var(--ac);
   outline-offset: 3px;
+}
+
+/* Reduced transparency: solid surfaces. Last in the file so no later crystal rule overrides it. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-clear,
+  .glass-dark,
+  .dark .glass,
+  .dark .glass-clear,
+  .dark .glass-dark {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--page) 92%, var(--ac) 8%);
+  }
 }

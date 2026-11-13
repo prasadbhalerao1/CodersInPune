@@ -10,7 +10,6 @@ import { Petals } from "@/components/landing/petals";
 import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
 import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
-import { ScrollPaging } from "@/components/landing/scroll-paging";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BlueArt } from "@/components/landing/landing-blue";
 import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
@@ -18,9 +17,9 @@ import { StickyHeader } from "@/components/landing/sticky-header";
 import { REPO_URL, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Relay — Sovereign Organisational Continuity",
+  title: { absolute: "Relay: keep work moving when people move on" },
   description:
-    "When lead engineers leave, the work shouldn't stall. Relay simulates absence blast radii and transfers knowledge with zero-hallucination citations.",
+    "When lead engineers leave, the work shouldn't stall. Relay forecasts what an absence breaks and hands the work over with cited evidence.",
 };
 
 const STRUCTURED_DATA = JSON.stringify({
@@ -44,15 +43,14 @@ const STRUCTURED_DATA = JSON.stringify({
 
 export default function HomePage() {
   return (
-    <div className="landing-snap bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
+    <div className="landing-root bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
 
       <BlueArt />
-      <ScrollPaging />
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
       <StickyHeader>
-        <div className="mx-auto grid h-16 max-w-7xl grid-cols-2 items-center px-6 sm:px-8 md:grid-cols-[1fr_auto_1fr] lg:px-12">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-2 items-center px-6 sm:px-8 lg:grid-cols-[1fr_auto_1fr] lg:px-12">
           <Link href="/" className="group flex items-center gap-2.5 justify-self-start">
             <RelayMark className="h-8 w-8 drop-shadow-[0_0_10px_rgba(90,120,255,0.5)]" />
             <span className="text-strong font-sans text-[22px] font-medium tracking-tight">
@@ -62,9 +60,9 @@ export default function HomePage() {
 
           <nav
             aria-label="Sections"
-            className="text-fg-soft glass hidden items-center gap-8 !rounded-full px-7 py-2.5 text-[13px] md:flex"
+            className="text-fg-soft glass hidden items-center gap-5 !rounded-full px-5 py-2.5 text-[13px] lg:flex xl:gap-8 xl:px-7"
           >
-            <a href="#overview" className="hover:text-strong transition-colors">
+            <a href="#overview" className="hover:text-strong hidden transition-colors xl:inline">
               Overview
             </a>
             <a href="#exposure" className="hover:text-strong transition-colors">
@@ -86,7 +84,7 @@ export default function HomePage() {
 
           <div className="flex items-center gap-3 justify-self-end">
             <ThemeToggle hint />
-            <Suspense fallback={<NavActionLink label="LAUNCH SANDBOX" />}>
+            <Suspense fallback={<NavActionLink label="LAUNCH SANDBOX" short="SANDBOX" />}>
               <PrimaryNavAction />
             </Suspense>
           </div>
@@ -99,7 +97,7 @@ export default function HomePage() {
             ========================================================================== */}
         <section
           id="overview"
-          className="relative flex min-h-svh snap-start snap-always flex-col justify-between overflow-hidden"
+          className="relative flex min-h-svh flex-col justify-between overflow-hidden"
         >
           <HeroCanvasBackground />
 
@@ -151,9 +149,9 @@ export default function HomePage() {
                 </span>
               </h1>
 
-              <p className="hero-in hero-in-2 text-fg-soft mx-auto mt-6 max-w-[28rem] text-[1.1rem] leading-snug lg:mx-0">
-                When lead engineers leave, the work shouldn&apos;t stall. Relay simulates absence
-                blast radii and transfers knowledge with zero-hallucination citations.
+              <p className="hero-in hero-in-2 scrim text-fg-soft mx-auto mt-6 max-w-[28rem] text-[1.1rem] leading-snug lg:mx-0">
+                When lead engineers leave, the work shouldn&apos;t stall. Relay simulates an
+                absence&apos;s blast radius and hands the work over with cited evidence.
               </p>
 
               <div className="hero-in hero-in-3 mt-9 flex flex-col items-center gap-4 lg:items-start">
@@ -195,8 +193,8 @@ export default function HomePage() {
           </div>
 
           {/* Bottom hairline bar */}
-          <div className="border-line/[0.1] bg-page/80 relative z-20 w-full shrink-0 border-t px-6 py-2.5 backdrop-blur-md sm:px-8 lg:px-12">
-            <div className="text-fg-mute mx-auto flex max-w-7xl flex-wrap items-center justify-start gap-x-3 text-xs">
+          <div className="border-line/[0.1] bg-page/80 relative z-20 w-full shrink-0 border-t py-2.5 backdrop-blur-md">
+            <div className="text-fg-mute mx-auto flex max-w-7xl flex-wrap items-center justify-start gap-x-3 px-6 text-xs sm:px-8 lg:px-12">
               <span>Reads GitHub, Linear and Notion</span>
               <span aria-hidden>·</span>
               <span>Read-only</span>
@@ -214,13 +212,16 @@ export default function HomePage() {
   );
 }
 
-function NavActionLink({ label }: { label: string }) {
+function NavActionLink({ label, short }: { label: string; short: string }) {
   return (
     <Link
       href="/workspaces"
-      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2 rounded-full px-5 text-xs font-bold tracking-wider transition-colors"
+      aria-label={label}
+      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2 rounded-full px-5 text-xs font-bold tracking-wider whitespace-nowrap transition-colors"
     >
-      <span>{label}</span>
+      {/* the full label from 640px; a phone header has room for one word */}
+      <span className="sm:hidden">{short}</span>
+      <span className="hidden sm:inline">{label}</span>
       <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
@@ -229,5 +230,9 @@ function NavActionLink({ label }: { label: string }) {
 async function PrimaryNavAction() {
   await connection();
   const { user } = await withAuth();
-  return <NavActionLink label={user ? "WORKSPACES" : "LAUNCH SANDBOX"} />;
+  return user ? (
+    <NavActionLink label="WORKSPACES" short="WORKSPACES" />
+  ) : (
+    <NavActionLink label="LAUNCH SANDBOX" short="SANDBOX" />
+  );
 }

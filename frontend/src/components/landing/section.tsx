@@ -2,32 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Fine grid plus a soft glow: the same atmosphere as the hero, scaled down for sections. */
-export function SectionBackdrop({
-  className,
-}: {
-  tone?: "lime" | "red" | "blue";
-  className?: string;
-}) {
-  return (
-    <div
-      aria-hidden
-      className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}
-    >
-      <div
-        className="absolute inset-0 opacity-[0.045]"
-        style={{
-          backgroundImage:
-            "linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-          maskImage: "radial-gradient(ellipse at 50% 30%, #000, transparent 75%)",
-        }}
-      />
-    </div>
-  );
-}
-
-/** Eyebrow + Bebas headline + optional description. `accent` is rendered lime. */
+/** Eyebrow, display headline with an italic accent, and an optional description. */
 export function SectionHeading({
   eyebrow,
   title,

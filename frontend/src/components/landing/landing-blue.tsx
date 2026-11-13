@@ -217,7 +217,7 @@ export function BlueHalf() {
       {/* SIMULATOR */}
       <section
         id="simulator"
-        className="relative snap-start snap-always scroll-mt-12 overflow-clip py-20 md:mt-14 md:py-24"
+        className="relative scroll-mt-12 overflow-clip py-20 md:mt-14 md:py-24"
       >
         <div
           aria-hidden
@@ -270,10 +270,7 @@ export function BlueHalf() {
       <div className="relative">
         <div className="relative z-10">
           {/* FEATURES */}
-          <section
-            id="product"
-            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-          >
+          <section id="product" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -526,10 +523,7 @@ export function BlueHalf() {
           </section>
 
           {/* WALKTHROUGH */}
-          <section
-            id="how"
-            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-          >
+          <section id="how" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -551,10 +545,7 @@ export function BlueHalf() {
           </section>
 
           {/* EVIDENCE */}
-          <section
-            id="evidence"
-            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-          >
+          <section id="evidence" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -595,10 +586,7 @@ export function BlueHalf() {
           </section>
 
           {/* AI PRINCIPLES */}
-          <section
-            id="ai"
-            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-          >
+          <section id="ai" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -647,7 +635,7 @@ export function BlueHalf() {
                   </div>
                 ))}
               </div>
-              <p className="text-fg-mute mt-4 text-xs">
+              <p className="scrim text-fg-mute mt-4 text-xs">
                 Scripted evaluation run in CI against synthetic cases. The same cases can run
                 against a live model.
               </p>
@@ -655,10 +643,7 @@ export function BlueHalf() {
           </section>
 
           {/* TRUST */}
-          <section
-            id="trust"
-            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-          >
+          <section id="trust" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
               <div className="lg:sticky lg:top-28 lg:self-start">
                 <SectionHeading
@@ -699,7 +684,7 @@ export function BlueHalf() {
           </section>
 
           {/* PROOF */}
-          <section className="relative snap-start snap-always py-24">
+          <section className="relative py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="glass lg:divide-line/10 grid overflow-clip sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
                 {PROOF.map((p) => (
@@ -716,10 +701,7 @@ export function BlueHalf() {
           </section>
 
           {/* TRY IT */}
-          <section
-            id="try"
-            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
-          >
+          <section id="try" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
               <div className="lg:sticky lg:top-28 lg:self-start">
                 <SectionHeading
@@ -759,7 +741,7 @@ export function BlueHalf() {
           </section>
 
           {/* CLOSING CTA */}
-          <section className="bg-page relative snap-start snap-always overflow-clip py-32 sm:py-40">
+          <section className="bg-page relative overflow-clip py-32 sm:py-40">
             <div aria-hidden className="pointer-events-none absolute inset-0">
               <div className="absolute top-1/2 right-[6%] h-[560px] w-[640px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(46,84,230,0.38),transparent_68%)] blur-3xl" />
               <Petals
@@ -825,7 +807,7 @@ export function BlueHalf() {
 
 export function LandingFooter() {
   return (
-    <footer className="border-line/[0.08] bg-page relative snap-start snap-always overflow-clip border-t">
+    <footer className="border-line/[0.08] bg-page relative overflow-clip border-t">
       <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-6 pt-16 pb-6 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr] lg:px-12">
         <div>
           <div className="flex items-center gap-2.5">
