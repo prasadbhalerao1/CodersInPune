@@ -35,6 +35,7 @@ export function SectionHeading({
   description,
   align = "center",
   theme = "crimson",
+  compact = false,
   className,
   children,
 }: {
@@ -44,6 +45,8 @@ export function SectionHeading({
   description?: ReactNode;
   align?: "center" | "left";
   theme?: "crimson" | "blue";
+  /** For headings inside a column: smaller, so long words never run into the next column. */
+  compact?: boolean;
   className?: string;
   children?: ReactNode;
 }) {
@@ -60,7 +63,13 @@ export function SectionHeading({
       {blue ? (
         <>
           <span className="text-peri text-sm font-medium">{eyebrow}</span>
-          <h2 className="font-display text-strong text-[clamp(3rem,7vw,6.2rem)] leading-[0.96] tracking-[-0.01em]">
+          <h2
+            className={cn(
+              "font-display text-strong tracking-[-0.01em] text-balance",
+              compact ? "text-[clamp(2.6rem,4.6vw,4.6rem)]" : "text-[clamp(3rem,7vw,6.2rem)]",
+              "leading-[0.96]",
+            )}
+          >
             {title}
             {accent ? <span className="text-ac block italic">{accent}</span> : null}
           </h2>

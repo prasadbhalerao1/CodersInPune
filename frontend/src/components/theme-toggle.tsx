@@ -76,7 +76,7 @@ export function ThemeToggle({ className, hint = false }: { className?: string; h
         onClick={toggle}
         aria-label={dark ? "Switch to white mode" : "Switch to dark mode"}
         className={cn(
-          "glass-clear text-strong grid size-9 shrink-0 place-items-center !rounded-full transition-transform hover:scale-105",
+          "glass-clear text-strong grid size-11 shrink-0 place-items-center !rounded-full transition-transform hover:scale-105",
           className,
         )}
       >

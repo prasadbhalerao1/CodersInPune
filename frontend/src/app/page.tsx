@@ -10,6 +10,7 @@ import { Petals } from "@/components/landing/petals";
 import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
 import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
+import { ScrollPaging } from "@/components/landing/scroll-paging";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BlueArt } from "@/components/landing/landing-blue";
 import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
@@ -43,10 +44,11 @@ const STRUCTURED_DATA = JSON.stringify({
 
 export default function HomePage() {
   return (
-    <div className="bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
+    <div className="landing-snap bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
 
       <BlueArt />
+      <ScrollPaging />
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
       <StickyHeader>
@@ -65,20 +67,20 @@ export default function HomePage() {
             <a href="#overview" className="hover:text-strong transition-colors">
               Overview
             </a>
+            <a href="#exposure" className="hover:text-strong transition-colors">
+              Problem
+            </a>
             <a href="#product" className="hover:text-strong transition-colors">
               Product
             </a>
             <a href="#how" className="hover:text-strong transition-colors">
-              Solutions
+              How it works
             </a>
             <a href="#trust" className="hover:text-strong transition-colors">
-              Pricing
+              Trust
             </a>
-            <a href="#exposure" className="hover:text-strong transition-colors">
-              Customers
-            </a>
-            <a href="#simulator" className="hover:text-strong transition-colors">
-              Relay
+            <a href="#try" className="hover:text-strong transition-colors">
+              Try it
             </a>
           </nav>
 
@@ -97,7 +99,7 @@ export default function HomePage() {
             ========================================================================== */}
         <section
           id="overview"
-          className="relative flex min-h-svh flex-col justify-between overflow-hidden"
+          className="relative flex min-h-svh snap-start snap-always flex-col justify-between overflow-hidden"
         >
           <HeroCanvasBackground />
 
@@ -216,7 +218,7 @@ function NavActionLink({ label }: { label: string }) {
   return (
     <Link
       href="/workspaces"
-      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-9 items-center gap-2 rounded-full px-5 text-[11px] font-bold tracking-wider transition-colors"
+      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2 rounded-full px-5 text-xs font-bold tracking-wider transition-colors"
     >
       <span>{label}</span>
       <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />

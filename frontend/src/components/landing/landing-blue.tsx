@@ -217,7 +217,7 @@ export function BlueHalf() {
       {/* SIMULATOR */}
       <section
         id="simulator"
-        className="relative scroll-mt-12 overflow-clip py-20 md:mt-14 md:py-24"
+        className="relative snap-start snap-always scroll-mt-12 overflow-clip py-20 md:mt-14 md:py-24"
       >
         <div
           aria-hidden
@@ -237,20 +237,15 @@ export function BlueHalf() {
         />
         <div className="relative mx-auto grid max-w-7xl items-start gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:px-12">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-              <SectionHeading
-                theme="blue"
-                align="left"
-                eyebrow="Try the forecast"
-                title="Don't wait for the"
-                accent="resignation."
-              />
-              <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
-                This is the What If? simulator in miniature. Pick an absence window, hand the work
-                to a candidate, and watch readiness move. In the product it is deterministic and
-                read-only: it never touches a real ownership record.
-              </p>
-            </div>
+            <SectionHeading
+              theme="blue"
+              align="left"
+              compact
+              eyebrow="Try the forecast"
+              title="Don't wait for the"
+              accent="resignation."
+              description="This is the What If? simulator in miniature. Pick an absence window, hand the work to a candidate, and watch readiness move. In the product it is deterministic and read-only: it never touches a real ownership record."
+            />
             <ol className="mt-10 space-y-5">
               {[
                 ["01", "Choose how long they're gone"],
@@ -275,7 +270,10 @@ export function BlueHalf() {
       <div className="relative">
         <div className="relative z-10">
           {/* FEATURES */}
-          <section id="product" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+          <section
+            id="product"
+            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+          >
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -392,9 +390,7 @@ export function BlueHalf() {
                               style={{ width: `${v}%`, background: c as string }}
                             />
                           </div>
-                          {flag ? (
-                            <p className="text-peri mt-1 text-[10px]">{flag as string}</p>
-                          ) : null}
+                          {flag ? <p className="text-peri mt-1 text-xs">{flag as string}</p> : null}
                         </li>
                       ))}
                     </ul>
@@ -420,7 +416,7 @@ export function BlueHalf() {
                         a single timeline. Filter by incident, press replay, inspect any event, and
                         let AI group it into chapters labelled <em>Inferred</em>.
                       </p>
-                      <p className="border-line/10 bg-sunk/30 text-fg-soft mt-4 rounded-lg border p-3 text-sm">
+                      <p className="border-ac/60 text-fg-soft border-l-2 pl-3 text-sm">
                         &ldquo;Why does every payments-api deploy need a canary?&rdquo;
                         <span className="text-fg-mute mt-1 block text-xs">
                           Answers cite events, or say they cannot find one.
@@ -472,7 +468,7 @@ export function BlueHalf() {
                     answers, a reviewer approves, and answers become knowledge. A coverage gap links
                     straight to the question that closes it.
                   </p>
-                  <p className="border-line/10 bg-sunk/40 text-fg-soft mt-5 rounded-xl border p-4 text-sm">
+                  <p className="border-ac/70 text-fg-soft mt-auto border-l-2 pl-4 text-sm leading-relaxed italic">
                     &ldquo;Two runbooks disagree on canary. Which one is current, and why?&rdquo;
                   </p>
                 </Feature>
@@ -530,7 +526,10 @@ export function BlueHalf() {
           </section>
 
           {/* WALKTHROUGH */}
-          <section id="how" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+          <section
+            id="how"
+            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+          >
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -552,7 +551,10 @@ export function BlueHalf() {
           </section>
 
           {/* EVIDENCE */}
-          <section id="evidence" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+          <section
+            id="evidence"
+            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+          >
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -593,7 +595,10 @@ export function BlueHalf() {
           </section>
 
           {/* AI PRINCIPLES */}
-          <section id="ai" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+          <section
+            id="ai"
+            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+          >
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -650,22 +655,21 @@ export function BlueHalf() {
           </section>
 
           {/* TRUST */}
-          <section id="trust" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+          <section
+            id="trust"
+            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+          >
             <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
               <div className="lg:sticky lg:top-28 lg:self-start">
-                <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                  <SectionHeading
-                    theme="blue"
-                    align="left"
-                    eyebrow="Trust"
-                    title="Safe by"
-                    accent="construction."
-                  />
-                  <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
-                    Continuity data is sensitive. Relay is built so the safe path is the only path,
-                    and the database enforces it, not just the application.
-                  </p>
-                </div>
+                <SectionHeading
+                  theme="blue"
+                  align="left"
+                  compact
+                  eyebrow="Trust"
+                  title="Safe by"
+                  accent="construction."
+                  description="Continuity data is sensitive. Relay is built so the safe path is the only path, and the database enforces it, not just the application."
+                />
               </div>
               <ul className="glass divide-line/10 divide-y px-7">
                 {SPEC.map((p) => {
@@ -695,7 +699,7 @@ export function BlueHalf() {
           </section>
 
           {/* PROOF */}
-          <section className="relative py-24">
+          <section className="relative snap-start snap-always py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="glass lg:divide-line/10 grid overflow-clip sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
                 {PROOF.map((p) => (
@@ -712,21 +716,21 @@ export function BlueHalf() {
           </section>
 
           {/* TRY IT */}
-          <section id="try" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+          <section
+            id="try"
+            className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+          >
             <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
               <div className="lg:sticky lg:top-28 lg:self-start">
-                <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                  <SectionHeading
-                    theme="blue"
-                    align="left"
-                    eyebrow="Try it"
-                    title="Ten minutes,"
-                    accent="no setup."
-                  />
-                  <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
-                    Sign in with any email. Relay sends a one-time code and never sees a password.
-                  </p>
-                </div>
+                <SectionHeading
+                  theme="blue"
+                  align="left"
+                  compact
+                  eyebrow="Try it"
+                  title="Ten minutes,"
+                  accent="no setup."
+                  description="Sign in with any email. Relay sends a one-time code and never sees a password."
+                />
                 <p className="reveal glass-clear text-fg-mute mt-8 rounded-xl p-4 text-xs leading-relaxed">
                   <span className="text-peri">Honest limits </span>
                   The sample workspace&apos;s GitHub, Linear and Notion records are synthetic and
@@ -755,7 +759,7 @@ export function BlueHalf() {
           </section>
 
           {/* CLOSING CTA */}
-          <section className="bg-page relative overflow-clip py-32 sm:py-40">
+          <section className="bg-page relative snap-start snap-always overflow-clip py-32 sm:py-40">
             <div aria-hidden className="pointer-events-none absolute inset-0">
               <div className="absolute top-1/2 right-[6%] h-[560px] w-[640px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(46,84,230,0.38),transparent_68%)] blur-3xl" />
               <Petals
@@ -821,7 +825,7 @@ export function BlueHalf() {
 
 export function LandingFooter() {
   return (
-    <footer className="border-line/[0.08] bg-page relative overflow-clip border-t">
+    <footer className="border-line/[0.08] bg-page relative snap-start snap-always overflow-clip border-t">
       <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-6 pt-16 pb-6 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr] lg:px-12">
         <div>
           <div className="flex items-center gap-2.5">

@@ -54,7 +54,7 @@ export function MemoryReplayPreview() {
   const active = MILESTONES.find((m) => m.id === activeId) ?? MILESTONES[1];
 
   return (
-    <div className="border-line/15 bg-sunk/25 rounded-xl border p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
+    <div className="text-left">
       <p className="text-fg-soft text-sm font-medium">Production deployments · history</p>
 
       <ol className="border-line/10 mt-4 space-y-1 border-l">
@@ -78,7 +78,7 @@ export function MemoryReplayPreview() {
         ))}
       </ol>
 
-      <div className="border-line/10 bg-sunk/30 mt-4 rounded-lg border p-4">
+      <div className="bg-line/5 mt-4 rounded-lg p-4">
         <p className="text-fg-soft text-sm leading-relaxed">{active.summary}</p>
         <p className="text-fg-mute mt-4 text-xs font-medium">Sources</p>
         <ul className="mt-2 flex flex-wrap gap-2">

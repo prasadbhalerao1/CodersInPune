@@ -437,15 +437,15 @@
    simply show the content. */
 @keyframes landing-reveal {
   from {
-    opacity: 0;
-    transform: translateY(28px);
+    opacity: 0.25;
+    transform: translateY(14px);
   }
 }
 @supports (animation-timeline: view()) {
   .reveal {
     animation: landing-reveal linear both;
     animation-timeline: view();
-    animation-range: entry 0% entry 40%;
+    animation-range: entry 0% entry 28%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -693,7 +693,7 @@ html {
   --page: #04060f;
   --strong: #f2eee5;
   --fg-soft: #cbd5e1;
-  --fg-mute: #94a3b8;
+  --fg-mute: #a9b7cc;
   --line: #ffffff;
   --sunk: #000000;
   --ac: #b8ff3c;
@@ -881,7 +881,7 @@ html {
    ========================================================================== */
 
 :root:not(.dark) {
-  --fg-mute: #4a5580;
+  --fg-mute: #3f4a73;
   --glass-tint: rgba(255, 255, 255, 0.72);
   --glass-tint-strong: rgba(255, 255, 255, 0.88);
   --primary: #2540c8;
@@ -1171,4 +1171,29 @@ html {
 .dark {
   --ho-stroke: rgba(242, 238, 229, 0.8);
   --ho-halo: rgba(4, 6, 15, 0.9);
+}
+
+/* ==========================================================================
+   Landing scroll behaviour. Sections are snap points and every snap point is a mandatory
+   stop, so a hard flick (or a fast trackpad) can never skip over a section: one gesture
+   lands on the next one, however far it was thrown. Scoped to the landing page; off for
+   reduced motion.
+   ========================================================================== */
+
+html:has(.landing-snap) {
+  scroll-padding-top: 0;
+}
+/* Touch: native scrolling with mandatory snapping. Mouse and trackpad: ScrollPaging. */
+@media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
+  html:has(.landing-snap) {
+    scroll-snap-type: y mandatory;
+  }
+}
+
+/* Keyboard focus: a clear ring in the theme's accent. */
+.landing-snap a:focus-visible,
+.landing-snap button:focus-visible,
+.landing-snap [tabindex]:focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 3px;
 }

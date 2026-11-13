@@ -109,7 +109,7 @@ export function LandingSections() {
   return (
     <>
       {/* MANIFESTO */}
-      <section className="manifesto relative h-[220svh]">
+      <section className="manifesto relative h-[220svh] snap-start snap-always">
         <div className="sticky top-0 flex h-svh items-center">
           <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12">
             <span className="text-ac mb-8 block text-sm font-medium">The problem</span>
@@ -132,7 +132,10 @@ export function LandingSections() {
       </section>
 
       {/* WHAT GOES WRONG */}
-      <section id="exposure" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+      <section
+        id="exposure"
+        className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+      >
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <SectionHeading
             theme="blue"
@@ -168,12 +171,16 @@ export function LandingSections() {
       </section>
 
       {/* THE GAP */}
-      <section id="gap" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
+      <section
+        id="gap"
+        className="relative snap-start snap-always scroll-mt-12 py-20 md:mt-14 md:py-24"
+      >
         <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
           <div className="lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
               theme="blue"
               align="left"
+              compact
               eyebrow="The gap"
               title="Your tools each hold a piece."
               accent="None answers this."
@@ -229,7 +236,7 @@ export function LandingSections() {
       </section>
 
       {/* THE JOURNEY */}
-      <section className="relative py-20 md:py-24">
+      <section className="relative snap-start snap-always py-20 md:py-24">
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <SectionHeading

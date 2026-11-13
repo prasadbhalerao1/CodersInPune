@@ -36,7 +36,7 @@ export function Feature({
 export function Chip({ children, tone = "#9CA3AF" }: { children: ReactNode; tone?: string }) {
   return (
     <span
-      className="rounded-md border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap"
+      className="rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap"
       style={{
         color: tone,
         borderColor: `color-mix(in srgb, ${tone} 35%, transparent)`,
@@ -49,5 +49,4 @@ export function Chip({ children, tone = "#9CA3AF" }: { children: ReactNode; tone
 }
 
 export const body = "mt-4 mb-5 text-sm leading-relaxed text-fg-mute";
-export const panel =
-  "mt-auto rounded-xl border border-line/15 bg-sunk/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md";
+export const panel = "mt-auto border-t border-line/15 pt-4";
