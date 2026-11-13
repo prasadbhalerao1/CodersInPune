@@ -18,7 +18,15 @@ export type Petal = {
   blur?: boolean;
 };
 
-export function Petals({ petals, className }: { petals: Petal[]; className?: string }) {
+export function Petals({
+  petals,
+  className,
+  variant = "default",
+}: {
+  petals: Petal[];
+  className?: string;
+  variant?: "default" | "light";
+}) {
   return (
     <svg
       aria-hidden
@@ -28,10 +36,16 @@ export function Petals({ petals, className }: { petals: Petal[]; className?: str
     >
       <defs>
         <linearGradient id="petal-fill" x1="0" y1="1" x2="0.25" y2="0">
-          <stop offset="0" stopColor="#050B24" />
-          <stop offset="0.45" stopColor="#1A38B5" />
-          <stop offset="0.82" stopColor="#5F7FF2" />
-          <stop offset="1" stopColor="#BCCDFF" />
+          <stop offset="0" style={{ stopColor: "var(--petal-0)" }} />
+          <stop offset="0.45" style={{ stopColor: "var(--petal-1)" }} />
+          <stop offset="0.82" style={{ stopColor: "var(--petal-2)" }} />
+          <stop offset="1" style={{ stopColor: "var(--petal-3)" }} />
+        </linearGradient>
+        <linearGradient id="petal-fill-light" x1="0" y1="1" x2="0.25" y2="0">
+          <stop offset="0" stopColor="#6f8cf5" />
+          <stop offset="0.45" stopColor="#a3b6ff" />
+          <stop offset="0.82" stopColor="#d3ddff" />
+          <stop offset="1" stopColor="#f4f7ff" />
         </linearGradient>
         <filter id="petal-blur" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="16" />
@@ -47,18 +61,21 @@ export function Petals({ petals, className }: { petals: Petal[]; className?: str
           opacity={p.o}
           filter={p.blur ? "url(#petal-blur)" : undefined}
         >
-          <path d={PETAL} fill="url(#petal-fill)" />
+          <path
+            d={PETAL}
+            fill={variant === "light" ? "url(#petal-fill-light)" : "url(#petal-fill)"}
+          />
           <g
             clipPath="url(#petal-clip)"
             fill="none"
-            stroke="rgba(205,220,255,0.3)"
+            style={{ stroke: "var(--petal-vein)" }}
             strokeWidth="1.1"
           >
             {VEINS.map((d, j) => (
               <path key={j} d={d} />
             ))}
           </g>
-          <path d={PETAL} fill="none" stroke="rgba(190,210,255,0.38)" strokeWidth="1.6" />
+          <path d={PETAL} fill="none" style={{ stroke: "var(--petal-edge)" }} strokeWidth="1.6" />
         </g>
       ))}
     </svg>

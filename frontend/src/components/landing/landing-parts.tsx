@@ -22,7 +22,7 @@ export function Feature({
       <span className="text-sm font-semibold" style={{ color: tone }}>
         {kicker}
       </span>
-      <h3 className="font-display mt-4 text-[2.7rem] leading-[0.98] tracking-[-0.01em] text-[#F2EEE5]">
+      <h3 className="font-display text-strong mt-4 text-[2.7rem] leading-[0.98] tracking-[-0.01em]">
         {title}{" "}
         <span className="italic" style={{ color: tone }}>
           {accent}
@@ -37,13 +37,17 @@ export function Chip({ children, tone = "#9CA3AF" }: { children: ReactNode; tone
   return (
     <span
       className="rounded-md border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap"
-      style={{ color: tone, borderColor: `${tone}55`, background: `${tone}14` }}
+      style={{
+        color: tone,
+        borderColor: `color-mix(in srgb, ${tone} 35%, transparent)`,
+        background: `color-mix(in srgb, ${tone} 10%, transparent)`,
+      }}
     >
       {children}
     </span>
   );
 }
 
-export const body = "mt-4 text-sm leading-relaxed text-zinc-400";
+export const body = "mt-4 text-sm leading-relaxed text-fg-mute";
 export const panel =
-  "mt-5 rounded-xl border border-white/15 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md";
+  "mt-5 rounded-xl border border-line/15 bg-sunk/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md";

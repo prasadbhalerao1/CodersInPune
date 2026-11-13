@@ -63,13 +63,22 @@ export const metadata: Metadata = {
   twitter: { card: "summary", title: "Relay", description: SITE_DESCRIPTION },
 };
 
+// Dark is the default and is already in the server-rendered <html class>. This runs before first
+// paint and switches to light only if the visitor explicitly chose it (key v2: values saved while
+// light was the default are deliberately ignored).
+const THEME_SCRIPT = `try{var l=localStorage.getItem("relay-theme-v2")==="light";document.documentElement.classList.toggle("dark",!l);document.documentElement.style.colorScheme=l?"light":"dark"}catch(e){document.documentElement.classList.add("dark")}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${syne.variable} ${bebasNeue.variable} dark h-full antialiased`}
     >
-      <body className="h-full bg-[#06070B] text-[#F5F5F7]">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body className="bg-background text-foreground h-full">
         <AuthKitProvider>{children}</AuthKitProvider>
       </body>
     </html>

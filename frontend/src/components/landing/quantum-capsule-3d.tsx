@@ -24,10 +24,13 @@ export function QuantumCapsule3D() {
     const host = mountRef.current;
     if (!host) return;
     let cleanup: (() => void) | undefined;
+    let gaveUp = false;
     // A hidden copy (display:none at this breakpoint) must not allocate a WebGL context.
     const tryInit = () => {
-      if (cleanup || host.clientWidth === 0) return;
+      if (gaveUp || cleanup || host.clientWidth === 0) return;
       cleanup = setup(host);
+      // setup() returns nothing when WebGL is unavailable: do not retry on every resize.
+      if (!cleanup) gaveUp = true;
     };
     tryInit();
     const gate = new ResizeObserver(tryInit);
@@ -60,7 +63,13 @@ export function QuantumCapsule3D() {
       }
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 0.9;
+      renderer.toneMappingExposure = 1.0;
+      // The browser may reclaim the GPU context (tab limits, GX resource limiter): fall back.
+      renderer.domElement.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault();
+        setWebglFailed(true);
+      });
+
       container.appendChild(renderer.domElement);
 
       const fitToContainer = () => {
@@ -75,7 +84,19 @@ export function QuantumCapsule3D() {
       // Image-based lighting: brushed metal and glass only read as real when they have
       // something to reflect.
       const pmrem = new THREE.PMREMGenerator(renderer);
-      const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      const envScene = new RoomEnvironment();
+      // HDR strip lights: long, bright highlights are what make machined metal read as metal.
+      const stripMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 3.2, 3.4) });
+      const strip = (w: number, h: number, x: number, y: number, z: number, ry: number) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), stripMat);
+        m.position.set(x, y, z);
+        m.rotation.y = ry;
+        envScene.add(m);
+      };
+      strip(0.6, 9, -5.5, 2, 1, Math.PI / 2.4);
+      strip(0.35, 9, 5.5, 1, -1, -Math.PI / 2.4);
+      strip(8, 0.5, 0, 6, 0, 0);
+      const envTexture = pmrem.fromScene(envScene, 0.03).texture;
       scene.environment = envTexture;
 
       // ── Procedural textures ─────────────────────────────────────────────────
@@ -100,7 +121,7 @@ export function QuantumCapsule3D() {
       }
       const knurlBump = new THREE.CanvasTexture(knurlCanvas);
       knurlBump.wrapS = knurlBump.wrapT = THREE.RepeatWrapping;
-      knurlBump.repeat.set(24, 4);
+      knurlBump.repeat.set(48, 6);
 
       // Fine brushed-metal streaks for the polished rings.
       const brushCanvas = document.createElement("canvas");
@@ -171,32 +192,50 @@ export function QuantumCapsule3D() {
       const R = 0.9; // tube radius
       const L = 10; // tube length
 
-      const knurledMat = new THREE.MeshStandardMaterial({
-        color: 0x5f666f,
+      const knurledMat = new THREE.MeshPhysicalMaterial({
+        color: 0x59626e,
         metalness: 1.0,
-        roughness: 0.46,
+        roughness: 0.4,
         bumpMap: knurlBump,
-        bumpScale: 0.03,
-        envMapIntensity: 0.55,
+        bumpScale: 0.14,
+        envMapIntensity: 1.0,
       });
-      const polishedMat = new THREE.MeshStandardMaterial({
-        color: 0xaab0b8,
+      const polishedMat = new THREE.MeshPhysicalMaterial({
+        color: 0xcfd5dd,
         metalness: 1.0,
-        roughness: 0.24,
+        roughness: 0.2,
         roughnessMap: brushRough,
-        envMapIntensity: 0.7,
+        anisotropy: 0.85,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.12,
+        envMapIntensity: 1.15,
       });
-      const darkSteelMat = new THREE.MeshStandardMaterial({
-        color: 0x2b3038,
-        metalness: 0.9,
-        roughness: 0.35,
-        envMapIntensity: 0.5,
+      const darkSteelMat = new THREE.MeshPhysicalMaterial({
+        color: 0x2a2f38,
+        metalness: 1.0,
+        roughness: 0.28,
+        envMapIntensity: 1.3,
       });
-      const gasketMat = new THREE.MeshStandardMaterial({
-        color: 0x0b0d10,
-        metalness: 0.0,
-        roughness: 0.85,
-      });
+
+      // Laser-etched legend that runs round the collar.
+      const engraveCanvas = document.createElement("canvas");
+      engraveCanvas.width = 2048;
+      engraveCanvas.height = 96;
+      const eCtx = engraveCanvas.getContext("2d");
+      if (eCtx) {
+        eCtx.clearRect(0, 0, 2048, 96);
+        eCtx.fillStyle = "rgba(20,24,32,0.85)";
+        eCtx.font = "600 40px ui-monospace, Menlo, monospace";
+        eCtx.textBaseline = "middle";
+        eCtx.fillText(
+          "RELAY  /  CONTINUITY CAPSULE  /  RLS FORCED  /  AUDIT ON  /  SN 0014-AR  /  ",
+          12,
+          50,
+        );
+      }
+      const engraveTex = new THREE.CanvasTexture(engraveCanvas);
+      engraveTex.colorSpace = THREE.SRGBColorSpace;
+      engraveTex.anisotropy = 4;
 
       // Glass: clear coated shell; opacity rather than transmission (transmission samples an
       // empty buffer on an alpha canvas and fogs the tube).
@@ -287,34 +326,100 @@ export function QuantumCapsule3D() {
       haze.renderOrder = 0;
       capsuleGroup.add(haze);
 
-      // Machined end caps: gasket → collar → knurled grip → bezel → recessed face.
+      // Machined end caps: lathe-turned collar and bezel, a knurled grip between them,
+      // grooves, a recessed face with six hex bolts, an engraved legend and a glowing seam.
+      const lathe = (pts: Array<[number, number]>) =>
+        new THREE.LatheGeometry(
+          pts.map(([r, y]) => new THREE.Vector2(r, y)),
+          128,
+        );
+      const collarProfile: Array<[number, number]> = [
+        [R + 0.02, 0],
+        [R + 0.02, 0.1],
+        [R + 0.07, 0.1],
+        [R + 0.12, 0.15],
+        [R + 0.12, 0.4],
+        [R + 0.095, 0.44],
+        [R + 0.095, 0.5],
+        [R + 0.16, 0.54],
+        [R + 0.16, 0.58],
+      ];
+      const bezelProfile: Array<[number, number]> = [
+        [R + 0.16, 1.54],
+        [R + 0.17, 1.58],
+        [R + 0.17, 1.64],
+        [R + 0.12, 1.7],
+        [R + 0.12, 1.74],
+        [R + 0.15, 1.76],
+        [R + 0.15, 1.84],
+        [R + 0.1, 1.9],
+        [R + 0.1, 1.98],
+        [R + 0.06, 2.02],
+        [R * 0.78, 2.02],
+        [R * 0.78, 1.94],
+        [R * 0.72, 1.92],
+        [R * 0.38, 1.92],
+        [R * 0.38, 2.06],
+        [R * 0.32, 2.08],
+        [0, 2.08],
+      ];
+      const collarGeom = lathe(collarProfile);
+      const bezelGeom = lathe(bezelProfile);
+      const gripGeom = new THREE.CylinderGeometry(R + 0.16, R + 0.16, 0.96, 128, 1, true);
+      const grooveGeom = new THREE.TorusGeometry(R + 0.165, 0.014, 12, 128);
+      const boltGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.07, 6);
+      const boltDimple = new THREE.CylinderGeometry(0.03, 0.03, 0.075, 12);
+      const seamGeom = new THREE.TorusGeometry(R + 0.03, 0.018, 12, 128);
+      const seamMat = new THREE.MeshBasicMaterial({ color: 0xb8ff3c });
+      const bandGeom = new THREE.CylinderGeometry(R + 0.126, R + 0.126, 0.2, 128, 1, true);
+      const bandMat = new THREE.MeshBasicMaterial({
+        map: engraveTex,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.FrontSide,
+      });
+
       const makeCap = (top: boolean) => {
         const g = new THREE.Group();
-        const d = top ? 1 : -1;
-        const add = (geom: THREE.BufferGeometry, mat: THREE.Material, y: number) => {
+        const add = (geom: THREE.BufferGeometry, mat: THREE.Material, y = 0) => {
           const m = new THREE.Mesh(geom, mat);
-          m.position.y = d * y;
+          m.position.y = y;
           g.add(m);
           return m;
         };
-        add(new THREE.CylinderGeometry(R + 0.015, R + 0.015, 0.12, 64), gasketMat, 0.06);
-        add(new THREE.CylinderGeometry(R + 0.11, R + 0.05, 0.3, 96), polishedMat, 0.27);
-        add(new THREE.CylinderGeometry(R + 0.16, R + 0.16, 1.15, 96), knurledMat, 1.0);
-        add(new THREE.CylinderGeometry(R + 0.09, R + 0.16, 0.22, 96), polishedMat, 1.68);
-        add(new THREE.CylinderGeometry(R + 0.09, R + 0.09, 0.16, 96), polishedMat, 1.87);
-        // Recessed machined face with a dark centre boss.
-        add(new THREE.CylinderGeometry(R * 0.72, R + 0.09, 0.08, 96), darkSteelMat, 1.99);
-        add(new THREE.CylinderGeometry(R * 0.3, R * 0.3, 0.1, 48), polishedMat, 2.04);
+        add(collarGeom, polishedMat);
+        add(gripGeom, knurledMat, 1.06);
+        add(bezelGeom, polishedMat);
+        for (const y of [0.6, 1.52]) {
+          const t = add(grooveGeom, darkSteelMat, y);
+          t.rotation.x = Math.PI / 2;
+        }
+        const seam = add(seamGeom, seamMat, 0.02);
+        seam.rotation.x = Math.PI / 2;
+        add(bandGeom, bandMat, 0.27);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+          const rr = R * 0.56;
+          const bolt = add(boltGeom, polishedMat, 1.955);
+          bolt.position.x = Math.cos(a) * rr;
+          bolt.position.z = Math.sin(a) * rr;
+          bolt.rotation.y = a;
+          const dimple = add(boltDimple, darkSteelMat, 1.96);
+          dimple.position.x = Math.cos(a) * rr;
+          dimple.position.z = Math.sin(a) * rr;
+        }
         // Small latch block on the top cap.
         if (top) {
           const latch = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.46), polishedMat);
-          latch.position.set(0, 1.0, R + 0.18);
+          latch.position.set(0, 1.06, R + 0.2);
           g.add(latch);
           const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.4, 24), darkSteelMat);
           pin.rotation.z = Math.PI / 2;
-          pin.position.set(0, 1.0, R + 0.3);
+          pin.position.set(0, 1.06, R + 0.32);
           g.add(pin);
         }
+        // The bottom cap is the same part turned over.
+        if (!top) g.rotation.z = Math.PI;
         return g;
       };
       const topCap = makeCap(true);
@@ -383,6 +488,7 @@ export function QuantumCapsule3D() {
 
       let t = 0;
       let frame = 0;
+      let low = false; // set when frames are slow (software rendering): lower quality, keep animating
 
       const ribbon = (
         ctx: CanvasRenderingContext2D,
@@ -463,7 +569,7 @@ export function QuantumCapsule3D() {
         }
         emberGeom.attributes.position.needsUpdate = true;
         frame += 1;
-        if (frame % 2 === 0) paintFluid();
+        if (frame % (low ? 3 : 2) === 0) paintFluid();
         limeLight.intensity = 2.2 + Math.sin(t * 1.4) * 0.4;
         amberLight.intensity = 1.8 + Math.cos(t * 1.1) * 0.3;
         renderer.render(scene, camera);
@@ -472,14 +578,30 @@ export function QuantumCapsule3D() {
       // Animate only while on screen.
       let animId = 0;
       let visible = true;
-      const animate = () => {
+      let lastTick = 0;
+      let slow = 0;
+      const animate = (now: number) => {
         animId = 0;
         if (!visible) return;
+        // Software rendering (GPU blocklisted, hardware acceleration off) is slow but works:
+        // drop to 1x pixel ratio and repaint the plasma less often, and keep animating.
+        if (lastTick && !low) {
+          slow = now - lastTick > 42 ? slow + 1 : Math.max(0, slow - 1);
+          if (slow > 20) {
+            low = true;
+            renderer.setPixelRatio(1);
+            fitToContainer();
+          }
+        }
+        lastTick = now;
         renderFrame();
         animId = requestAnimationFrame(animate);
       };
       const start = () => {
-        if (animId === 0) animId = requestAnimationFrame(animate);
+        if (animId === 0) {
+          lastTick = 0;
+          animId = requestAnimationFrame(animate);
+        }
       };
       const stop = () => {
         if (animId !== 0) {
@@ -523,6 +645,7 @@ export function QuantumCapsule3D() {
           }
         });
         knurlBump.dispose();
+        engraveTex.dispose();
         brushRough.dispose();
         scaleTex.dispose();
         fluidTexture.dispose();

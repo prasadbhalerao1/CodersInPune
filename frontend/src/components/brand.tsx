@@ -92,8 +92,8 @@ export function RelayMark({ className }: { className?: string }) {
         strokeLinecap="round"
       />
       {/* Baton */}
-      <circle cx="26" cy="27.6" r="2.3" fill="#C4FF00" />
-      <circle cx="26" cy="27.6" r="4" fill="#C4FF00" opacity="0.22" />
+      <circle cx="26" cy="27.6" r="2.3" style={{ fill: "var(--lime)" }} />
+      <circle cx="26" cy="27.6" r="4" opacity="0.22" style={{ fill: "var(--lime)" }} />
     </svg>
   );
 }

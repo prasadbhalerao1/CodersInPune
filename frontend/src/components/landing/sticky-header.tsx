@@ -19,7 +19,7 @@ export function StickyHeader({ children }: { children: ReactNode }) {
       className={cn(
         "fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300",
         scrolled
-          ? "border-white/[0.08] bg-[#090D18]/75 backdrop-blur-xl"
+          ? "border-line/[0.08] bg-page/75 backdrop-blur-xl"
           : "border-transparent bg-transparent",
       )}
     >

@@ -54,10 +54,10 @@ export function MemoryReplayPreview() {
   const active = MILESTONES.find((m) => m.id === activeId) ?? MILESTONES[1];
 
   return (
-    <div className="rounded-xl border border-white/15 bg-black/25 p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-      <p className="text-sm font-medium text-zinc-300">Production deployments · history</p>
+    <div className="border-line/15 bg-sunk/25 rounded-xl border p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
+      <p className="text-fg-soft text-sm font-medium">Production deployments · history</p>
 
-      <ol className="mt-4 space-y-1 border-l border-white/10">
+      <ol className="border-line/10 mt-4 space-y-1 border-l">
         {MILESTONES.map((m) => (
           <li key={m.id}>
             <button
@@ -67,27 +67,27 @@ export function MemoryReplayPreview() {
               className={cn(
                 "-ml-px flex w-full items-baseline gap-4 border-l-2 py-2 pl-4 text-left transition-colors",
                 activeId === m.id
-                  ? "border-[#C4FF00] text-white"
-                  : "border-transparent text-zinc-400 hover:text-zinc-200",
+                  ? "text-strong border-ac"
+                  : "text-fg-mute hover:text-fg-soft border-transparent",
               )}
             >
-              <span className="w-24 shrink-0 text-xs text-zinc-500 tabular-nums">{m.date}</span>
+              <span className="text-fg-mute w-24 shrink-0 text-xs tabular-nums">{m.date}</span>
               <span className="text-sm font-medium">{m.title}</span>
             </button>
           </li>
         ))}
       </ol>
 
-      <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4">
-        <p className="text-sm leading-relaxed text-zinc-200">{active.summary}</p>
-        <p className="mt-4 text-xs font-medium text-zinc-500">Sources</p>
+      <div className="border-line/10 bg-sunk/30 mt-4 rounded-lg border p-4">
+        <p className="text-fg-soft text-sm leading-relaxed">{active.summary}</p>
+        <p className="text-fg-mute mt-4 text-xs font-medium">Sources</p>
         <ul className="mt-2 flex flex-wrap gap-2">
           {active.sources.map((s) => (
             <li
               key={s.ref}
-              className="rounded-md border border-white/10 px-2.5 py-1 text-xs text-zinc-300"
+              className="border-line/10 text-fg-soft rounded-md border px-2.5 py-1 text-xs"
             >
-              <span className="text-zinc-500">{s.kind}</span> · {s.ref}
+              <span className="text-fg-mute">{s.kind}</span> · {s.ref}
             </li>
           ))}
         </ul>

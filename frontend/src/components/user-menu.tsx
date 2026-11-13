@@ -2,6 +2,7 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { connection } from "next/server";
 
 import { signOutAction } from "@/app/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function UserMenu() {
   // withAuth reads the clock for token expiry; mark the render as request-time first.
@@ -9,9 +10,12 @@ export async function UserMenu() {
   const { user } = await withAuth();
   if (!user) {
     return (
-      <a href="/sign-in" className="text-sm font-medium hover:underline">
-        Sign in
-      </a>
+      <div className="flex items-center gap-3">
+        <a href="/sign-in" className="text-sm font-medium hover:underline">
+          Sign in
+        </a>
+        <ThemeToggle className="ml-auto" />
+      </div>
     );
   }
   const name = user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : user.email;
@@ -42,6 +46,7 @@ export async function UserMenu() {
           </form>
         </span>
       </div>
+      <ThemeToggle className="ml-auto" />
     </div>
   );
 }

@@ -56,7 +56,7 @@ const PRINCIPLES = [
   {
     num: "01",
     title: "Rules decide",
-    tone: "#FF6B7A",
+    tone: "var(--ac)",
     points: [
       "Risks, readiness, simulation and overload are deterministic rules you can read on the page.",
       "Missing owners, stale knowledge and conflicting runbooks are found before any model runs.",
@@ -65,7 +65,7 @@ const PRINCIPLES = [
   {
     num: "02",
     title: "AI explains",
-    tone: "#B8FF3C",
+    tone: "var(--peri)",
     points: [
       "Every AI statement cites evidence Relay validates, or it is dropped. A conflict needs two sources.",
       "Models hold read-only tools. They cannot change ownership, approve, acknowledge or edit a source.",
@@ -74,7 +74,7 @@ const PRINCIPLES = [
   {
     num: "03",
     title: "People approve",
-    tone: "#B8FF3C",
+    tone: "var(--ac)",
     points: [
       "Proposals wait for a human; accepting one goes through the normal services and the audit log.",
       "Any edit to a brief is a new version that needs approval again.",
@@ -165,21 +165,10 @@ const TRY = [
 ];
 
 function Orb({ className }: { className: string }) {
-  return (
-    <div
-      aria-hidden
-      className={`absolute rounded-full ${className}`}
-      style={{
-        background:
-          "radial-gradient(circle at 32% 28%, #F6FFC9 0%, #CFFF5E 20%, #B8FF3C 44%, #6F9A12 80%, #2A4008 100%)",
-        boxShadow:
-          "0 0 90px 12px rgba(184,255,60,0.22), inset -14px -18px 34px rgba(0,0,0,0.35), inset 10px 10px 24px rgba(255,255,255,0.25)",
-      }}
-    />
-  );
+  return <div aria-hidden className={`orb absolute hidden rounded-full md:block ${className}`} />;
 }
 
-/** What the glass refracts: orchid petals and lime glass orbs, spread down the page. */
+/** What the crystal refracts: orchid petals and glossy orbs, spread down the whole page. */
 export function BlueArt() {
   const cluster = (flip: boolean) => [
     { x: flip ? 560 : 640, y: 780, rot: flip ? 30 : -30, s: 1.2, o: 0.95 },
@@ -210,7 +199,7 @@ export function BlueArt() {
     "top-[69%] -right-10 h-40 w-40",
   ];
   return (
-    <div aria-hidden className="layer pointer-events-none absolute inset-0 z-0 overflow-hidden">
+    <div aria-hidden className="layer pointer-events-none absolute inset-0 z-0 overflow-clip">
       {clusters.map(([pos, flip]) => (
         <Petals key={pos} className={`${sizes} ${pos} opacity-75`} petals={cluster(flip)} />
       ))}
@@ -221,31 +210,30 @@ export function BlueArt() {
   );
 }
 
-/** The second half of the page: cobalt, periwinkle and acid lime, in serif. */
+/** The second half of the page: cobalt and periwinkle (plus lime in dark mode), in serif. */
 export function BlueHalf() {
   return (
     <>
       {/* SIMULATOR */}
-      <section
-        id="simulator"
-        className="relative scroll-mt-16 overflow-hidden border-b border-white/[0.08] py-28"
-      >
+      <section id="simulator" className="relative scroll-mt-16 overflow-clip py-28">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute inset-0 max-lg:hidden"
           style={{
             clipPath: "polygon(52% 0%, 100% 0%, 100% 100%, 30% 100%)",
-            background:
-              "linear-gradient(160deg, #8E1626 0%, #5B1F6B 34%, #26308F 66%, #1B3FD0 100%)",
+            background: "linear-gradient(160deg, #1A2C9E 0%, #2540C8 50%, #3B5BFF 100%)",
             opacity: 0.5,
+            maskImage: "linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent)",
           }}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute top-1/2 right-[8%] h-[520px] w-[640px] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(184,255,60,0.12),transparent_65%)] blur-3xl"
+          className="pointer-events-none absolute top-1/2 right-[8%] hidden h-[520px] w-[640px] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,var(--bloom),transparent_65%)] blur-3xl lg:block"
         />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:px-12">
-          <div>
+        <div className="relative mx-auto grid max-w-7xl items-start gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:px-12">
+          <div className="lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
               theme="blue"
               align="left"
@@ -264,7 +252,7 @@ export function BlueHalf() {
                   <span className="font-bebas display-outline text-4xl leading-none tracking-wider">
                     {n}
                   </span>
-                  <span className="text-lg text-slate-200">{t}</span>
+                  <span className="text-fg-soft text-lg">{t}</span>
                 </li>
               ))}
             </ol>
@@ -292,7 +280,7 @@ export function BlueHalf() {
                 {/* Accountability map */}
                 <Feature
                   kicker="Accountability map"
-                  tone="#B8FF3C"
+                  tone="var(--ac)"
                   title="Ownership for"
                   accent="any work"
                 >
@@ -303,12 +291,17 @@ export function BlueHalf() {
                   </p>
                   <ul className={`${panel} space-y-3 text-xs`}>
                     {[
-                      ["Production deployments", "Arjun · primary", "Leo · backup", "#B8FF3C"],
-                      ["Vendor contract renewal", "Priya · primary", "No backup", "#FF6B7A"],
-                      ["Quarterly compliance export", "Mira · primary", "Review due", "#8FA8FF"],
+                      ["Production deployments", "Arjun · primary", "Leo · backup", "var(--ac)"],
+                      ["Vendor contract renewal", "Priya · primary", "No backup", "var(--coral)"],
+                      [
+                        "Quarterly compliance export",
+                        "Mira · primary",
+                        "Review due",
+                        "var(--peri)",
+                      ],
                     ].map(([r, a, b, c]) => (
                       <li key={r} className="flex flex-col gap-1.5">
-                        <span className="text-slate-200">{r}</span>
+                        <span className="text-fg-soft">{r}</span>
                         <span className="flex flex-wrap gap-1.5">
                           <Chip>{a}</Chip>
                           <Chip tone={c}>{b}</Chip>
@@ -321,7 +314,7 @@ export function BlueHalf() {
                 {/* Risks */}
                 <Feature
                   kicker="Continuity risk"
-                  tone="#FF6B7A"
+                  tone="var(--coral)"
                   title="Gaps found"
                   accent="before they hurt"
                 >
@@ -330,22 +323,22 @@ export function BlueHalf() {
                     critical work, stale knowledge. Each risk shows the rule that raised it.
                   </p>
                   <div className={panel}>
-                    <span className="text-xs text-slate-500">Key-person exposure</span>
+                    <span className="text-fg-mute text-xs">Key-person exposure</span>
                     <ul className="mt-3 space-y-2.5 text-xs">
                       {[
-                        ["Arjun Rao", "4 critical, sole holder", "#FF6B7A"],
-                        ["Priya Nair", "2 critical, sole holder", "#8FA8FF"],
-                        ["Mira Chen", "1 critical, sole holder", "#8FA8FF"],
+                        ["Arjun Rao", "4 critical, sole holder", "var(--coral)"],
+                        ["Priya Nair", "2 critical, sole holder", "var(--peri)"],
+                        ["Mira Chen", "1 critical, sole holder", "var(--peri)"],
                       ].map(([n, d, c]) => (
                         <li key={n} className="flex items-center justify-between">
-                          <span className="text-slate-200">{n}</span>
+                          <span className="text-fg-soft">{n}</span>
                           <span className="tabular-nums" style={{ color: c }}>
                             {d}
                           </span>
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-3 border-t border-white/10 pt-3 text-xs text-slate-500">
+                    <p className="border-line/10 text-fg-mute mt-3 border-t pt-3 text-xs">
                       One click: what if they are away?
                     </p>
                   </div>
@@ -354,7 +347,7 @@ export function BlueHalf() {
                 {/* What If */}
                 <Feature
                   kicker="What If? simulator"
-                  tone="#8FA8FF"
+                  tone="var(--peri)"
                   title="See the"
                   accent="blast radius"
                 >
@@ -364,33 +357,33 @@ export function BlueHalf() {
                     every point.
                   </p>
                   <div className={panel}>
-                    <span className="text-xs text-slate-500">Cover candidates</span>
+                    <span className="text-fg-mute text-xs">Cover candidates</span>
                     <ul className="mt-3 space-y-3 text-xs">
                       {[
-                        ["Dev Patel", 88, "#B8FF3C", "Overloaded: 2.4x typical load"],
-                        ["Leo Martins", 61, "#8FA8FF", ""],
-                        ["Sam Okafor", 44, "#FF6B7A", ""],
+                        ["Dev Patel", 88, "var(--ac)", "Overloaded: 2.4x typical load"],
+                        ["Leo Martins", 61, "var(--peri)", ""],
+                        ["Sam Okafor", 44, "var(--coral)", ""],
                       ].map(([n, v, c, flag]) => (
                         <li key={n as string}>
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-200">{n}</span>
+                            <span className="text-fg-soft">{n}</span>
                             <span className="tabular-nums" style={{ color: c as string }}>
                               {v}%
                             </span>
                           </div>
-                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+                          <div className="bg-line/[0.07] mt-1.5 h-1 overflow-clip rounded-full">
                             <div
                               className="h-full rounded-full"
                               style={{ width: `${v}%`, background: c as string }}
                             />
                           </div>
                           {flag ? (
-                            <p className="mt-1 text-[10px] text-indigo-400">{flag as string}</p>
+                            <p className="text-peri mt-1 text-[10px]">{flag as string}</p>
                           ) : null}
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-3 border-t border-white/10 pt-3 text-xs text-slate-500">
+                    <p className="border-line/10 text-fg-mute mt-3 border-t pt-3 text-xs">
                       Overload when load ≥ max(2x typical, typical + 3)
                     </p>
                   </div>
@@ -401,7 +394,7 @@ export function BlueHalf() {
                   id="memory"
                   className="lg:col-span-2"
                   kicker="Project memory replay"
-                  tone="#B8FF3C"
+                  tone="var(--ac)"
                   title="Learn how the work"
                   accent="got here"
                 >
@@ -412,9 +405,9 @@ export function BlueHalf() {
                         a single timeline. Filter by incident, press replay, inspect any event, and
                         let AI group it into chapters labelled <em>Inferred</em>.
                       </p>
-                      <p className="mt-4 rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-slate-300">
+                      <p className="border-line/10 bg-sunk/30 text-fg-soft mt-4 rounded-lg border p-3 text-sm">
                         &ldquo;Why does every payments-api deploy need a canary?&rdquo;
-                        <span className="mt-1 block text-xs text-slate-500">
+                        <span className="text-fg-mute mt-1 block text-xs">
                           Answers cite events, or say they cannot find one.
                         </span>
                       </p>
@@ -426,7 +419,7 @@ export function BlueHalf() {
                 {/* Handover copilot */}
                 <Feature
                   kicker="Handover brief"
-                  tone="#B8FF3C"
+                  tone="var(--ac)"
                   title="A brief that shows"
                   accent="its work"
                 >
@@ -436,18 +429,18 @@ export function BlueHalf() {
                   </p>
                   <ul className={`${panel} space-y-2.5 text-xs`}>
                     {[
-                      ["Fact", "3 open PRs on deploy-pipelines", "#8FA8FF"],
-                      ["Rule", "No written rollback procedure", "#8FA8FF"],
-                      ["AI inference", "Old runbook skips the canary", "#B8FF3C"],
+                      ["Fact", "3 open PRs on deploy-pipelines", "var(--peri)"],
+                      ["Rule", "No written rollback procedure", "var(--peri)"],
+                      ["AI inference", "Old runbook skips the canary", "var(--ac)"],
                     ].map(([l, t, c]) => (
                       <li key={t} className="flex items-center gap-2">
                         <Chip tone={c}>{l}</Chip>
-                        <span className="text-slate-300">{t}</span>
+                        <span className="text-fg-soft">{t}</span>
                       </li>
                     ))}
-                    <li className="flex items-center justify-between border-t border-white/10 pt-2.5 text-xs text-slate-500">
+                    <li className="border-line/10 text-fg-mute flex items-center justify-between border-t pt-2.5 text-xs">
                       <span>Coverage 6 of 7 cited</span>
-                      <span className="text-indigo-400">1 source changed</span>
+                      <span className="text-peri">1 source changed</span>
                     </li>
                   </ul>
                 </Feature>
@@ -455,7 +448,7 @@ export function BlueHalf() {
                 {/* Interview */}
                 <Feature
                   kicker="Handover interview"
-                  tone="#B8FF3C"
+                  tone="var(--ac)"
                   title="Capture what's"
                   accent="in their head"
                 >
@@ -464,7 +457,7 @@ export function BlueHalf() {
                     answers, a reviewer approves, and answers become knowledge. A coverage gap links
                     straight to the question that closes it.
                   </p>
-                  <p className="mt-5 rounded-xl border border-white/10 bg-black/40 p-4 text-sm text-slate-300">
+                  <p className="border-line/10 bg-sunk/40 text-fg-soft mt-5 rounded-xl border p-4 text-sm">
                     &ldquo;Two runbooks disagree on canary. Which one is current, and why?&rdquo;
                   </p>
                 </Feature>
@@ -472,7 +465,7 @@ export function BlueHalf() {
                 {/* Audited cases */}
                 <Feature
                   kicker="Audited cases"
-                  tone="#B8FF3C"
+                  tone="var(--ac)"
                   title="Approval that"
                   accent="means something"
                 >
@@ -488,28 +481,33 @@ export function BlueHalf() {
                       ["Ownership moves", "24 Nov", false],
                     ].map(([l, m, d]) => (
                       <li key={l as string} className="flex items-center justify-between">
-                        <span className={d ? "text-slate-200" : "text-slate-500"}>
+                        <span className={d ? "text-fg-soft" : "text-fg-mute"}>
                           {d ? "✓ " : "○ "}
                           {l as string}
                         </span>
-                        <span className="text-xs text-slate-500">{m as string}</span>
+                        <span className="text-fg-mute text-xs">{m as string}</span>
                       </li>
                     ))}
                   </ol>
                 </Feature>
 
                 {/* Follow-through */}
-                <Feature kicker="Follow-through" tone="#8FA8FF" title="Did it take" accent="hold?">
+                <Feature
+                  kicker="Follow-through"
+                  tone="var(--peri)"
+                  title="Did it take"
+                  accent="hold?"
+                >
                   <p className={body}>
                     We found no other product that checks this. After a handover, each
                     responsibility shows whether the new holder is recorded, reviewing, active and
                     closing tasks. It measures the work, not the person.
                   </p>
                   <ul className={`${panel} flex flex-wrap gap-2`}>
-                    <Chip tone="#B8FF3C">Settled</Chip>
-                    <Chip tone="#8FA8FF">Settling in</Chip>
-                    <Chip tone="#8FA8FF">Check in</Chip>
-                    <Chip tone="#FF6B7A">New holder not recorded</Chip>
+                    <Chip tone="var(--ac)">Settled</Chip>
+                    <Chip tone="var(--peri)">Settling in</Chip>
+                    <Chip tone="var(--peri)">Check in</Chip>
+                    <Chip tone="var(--coral)">New holder not recorded</Chip>
                   </ul>
                 </Feature>
               </div>
@@ -527,7 +525,7 @@ export function BlueHalf() {
                   title="Arjun gives notice."
                   accent="Here's what happens."
                 />
-                <p className="reveal max-w-sm text-sm leading-relaxed text-slate-400">
+                <p className="scrim reveal text-fg-mute max-w-sm text-sm leading-relaxed">
                   Five steps from the departure signal to a verified successor. Click any step or
                   let it advance.
                 </p>
@@ -551,20 +549,20 @@ export function BlueHalf() {
               <div className="mt-16 grid gap-5 md:grid-cols-3">
                 {SOURCES.map((s) => (
                   <div key={s.name} className="glass reveal flex flex-col p-7">
-                    <span className="font-display text-5xl leading-[0.95] text-[#F2EEE5]">
+                    <span className="font-display text-strong text-5xl leading-[0.95]">
                       {s.name}
                     </span>
-                    <span className="mt-2 text-xs text-[#B8FF3C]">{s.how}</span>
-                    <ul className="mt-6 space-y-3 text-sm text-slate-300">
+                    <span className="text-ac mt-2 text-xs">{s.how}</span>
+                    <ul className="text-fg-soft mt-6 space-y-3 text-sm">
                       {s.reads.map((r) => (
                         <li key={r} className="flex gap-2.5">
-                          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#B8FF3C]" />
+                          <span className="bg-lime mt-2 h-1 w-1 shrink-0 rounded-full" />
                           {r}
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-auto border-t border-white/10 pt-5 text-xs leading-relaxed text-slate-500">
-                      <span className="text-[#FF6B7A]">Boundary </span>
+                    <p className="border-line/10 text-fg-mute mt-auto border-t pt-5 text-xs leading-relaxed">
+                      <span className="text-coral">Boundary </span>
                       {s.never}
                     </p>
                   </div>
@@ -583,7 +581,7 @@ export function BlueHalf() {
                 accent="People approve."
                 description="Deterministic where it decides, generative where it explains. If AI is switched off, nothing breaks: you get labelled search and rule-based briefs."
               />
-              <div className="glass mt-16 grid overflow-hidden md:grid-cols-3 md:divide-x md:divide-white/10">
+              <div className="glass md:divide-line/10 mt-16 grid overflow-clip md:grid-cols-3 md:divide-x">
                 {PRINCIPLES.map((p) => (
                   <div key={p.num} className="reveal p-8">
                     <span
@@ -592,8 +590,8 @@ export function BlueHalf() {
                     >
                       {p.num}
                     </span>
-                    <h3 className="font-display mt-4 text-4xl text-[#F2EEE5]">{p.title}</h3>
-                    <ul className="mt-5 space-y-3 text-sm leading-relaxed text-slate-400">
+                    <h3 className="font-display text-strong mt-4 text-4xl">{p.title}</h3>
+                    <ul className="text-fg-mute mt-5 space-y-3 text-sm leading-relaxed">
                       {p.points.map((t) => (
                         <li key={t} className="flex gap-2.5">
                           <span
@@ -611,15 +609,13 @@ export function BlueHalf() {
               <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 {EVAL.map((e) => (
                   <div key={e.label} className="glass reveal p-6">
-                    <span className="font-bebas text-6xl leading-none text-[#B8FF3C]">
-                      {e.value}
-                    </span>
-                    <p className="mt-3 text-sm font-medium text-slate-200">{e.label}</p>
-                    <p className="mt-1 text-xs text-slate-500">{e.sub}</p>
+                    <span className="font-bebas text-ac text-6xl leading-none">{e.value}</span>
+                    <p className="text-fg-soft mt-3 text-sm font-medium">{e.label}</p>
+                    <p className="text-fg-mute mt-1 text-xs">{e.sub}</p>
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-slate-600">
+              <p className="text-fg-mute mt-4 text-xs">
                 Scripted evaluation run in CI against synthetic cases. The same cases can run
                 against a live model.
               </p>
@@ -639,27 +635,25 @@ export function BlueHalf() {
                   description="Continuity data is sensitive. Relay is built so the safe path is the only path, and the database enforces it, not just the application."
                 />
               </div>
-              <ul className="glass divide-y divide-white/10 px-7">
+              <ul className="glass divide-line/10 divide-y px-7">
                 {SPEC.map((p) => {
                   const Icon = p.icon;
                   return (
-                    <li key={p.code} className="reveal group flex gap-6 py-8">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#B8FF3C] transition-colors group-hover:border-[#B8FF3C]/40">
+                    <li key={p.code} className="reveal flex gap-6 py-8">
+                      <div className="border-line/10 bg-line/[0.04] text-ac flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
-                          <span className="text-xs text-slate-500">{p.code}</span>
-                          <span className="rounded-full border border-lime-500/25 bg-lime-500/10 px-2.5 py-0.5 text-xs text-lime-400">
+                          <span className="text-fg-mute text-xs">{p.code}</span>
+                          <span className="text-ac border-ac/25 bg-ac/10 rounded-full border px-2.5 py-0.5 text-xs">
                             {p.spec}
                           </span>
                         </div>
-                        <h3 className="mt-3 text-xl leading-snug font-semibold text-[#F2EEE5] sm:text-2xl">
+                        <h3 className="text-strong mt-3 text-xl leading-snug font-semibold sm:text-2xl">
                           {p.title}
                         </h3>
-                        <p className="mt-3 text-[0.95rem] leading-relaxed text-slate-400">
-                          {p.desc}
-                        </p>
+                        <p className="text-fg-mute mt-3 text-[0.95rem] leading-relaxed">{p.desc}</p>
                       </div>
                     </li>
                   );
@@ -671,14 +665,14 @@ export function BlueHalf() {
           {/* PROOF */}
           <section className="relative py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
-              <div className="glass grid overflow-hidden sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-white/10">
+              <div className="glass lg:divide-line/10 grid overflow-clip sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
                 {PROOF.map((p) => (
                   <div key={p.label} className="reveal p-8">
-                    <span className="font-bebas text-[4.5rem] leading-none text-[#F2EEE5]">
+                    <span className="font-bebas text-strong text-[4.5rem] leading-none">
                       {p.value}
                     </span>
-                    <p className="mt-3 text-sm font-medium text-slate-200">{p.label}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{p.sub}</p>
+                    <p className="text-fg-soft mt-3 text-sm font-medium">{p.label}</p>
+                    <p className="text-fg-mute mt-1 text-xs leading-relaxed">{p.sub}</p>
                   </div>
                 ))}
               </div>
@@ -697,26 +691,26 @@ export function BlueHalf() {
                   accent="no setup."
                   description="Sign in with any email. Relay sends a one-time code and never sees a password."
                 />
-                <p className="reveal glass-clear mt-8 rounded-xl p-4 text-xs leading-relaxed text-slate-500">
-                  <span className="text-indigo-400">Honest limits </span>
+                <p className="reveal glass-clear text-fg-mute mt-8 rounded-xl p-4 text-xs leading-relaxed">
+                  <span className="text-peri">Honest limits </span>
                   The sample workspace&apos;s GitHub, Linear and Notion records are synthetic and
                   labelled as such. AI prose needs a configured model, otherwise Relay falls back to
                   rule-based briefs. Brief coverage matches by name, so it shows a gap to check,
                   never a verdict.
                 </p>
               </div>
-              <ol className="glass divide-y divide-white/10 px-7">
+              <ol className="glass divide-line/10 divide-y px-7">
                 {TRY.map(([t, d], i) => (
                   <li
                     key={t}
-                    className="reveal grid grid-cols-[4rem_minmax(0,1fr)] gap-4 border-b border-white/10 py-7 last:border-b-0"
+                    className="reveal border-line/10 grid grid-cols-[4rem_minmax(0,1fr)] gap-4 border-b py-7 last:border-b-0"
                   >
                     <span className="font-bebas display-outline text-5xl leading-none tracking-wider">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
-                      <h3 className="text-xl font-semibold text-[#F2EEE5]">{t}</h3>
-                      <p className="mt-2 text-[0.95rem] leading-relaxed text-slate-400">{d}</p>
+                      <h3 className="text-strong text-xl font-semibold">{t}</h3>
+                      <p className="text-fg-mute mt-2 text-[0.95rem] leading-relaxed">{d}</p>
                     </div>
                   </li>
                 ))}
@@ -725,7 +719,7 @@ export function BlueHalf() {
           </section>
 
           {/* CLOSING CTA */}
-          <section className="relative overflow-hidden bg-[#03050D] py-32 sm:py-40">
+          <section className="bg-page relative overflow-clip py-32 sm:py-40">
             <div aria-hidden className="pointer-events-none absolute inset-0">
               <div className="absolute top-1/2 right-[6%] h-[560px] w-[640px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(46,84,230,0.38),transparent_68%)] blur-3xl" />
               <Petals
@@ -738,46 +732,46 @@ export function BlueHalf() {
                   { x: 1040, y: 780, rot: 78, s: 1.0, o: 0.7, blur: true },
                 ]}
               />
-              <div className="absolute top-[46%] right-[27%] h-28 w-44 -rotate-[14deg] rounded-[60%] bg-[radial-gradient(ellipse_at_center,rgba(184,255,60,0.55),rgba(184,255,60,0.12)_55%,transparent_75%)] blur-xl" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#03050D] via-[#03050D]/80 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#050A1C] via-transparent to-[#03050D]" />
+              <div className="absolute top-[46%] right-[27%] h-28 w-44 -rotate-[14deg] rounded-[60%] bg-[radial-gradient(ellipse_at_center,var(--orb-glow),transparent_72%)] blur-xl" />
+              <div className="from-page via-page/80 absolute inset-0 bg-gradient-to-r to-transparent" />
+              <div className="from-page to-page absolute inset-0 bg-gradient-to-b via-transparent" />
             </div>
 
             <div className="reveal relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="max-w-xl">
-                <span className="text-sm font-medium text-[#8FA8FF]">Try Relay</span>
+                <span className="text-peri text-sm font-medium">Try Relay</span>
                 <h2 className="mt-5">
-                  <span className="font-display block text-[clamp(4rem,10vw,8.5rem)] leading-[0.9] tracking-[-0.02em] text-[#B8FF3C] italic">
+                  <span className="font-display text-ac block text-[clamp(4rem,10vw,8.5rem)] leading-[0.9] tracking-[-0.02em] italic">
                     Pass the
                   </span>
-                  <span className="font-display block text-[clamp(3rem,7.4vw,6.4rem)] leading-[0.95] tracking-[-0.01em] text-[#F2EEE5]">
+                  <span className="font-display text-strong block text-[clamp(3rem,7.4vw,6.4rem)] leading-[0.95] tracking-[-0.01em]">
                     accountability.
                   </span>
-                  <span className="mt-2 block text-[clamp(1.6rem,3.6vw,3rem)] leading-tight font-light tracking-tight text-[#8FA8FF]">
+                  <span className="text-peri mt-2 block text-[clamp(1.6rem,3.6vw,3rem)] leading-tight font-light tracking-tight">
                     And prove it happened.
                   </span>
                 </h2>
-                <p className="mt-8 max-w-md text-base leading-relaxed text-slate-300">
+                <p className="text-fg-soft mt-8 max-w-md text-base leading-relaxed">
                   Open the sample workspace and run a handover end to end: replay the history,
                   simulate the absence, brief the successor, and check it took hold.
                 </p>
                 <div className="mt-10 flex flex-wrap items-center gap-4">
                   <Link
                     href="/workspaces"
-                    className="group inline-flex h-12 items-center gap-2 rounded-full bg-[#B8FF3C] px-7 text-sm font-semibold text-[#04060F] transition-colors hover:bg-[#caff6a]"
+                    className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition-colors"
                   >
                     Open the sample workspace
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                   <a
                     href={REPO_URL}
-                    className="inline-flex h-12 items-center gap-2 rounded-full border border-white/25 px-7 text-sm font-medium text-slate-200 transition-colors hover:border-white/50 hover:text-white"
+                    className="border-line/25 text-fg-soft hover:border-line/50 hover:text-strong inline-flex h-12 items-center gap-2 rounded-full border px-7 text-sm font-medium transition-colors"
                   >
                     View the source
                     <ArrowUpRight className="h-4 w-4" aria-hidden />
                   </a>
                 </div>
-                <p className="mt-8 text-sm text-slate-500">
+                <p className="text-fg-mute mt-8 text-sm">
                   Read-only integrations. Forced row-level security. A complete audit trail.
                 </p>
               </div>
@@ -791,47 +785,47 @@ export function BlueHalf() {
 
 export function LandingFooter() {
   return (
-    <footer className="relative overflow-hidden border-t border-white/[0.08] bg-[#03050D]">
+    <footer className="border-line/[0.08] bg-page relative overflow-clip border-t">
       <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-6 pt-16 pb-6 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr] lg:px-12">
         <div>
           <div className="flex items-center gap-2.5">
             <RelayMark className="h-7 w-7" />
-            <span className="text-xl font-medium tracking-tight text-white">Relay</span>
+            <span className="text-strong text-xl font-medium tracking-tight">Relay</span>
           </div>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
+          <p className="text-fg-mute mt-4 max-w-xs text-sm leading-relaxed">
             Relay makes accountability transferable, and proves the transfer happened.
           </p>
         </div>
-        <nav aria-label="Product" className="flex flex-col gap-3 text-sm text-slate-400">
-          <span className="text-xs text-slate-600">Product</span>
-          <a href="#product" className="transition-colors hover:text-white">
+        <nav aria-label="Product" className="text-fg-mute flex flex-col gap-3 text-sm">
+          <span className="text-fg-mute text-xs">Product</span>
+          <a href="#product" className="hover:text-strong transition-colors">
             Features
           </a>
-          <a href="#simulator" className="transition-colors hover:text-white">
+          <a href="#simulator" className="hover:text-strong transition-colors">
             What If? simulator
           </a>
-          <a href="#evidence" className="transition-colors hover:text-white">
+          <a href="#evidence" className="hover:text-strong transition-colors">
             Evidence sources
           </a>
-          <a href="#ai" className="transition-colors hover:text-white">
+          <a href="#ai" className="hover:text-strong transition-colors">
             AI guardrails
           </a>
-          <a href="#trust" className="transition-colors hover:text-white">
+          <a href="#trust" className="hover:text-strong transition-colors">
             Trust and security
           </a>
         </nav>
-        <nav aria-label="Explore" className="flex flex-col gap-3 text-sm text-slate-400">
-          <span className="text-xs text-slate-600">Explore</span>
-          <Link href="/workspaces" className="transition-colors hover:text-white">
+        <nav aria-label="Explore" className="text-fg-mute flex flex-col gap-3 text-sm">
+          <span className="text-fg-mute text-xs">Explore</span>
+          <Link href="/workspaces" className="hover:text-strong transition-colors">
             Sample workspace
           </Link>
-          <a href="#try" className="transition-colors hover:text-white">
+          <a href="#try" className="hover:text-strong transition-colors">
             Ten-minute tour
           </a>
-          <a href={REPO_URL} className="transition-colors hover:text-white">
+          <a href={REPO_URL} className="hover:text-strong transition-colors">
             Source on GitHub
           </a>
-          <a href="/llms.txt" className="transition-colors hover:text-white">
+          <a href="/llms.txt" className="hover:text-strong transition-colors">
             llms.txt
           </a>
         </nav>
@@ -839,24 +833,14 @@ export function LandingFooter() {
 
       {/* Giant wordmark: complete glyphs, edge-lit, with a lime glow underneath */}
       <div aria-hidden className="pointer-events-none relative mt-10 select-none">
-        <div className="absolute inset-x-[10%] bottom-0 h-1/2 bg-[radial-gradient(ellipse_at_center,rgba(184,255,60,0.18),transparent_70%)] blur-3xl" />
-        <span
-          className="font-bebas relative block pb-[0.08em] text-center text-[clamp(8rem,27vw,25rem)] leading-[0.86] tracking-[0.05em] text-transparent"
-          style={{
-            WebkitTextStroke: "1.5px rgba(184,255,60,0.75)",
-            backgroundImage:
-              "linear-gradient(180deg, rgba(143,168,255,0.28) 0%, rgba(59,91,255,0.1) 60%, transparent 100%)",
-            WebkitBackgroundClip: "text",
-            backgroundClip: "text",
-            filter: "drop-shadow(0 0 22px rgba(184,255,60,0.25))",
-          }}
-        >
+        <div className="wordmark-glow absolute inset-x-[10%] bottom-0 h-1/2 blur-3xl" />
+        <span className="wordmark font-bebas relative block pb-[0.08em] text-center text-[clamp(8rem,27vw,25rem)] leading-[0.86] tracking-[0.05em]">
           RELAY
         </span>
       </div>
 
-      <div className="relative z-10 border-t border-white/[0.06]">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-slate-600 sm:flex-row sm:px-8 lg:px-12">
+      <div className="border-line/[0.06] relative z-10 border-t">
+        <div className="text-fg-mute mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 py-5 text-xs sm:flex-row sm:px-8 lg:px-12">
           <span>© 2026 Relay Systems. All rights reserved.</span>
           <span>AI proposes, people decide</span>
         </div>

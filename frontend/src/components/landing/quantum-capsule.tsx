@@ -203,7 +203,7 @@ export function QuantumCapsule() {
       {/* Volumetric Radial Ambient Glow onto the red background */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-24 rounded-full bg-gradient-to-r from-[#C4FF00]/22 via-[#FF9900]/16 to-[#7E1520]/28 opacity-90 blur-3xl"
+        className="pointer-events-none absolute -inset-24 rounded-full bg-gradient-to-r from-[#C4FF00]/22 via-[#FF9900]/16 to-[#2540C8]/28 opacity-90 blur-3xl"
       />
 
       {/* 

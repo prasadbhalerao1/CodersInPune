@@ -101,7 +101,7 @@ export function Walkthrough() {
               aria-current={i === step ? "step" : undefined}
               className={cn(
                 "group flex w-full items-center gap-4 rounded-xl px-4 py-3 text-left whitespace-nowrap transition-colors",
-                i === step ? "bg-white/[0.06]" : "hover:bg-white/[0.03]",
+                i === step ? "bg-line/[0.06]" : "hover:bg-line/[0.03]",
               )}
             >
               <span
@@ -109,16 +109,16 @@ export function Walkthrough() {
                 className={cn(
                   "font-bebas text-4xl leading-none tracking-wider transition-colors",
                   i === step
-                    ? "text-[#C4FF00]"
+                    ? "text-ac"
                     : i < step
-                      ? "text-zinc-300"
-                      : "text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.35)]",
+                      ? "text-fg-soft"
+                      : "text-transparent [-webkit-text-stroke:1px_color-mix(in_srgb,var(--line)_35%,transparent)]",
                 )}
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span
-                className={cn("text-sm", i === step ? "font-medium text-white" : "text-zinc-400")}
+                className={cn("text-sm", i === step ? "text-strong font-medium" : "text-fg-mute")}
               >
                 {s.label}
               </span>
@@ -127,9 +127,7 @@ export function Walkthrough() {
         ))}
       </ol>
       <div className="glass relative overflow-hidden">
-        <div className="border-b border-white/10 px-5 py-3 text-sm text-zinc-400">
-          Northwind Labs
-        </div>
+        <div className="border-line/10 text-fg-mute border-b px-5 py-3 text-sm">Northwind Labs</div>
         <div
           key={current.key}
           className="animate-in fade-in slide-in-from-bottom-1 flex flex-col gap-4 p-5 duration-500"

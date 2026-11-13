@@ -6,9 +6,11 @@ import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
+import { Petals } from "@/components/landing/petals";
 import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
-import { BlastRadiusCard } from "@/components/landing/blast-radius-card";
+import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { BlueArt } from "@/components/landing/landing-blue";
 import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
 import { StickyHeader } from "@/components/landing/sticky-header";
@@ -41,46 +43,47 @@ const STRUCTURED_DATA = JSON.stringify({
 
 export default function HomePage() {
   return (
-    <div className="relative min-h-svh overflow-x-clip bg-[#04060F] text-[#F2EEE5] selection:bg-[#B8FF3C] selection:text-[#04060F]">
+    <div className="bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
 
       <BlueArt />
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
       <StickyHeader>
-        <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-6 sm:px-8 lg:px-12">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8 lg:px-12">
           <Link href="/" className="group flex items-center gap-2.5">
             <RelayMark className="h-8 w-8 drop-shadow-[0_0_10px_rgba(90,120,255,0.5)]" />
-            <span className="font-sans text-[22px] font-medium tracking-tight text-white">
+            <span className="text-strong font-sans text-[22px] font-medium tracking-tight">
               Relay
             </span>
           </Link>
 
           <nav
             aria-label="Sections"
-            className="hidden items-center gap-9 text-[13px] text-slate-300 md:flex"
+            className="text-fg-soft glass hidden items-center gap-8 !rounded-full px-7 py-2.5 text-[13px] md:flex"
           >
-            <a href="#overview" className="transition-colors hover:text-white">
+            <a href="#overview" className="hover:text-strong transition-colors">
               Overview
             </a>
-            <a href="#product" className="transition-colors hover:text-white">
+            <a href="#product" className="hover:text-strong transition-colors">
               Product
             </a>
-            <a href="#how" className="transition-colors hover:text-white">
+            <a href="#how" className="hover:text-strong transition-colors">
               Solutions
             </a>
-            <a href="#trust" className="transition-colors hover:text-white">
+            <a href="#trust" className="hover:text-strong transition-colors">
               Pricing
             </a>
-            <a href="#exposure" className="transition-colors hover:text-white">
+            <a href="#exposure" className="hover:text-strong transition-colors">
               Customers
             </a>
-            <a href="#simulator" className="transition-colors hover:text-white">
+            <a href="#simulator" className="hover:text-strong transition-colors">
               Relay
             </a>
           </nav>
 
-          <div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle hint />
             <Suspense fallback={<NavActionLink label="LAUNCH SANDBOX" />}>
               <PrimaryNavAction />
             </Suspense>
@@ -103,33 +106,46 @@ export default function HomePage() {
             aria-hidden
             className="pointer-events-none absolute top-[13%] right-[7%] z-[5] hidden select-none lg:block"
           >
-            <span className="font-bebas display-outline block text-[clamp(5rem,12vw,12rem)] leading-none tracking-[0.03em] whitespace-nowrap text-transparent">
+            <span className="font-bebas hero-outline block text-[clamp(5rem,12vw,12rem)] leading-none tracking-[0.03em] whitespace-nowrap">
               CONTINUITY
             </span>
           </div>
+
+          {/* Orchid behind the capsule: in front of the slash, behind the capsule */}
+          <Petals
+            variant="light"
+            className="pointer-events-none absolute right-[-3%] bottom-[-4%] z-[6] hidden h-[94%] w-[68vw] max-w-[1150px] [mask-image:radial-gradient(closest-side,#000_64%,transparent_100%)] lg:block"
+            petals={[
+              { x: 480, y: 800, rot: -70, s: 1.2, o: 0.8, blur: true },
+              { x: 600, y: 800, rot: -38, s: 1.45, o: 0.95 },
+              { x: 760, y: 800, rot: -6, s: 1.7, o: 1 },
+              { x: 920, y: 800, rot: 30, s: 1.5, o: 0.95 },
+              { x: 1040, y: 800, rot: 62, s: 1.2, o: 0.8, blur: true },
+            ]}
+          />
 
           {/* Capsule: large, diagonal, overlapping the copy column (desktop) */}
           <div className="pointer-events-none absolute top-1/2 right-[5%] z-10 hidden w-[60vw] max-w-[1080px] -translate-y-[50%] lg:block">
             <QuantumCapsule3D />
           </div>
 
-          {/* Telemetry card (desktop) */}
-          <div className="absolute right-[11%] bottom-[13%] z-30 hidden lg:block">
-            <BlastRadiusCard />
+          {/* What-if readout (desktop): the same numbers as the simulator below */}
+          <div className="absolute right-[9%] bottom-[12%] z-30 hidden lg:block">
+            <HeroReadout />
           </div>
 
-          <div className="relative z-20 mx-auto flex w-full max-w-[1360px] flex-1 flex-col justify-center px-6 pt-28 pb-14 sm:px-8 lg:px-12">
+          <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 pt-28 pb-14 sm:px-8 lg:px-12">
             <div className="mx-auto max-w-[640px] text-center lg:mx-0 lg:text-left">
               <h1 className="hero-in flex flex-col items-center select-none lg:items-start">
-                <span className="font-display text-[clamp(3.4rem,7.6vw,6.6rem)] leading-[0.9] tracking-[-0.02em] text-[#B8FF3C] italic">
+                <span className="font-display text-ac text-[clamp(3.4rem,7.6vw,6.6rem)] leading-[0.9] tracking-[-0.02em] italic">
                   Pass the
                 </span>
-                <span className="font-display text-[clamp(2.8rem,6.4vw,5.6rem)] leading-[0.95] tracking-[-0.01em] text-[#F2EEE5]">
+                <span className="font-display text-strong text-[clamp(2.8rem,6.4vw,5.6rem)] leading-[0.95] tracking-[-0.01em]">
                   accountability.
                 </span>
               </h1>
 
-              <p className="hero-in hero-in-2 mx-auto mt-6 max-w-[28rem] text-[1.1rem] leading-snug text-slate-300 lg:mx-0">
+              <p className="hero-in hero-in-2 text-fg-soft mx-auto mt-6 max-w-[28rem] text-[1.1rem] leading-snug lg:mx-0">
                 When lead engineers leave, the work shouldn&apos;t stall. Relay simulates absence
                 blast radii and transfers knowledge with zero-hallucination citations.
               </p>
@@ -137,15 +153,15 @@ export default function HomePage() {
               <div className="hero-in hero-in-3 mt-9 flex flex-col items-center gap-4 lg:items-start">
                 <Link
                   href="#simulator"
-                  className="group inline-flex h-11 items-center gap-2.5 rounded-full bg-[#B8FF3C] px-6 text-sm font-semibold text-[#04060F] transition-colors hover:bg-[#caff6a]"
+                  className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2.5 rounded-full px-6 text-sm font-semibold transition-colors"
                 >
-                  <span className="h-2 w-2 rounded-full bg-[#04060F]/70" />
+                  <span className="bg-page/70 h-2 w-2 rounded-full" />
                   <span>INITIALIZE SIMULATOR</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <a
                   href="#how"
-                  className="glass-clear inline-flex h-11 items-center gap-2.5 !rounded-full px-6 text-sm font-medium text-slate-100 transition-colors hover:text-white"
+                  className="glass-clear text-fg-soft hover:text-strong inline-flex h-11 items-center gap-2.5 !rounded-full px-6 text-sm font-medium transition-colors"
                 >
                   <span>(▷) SYSTEM FILM</span>
                 </a>
@@ -153,23 +169,33 @@ export default function HomePage() {
             </div>
 
             {/* Capsule + card stacked under the copy on small screens */}
-            <div className="relative mt-12 lg:hidden">
+            <div className="relative mt-12 overflow-clip rounded-3xl bg-gradient-to-br from-[#3A58FF] via-[#1D32C2] to-[#08104A] px-3 pt-6 pb-5 lg:hidden">
+              <Petals
+                variant="light"
+                className="pointer-events-none absolute inset-0 h-full w-full opacity-90"
+                petals={[
+                  { x: 480, y: 800, rot: -70, s: 1.2, o: 0.8, blur: true },
+                  { x: 600, y: 800, rot: -38, s: 1.45, o: 0.95 },
+                  { x: 760, y: 800, rot: -6, s: 1.7, o: 1 },
+                  { x: 920, y: 800, rot: 30, s: 1.5, o: 0.95 },
+                  { x: 1040, y: 800, rot: 62, s: 1.2, o: 0.8, blur: true },
+                ]}
+              />
               <QuantumCapsule3D />
-              <div className="mt-4 flex justify-center">
-                <BlastRadiusCard />
+              <div className="mt-2 flex justify-center">
+                <HeroReadout />
               </div>
             </div>
           </div>
 
           {/* Bottom hairline bar */}
-          <div className="relative z-20 w-full shrink-0 border-t border-white/[0.1] px-6 py-2.5 backdrop-blur-sm sm:px-8 lg:px-12">
-            <div className="mx-auto flex max-w-[1360px] items-center justify-end gap-x-3 font-mono text-[9px] tracking-[0.12em] text-slate-400 uppercase">
-              <span>BOTTOM HAIRLINE</span>
-              <span>MICRO-TELEMETRY STATS</span>
-              <span>|</span>
-              <span>BK: 3.000</span>
-              <span>MUR CALAE</span>
-              <span>4 0.000</span>
+          <div className="border-line/[0.1] bg-page/80 relative z-20 w-full shrink-0 border-t px-6 py-2.5 backdrop-blur-md sm:px-8 lg:px-12">
+            <div className="text-fg-mute mx-auto flex max-w-7xl flex-wrap items-center justify-start gap-x-3 text-xs">
+              <span>Reads GitHub, Linear and Notion</span>
+              <span aria-hidden>·</span>
+              <span>Read-only</span>
+              <span aria-hidden>·</span>
+              <span>AI proposes, people decide</span>
             </div>
           </div>
         </section>
@@ -186,7 +212,7 @@ function NavActionLink({ label }: { label: string }) {
   return (
     <Link
       href="/workspaces"
-      className="group inline-flex h-9 items-center gap-2 rounded-full bg-[#B8FF3C] px-5 text-[11px] font-bold tracking-wider text-[#04060F] transition-colors hover:bg-[#caff6a]"
+      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-9 items-center gap-2 rounded-full px-5 text-[11px] font-bold tracking-wider transition-colors"
     >
       <span>{label}</span>
       <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />

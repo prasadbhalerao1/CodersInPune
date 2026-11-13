@@ -28,8 +28,8 @@ async function WorkspaceForms() {
 
 export default function WorkspacesPage() {
   return (
-    <div className="flex flex-1 flex-col bg-[#06070B] text-[#F5F5F7]">
-      <section className="relative overflow-hidden border-b border-white/[0.08] bg-gradient-to-b from-[#0B0E16] to-[#06070B]">
+    <div className="bg-page text-strong flex flex-1 flex-col">
+      <section className="border-line/[0.08] from-card to-page relative overflow-hidden border-b bg-gradient-to-b">
         <RelayLines className="absolute inset-y-0 right-0 hidden h-full w-[45%] opacity-20 md:block" />
         <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 pt-16 pb-12">
           <div className="flex items-center gap-2">
@@ -38,12 +38,12 @@ export default function WorkspacesPage() {
               SOVEREIGN DOMAINS // WORKSPACES
             </p>
           </div>
-          <h1 className="font-syne font-extrabold text-4xl sm:text-5xl text-white tracking-tight">
+          <h1 className="font-syne text-strong text-4xl font-extrabold tracking-tight sm:text-5xl">
             WHERE DOES YOUR WORK LIVE?
           </h1>
-          <p className="text-zinc-400 max-w-xl text-sm leading-relaxed">
-            A workspace encapsulates an organization&apos;s responsibilities, cryptographic access controls,
-            absence blast radii, and audited continuity handovers.
+          <p className="text-fg-mute max-w-xl text-sm leading-relaxed">
+            A workspace encapsulates an organization&apos;s responsibilities, cryptographic access
+            controls, absence blast radii, and audited continuity handovers.
           </p>
         </div>
       </section>
@@ -51,15 +51,15 @@ export default function WorkspacesPage() {
         <Suspense
           fallback={
             <div className="flex flex-col gap-3">
-              <Skeleton className="h-20 w-full rounded-2xl bg-white/5" />
-              <Skeleton className="h-20 w-full rounded-2xl bg-white/5" />
+              <Skeleton className="bg-line/5 h-20 w-full rounded-2xl" />
+              <Skeleton className="bg-line/5 h-20 w-full rounded-2xl" />
             </div>
           }
         >
           <WorkspaceList />
         </Suspense>
         <div className="flex flex-col gap-5">
-          <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl bg-white/5" />}>
+          <Suspense fallback={<Skeleton className="bg-line/5 h-44 w-full rounded-2xl" />}>
             <WorkspaceForms />
           </Suspense>
         </div>
@@ -78,13 +78,13 @@ async function WorkspaceList() {
   }
   if (workspaces.length === 0) {
     return (
-      <div className="flex flex-col justify-center rounded-2xl border border-dashed border-white/15 bg-[#0E1118]/60 p-8 text-left">
-        <span className="font-mono text-xs tracking-wider text-[#D2FF00] uppercase">
-          TENANT DISCOVERY
-        </span>
-        <h2 className="font-syne font-bold text-2xl text-white mt-1">No Active Workspaces Yet</h2>
-        <p className="text-zinc-400 mt-2 max-w-md text-xs leading-relaxed">
-          The fastest way to test Relay&apos;s continuity engine is staging the demo workspace: a complete team mid-handover, with live absence blast radius simulations and pending audit acknowledgements.
+      <div className="border-line/15 bg-card/60 flex flex-col justify-center rounded-2xl border border-dashed p-8 text-left">
+        <span className="text-ac font-mono text-xs tracking-wider uppercase">TENANT DISCOVERY</span>
+        <h2 className="font-syne text-strong mt-1 text-2xl font-bold">No Active Workspaces Yet</h2>
+        <p className="text-fg-mute mt-2 max-w-md text-xs leading-relaxed">
+          The fastest way to test Relay&apos;s continuity engine is staging the demo workspace: a
+          complete team mid-handover, with live absence blast radius simulations and pending audit
+          acknowledgements.
         </p>
       </div>
     );
@@ -95,19 +95,22 @@ async function WorkspaceList() {
         <li key={workspace.id}>
           <Link
             href={`/w/${workspace.id}`}
-            className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-[#0E1118] px-5 py-4 shadow-lg transition-all hover:border-[#D2FF00]/40 hover:bg-[#131722]"
+            className="group border-line/10 bg-card hover:border-ac/40 flex items-center gap-4 rounded-2xl border px-5 py-4 shadow-lg transition-all hover:bg-[#131722]"
           >
-            <Avatar name={workspace.name} size="lg" className="rounded-xl border border-white/15" />
+            <Avatar name={workspace.name} size="lg" className="border-line/15 rounded-xl border" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold text-white group-hover:text-[#D2FF00] transition-colors">
+              <span className="text-strong group-hover:text-ac block truncate font-semibold transition-colors">
                 {workspace.name}
               </span>
-              <span className="font-mono text-[11px] text-zinc-400 capitalize">
+              <span className="text-fg-mute font-mono text-[11px] capitalize">
                 ROLE: {workspace.role.replace("_", " ")}
               </span>
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-400 group-hover:border-[#D2FF00]/40 group-hover:text-[#D2FF00] transition-all">
-              <ArrowRight aria-hidden className="size-4 transition-transform group-hover:translate-x-0.5" />
+            <div className="border-line/10 bg-line/[0.04] text-fg-mute group-hover:text-ac group-hover:border-ac/40 flex h-8 w-8 items-center justify-center rounded-full border transition-all">
+              <ArrowRight
+                aria-hidden
+                className="size-4 transition-transform group-hover:translate-x-0.5"
+              />
             </div>
           </Link>
         </li>

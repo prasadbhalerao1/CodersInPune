@@ -78,9 +78,9 @@ function readiness(base: number, coverId: string | null) {
 }
 
 function verdict(score: number) {
-  if (score >= 85) return { word: "Ready", color: "#00F5A0" };
-  if (score >= 70) return { word: "Fragile", color: "#F59E0B" };
-  return { word: "At risk", color: "#FF5468" };
+  if (score >= 85) return { word: "Ready", color: "var(--good)" };
+  if (score >= 70) return { word: "Fragile", color: "var(--warn)" };
+  return { word: "At risk", color: "var(--bad)" };
 }
 
 export function HeroSandbox() {
@@ -106,25 +106,25 @@ export function HeroSandbox() {
   return (
     <div className="glass-dark overflow-hidden">
       {/* Who */}
-      <div className="flex items-center gap-4 border-b border-white/10 px-6 py-5">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-zinc-800 text-sm font-semibold text-zinc-200">
+      <div className="border-line/10 flex items-center gap-4 border-b px-6 py-5">
+        <span className="bg-line/10 text-fg-soft grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-semibold">
           AR
         </span>
         <div className="min-w-0">
-          <p className="font-semibold text-[#F1EDE6]">Arjun Rao</p>
-          <p className="text-sm text-zinc-400">Platform engineer, away for {win.label}</p>
+          <p className="text-strong font-semibold">Arjun Rao</p>
+          <p className="text-fg-mute text-sm">Platform engineer, away for {win.label}</p>
         </div>
       </div>
 
       {/* How long */}
-      <div className="border-b border-white/10 px-6 py-5">
-        <p id="away-label" className="text-sm font-medium text-zinc-300">
+      <div className="border-line/10 border-b px-6 py-5">
+        <p id="away-label" className="text-fg-soft text-sm font-medium">
           How long is he away?
         </p>
         <div
           role="group"
           aria-labelledby="away-label"
-          className="mt-3 grid grid-cols-4 gap-1 rounded-lg bg-black/40 p-1"
+          className="bg-sunk/40 mt-3 grid grid-cols-4 gap-1 rounded-lg p-1"
         >
           {WINDOWS.map((w) => (
             <button
@@ -135,8 +135,8 @@ export function HeroSandbox() {
               className={cn(
                 "rounded-md py-2 text-sm transition-colors",
                 windowId === w.id
-                  ? "bg-white/10 font-medium text-white"
-                  : "text-zinc-400 hover:text-zinc-200",
+                  ? "bg-line/10 text-strong font-medium"
+                  : "text-fg-mute hover:text-fg-soft",
               )}
             >
               {w.label}
@@ -146,12 +146,12 @@ export function HeroSandbox() {
       </div>
 
       {/* Result */}
-      <div aria-live="polite" className="border-b border-white/10 px-6 py-5">
+      <div aria-live="polite" className="border-line/10 border-b px-6 py-5">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-zinc-300">Readiness</p>
+            <p className="text-fg-soft text-sm font-medium">Readiness</p>
             <p className="mt-1 flex items-baseline gap-2">
-              <span className="font-bebas text-6xl leading-none text-white tabular-nums">
+              <span className="font-bebas text-strong text-6xl leading-none tabular-nums">
                 {score}
               </span>
               <span className="text-lg font-medium" style={{ color: v.color }}>
@@ -159,9 +159,9 @@ export function HeroSandbox() {
               </span>
             </p>
           </div>
-          <p className="max-w-[16rem] text-right text-sm leading-snug text-zinc-400">{summary}</p>
+          <p className="text-fg-mute max-w-[16rem] text-right text-sm leading-snug">{summary}</p>
         </div>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="bg-line/10 mt-4 h-1.5 overflow-hidden rounded-full">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{ width: `${score}%`, background: v.color }}
@@ -175,16 +175,16 @@ export function HeroSandbox() {
       </div>
 
       {/* What is affected */}
-      <div className="border-b border-white/10 px-6 py-5">
-        <p className="text-sm font-medium text-zinc-300">What depends on him</p>
-        <ul className="mt-3 divide-y divide-white/[0.07]">
+      <div className="border-line/10 border-b px-6 py-5">
+        <p className="text-fg-soft text-sm font-medium">What depends on him</p>
+        <ul className="divide-line/[0.07] mt-3 divide-y">
           {WORK.map((w) => {
             const covered = cand ? (cand.covers as readonly string[]).includes(w.id) : false;
             return (
               <li key={w.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
                 <div className="min-w-0">
-                  <p className="text-zinc-100">{w.name}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-fg-soft">{w.name}</p>
+                  <p className="text-fg-mute text-xs">
                     {w.level} · {w.note}
                   </p>
                 </div>
@@ -194,8 +194,8 @@ export function HeroSandbox() {
                     covered
                       ? "text-emerald-400"
                       : w.level === "Critical"
-                        ? "text-rose-400"
-                        : "text-zinc-500",
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-fg-mute",
                   )}
                 >
                   {covered ? `Covered by ${cand!.name.split(" ")[0]}` : "No backup"}
@@ -208,7 +208,7 @@ export function HeroSandbox() {
 
       {/* Who could cover */}
       <div className="px-6 py-5">
-        <p className="text-sm font-medium text-zinc-300">Who could cover? Try one.</p>
+        <p className="text-fg-soft text-sm font-medium">Who could cover? Try one.</p>
         <ul className="mt-3 space-y-2">
           {CANDIDATES.map((c) => {
             const selected = coverId === c.id;
@@ -220,20 +220,18 @@ export function HeroSandbox() {
                   onClick={() => setCoverId(selected ? null : c.id)}
                   className={cn(
                     "flex w-full items-center justify-between gap-4 rounded-lg border px-4 py-3 text-left transition-colors",
-                    selected
-                      ? "border-[#C4FF00]/60 bg-[#C4FF00]/[0.06]"
-                      : "border-white/10 hover:border-white/25",
+                    selected ? "border-ac/60 bg-ac/[0.06]" : "border-line/10 hover:border-line/25",
                   )}
                 >
                   <span>
-                    <span className="block text-sm font-medium text-zinc-100">{c.name}</span>
-                    <span className="block text-xs text-zinc-500">
+                    <span className="text-fg-soft block text-sm font-medium">{c.name}</span>
+                    <span className="text-fg-mute block text-xs">
                       {c.team} · {c.load}
                     </span>
                   </span>
-                  <span className="shrink-0 text-sm text-zinc-300 tabular-nums">
+                  <span className="text-fg-soft shrink-0 text-sm tabular-nums">
                     {readiness(win.base, c.id)}
-                    <span className="text-xs text-zinc-500"> / 100</span>
+                    <span className="text-fg-mute text-xs"> / 100</span>
                   </span>
                 </button>
               </li>
@@ -243,7 +241,7 @@ export function HeroSandbox() {
 
         <Link
           href="/workspaces"
-          className="group mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#F1EDE6] text-sm font-semibold text-[#090D18] transition-colors hover:bg-white"
+          className="group bg-strong text-page hover:bg-strong/90 mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors"
         >
           Plan a real handover
           <ArrowRight
@@ -251,7 +249,7 @@ export function HeroSandbox() {
             aria-hidden
           />
         </Link>
-        <p className="mt-3 text-center text-xs text-zinc-500">
+        <p className="text-fg-mute mt-3 text-center text-xs">
           Sample data. In Relay a simulation is read-only and never changes ownership.
         </p>
       </div>

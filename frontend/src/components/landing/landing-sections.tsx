@@ -57,27 +57,34 @@ const GAP = [
     owns: "Access, assets, exit tasks",
     stops: "Knowledge transfer is one checklist item that depends on the leaver's goodwill.",
   },
+  {
+    cat: "Relay",
+    owns: "Who is accountable for what, with the evidence behind it",
+    stops:
+      "Forecasts what an absence breaks, hands the work over with citations, then checks it took hold.",
+    answer: true,
+  },
 ];
 
 const JOURNEY = [
   {
     phase: "Understand",
-    tone: "#B8FF3C",
+    tone: "var(--ac)",
     steps: ["Memory Replay: how the work got here"],
   },
   {
     phase: "Forecast",
-    tone: "#FF6B7A",
+    tone: "var(--peri)",
     steps: ["What If? absence simulation", "Cover candidates and overload"],
   },
   {
     phase: "Decide",
-    tone: "#8FA8FF",
+    tone: "var(--ac)",
     steps: ["Pick a successor", "Open a pre-filled handover case"],
   },
   {
     phase: "Transfer",
-    tone: "#B8FF3C",
+    tone: "var(--peri)",
     steps: [
       "Handover Brief and interview",
       "Approve a version",
@@ -87,7 +94,7 @@ const JOURNEY = [
   },
   {
     phase: "Prove",
-    tone: "#8FA8FF",
+    tone: "var(--ac)",
     steps: ["Separation-of-duties check", "Follow-through: did it take hold?"],
   },
 ];
@@ -101,27 +108,18 @@ export function LandingSections() {
   const words = MANIFESTO.split(" ");
   return (
     <>
-      {/* What it connects to */}
-      <div className="border-y border-white/[0.08] bg-white/[0.03] py-4 backdrop-blur-md">
-        <p className="mx-auto max-w-7xl px-6 text-center text-sm text-slate-500 sm:px-8">
-          Reads from <span className="text-slate-300">GitHub</span>,{" "}
-          <span className="text-slate-300">Linear</span> and{" "}
-          <span className="text-slate-300">Notion</span>. Read-only. AI proposes, people decide.
-        </p>
-      </div>
-
       {/* MANIFESTO */}
       <section className="manifesto relative h-[220svh]">
         <div className="sticky top-0 flex h-svh items-center">
-          <div className="mx-auto w-full max-w-6xl px-6 sm:px-8">
-            <span className="mb-8 block text-sm font-medium text-[#B8FF3C]">The problem</span>
-            <p className="font-display text-[clamp(2.8rem,6.6vw,6rem)] leading-[1.02] tracking-[-0.01em]">
+          <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12">
+            <span className="text-ac mb-8 block text-sm font-medium">The problem</span>
+            <p className="scrim font-display text-[clamp(2.8rem,6.6vw,6rem)] leading-[1.02] tracking-[-0.01em]">
               {words.map((w, i) => {
                 const a = 8 + (i / words.length) * 52;
                 return (
                   <span
                     key={i}
-                    className="word-fill text-[#F2EEE5]"
+                    className="word-fill text-strong"
                     style={{ animationRange: `cover ${a}% cover ${a + 9}%` }}
                   >
                     {w}{" "}
@@ -143,28 +141,26 @@ export function LandingSections() {
             title="Three things go wrong"
             accent="every time."
           />
-          <ul className="glass mt-16 divide-y divide-white/10 px-4 md:px-6">
+          <ul className="glass divide-line/10 mt-16 divide-y px-4 py-2 md:px-6">
             {FAILURES.map((f) => (
               <li
                 key={f.num}
-                className="reveal group relative grid gap-6 overflow-hidden px-2 py-10 md:grid-cols-[9rem_minmax(0,1.15fr)_minmax(0,1fr)] md:items-center md:gap-10 md:px-6"
+                className="reveal relative grid gap-6 overflow-clip rounded-xl px-2 py-10 md:grid-cols-[9rem_minmax(0,1.15fr)_minmax(0,1fr)] md:items-center md:gap-10 md:px-6"
               >
                 <span
                   aria-hidden
-                  className="absolute inset-0 bg-gradient-to-r from-[#3B5BFF]/25 via-[#3B5BFF]/8 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  className="lit-bg absolute inset-0 rounded-xl bg-gradient-to-r from-[#3B5BFF]/22 via-[#3B5BFF]/8 to-transparent"
                 />
-                <span className="font-display display-outline relative text-[7rem] leading-[0.8] tracking-wider transition-all duration-500 group-hover:[-webkit-text-stroke-color:#B8FF3C]">
+                <span className="lit-stroke font-display display-outline relative text-[7rem] leading-[0.8] tracking-wider">
                   {f.num}
                 </span>
                 <div className="relative">
-                  <span className="text-xs text-[#B8FF3C]">{f.tag}</span>
-                  <h3 className="mt-3 text-2xl leading-snug font-semibold text-[#F2EEE5] sm:text-3xl">
+                  <span className="text-ac text-xs">{f.tag}</span>
+                  <h3 className="text-strong mt-3 text-2xl leading-snug font-semibold sm:text-3xl">
                     {f.headline}
                   </h3>
                 </div>
-                <p className="relative text-[0.95rem] leading-relaxed text-slate-400 transition-colors group-hover:text-slate-200">
-                  {f.desc}
-                </p>
+                <p className="lit-text relative text-[0.95rem] leading-relaxed">{f.desc}</p>
               </li>
             ))}
           </ul>
@@ -182,12 +178,12 @@ export function LandingSections() {
               title="Your tools each hold a piece."
               accent="None answers this."
             />
-            <blockquote className="reveal mt-10 border-l-2 border-[#B8FF3C] pl-6">
-              <p className="font-display text-4xl leading-tight text-[#F2EEE5] italic sm:text-5xl">
+            <blockquote className="reveal scrim border-ac mt-10 border-l-2 pl-6">
+              <p className="font-display text-strong text-4xl leading-tight italic sm:text-5xl">
                 If Arjun is away for two weeks, what breaks, who should cover, and did the handover
                 actually happen?
               </p>
-              <p className="mt-5 text-sm leading-relaxed text-slate-400">
+              <p className="text-fg-mute mt-5 text-sm leading-relaxed">
                 Relay is the connection between those boundaries: one record of who is accountable
                 for what, the evidence behind it, a forecast of what an absence breaks, and an
                 audited transfer that ends with the new owner confirmed.
@@ -195,22 +191,34 @@ export function LandingSections() {
             </blockquote>
           </div>
 
-          <ul className="glass divide-y divide-white/10 px-7">
+          <ul className="glass divide-line/10 divide-y px-7 lg:self-start">
             {GAP.map((g) => (
               <li
                 key={g.cat}
                 className="reveal grid gap-3 py-7 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8"
               >
                 <div>
-                  <span className="text-lg font-semibold text-[#F2EEE5]">{g.cat}</span>
+                  <span
+                    className={
+                      g.answer
+                        ? "text-ac text-lg font-semibold"
+                        : "text-strong text-lg font-semibold"
+                    }
+                  >
+                    {g.cat}
+                  </span>
                 </div>
                 <div className="text-sm leading-relaxed">
-                  <p className="text-slate-300">
-                    <span className="text-xs text-lime-400">Owns </span>
+                  <p className="text-fg-soft">
+                    <span className="text-ac text-xs">Owns </span>
                     {g.owns}
                   </p>
-                  <p className="mt-2 text-slate-500">
-                    <span className="text-xs text-[#FF6B7A]">Stops </span>
+                  <p className="text-fg-mute mt-2">
+                    <span
+                      className={g.answer ? "text-ac text-xs font-semibold" : "text-coral text-xs"}
+                    >
+                      {g.answer ? "Closes the gap " : "Stops "}
+                    </span>
                     {g.stops}
                   </p>
                 </div>
@@ -221,7 +229,7 @@ export function LandingSections() {
       </section>
 
       {/* THE JOURNEY */}
-      <section className="relative overflow-hidden py-28">
+      <section className="relative py-28">
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <SectionHeading
             theme="blue"
@@ -233,12 +241,12 @@ export function LandingSections() {
           <ol className="relative mt-20 grid gap-10 md:grid-cols-5 md:gap-5">
             <div
               aria-hidden
-              className="absolute top-[22px] right-[10%] left-[10%] hidden h-px bg-gradient-to-r from-[#B8FF3C] via-[#FF6B7A] to-[#8FA8FF] opacity-40 md:block"
+              className="from-ac via-peri to-ac absolute top-[22px] right-[10%] left-[10%] hidden h-px bg-gradient-to-r opacity-40 md:block"
             />
             {JOURNEY.map((j, i) => (
               <li key={j.phase} className="reveal relative">
                 <span
-                  className="font-display relative z-10 grid h-11 w-11 place-items-center rounded-full border bg-[#04060F]/60 text-2xl backdrop-blur-md"
+                  className="font-display bg-page/60 relative z-10 grid h-11 w-11 place-items-center rounded-full border text-2xl backdrop-blur-md"
                   style={{
                     color: j.tone,
                     borderColor: j.tone,
@@ -247,8 +255,8 @@ export function LandingSections() {
                 >
                   {i + 1}
                 </span>
-                <h3 className="font-display mt-5 text-3xl text-[#F2EEE5]">{j.phase}</h3>
-                <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <h3 className="font-display text-strong mt-5 text-3xl">{j.phase}</h3>
+                <ul className="text-fg-mute mt-3 space-y-2 text-sm">
                   {j.steps.map((s) => (
                     <li key={s} className="flex gap-2">
                       <span className="mt-2 h-px w-3 shrink-0" style={{ background: j.tone }} />
