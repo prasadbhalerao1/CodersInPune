@@ -5,7 +5,7 @@ import Link from "next/link";
 export function HeroReadout() {
   return (
     <Link href="#simulator" className="glass-dark group block w-64 p-4 text-left">
-      <p className="text-fg-mute text-xs">What if Arjun is away for 2 weeks?</p>
+      <p className="text-fg-soft text-xs">What if Arjun is away for 2 weeks?</p>
       <p className="mt-2 flex items-baseline gap-2">
         <span className="font-display text-strong text-5xl leading-none tabular-nums">55</span>
         <span className="text-sm font-medium" style={{ color: "var(--bad)" }}>

@@ -215,7 +215,10 @@ export function BlueHalf() {
   return (
     <>
       {/* SIMULATOR */}
-      <section id="simulator" className="relative scroll-mt-16 overflow-clip py-28">
+      <section
+        id="simulator"
+        className="relative scroll-mt-12 overflow-clip py-20 md:mt-14 md:py-24"
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 max-lg:hidden"
@@ -234,14 +237,20 @@ export function BlueHalf() {
         />
         <div className="relative mx-auto grid max-w-7xl items-start gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:px-12">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <SectionHeading
-              theme="blue"
-              align="left"
-              eyebrow="Try the forecast"
-              title="Don't wait for the"
-              accent="resignation."
-              description="This is the What If? simulator in miniature. Pick an absence window, hand the work to a candidate, and watch readiness move. In the product it is deterministic and read-only: it never touches a real ownership record."
-            />
+            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+              <SectionHeading
+                theme="blue"
+                align="left"
+                eyebrow="Try the forecast"
+                title="Don't wait for the"
+                accent="resignation."
+              />
+              <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+                This is the What If? simulator in miniature. Pick an absence window, hand the work
+                to a candidate, and watch readiness move. In the product it is deterministic and
+                read-only: it never touches a real ownership record.
+              </p>
+            </div>
             <ol className="mt-10 space-y-5">
               {[
                 ["01", "Choose how long they're gone"],
@@ -266,17 +275,23 @@ export function BlueHalf() {
       <div className="relative">
         <div className="relative z-10">
           {/* FEATURES */}
-          <section id="product" className="relative scroll-mt-16 py-28">
+          <section id="product" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
-              <SectionHeading
-                theme="blue"
-                eyebrow="The product"
-                title="Everything a handover"
-                accent="actually needs."
-                description="Eight capabilities, built to hand off to each other. The people and numbers on these cards are the synthetic Northwind Labs sample."
-              />
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                <SectionHeading
+                  theme="blue"
+                  align="left"
+                  eyebrow="The product"
+                  title="Everything a handover"
+                  accent="actually needs."
+                />
+                <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+                  Eight capabilities, built to hand off to each other. The people and numbers on
+                  these cards are the synthetic Northwind Labs sample.
+                </p>
+              </div>
 
-              <div className="mt-16 grid gap-5 lg:grid-cols-3">
+              <div className="mt-12 grid gap-5 md:mt-14 lg:grid-cols-3">
                 {/* Accountability map */}
                 <Feature
                   kicker="Accountability map"
@@ -515,7 +530,7 @@ export function BlueHalf() {
           </section>
 
           {/* WALKTHROUGH */}
-          <section id="how" className="relative scroll-mt-16 py-28">
+          <section id="how" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <SectionHeading
@@ -530,23 +545,29 @@ export function BlueHalf() {
                   let it advance.
                 </p>
               </div>
-              <div className="reveal mt-14">
+              <div className="reveal mt-12 md:mt-14">
                 <Walkthrough />
               </div>
             </div>
           </section>
 
           {/* EVIDENCE */}
-          <section id="evidence" className="relative scroll-mt-16 py-28">
+          <section id="evidence" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
-              <SectionHeading
-                theme="blue"
-                eyebrow="Evidence"
-                title="Read-only, from the tools"
-                accent="you already use."
-                description="Relay never asks you to move your work. It reads what is already there, and it is explicit about what it never touches."
-              />
-              <div className="mt-16 grid gap-5 md:grid-cols-3">
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                <SectionHeading
+                  theme="blue"
+                  align="left"
+                  eyebrow="Evidence"
+                  title="Read-only, from the tools"
+                  accent="you already use."
+                />
+                <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+                  Relay never asks you to move your work. It reads what is already there, and it is
+                  explicit about what it never touches.
+                </p>
+              </div>
+              <div className="mt-12 grid gap-5 md:mt-14 md:grid-cols-3">
                 {SOURCES.map((s) => (
                   <div key={s.name} className="glass reveal flex flex-col p-7">
                     <span className="font-display text-strong text-5xl leading-[0.95]">
@@ -572,16 +593,22 @@ export function BlueHalf() {
           </section>
 
           {/* AI PRINCIPLES */}
-          <section id="ai" className="relative scroll-mt-16 py-28">
+          <section id="ai" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
-              <SectionHeading
-                theme="blue"
-                eyebrow="AI you can defend"
-                title="Rules decide. AI explains."
-                accent="People approve."
-                description="Deterministic where it decides, generative where it explains. If AI is switched off, nothing breaks: you get labelled search and rule-based briefs."
-              />
-              <div className="glass md:divide-line/10 mt-16 grid overflow-clip md:grid-cols-3 md:divide-x">
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                <SectionHeading
+                  theme="blue"
+                  align="left"
+                  eyebrow="AI you can defend"
+                  title="Rules decide. AI explains."
+                  accent="People approve."
+                />
+                <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+                  Deterministic where it decides, generative where it explains. If AI is switched
+                  off, nothing breaks: you get labelled search and rule-based briefs.
+                </p>
+              </div>
+              <div className="glass md:divide-line/10 mt-12 grid overflow-clip md:mt-14 md:grid-cols-3 md:divide-x">
                 {PRINCIPLES.map((p) => (
                   <div key={p.num} className="reveal p-8">
                     <span
@@ -623,17 +650,22 @@ export function BlueHalf() {
           </section>
 
           {/* TRUST */}
-          <section id="trust" className="relative scroll-mt-16 py-28">
+          <section id="trust" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
               <div className="lg:sticky lg:top-28 lg:self-start">
-                <SectionHeading
-                  theme="blue"
-                  align="left"
-                  eyebrow="Trust"
-                  title="Safe by"
-                  accent="construction."
-                  description="Continuity data is sensitive. Relay is built so the safe path is the only path, and the database enforces it, not just the application."
-                />
+                <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                  <SectionHeading
+                    theme="blue"
+                    align="left"
+                    eyebrow="Trust"
+                    title="Safe by"
+                    accent="construction."
+                  />
+                  <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+                    Continuity data is sensitive. Relay is built so the safe path is the only path,
+                    and the database enforces it, not just the application.
+                  </p>
+                </div>
               </div>
               <ul className="glass divide-line/10 divide-y px-7">
                 {SPEC.map((p) => {
@@ -680,17 +712,21 @@ export function BlueHalf() {
           </section>
 
           {/* TRY IT */}
-          <section id="try" className="relative scroll-mt-16 py-28">
+          <section id="try" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
             <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
               <div className="lg:sticky lg:top-28 lg:self-start">
-                <SectionHeading
-                  theme="blue"
-                  align="left"
-                  eyebrow="Try it"
-                  title="Ten minutes,"
-                  accent="no setup."
-                  description="Sign in with any email. Relay sends a one-time code and never sees a password."
-                />
+                <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                  <SectionHeading
+                    theme="blue"
+                    align="left"
+                    eyebrow="Try it"
+                    title="Ten minutes,"
+                    accent="no setup."
+                  />
+                  <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+                    Sign in with any email. Relay sends a one-time code and never sees a password.
+                  </p>
+                </div>
                 <p className="reveal glass-clear text-fg-mute mt-8 rounded-xl p-4 text-xs leading-relaxed">
                   <span className="text-peri">Honest limits </span>
                   The sample workspace&apos;s GitHub, Linear and Notion records are synthetic and

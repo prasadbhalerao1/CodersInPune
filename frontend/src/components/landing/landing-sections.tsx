@@ -132,7 +132,7 @@ export function LandingSections() {
       </section>
 
       {/* WHAT GOES WRONG */}
-      <section id="exposure" className="relative scroll-mt-16 py-28">
+      <section id="exposure" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <SectionHeading
             theme="blue"
@@ -141,7 +141,7 @@ export function LandingSections() {
             title="Three things go wrong"
             accent="every time."
           />
-          <ul className="glass divide-line/10 mt-16 divide-y px-4 py-2 md:px-6">
+          <ul className="glass divide-line/10 mt-12 divide-y px-4 py-2 md:mt-14 md:px-6">
             {FAILURES.map((f) => (
               <li
                 key={f.num}
@@ -168,7 +168,7 @@ export function LandingSections() {
       </section>
 
       {/* THE GAP */}
-      <section id="gap" className="relative scroll-mt-16 py-28">
+      <section id="gap" className="relative scroll-mt-12 py-20 md:mt-14 md:py-24">
         <div className="relative mx-auto grid max-w-7xl gap-14 px-6 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:px-12">
           <div className="lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
@@ -229,16 +229,22 @@ export function LandingSections() {
       </section>
 
       {/* THE JOURNEY */}
-      <section className="relative py-28">
+      <section className="relative py-20 md:py-24">
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
-          <SectionHeading
-            theme="blue"
-            eyebrow="The Relay answer"
-            title="One journey, from"
-            accent="history to proof."
-            description="The features are not separate tools. Each one hands off to the next, and every arrow is a link in the product."
-          />
-          <ol className="relative mt-20 grid gap-10 md:grid-cols-5 md:gap-5">
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+            <SectionHeading
+              theme="blue"
+              align="left"
+              eyebrow="The Relay answer"
+              title="One journey, from"
+              accent="history to proof."
+            />
+            <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
+              The features are not separate tools. Each one hands off to the next, and every arrow
+              is a link in the product.
+            </p>
+          </div>
+          <ol className="relative mt-12 grid gap-10 md:mt-14 md:grid-cols-5 md:gap-5">
             <div
               aria-hidden
               className="from-ac via-peri to-ac absolute top-[22px] right-[10%] left-[10%] hidden h-px bg-gradient-to-r opacity-40 md:block"

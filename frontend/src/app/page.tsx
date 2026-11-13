@@ -50,8 +50,8 @@ export default function HomePage() {
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
       <StickyHeader>
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8 lg:px-12">
-          <Link href="/" className="group flex items-center gap-2.5">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-2 items-center px-6 sm:px-8 md:grid-cols-[1fr_auto_1fr] lg:px-12">
+          <Link href="/" className="group flex items-center gap-2.5 justify-self-start">
             <RelayMark className="h-8 w-8 drop-shadow-[0_0_10px_rgba(90,120,255,0.5)]" />
             <span className="text-strong font-sans text-[22px] font-medium tracking-tight">
               Relay
@@ -82,7 +82,7 @@ export default function HomePage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-self-end">
             <ThemeToggle hint />
             <Suspense fallback={<NavActionLink label="LAUNCH SANDBOX" />}>
               <PrimaryNavAction />
@@ -104,7 +104,7 @@ export default function HomePage() {
           {/* CONTINUITY outline: centred behind the capsule, running off the right edge */}
           <div
             aria-hidden
-            className="pointer-events-none absolute top-[13%] right-[7%] z-[5] hidden select-none lg:block"
+            className="pointer-events-none absolute top-[13%] right-[7%] z-[12] hidden select-none lg:block"
           >
             <span className="font-bebas hero-outline block text-[clamp(5rem,12vw,12rem)] leading-none tracking-[0.03em] whitespace-nowrap">
               CONTINUITY
@@ -130,8 +130,12 @@ export default function HomePage() {
           </div>
 
           {/* What-if readout (desktop): the same numbers as the simulator below */}
-          <div className="absolute right-[9%] bottom-[12%] z-30 hidden lg:block">
-            <HeroReadout />
+          <div className="pointer-events-none absolute inset-x-0 bottom-[25.8%] z-30 hidden lg:block">
+            <div className="mx-auto flex max-w-7xl justify-end px-12">
+              <div className="pointer-events-auto">
+                <HeroReadout />
+              </div>
+            </div>
           </div>
 
           <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 pt-28 pb-14 sm:px-8 lg:px-12">
@@ -153,7 +157,7 @@ export default function HomePage() {
               <div className="hero-in hero-in-3 mt-9 flex flex-col items-center gap-4 lg:items-start">
                 <Link
                   href="#simulator"
-                  className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2.5 rounded-full px-6 text-sm font-semibold transition-colors"
+                  className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold transition-colors"
                 >
                   <span className="bg-page/70 h-2 w-2 rounded-full" />
                   <span>INITIALIZE SIMULATOR</span>
@@ -161,7 +165,7 @@ export default function HomePage() {
                 </Link>
                 <a
                   href="#how"
-                  className="glass-clear text-fg-soft hover:text-strong inline-flex h-11 items-center gap-2.5 !rounded-full px-6 text-sm font-medium transition-colors"
+                  className="glass-clear text-fg-soft hover:text-strong inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 !rounded-full px-6 text-sm font-medium transition-colors"
                 >
                   <span>(▷) SYSTEM FILM</span>
                 </a>
