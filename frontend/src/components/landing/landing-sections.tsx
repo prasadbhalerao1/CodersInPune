@@ -1,4 +1,5 @@
 import { BlueHalf } from "@/components/landing/landing-blue";
+import { CardRider } from "@/components/landing/figures/card-rider";
 import { SectionHeading } from "@/components/landing/section";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -194,40 +195,45 @@ export function LandingSections() {
             </blockquote>
           </div>
 
-          <ul className="glass divide-line/10 divide-y px-7 lg:self-start">
-            {GAP.map((g) => (
-              <li
-                key={g.cat}
-                className="reveal grid gap-3 py-7 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8"
-              >
-                <div>
-                  <span
-                    className={
-                      g.answer
-                        ? "text-ac text-lg font-semibold"
-                        : "text-strong text-lg font-semibold"
-                    }
-                  >
-                    {g.cat}
-                  </span>
-                </div>
-                <div className="text-sm leading-relaxed">
-                  <p className="text-fg-soft">
-                    <span className="text-ac text-xs">Owns </span>
-                    {g.owns}
-                  </p>
-                  <p className="text-fg-mute mt-2">
+          <div className="relative lg:self-start">
+            <CardRider />
+            <ul className="glass divide-line/10 divide-y px-7">
+              {GAP.map((g) => (
+                <li
+                  key={g.cat}
+                  className="reveal grid gap-3 py-7 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8"
+                >
+                  <div>
                     <span
-                      className={g.answer ? "text-ac text-xs font-semibold" : "text-coral text-xs"}
+                      className={
+                        g.answer
+                          ? "text-ac text-lg font-semibold"
+                          : "text-strong text-lg font-semibold"
+                      }
                     >
-                      {g.answer ? "Closes the gap " : "Stops "}
+                      {g.cat}
                     </span>
-                    {g.stops}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </div>
+                  <div className="text-sm leading-relaxed">
+                    <p className="text-fg-soft">
+                      <span className="text-ac text-xs">Owns </span>
+                      {g.owns}
+                    </p>
+                    <p className="text-fg-mute mt-2">
+                      <span
+                        className={
+                          g.answer ? "text-ac text-xs font-semibold" : "text-coral text-xs"
+                        }
+                      >
+                        {g.answer ? "Closes the gap " : "Stops "}
+                      </span>
+                      {g.stops}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 

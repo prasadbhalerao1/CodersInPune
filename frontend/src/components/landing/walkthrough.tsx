@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { WalkthroughFigures } from "@/components/landing/figures/walkthrough-figures";
 import { cn } from "@/lib/utils";
 
 /** A miniature, animated run of the real workflow: change → discover → evidence → review →
@@ -92,7 +93,7 @@ export function Walkthrough() {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="glass min-w-0 self-start overflow-clip p-2">
+      <div className="glass min-w-0 self-start overflow-clip p-2 lg:mt-16">
         <ol className="flex gap-2 overflow-x-auto lg:flex-col lg:gap-1" aria-label="Workflow steps">
           {STEPS.map((s, i) => (
             <li key={s.key}>
@@ -128,33 +129,38 @@ export function Walkthrough() {
           ))}
         </ol>
       </div>
-      <div className="glass relative overflow-clip">
-        <div className="border-line/10 text-fg-mute border-b px-5 py-3 text-sm">Northwind Labs</div>
-        <div
-          key={current.key}
-          className="animate-in fade-in slide-in-from-bottom-1 flex flex-col gap-4 p-5 duration-500"
-        >
-          <div>
-            <p className="text-strong text-lg font-semibold tracking-tight">{current.title}</p>
-            <p className="text-fg-mute mt-1 text-sm">{current.body}</p>
+      <div className="min-w-0">
+        <WalkthroughFigures step={step} />
+        <div className="glass relative overflow-clip">
+          <div className="border-line/10 text-fg-mute border-b px-5 py-3 text-sm">
+            Northwind Labs
           </div>
-          <ul className="divide-line/10 border-line/15 text-fg-soft divide-y rounded-lg border text-sm">
-            {current.rows.map(([a, b, c]) => (
-              <li
-                key={`${a}:${b}:${c}`}
-                className="grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5"
-              >
-                <span className={cn("font-medium", TONE[a] ?? "")}>{a}</span>
-                <span className="truncate">{b}</span>
-                <span className={cn("text-xs", TONE[c] ?? "text-fg-mute")}>{c}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="bg-line/10 h-1 overflow-clip rounded-full" aria-hidden>
-            <div
-              className="bg-ac h-1 rounded-full transition-[width] duration-500"
-              style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-            />
+          <div
+            key={current.key}
+            className="animate-in fade-in slide-in-from-bottom-1 flex flex-col gap-4 p-5 duration-500"
+          >
+            <div>
+              <p className="text-strong text-lg font-semibold tracking-tight">{current.title}</p>
+              <p className="text-fg-mute mt-1 text-sm">{current.body}</p>
+            </div>
+            <ul className="divide-line/10 border-line/15 text-fg-soft divide-y rounded-lg border text-sm">
+              {current.rows.map(([a, b, c]) => (
+                <li
+                  key={`${a}:${b}:${c}`}
+                  className="grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5"
+                >
+                  <span className={cn("font-medium", TONE[a] ?? "")}>{a}</span>
+                  <span className="truncate">{b}</span>
+                  <span className={cn("text-xs", TONE[c] ?? "text-fg-mute")}>{c}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="bg-line/10 h-1 overflow-clip rounded-full" aria-hidden>
+              <div
+                className="bg-ac h-1 rounded-full transition-[width] duration-500"
+                style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>

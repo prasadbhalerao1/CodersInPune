@@ -1185,6 +1185,46 @@ html {
   outline-offset: 3px;
 }
 
+/* Figures: pictogram ink in the theme's strong colour, a hairline halo in the page colour so
+   they stay legible where they cross the cobalt slash or a petal, the baton in the accent. */
+.fig-g {
+  --fig-ink: var(--strong);
+  filter: drop-shadow(0 0 1.25px color-mix(in srgb, var(--page) 80%, transparent));
+}
+.fig {
+  fill: none;
+  stroke: var(--fig-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fig-far {
+  opacity: 0.42;
+}
+.fig-head {
+  fill: var(--fig-ink);
+}
+.fig-shadow {
+  fill: var(--strong);
+  opacity: 0.16;
+}
+.fig-baton {
+  stroke: var(--ac);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--ac));
+}
+.fig-box {
+  fill: color-mix(in srgb, var(--ac) 16%, transparent);
+  stroke: var(--ac);
+}
+.fig-box-load {
+  fill: color-mix(in srgb, var(--strong) 6%, transparent);
+  stroke: color-mix(in srgb, var(--strong) 45%, transparent);
+}
+.fig-doc {
+  fill: var(--page);
+  stroke: var(--strong);
+}
+
 /* Reduced transparency: solid surfaces. Last in the file so no later crystal rule overrides it. */
 @media (prefers-reduced-transparency: reduce) {
   .glass,

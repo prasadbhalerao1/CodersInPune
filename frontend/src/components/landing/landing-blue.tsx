@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { RelayMark } from "@/components/brand";
+import { FooterSitter } from "@/components/landing/figures/footer-sitter";
 import { HeroSandbox } from "@/components/landing/hero-sandbox";
 import { Chip, Feature, body, panel } from "@/components/landing/landing-parts";
 import { MemoryReplayPreview } from "@/components/landing/memory-replay-preview";
@@ -859,6 +860,7 @@ export function LandingFooter() {
         <span className="wordmark font-bebas relative block pb-[0.08em] text-center text-[clamp(8rem,27vw,25rem)] leading-[0.86] tracking-[0.05em]">
           RELAY
         </span>
+        <FooterSitter />
       </div>
 
       <div className="border-line/[0.06] relative z-10 border-t">

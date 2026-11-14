@@ -11,6 +11,7 @@ import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
 import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HeroRelay } from "@/components/landing/figures/hero-relay";
 import { BlueArt } from "@/components/landing/landing-blue";
 import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
 import { StickyHeader } from "@/components/landing/sticky-header";
@@ -194,6 +195,7 @@ export default function HomePage() {
 
           {/* Bottom hairline bar */}
           <div className="border-line/[0.1] bg-page/80 relative z-20 w-full shrink-0 border-t py-2.5 backdrop-blur-md">
+            <HeroRelay />
             <div className="text-fg-mute mx-auto flex max-w-7xl flex-wrap items-center justify-start gap-x-3 px-6 text-xs sm:px-8 lg:px-12">
               <span>Reads GitHub, Linear and Notion</span>
               <span aria-hidden>·</span>
