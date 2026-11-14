@@ -12,6 +12,7 @@ import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeroCrew } from "@/components/landing/figures/hero-crew";
+import { Roamer } from "@/components/landing/figures/roamer";
 import { HeroRelay } from "@/components/landing/figures/hero-relay";
 import { BlueArt } from "@/components/landing/landing-blue";
 import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
@@ -48,6 +49,7 @@ export default function HomePage() {
     <div className="landing-root bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
 
+      <Roamer />
       <BlueArt />
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}

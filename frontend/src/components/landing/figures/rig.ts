@@ -137,41 +137,145 @@ export const sit = (t: number): Pose =>
   });
 
 // ── Locomotion ───────────────────────────────────────────────────────────────────────────
+//
+// Walk and run are keyed from the phases of a real stride, per leg, over one full cycle
+// (two steps; leg B runs half a cycle behind leg A):
+//
+//   walk: contact (heel strike, leg ahead) → loading (knee takes the weight) → mid-stance
+//         (leg under the body, straight) → toe-off (leg behind) → swing (knee folds to clear
+//         the ground) → terminal swing (leg reaches ahead) → contact.
+//   run:  contact (foot lands nearly under the body) → down (deepest knee bend) → push-off
+//         (leg extended behind) → heel recovery (heel kicked up towards the seat) → knee drive
+//         (thigh high, ahead) → reach → paw back → contact. Both feet are off the ground twice
+//         per cycle: that flight phase is what makes it a run and not a fast walk.
+//
+// Keys are joined with periodic Hermite splines whose tangents come from the neighbouring keys,
+// so every joint moves with continuous velocity: no hitch at any key, which is what reads as
+// smooth. Arms swing opposite their leg; the trunk dips on each loading and the head counters.
 
-/** A walk (run = 0) through a run (run = 1) at the given phase (radians). */
+type Track = readonly (readonly [number, number])[];
+
+/** A periodic spline through keyed (phase 0..1, value) pairs, sampled at `p` (any real). */
+function loop(track: Track, p: number) {
+  const n = track.length;
+  const x = ((p % 1) + 1) % 1;
+  let i = n - 1;
+  for (let k = 0; k < n; k++) {
+    if (track[k]![0] > x) {
+      i = k - 1;
+      break;
+    }
+  }
+  if (i < 0) i = n - 1;
+  const at = (k: number) => {
+    const j = ((k % n) + n) % n;
+    const wraps = Math.floor(k / n);
+    return [track[j]![0] + wraps, track[j]![1]] as const;
+  };
+  const [t0, v0] = at(i);
+  const [t1, v1] = at(i + 1);
+  const [tm, vm] = at(i - 1);
+  const [t2, v2] = at(i + 2);
+  const span = t1 - t0;
+  const m0 = ((v1 - vm) / (t1 - tm)) * span;
+  const m1 = ((v2 - v0) / (t2 - t0)) * span;
+  let u = (x < t0 ? x + 1 : x) - t0;
+  u = span > 0 ? u / span : 0;
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (
+    (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * m0 + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * m1
+  );
+}
+
+const WALK_HIP: Track = [
+  [0.0, 0.38],
+  [0.12, 0.24],
+  [0.3, 0.02],
+  [0.5, -0.36],
+  [0.62, -0.12],
+  [0.75, 0.22],
+  [0.88, 0.42],
+];
+const WALK_KNEE: Track = [
+  [0.0, 0.04],
+  [0.12, 0.24],
+  [0.3, 0.07],
+  [0.5, 0.32],
+  [0.62, 1.02],
+  [0.75, 0.82],
+  [0.88, 0.14],
+];
+const RUN_HIP: Track = [
+  [0.0, 0.42],
+  [0.1, 0.08],
+  [0.25, -0.58],
+  [0.36, -0.42],
+  [0.5, 0.25],
+  [0.66, 1.2],
+  [0.8, 0.95],
+  [0.92, 0.6],
+];
+const RUN_KNEE: Track = [
+  [0.0, 0.24],
+  [0.1, 0.62],
+  [0.25, 0.22],
+  [0.36, 1.85],
+  [0.5, 2.2],
+  [0.66, 1.65],
+  [0.8, 0.62],
+  [0.92, 0.32],
+];
+
+/** A walk (run = 0) through a run (run = 1) at the given phase (radians, 2π per cycle). */
 export function gait(phase: number, run: number): Pose {
-  const s = Math.sin(phase);
-  const hip = lerp(0.4, 0.8, run);
-  const kneeBase = lerp(0.08, 0.32, run);
-  const kneeSwing = lerp(0.75, 1.75, run);
-  const arm = lerp(0.34, 0.95, run);
-  const elbow = lerp(0.28, 1.45, run);
-  // the knee folds while its leg swings forward, peaking just after it passes under the body
-  const knee = (ph: number) => kneeBase + kneeSwing * Math.max(0, Math.cos(ph - 0.35)) ** 1.3;
-  // overlapping action: the forearm trails its upper arm by a fraction of a step, the trunk
-  // pitches a touch on each footfall and the head counters it, so nothing moves in lockstep
-  const lag = 0.55;
-  const fall = Math.cos(2 * phase);
+  const p = phase / (2 * Math.PI);
+  const leg = (q: number) => ({
+    hip: lerp(loop(WALK_HIP, q), loop(RUN_HIP, q), run),
+    knee: lerp(loop(WALK_KNEE, q), loop(RUN_KNEE, q), run),
+  });
+  const a = leg(p);
+  const b = leg(p + 0.5);
+  // arms: each swings forward as the opposite leg does; the forearm trails the upper arm
+  const swing = (q: number) => Math.cos(2 * Math.PI * (q - lerp(0.5, 0.65, run)));
+  const armAmp = lerp(0.3, 0.85, run);
+  const elbow = lerp(0.28, 1.5, run);
+  const fwdA = swing(p);
+  const fwdB = swing(p + 0.5);
+  const lagA = Math.max(0, swing(p - 0.07));
+  const lagB = Math.max(0, swing(p + 0.43));
+  // the trunk dips on each loading (twice per cycle) and the head counters to stay level
+  const dip = Math.cos(4 * Math.PI * (p - lerp(0.12, 0.1, run)));
   return {
-    lean: lerp(0.04, 0.26, run) + lerp(0.015, 0.035, run) * fall,
-    head: lerp(0, -0.14, run) - lerp(0.03, 0.05, run) * fall,
-    hipA: hip * s,
-    kneeA: knee(phase),
-    hipB: -hip * s,
-    kneeB: knee(phase + Math.PI),
-    shA: -arm * s * 0.9,
-    elA: elbow + lerp(0.2, 0.35, run) * Math.max(0, -Math.sin(phase - lag)),
-    shB: arm * s * 0.9,
-    elB: elbow + lerp(0.2, 0.35, run) * Math.max(0, Math.sin(phase - lag)),
+    lean: lerp(0.04, 0.24, run) + lerp(0.015, 0.03, run) * dip,
+    head: lerp(0, -0.14, run) - lerp(0.02, 0.045, run) * dip,
+    hipA: a.hip,
+    kneeA: a.knee,
+    hipB: b.hip,
+    kneeB: b.knee,
+    shA: lerp(0.06, 0.18, run) + armAmp * fwdA,
+    elA: elbow + lerp(0.15, 0.4, run) * lagA,
+    shB: lerp(0.06, 0.18, run) + armAmp * fwdB,
+    elB: elbow + lerp(0.15, 0.4, run) * lagB,
   };
 }
 
-/** Distance covered by one full gait cycle (two steps). */
-export const stride = (run: number, H: number) => lerp(0.9, 1.95, run) * H;
+/** Distance covered by one full gait cycle (two steps), from a stroll to a sprint. */
+export const stride = (run: number, H: number) => lerp(0.85, 2.3, run) * H;
 
-/** Running has a flight phase between steps: lift the body while the legs are spread. */
-export const runLift = (phase: number, run: number, H: number) =>
-  (run * 0.05 * H * (1 - Math.cos(2 * phase))) / 2;
+/**
+ * Height to add to a ground-contact solve so a run has its flight phase: during stance the
+ * foot stays planted; between steps the body rises off the ground. Pass the pose and dims;
+ * without them this falls back to a simple bob.
+ */
+export function runLift(phase: number, run: number, H: number, pose?: Pose, d?: Dims) {
+  const p = phase / (2 * Math.PI);
+  if (!pose || !d) return (run * 0.05 * H * (1 - Math.cos(2 * phase))) / 2;
+  const leg = d.thigh + d.shin;
+  // highest mid-flight (just after push-off), lowest at the deepest knee bend
+  const target = 0.9 * leg + 0.05 * H * Math.cos(4 * Math.PI * (p - 0.35));
+  return run * Math.max(0, target - legDrop(pose, d));
+}
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────────────────
 

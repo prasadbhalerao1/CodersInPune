@@ -143,8 +143,8 @@ function HeroRelayScene() {
     const holding = s.stage === "after" || s.stage === "fade";
     if (!holding) pb = { ...pb, shB: -1.05, elB: 0.12 };
 
-    const liftA = runLift(s.a.ph, runNorm(s.a), H);
-    const liftB = runLift(s.b.ph, kb, H);
+    const liftA = runLift(s.a.ph, runNorm(s.a), H, pa, d);
+    const liftB = runLift(s.b.ph, kb, H, pb, d);
     let ja = solve(pa, d, s.a.x, ground, 1, { lift: liftA });
     let jb = solve(pb, d, s.b.x, ground, 1, { lift: liftB });
 
