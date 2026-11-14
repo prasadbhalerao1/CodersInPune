@@ -376,7 +376,7 @@ function RoamerLayer() {
     const onDown = (e: PointerEvent) => {
       const x = e.clientX;
       const y = e.clientY + window.scrollY;
-      if (e.button !== 0 || !near(x, y)) return;
+      if (away || e.button !== 0 || !near(x, y)) return;
       e.preventDefault();
       e.stopPropagation();
       P.down = true;
@@ -434,11 +434,23 @@ function RoamerLayer() {
     let last = 0;
     let box = { x0: 0, y0: 0, x1: 0, y1: 0 };
     let tag = 0;
+    // while the idle story plays, he steps off stage
+    let away = false;
+    const onInterlude = (e: Event) => {
+      away = (e as CustomEvent<{ active: boolean }>).detail.active;
+      if (away) {
+        P.dragging = false;
+        setCursor("");
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, cv.width, cv.height);
+      }
+    };
+    window.addEventListener("relay:interlude", onInterlude);
     const frame = (now: number) => {
       const dt = last ? Math.min(0.033, (now - last) / 1000) : 0;
       last = now;
       raf = requestAnimationFrame(frame);
-      if (dt === 0) return;
+      if (dt === 0 || away) return;
       step(dt);
       draw();
       // where he is and what he is doing, for tests and debugging (5 times a second)
@@ -1000,6 +1012,7 @@ function RoamerLayer() {
       document.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("touchstart", onTouch);
       window.removeEventListener("resize", fit);
+      window.removeEventListener("relay:interlude", onInterlude);
       document.documentElement.style.cursor = "";
     };
   }, []);

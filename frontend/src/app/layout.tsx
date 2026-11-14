@@ -66,14 +66,14 @@ export const metadata: Metadata = {
 // Dark is the default and is already in the server-rendered <html class>. This runs before first
 // paint and switches to light only if the visitor explicitly chose it (key v2: values saved while
 // light was the default are deliberately ignored).
-const THEME_SCRIPT = `try{var l=localStorage.getItem("relay-theme-v2")==="light";document.documentElement.classList.toggle("dark",!l);document.documentElement.style.colorScheme=l?"light":"dark"}catch(e){document.documentElement.classList.add("dark")}`;
+const THEME_SCRIPT = `try{var d=document.documentElement;d.classList.remove("dark");d.style.colorScheme="light";localStorage.removeItem("relay-theme-v2")}catch(e){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${syne.variable} ${bebasNeue.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${syne.variable} ${bebasNeue.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

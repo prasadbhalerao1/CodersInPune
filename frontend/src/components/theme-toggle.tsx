@@ -5,10 +5,9 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/utils";
 
-// The `dark` class on <html> is the single source of truth. An inline script in the root
-// layout applies the saved choice before first paint, so there is no flash. Dark is the default.
-const KEY = "relay-theme-v2";
-const HINT_KEY = "relay-theme-hint";
+// The `dark` class on <html> is the single source of truth. Every load starts in light mode (an
+// inline script in the root layout makes sure of it before first paint); switching to dark lasts
+// until the next load and is deliberately not remembered.
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
@@ -18,32 +17,17 @@ function subscribe(onChange: () => void) {
 
 const isDark = () => document.documentElement.classList.contains("dark");
 
-function markHintSeen() {
-  try {
-    localStorage.setItem(HINT_KEY, "1");
-  } catch {
-    /* private mode: the hint may show again next visit */
-  }
-}
-
 /**
- * Sun/moon switch. With `hint`, first-time visitors on the default (dark) theme get a small
- * pop-up pointing at it: "Prefer white mode? Click to switch." It dismisses itself, and for
- * good once the button is used or the pop-up is closed.
+ * Sun/moon switch. With `hint`, every load (always light) shows a small pop-up under it:
+ * "Prefer dark mode? Click to switch." It closes itself after a few seconds, when the button is
+ * used, or with its close button.
  */
 export function ThemeToggle({ className, hint = false }: { className?: string; hint?: boolean }) {
-  const dark = useSyncExternalStore(subscribe, isDark, () => true);
+  const dark = useSyncExternalStore(subscribe, isDark, () => false);
   const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
     if (!hint) return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(HINT_KEY) === "1";
-    } catch {
-      /* ignore */
-    }
-    if (seen) return;
     const open = setTimeout(() => setShowHint(true), 1400);
     const close = setTimeout(() => setShowHint(false), 10000);
     return () => {
@@ -52,20 +36,12 @@ export function ThemeToggle({ className, hint = false }: { className?: string; h
     };
   }, [hint]);
 
-  const dismiss = () => {
-    setShowHint(false);
-    markHintSeen();
-  };
+  const dismiss = () => setShowHint(false);
 
   const toggle = () => {
     const next = !dark;
     document.documentElement.classList.toggle("dark", next);
     document.documentElement.style.colorScheme = next ? "dark" : "light";
-    try {
-      localStorage.setItem(KEY, next ? "dark" : "light");
-    } catch {
-      /* private mode: the choice just won't persist */
-    }
     dismiss();
   };
 
@@ -83,7 +59,7 @@ export function ThemeToggle({ className, hint = false }: { className?: string; h
         {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
       </button>
 
-      {showHint && dark ? (
+      {showHint && !dark ? (
         // Outer span places the pop-up (the crystal class sets its own position, so it must
         // not be on the element that is absolutely positioned).
         <span
@@ -96,7 +72,7 @@ export function ThemeToggle({ className, hint = false }: { className?: string; h
               className="bg-page/90 border-line/25 absolute -top-1 left-1/2 size-2 -translate-x-1/2 rotate-45 border-t border-l"
             />
             <span>
-              Prefer white mode? <span className="text-ac font-medium">Click to switch.</span>
+              Prefer dark mode? <span className="text-ac font-medium">Click to switch.</span>
             </span>
             <button
               type="button"

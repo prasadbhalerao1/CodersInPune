@@ -12,6 +12,7 @@ import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeroCrew } from "@/components/landing/figures/hero-crew";
+import { Interlude } from "@/components/landing/figures/interlude";
 import { Roamer } from "@/components/landing/figures/roamer";
 import { HeroRelay } from "@/components/landing/figures/hero-relay";
 import { BlueArt } from "@/components/landing/landing-blue";
@@ -50,6 +51,7 @@ export default function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
 
       <Roamer />
+      <Interlude />
       <BlueArt />
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
