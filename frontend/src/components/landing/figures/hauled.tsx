@@ -5,6 +5,8 @@ import { useRef, type ReactNode } from "react";
 import { STAND, approach, clamp01, dims, mix, solve, type Pose, type Vec } from "./rig";
 import { haul } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, figure, useStage } from "./stage";
+import { Body, Spring, feel, knock as hit } from "./physics";
+import { Particles, dust, sparks, stepParticles } from "./particles";
 
 const HAULS = 5;
 const DROP = 120; // px the card starts below its place
@@ -23,7 +25,16 @@ const PULL: Pose = {
   elB: 0.7,
 };
 
-type Sim = { top: number; pose: Pose; ph: number; ty: number; rope: number };
+type Sim = {
+  top: number;
+  pose: Pose;
+  ph: number;
+  ty: number;
+  rope: number;
+  spring: Spring;
+  body: Body;
+  home: boolean;
+};
 
 /**
  * A card that is hauled into place rather than fading in. A figure stands where the card's top
@@ -44,7 +55,17 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
     if (!el || !card) return;
     const H = 80;
     const d = dims(H);
-    const s = (sim.current ??= { top: 0, pose: STAND, ph: 0, ty: 0, rope: 1 });
+    const s = (sim.current ??= {
+      top: 0,
+      pose: STAND,
+      ph: 0,
+      ty: 0,
+      rope: 1,
+      spring: new Spring(230, 11),
+      body: new Body(),
+      home: false,
+    });
+    stepParticles(el, dt);
     if (dt === 0 || !s.top) {
       // the card's resting document position (its current transform taken back out)
       s.top = card.getBoundingClientRect().top + window.scrollY - s.ty;
@@ -58,13 +79,32 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
     const step = Math.floor(k);
     const cycle = haul(k - step);
     const pe = p >= 1 ? 1 : (step + cycle.draw) / HAULS;
-    s.ty = (1 - pe) * DROP;
-    card.style.transform = s.ty > 0.5 ? `translate3d(0, ${s.ty.toFixed(1)}px, 0)` : "";
+    // the card is heavy: it chases the rope on a spring, overshooting each haul a little
+    const want = (1 - pe) * DROP;
+    if (still) {
+      s.spring.x = want;
+      s.spring.v = 0;
+    } else s.spring.step(dt, want);
+    s.ty = s.spring.x;
+    card.style.transform = Math.abs(s.ty) > 0.5 ? `translate3d(0, ${s.ty.toFixed(1)}px, 0)` : "";
 
     const ground = h - d.stroke / 2;
     const done = p >= 1;
     const corner: Vec = { x: w - 0.08 * H, y: h + s.ty + d.stroke };
-    const x = Math.max(1.6 * H, 0.42 * w);
+    const homeX = Math.max(1.6 * H, 0.42 * w);
+    // home: the card clunks into place and the hauler, suddenly pulling on nothing, staggers back
+    if (done && !s.home && !still) {
+      s.home = true;
+      hit(card, { y: -260, r: 1.4 }, 0.8);
+      s.body.vx = -3.2 * H;
+      dust(el, homeX, h - d.stroke / 2, -1, 1);
+      sparks(el, w - 0.08 * H, h, -Math.PI / 2, 1.6, 0.7);
+    }
+    if (!done) s.home = false;
+    if (!s.body.x) s.body.x = homeX;
+    s.body.step(dt);
+    if (s.body.grounded) s.body.seek(homeX, 1.4 * H, 6 * H, dt);
+    const x = s.body.x;
     const target = done ? STAND : still ? PULL : cycle.pose;
     s.pose = still ? target : mix(s.pose, target, approach(dt, done ? 6 : 18));
     s.rope += ((done ? 0 : 1) - s.rope) * (still ? 1 : approach(dt, 6));
@@ -80,7 +120,7 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
       (d.upper + d.fore) / Math.hypot(corner.x - chestGuess.x, corner.y - chestGuess.y);
     const a = reachLen * 0.88 * cycle.reach;
     const b = reachLen * 0.5;
-    const j = solve(s.pose, d, x, ground, 1, {
+    const j = solve(feel(s.pose, s.body, H, 1), d, x, ground, 1, {
       reachA: done ? undefined : { target: along(a), w: s.rope, bend: -1 },
       reachB: done ? undefined : { target: along(b), w: s.rope, bend: -1 },
     });
@@ -107,6 +147,7 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
       >
         <path ref={rope} className="fig-rope" />
         <FigureGlyph name="h" />
+        <Particles />
       </svg>
       <div ref={box} style={{ willChange: "transform" }}>
         {children}

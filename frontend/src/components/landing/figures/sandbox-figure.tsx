@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 
 import { CARRY, STRAIN, THINK, approach, dims, mix, solve, type Pose } from "./rig";
 import { FigureGlyph, drawFigure, drawRect, useStage, figure, FIGURES_ON } from "./stage";
+import { knock as hit } from "./physics";
+import { Particles, dust, stepParticles } from "./particles";
 
 type Box = { kind: "load" | "new"; y: number | null; vy: number; delay: number; landed: boolean };
 type Sim = { sig: string; boxes: Box[]; pose: Pose; dip: number; t: number };
@@ -73,6 +75,7 @@ function SandboxFigureScene({
 
     const facing = -1;
     const j = solve(p, d, w * 0.8, ground, facing);
+    stepParticles(svg.current, dt);
     drawFigure(figure(svg.current, "f"), j, d, { groundY: ground });
 
     // the stack rides on the forearms
@@ -100,6 +103,9 @@ function SandboxFigureScene({
         if (b.y >= slot) {
           b.landed = true;
           s.dip = Math.min(1, s.dip + (strain ? 0.55 : 0.35));
+          const cardEl = svg.current?.parentElement?.nextElementSibling as HTMLElement | null;
+          hit(cardEl, { y: strain ? 120 : 60, r: strain ? 0.8 : 0.3 }, 0.9);
+          dust(svg.current, w * 0.8, ground, 0, strain ? 0.8 : 0.45);
         }
       }
       const y = b.landed ? slot : (b.y ?? slot);
@@ -118,6 +124,7 @@ function SandboxFigureScene({
         className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       >
         <FigureGlyph name="f" />
+        <Particles />
         {Array.from({ length: MAX_BOXES }, (_, i) => (
           <rect
             key={i}

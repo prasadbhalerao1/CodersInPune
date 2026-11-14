@@ -20,6 +20,7 @@ import {
 } from "./rig";
 import { wave } from "./gestures";
 import { FigureGlyph, drawBaton, drawFigure, useStage, figure, FIGURES_ON } from "./stage";
+import { Particles, dust, sparks, stepParticles } from "./particles";
 
 type Runner = { x: number; v: number; ph: number; op: number };
 type Sim = {
@@ -31,6 +32,9 @@ type Sim = {
   handoff: number;
   wave: number;
   clock: number;
+  spark: boolean;
+  skid: number;
+  dustAt: number | null;
 };
 
 const sizeFor = (w: number) => (w < 640 ? 54 : w < 1024 ? 70 : 86);
@@ -60,6 +64,9 @@ function HeroRelayScene() {
       handoff: 0,
       wave: 0,
       clock: 0,
+      spark: false,
+      skid: 0,
+      dustAt: null,
     });
     let s = sim.current;
     if (!s || Math.abs(s.w - w) > 40) s = sim.current = fresh();
@@ -92,14 +99,22 @@ function HeroRelayScene() {
       } else if (s.stage === "exchange") {
         step(s.b, 0.86 * V, V);
         step(s.a, s.b.v, 3 * V);
+        const before = s.handoff;
         s.handoff = clamp01(s.t / 0.45);
+        if (before < 0.55 && s.handoff >= 0.55) s.spark = true;
         if (s.t > 0.55) {
           s.stage = "after";
           s.t = 0;
         }
       } else if (s.stage === "after") {
         step(s.b, 1.08 * V, 0.8 * V);
-        step(s.a, 0, V / 1.2);
+        const was = s.a.v;
+        step(s.a, 0, V / 0.9);
+        s.skid += dt;
+        if (was > 0.35 * V && s.skid > 0.06) {
+          s.skid = 0;
+          s.dustAt = s.a.x;
+        }
         if (s.a.v === 0) s.wave += dt;
         if (s.b.x > w + 2 * H && s.wave > 1.9) {
           s.stage = "fade";
@@ -147,6 +162,16 @@ function HeroRelayScene() {
       });
     }
 
+    stepParticles(svg.current, dt);
+    if (s.spark) {
+      s.spark = false;
+      const m = { x: (ja.handA.x + jb.handB.x) / 2, y: (ja.handA.y + jb.handB.y) / 2 };
+      sparks(svg.current, m.x, m.y, -Math.PI / 2, Math.PI * 2, 0.9);
+    }
+    if (s.dustAt !== null) {
+      dust(svg.current, s.dustAt + 0.15 * H, ground, 1, 0.55);
+      s.dustAt = null;
+    }
     drawFigure(figure(svg.current, "a"), ja, d, { opacity: s.a.op, groundY: ground });
     drawFigure(figure(svg.current, "b"), jb, d, { opacity: s.b.op, groundY: ground });
     placeBaton(baton.current, s, ja, jb, d);
@@ -160,6 +185,7 @@ function HeroRelayScene() {
     >
       <FigureGlyph name="a" />
       <FigureGlyph name="b" />
+      <Particles />
       <line ref={baton} className="fig-baton" />
     </svg>
   );

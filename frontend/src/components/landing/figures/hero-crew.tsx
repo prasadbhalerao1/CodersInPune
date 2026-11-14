@@ -17,6 +17,8 @@ import {
 } from "./rig";
 import { BECKON_TIME, KNOCK_TIME, SHOVE_TIME, beckon, cheer, knock, shove, wave } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, figure, useStage } from "./stage";
+import { Body, crouch, feel, knock as hit } from "./physics";
+import { Particles, dust, sparks, stepParticles } from "./particles";
 
 type Box = { x: number; y: number; w: number; h: number };
 type Greet = "walk" | "wave" | "point" | "shove" | "idle" | "flinch" | "cheer" | "beckon" | "knock";
@@ -36,6 +38,11 @@ type Sim = {
   gt: number;
   shove: number;
   idleSince: number;
+  ab: Body;
+  bb: Body;
+  landed: boolean;
+  setDownHit: boolean;
+  skid: number;
   pointer: Vec | null;
   hover: boolean;
 };
@@ -114,10 +121,17 @@ function HeroCrewScene() {
       gt: 0,
       shove: 0,
       idleSince: 0,
+      ab: new Body(),
+      bb: new Body(),
+      landed: false,
+      setDownHit: false,
+      skid: 0,
       pointer: null,
       hover: false,
     });
     s.t += dt;
+    stepParticles(el, dt);
+    s.bb.step(dt);
     const cardEl = document.querySelector<HTMLElement>('[data-fig="readout"]');
     const ctaEl = document.querySelector<HTMLElement>('[data-fig="cta"]');
     if (!cardEl || !ctaEl) return;
@@ -158,6 +172,14 @@ function HeroCrewScene() {
     cardEl.style.willChange = downK < 1 ? "transform" : "";
 
     const groundCard = card.y + card.h + d.stroke * 0.5; // the card's resting bottom edge
+    if (downK >= 1 && !s.setDownHit && !still) {
+      s.setDownHit = true;
+      hit(cardEl, { y: 420, r: 9 }, 0.75);
+      s.ab.squash.kick(5);
+      s.bb.squash.kick(5);
+      dust(el, card.x - 0.2 * H, groundCard, -1, 0.9);
+      dust(el, card.x + card.w + 0.2 * H, groundCard, 1, 0.9);
+    }
     const carrying = downK < 1;
     const walking = inK < 1;
 
@@ -168,6 +190,7 @@ function HeroCrewScene() {
       s.b.ph += walking ? (2 * Math.PI * Math.abs(fromX) * (1 / 2.3) * dt) / stride(0, H) : 0;
       const pose = walking ? mix(gait(s.b.ph, 0), CARRY_UP, 0.75) : mix(CARRY_UP, SQUAT, downK);
       s.b.pose = still ? LEAN_ON : mix(s.b.pose, pose, approach(dt, 12));
+      s.b.pose = feel(s.b.pose, s.bb, H, -1);
       s.b.f = -1;
       const jb = solve(s.b.pose, d, s.b.x, groundCard, -1, {
         reachA: {
@@ -185,10 +208,12 @@ function HeroCrewScene() {
       s.b.x += (restX - s.b.x) * approach(dt, 6);
       const pose = { ...LEAN_ON, head: LEAN_ON.head + 0.04 * Math.sin(s.t * 1.1) };
       s.b.pose = still ? pose : mix(s.b.pose, pose, approach(dt, 7));
+      const bPose = feel(s.b.pose, s.bb, H, -1);
       const gaze = s.pointer
         ? gazeTo(s.pointer, { x: s.b.x, y: groundCard - 0.9 * H }, H)
         : undefined;
-      const jb = solve(s.b.pose, d, s.b.x, groundCard, -1, {
+      const jb = solve(bPose, d, s.b.x, groundCard, -1, {
+        lift: -crouch(s.bb, H),
         reachA: { target: { x: card.x + card.w + 0.04 * H, y: card.y + 0.12 * H }, w: 1, bend: -1 },
         gaze,
       });
@@ -198,90 +223,125 @@ function HeroCrewScene() {
     // A carries the front end, then becomes the greeter
     const groundCta = cta.y + cta.h + d.stroke * 0.5;
     const ax = card.x + tx.x - 0.22 * H;
+    const A = s.ab;
     if (carrying) {
       s.a.x = ax;
+      A.x = ax;
+      A.vx = 0;
       s.a.ph = s.b.ph + 0.9;
       const pose = walking ? mix(gait(s.a.ph, 0), CARRY_UP, 0.75) : mix(CARRY_UP, SQUAT, downK);
       s.a.pose = still ? FRONT : mix(s.a.pose, pose, approach(dt, 12));
       s.a.f = -1;
       s.greet = "walk";
       s.gt = 0;
-      const ja = solve(s.a.pose, d, s.a.x, groundCard, -1, {
+      A.step(dt);
+      const ja = solve(feel(s.a.pose, A, H, -1), d, s.a.x, groundCard, -1, {
+        lift: -crouch(A, H),
         reachA: { target: { x: card.x + tx.x + 0.1 * H, y: card.y + card.h + tx.y }, w: 1 },
         reachB: { target: { x: card.x + tx.x + 0.3 * H, y: card.y + card.h + tx.y }, w: 1 },
       });
       drawFigure(figure(el, "a"), ja, d, { groundY: groundCard });
     } else {
+      const prev = s.gt;
       s.gt += dt;
+      const crossed = (at: number) => prev < at && s.gt >= at;
+      const entered = prev === 0;
       const standX = cta.x + cta.w + 0.75 * H;
       const ctaMid: Vec = { x: cta.x + cta.w, y: cta.y + cta.h * 0.5 };
       const nearPointer =
-        !!s.pointer && Math.hypot(s.pointer.x - s.a.x, s.pointer.y - (groundCta - 0.5 * H)) < 2 * H;
+        !!s.pointer && Math.hypot(s.pointer.x - A.x, s.pointer.y - (groundCta - 0.5 * H)) < 2 * H;
       const idle = s.t - s.idleSince;
+      const go = (g: Greet) => {
+        s.greet = g;
+        s.gt = 0;
+      };
+      const maxRun = 5.2 * H;
 
-      // state machine for the greeter
+      // ── behaviour ──
       if (still) {
         s.greet = "point";
-        s.a.x = standX;
+        A.x = standX;
+        A.y = 0;
+        A.grounded = true;
+        s.landed = true;
         s.a.f = 0;
       } else if (s.greet === "walk") {
-        const gap = standX - s.a.x;
-        if (Math.abs(gap) < 1) {
-          s.greet = "wave";
-          s.gt = 0;
-        } else {
-          const step = Math.sign(gap) * Math.min(Math.abs(gap), 4.6 * H * dt);
-          s.a.x += step;
-          s.a.ph += (2 * Math.PI * Math.abs(step)) / stride(0.75, H);
+        if (!s.landed && A.grounded) {
+          if (A.x - standX > 2.4 * H) {
+            // run out with momentum
+            A.seek(standX, maxRun, 9 * H, dt);
+          } else {
+            // then leap up onto the button's level, timed to land beside it
+            const rise = groundCard - groundCta;
+            A.y = -rise;
+            const vy = Math.sqrt(2 * A.gravity * (Math.max(0, rise) + 0.55 * H));
+            const tUp = vy / A.gravity;
+            const tDown = Math.sqrt((2 * 0.55 * H) / A.gravity);
+            A.jump(vy, (standX - A.x) / (tUp + tDown));
+            s.landed = true;
+          }
         }
-      } else if (s.greet === "wave" && s.gt > 1.5) {
-        s.greet = "point";
-        s.gt = 0;
-      } else if (s.greet === "point" && s.gt > 1.1) {
-        s.greet = "shove";
-        s.gt = 0;
-      } else if (s.greet === "shove" && s.gt > SHOVE_TIME) {
-        s.greet = "idle";
-        s.gt = 0;
+      } else if (s.greet === "wave" && s.gt > 1.6) go("point");
+      else if (s.greet === "point" && s.gt > 1.1) go("shove");
+      else if (s.greet === "shove" && s.gt > SHOVE_TIME) {
+        go("idle");
         s.idleSince = s.t;
       } else if (s.greet === "idle") {
-        if (s.hover) {
-          s.greet = "cheer";
-          s.gt = 0;
-        } else if (nearPointer) {
-          s.greet = "flinch";
-          s.gt = 0;
-        } else if (idle > 14) {
-          s.greet = "knock";
-          s.gt = 0;
-        } else if (idle > 7 && idle < 7.05) {
-          s.greet = "beckon";
-          s.gt = 0;
-        }
-      } else if (s.greet === "cheer" && (!s.hover || s.gt > 2.5)) {
-        s.greet = "idle";
-        s.gt = 0;
-      } else if (s.greet === "flinch" && s.gt > 0.9) {
-        s.greet = "idle";
-        s.gt = 0;
-      } else if (s.greet === "beckon" && s.gt > BECKON_TIME) {
-        s.greet = "idle";
-        s.gt = 0;
-      } else if (s.greet === "knock" && s.gt > KNOCK_TIME) {
-        s.greet = "idle";
-        s.gt = 0;
+        if (s.hover) go("cheer");
+        else if (nearPointer) go("flinch");
+        else if (idle > 14) go("knock");
+        else if (idle > 7 && idle < 7.05) go("beckon");
+      } else if (s.greet === "cheer" && !s.hover && A.grounded && s.gt > 0.5) go("idle");
+      else if (s.greet === "flinch" && s.gt > 1.1 && A.grounded) go("idle");
+      else if (s.greet === "beckon" && s.gt > BECKON_TIME) go("idle");
+      else if (s.greet === "knock" && s.gt > KNOCK_TIME) {
+        go("idle");
         s.idleSince = s.t - 2; // knock again sooner if they still do not move
       }
 
+      // ── physics ──
+      if (s.greet === "flinch" && entered) {
+        const away = s.pointer && s.pointer.x < A.x ? 1 : -1;
+        A.jump(3.6 * H, away * 3.2 * H);
+      }
+      if (s.greet === "cheer" && A.grounded && s.hover && A.squash.x < 0.4) A.jump(5.4 * H, 0);
+      const landing = A.step(dt);
+      if (landing && !still) {
+        dust(el, A.x, groundCta, 0, Math.min(1.4, landing.speed / (9 * H)));
+        if (s.greet === "walk") go("wave");
+      }
+      const settle =
+        s.greet === "idle" ||
+        s.greet === "wave" ||
+        s.greet === "point" ||
+        s.greet === "beckon" ||
+        s.greet === "knock" ||
+        (s.greet === "flinch" && s.gt > 0.25);
+      if (settle && A.grounded && s.landed) A.seek(standX, 2.5 * H, 10 * H, dt);
+
+      // skidding: braking hard on the ground kicks up dust
+      s.skid += dt;
+      if (A.grounded && A.vx * A.ax < 0 && Math.abs(A.vx) > 1.2 * H && s.skid > 0.05) {
+        s.skid = 0;
+        dust(
+          el,
+          A.x + Math.sign(A.vx) * 0.1 * H,
+          s.landed ? groundCta : groundCard,
+          Math.sign(A.vx),
+          0.5,
+        );
+      }
+
+      // ── pose ──
+      const moving = Math.abs(A.vx) > 0.15 * H;
+      const run = clamp01(Math.abs(A.vx) / maxRun);
+      if (A.grounded && moving) s.a.ph += (2 * Math.PI * Math.abs(A.vx) * dt) / stride(run, H);
       let pose: Pose;
       let fTarget = 0;
       let reachA: { target: Vec; w: number; bend?: number } | undefined;
-      let xTarget = standX;
-      let push = 0;
-      let hop = 0;
-      if (s.greet === "walk") {
-        pose = gait(s.a.ph, 0.75);
-        fTarget = -1;
+      if (s.greet === "walk" || (moving && A.grounded && s.greet !== "shove")) {
+        pose = mix(FRONT, gait(s.a.ph, run), smooth(Math.abs(A.vx) / (0.8 * H)));
+        if (moving) fTarget = Math.sign(A.vx);
       } else if (s.greet === "wave") {
         pose = { ...FRONT, ...pick(wave(s.gt)) };
       } else if (s.greet === "point") {
@@ -289,42 +349,57 @@ function HeroCrewScene() {
         reachA = { target: ctaMid, w: smooth(s.gt / 0.4), bend: -1 };
         fTarget = -0.35;
       } else if (s.greet === "shove") {
-        // wind back, drive through, hold, recover; the button travels with the hand
+        // wind back, drive through; on contact the button takes the hit and the figure recoils
         const sh = shove(s.gt);
         pose = { ...FRONT, ...pick(sh.pose) };
-        push = sh.push;
         const contact = smooth(clamp01(s.gt / 0.3));
-        reachA = { target: { x: ctaMid.x - push * 12, y: ctaMid.y }, w: contact * 0.95, bend: -1 };
+        reachA = {
+          target: { x: ctaMid.x - sh.push * 10, y: ctaMid.y },
+          w: contact * 0.95,
+          bend: -1,
+        };
         fTarget = -0.6;
-        xTarget = standX - 0.1 * H - push * 0.12 * H;
+        if (crossed(0.36)) {
+          hit(ctaEl, { x: -820, r: -14 }, 0.9);
+          sparks(el, ctaMid.x - 4, ctaMid.y, Math.PI, 1.3, 1.1);
+          A.vx = 1.1 * H;
+        }
       } else if (s.greet === "flinch") {
-        const k = s.gt / 0.9;
-        pose = mix(STARTLE, FRONT, smooth((k - 0.55) / 0.45));
-        const away = s.pointer && s.pointer.x < s.a.x ? 1 : -1;
-        xTarget = standX + away * 0.45 * H * Math.sin(Math.PI * Math.min(1, k * 1.3));
+        pose = mix(STARTLE, FRONT, smooth((s.gt - 0.5) / 0.5));
       } else if (s.greet === "cheer") {
-        const ch = cheer(s.gt);
-        pose = ch.pose;
-        hop = ch.lift * H;
+        pose = { ...cheer(s.gt).pose };
       } else if (s.greet === "beckon") {
         pose = { ...FRONT, ...pick(beckon(s.gt)) };
-      } else {
+      } else if (s.greet === "knock") {
         pose = { ...FRONT, ...pick(knock(s.gt)) };
+      } else {
+        pose = FRONT;
       }
-      if (s.greet !== "walk") s.a.x += (xTarget - s.a.x) * approach(dt, 10);
-      s.a.f += (fTarget - s.a.f) * approach(dt, 8);
-      s.a.pose = still ? pose : mix(s.a.pose, pose, approach(dt, s.greet === "walk" ? 16 : 9));
-
-      // the real button moves when shoved
-      ctaEl.style.transform = push > 0.02 ? `translate3d(${(-push * 12).toFixed(1)}px, 0, 0)` : "";
+      s.a.f += (fTarget - s.a.f) * approach(dt, 9);
+      s.a.pose = still ? pose : mix(s.a.pose, pose, approach(dt, moving ? 16 : 10));
       const gaze =
         s.pointer && (s.greet === "idle" || s.greet === "cheer" || s.greet === "beckon")
-          ? gazeTo(s.pointer, { x: s.a.x, y: groundCta - 0.9 * H }, H)
+          ? gazeTo(s.pointer, { x: A.x, y: groundCta - 0.9 * H }, H)
           : s.greet === "knock"
             ? { x: 0, y: 0.03 * H }
             : undefined;
-      const ja = solve(s.a.pose, d, s.a.x, groundCta, s.a.f, { reachA, gaze, lift: hop });
-      drawFigure(figure(el, "a"), ja, d, { groundY: groundCta });
+      // before the leap the figure stands on the card's level, after it on the button's
+      const ground = s.landed ? groundCta : groundCard;
+      const ja = solve(feel(s.a.pose, A, H, s.a.f), d, A.x, ground, s.a.f, {
+        reachA,
+        gaze,
+        lift: A.y - crouch(A, H),
+      });
+      // each rap lands on the glass: the whole hero takes a jolt, with a spark at the knuckles
+      if (s.greet === "knock") {
+        for (const r of [0.47, 0.74, 1.01]) {
+          if (crossed(r)) {
+            hit(el.closest("section"), { y: 150, x: (r === 0.74 ? -1 : 1) * 90 }, 1.6);
+            sparks(el, ja.handA.x, ja.handA.y, -Math.PI / 2, Math.PI * 2, 0.35);
+          }
+        }
+      }
+      drawFigure(figure(el, "a"), ja, d, { groundY: ground });
     }
   });
 
@@ -376,6 +451,7 @@ function HeroCrewScene() {
     >
       <FigureGlyph name="b" />
       <FigureGlyph name="a" />
+      <Particles />
     </svg>
   );
 }

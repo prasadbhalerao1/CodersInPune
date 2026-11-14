@@ -5,6 +5,8 @@ import { useEffect, useRef } from "react";
 import { approach, dims, mix, sit, solve, type Pose, type Vec } from "./rig";
 import { STOMP_TIME, cheer, stamping, stomp } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, drawRect, figure, useStage } from "./stage";
+import { knock as hit } from "./physics";
+import { Particles, dust, stepParticles } from "./particles";
 
 type Box = { x: number; y: number; w: number; h: number };
 type State = "sit" | "stomp" | "cheer";
@@ -76,7 +78,6 @@ function SignHolderScene() {
 
     const ledge: Vec = { x: b.x + b.w - 0.55 * H, y: b.y + d.stroke * 0.4 };
     let j;
-    let dip = 0;
     if (s.st === "sit") {
       const p = { ...sit(still ? 0 : s.t), ...HOLD_UP, lean: -0.05 };
       s.pose = still ? p : mix(s.pose, p, approach(dt, 8));
@@ -85,14 +86,17 @@ function SignHolderScene() {
       // up on the feet, three keyed stamps; the button dips as each one lands
       const p: Pose = { ...stomp(s.stt), ...HOLD_UP };
       s.pose = mix(s.pose, p, approach(dt, 20));
-      dip = stamping(s.stt) ? 3 : 0;
+      if (stamping(s.stt) && !stamping(s.stt - dt)) {
+        hit(btn, { y: 300, r: (s.stt < 0.5 ? 1 : -1) * 2 }, 1.1);
+        dust(el, ledge.x + 0.25 * H, ledge.y, 0, 0.6);
+      }
       j = solve(s.pose, d, ledge.x + 0.1 * H, ledge.y, 1);
     } else {
       const ch = cheer(s.stt);
       s.pose = mix(s.pose, { ...ch.pose, ...HOLD_UP }, approach(dt, 16));
       j = solve(s.pose, d, ledge.x + 0.1 * H, ledge.y, 1, { lift: ch.lift * H });
     }
-    btn.style.transform = dip ? `translate3d(0, ${dip}px, 0)` : "";
+    stepParticles(el, dt);
     drawFigure(figure(el, "s"), j, d, { groundY: s.st === "sit" ? undefined : ledge.y });
 
     // the sign: a board above the raised hand, an arrow pointing down at the button
@@ -136,6 +140,7 @@ function SignHolderScene() {
       className="pointer-events-none absolute inset-0 hidden h-full w-full overflow-visible md:block"
     >
       <FigureGlyph name="s" />
+      <Particles />
       <rect ref={board} rx={1.5} className="fig-doc" />
       <path ref={arrow} className="fig fig-arrow" />
     </svg>

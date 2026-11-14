@@ -5,6 +5,8 @@ import { useRef } from "react";
 import { STAND, approach, clamp01, dims, gait, mix, smooth, solve, stride, type Pose } from "./rig";
 import { wave } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, figure, useStage } from "./stage";
+import { knock as hit } from "./physics";
+import { Particles, dust, sparks, stepParticles } from "./particles";
 
 type Stage = "wait" | "run" | "leap" | "hang" | "climb" | "wave" | "fade";
 type Sim = {
@@ -122,6 +124,9 @@ function CardRiderScene() {
         s.stage = "hang";
         s.t = 0;
         s.omega = 2.2;
+        // the whole card takes the catch
+        hit(el.parentElement, { y: 210, r: -2.4 }, 0.8);
+        sparks(el, ledge.x, ledge.y, -Math.PI / 2, 2.2, 0.8);
       }
     } else if (s.stage === "hang") {
       // card almost scrolled away upwards: get off. Scrolled back above the start: reset.
@@ -209,6 +214,7 @@ function CardRiderScene() {
     } else {
       // climbing onto the ledge, then standing on it waving
       const k = s.stage === "climb" ? smooth(s.t / 0.55) : 1;
+      if (s.stage === "wave" && s.t === dt) dust(el, ledge.x + 0.5 * H, ledge.y, 0, 0.7);
       const up: Pose =
         s.stage === "wave"
           ? wave(s.t)
@@ -218,6 +224,7 @@ function CardRiderScene() {
       const x = ledge.x - 0.2 * H + k * (standX - (ledge.x - 0.2 * H));
       j = solve(s.pose, d, x, ledge.y, 1, { lift: (1 - k) * -0.9 * H });
     }
+    stepParticles(el, dt);
     drawFigure(figure(el, "r"), j, d, { opacity: s.op });
     el.dataset.stage = s.stage;
   });
@@ -229,6 +236,7 @@ function CardRiderScene() {
       className="pointer-events-none absolute bottom-full left-0 hidden h-[5.5rem] w-[100vw] overflow-visible lg:block"
     >
       <FigureGlyph name="r" />
+      <Particles />
     </svg>
   );
 }

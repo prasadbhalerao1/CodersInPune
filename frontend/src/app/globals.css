@@ -1236,6 +1236,16 @@ html {
   stroke: var(--ac);
 }
 
+.fx-spark {
+  stroke: var(--ac);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--ac));
+}
+.fx-dust {
+  fill: var(--strong);
+}
+
 /* Reduced transparency: solid surfaces. Last in the file so no later crystal rule overrides it. */
 @media (prefers-reduced-transparency: reduce) {
   .glass,
