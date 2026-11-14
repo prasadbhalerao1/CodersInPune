@@ -1198,11 +1198,11 @@ html {
   stroke-linejoin: round;
 }
 .fig-far {
-  opacity: 0.45;
+  opacity: 0.92;
 }
 .fig-head {
-  fill: none;
-  stroke: var(--fig-ink);
+  fill: var(--fig-ink);
+  stroke: none;
 }
 .fig-shadow {
   fill: var(--strong);

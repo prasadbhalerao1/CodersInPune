@@ -163,29 +163,19 @@ export function drawFigure(
   o: { opacity?: number; groundY?: number } = {},
 ) {
   if (!f) return;
-  // feet point the way the figure faces and shorten as it turns to the viewer; a planted foot
-  // lies flat, a lifted one hangs from the ankle
-  const side = Math.sign(j.f) || 1;
-  const reach = d.foot * Math.max(0.35, Math.abs(j.f));
-  const foot = (knee: Vec, ankle: Vec) => {
-    const up = o.groundY === undefined ? 0.5 : clamp01((o.groundY - ankle.y) / (0.3 * d.H));
-    const shinX = (ankle.x - knee.x) / (Math.hypot(ankle.x - knee.x, ankle.y - knee.y) || 1);
-    return `l${n(side * reach * (1 - 0.35 * up))} ${n(reach * (0.15 + 0.5 * up) - shinX * side * reach * 0.2 * up)}`;
-  };
   seg(f.farThigh, j.pelvis, j.kneeB, d.wThigh);
-  seg(f.farShin, j.kneeB, j.footB, d.wShin, foot(j.kneeB, j.footB));
-  seg(f.farUpper, j.chest, j.elbowB, d.wUpper);
+  seg(f.farShin, j.kneeB, j.footB, d.wShin);
+  seg(f.farUpper, j.shoulder, j.elbowB, d.wUpper);
   seg(f.farFore, j.elbowB, j.handB, d.wFore);
   seg(f.torso, j.pelvis, j.chest, d.wTorso);
   seg(f.nearThigh, j.pelvis, j.kneeA, d.wThigh);
-  seg(f.nearShin, j.kneeA, j.footA, d.wShin, foot(j.kneeA, j.footA));
-  seg(f.nearUpper, j.chest, j.elbowA, d.wUpper);
+  seg(f.nearShin, j.kneeA, j.footA, d.wShin);
+  seg(f.nearUpper, j.shoulder, j.elbowA, d.wUpper);
   seg(f.nearFore, j.elbowA, j.handA, d.wFore);
   const head = f.head;
   head.setAttribute("cx", String(n(j.head.x)));
   head.setAttribute("cy", String(n(j.head.y)));
-  head.setAttribute("r", String(n(d.head - d.wHead / 2)));
-  head.setAttribute("stroke-width", String(n(d.wHead)));
+  head.setAttribute("r", String(n(d.head)));
   f.g.style.opacity = String(clamp01(o.opacity ?? 1));
   const shadow = f.shadow;
   if (o.groundY === undefined) {
@@ -196,7 +186,7 @@ export function drawFigure(
   const air = clamp01((o.groundY - Math.max(j.footA.y, j.footB.y)) / (0.5 * d.H));
   shadow.setAttribute("cx", String(n((j.footA.x + j.footB.x) / 2)));
   shadow.setAttribute("cy", String(n(o.groundY)));
-  shadow.setAttribute("rx", String(n(0.26 * d.H * (1 - 0.45 * air))));
+  shadow.setAttribute("rx", String(n(0.24 * d.H * (1 - 0.45 * air))));
   shadow.setAttribute("ry", String(n(0.032 * d.H)));
 }
 

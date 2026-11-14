@@ -148,17 +148,21 @@ export function gait(phase: number, run: number): Pose {
   const elbow = lerp(0.28, 1.45, run);
   // the knee folds while its leg swings forward, peaking just after it passes under the body
   const knee = (ph: number) => kneeBase + kneeSwing * Math.max(0, Math.cos(ph - 0.35)) ** 1.3;
+  // overlapping action: the forearm trails its upper arm by a fraction of a step, the trunk
+  // pitches a touch on each footfall and the head counters it, so nothing moves in lockstep
+  const lag = 0.55;
+  const fall = Math.cos(2 * phase);
   return {
-    lean: lerp(0.04, 0.26, run),
-    head: lerp(0, -0.14, run),
+    lean: lerp(0.04, 0.26, run) + lerp(0.015, 0.035, run) * fall,
+    head: lerp(0, -0.14, run) - lerp(0.03, 0.05, run) * fall,
     hipA: hip * s,
     kneeA: knee(phase),
     hipB: -hip * s,
     kneeB: knee(phase + Math.PI),
     shA: -arm * s * 0.9,
-    elA: elbow + 0.25 * Math.max(0, -s),
+    elA: elbow + lerp(0.2, 0.35, run) * Math.max(0, -Math.sin(phase - lag)),
     shB: arm * s * 0.9,
-    elB: elbow + 0.25 * Math.max(0, s),
+    elB: elbow + lerp(0.2, 0.35, run) * Math.max(0, Math.sin(phase - lag)),
   };
 }
 
@@ -174,39 +178,43 @@ export const runLift = (phase: number, run: number, H: number) =>
 export type Dims = ReturnType<typeof dims>;
 
 /**
- * Proportions for a figure `H` pixels tall (sole to crown), in the classic Pivot stick-figure
- * canon: long limbs, the head a ring sitting right on the torso, and segment weights that taper
- * from the trunk and thighs out to the forearms. Ratios are measured from that canon (a figure
- * about 251 units tall: torso 78, thigh 66, shin 63, upper arm 53, forearm 48, head 44 across;
- * weights 11, 11, 10, 9, 8, ring 8).
+ * Proportions for a figure `H` pixels tall (sole to crown), in the studio stick-figure style:
+ * one heavy, even line weight (about 7% of the height) with round ends, a large solid head
+ * (about a fifth of the height) sitting just above a long torso, shoulders set a little below
+ * the neck, and no feet. The weight is what makes a line figure read as a body rather than
+ * as a sketch.
  */
 export function dims(H: number) {
-  const w = (units: number) => Math.max(1.4, (units / 251) * H);
+  const w = (share: number) => Math.max(2, share * H);
   return {
     H,
-    head: 0.0876 * H,
-    gap: 0,
-    torso: 0.311 * H,
-    thigh: 0.263 * H,
-    shin: 0.251 * H,
-    upper: 0.211 * H,
-    fore: 0.191 * H,
-    foot: 0.07 * H,
-    /** Per-segment line weights. */
-    wTorso: w(11),
-    wThigh: w(11),
-    wShin: w(10),
-    wUpper: w(9),
-    wFore: w(8),
-    wHead: w(8),
+    head: 0.1 * H,
+    gap: 0.014 * H,
+    torso: 0.355 * H,
+    /** How far below the top of the torso the arms attach (share of the torso). */
+    shoulder: 0.14,
+    thigh: 0.225 * H,
+    shin: 0.222 * H,
+    upper: 0.175 * H,
+    fore: 0.165 * H,
+    foot: 0,
+    /** Per-segment line weights: nearly even, a touch heavier through the trunk and thighs. */
+    wTorso: w(0.078),
+    wThigh: w(0.074),
+    wShin: w(0.07),
+    wUpper: w(0.068),
+    wFore: w(0.066),
+    wHead: 0,
     /** The base weight props (batons, boxes, ropes) are drawn at. */
-    stroke: w(9),
+    stroke: w(0.05),
   };
 }
 
 export type Joints = {
   pelvis: Vec;
   chest: Vec;
+  /** Where the arms attach: a little below the top of the torso. */
+  shoulder: Vec;
   head: Vec;
   kneeA: Vec;
   footA: Vec;
@@ -307,14 +315,29 @@ export function solve(
   const footA = limb(kneeA, hipA - p.kneeA, d.shin, fA);
   const footB = limb(kneeB, hipB - p.kneeB, d.shin, fB);
 
+  const shoulder = vlerp(chest, pelvis, d.shoulder);
   const arm = (sh: number, el: number, fl: number, reach?: Reach): [Vec, Vec] => {
-    const elbow = limb(chest, sh, d.upper, fl);
+    const elbow = limb(shoulder, sh, d.upper, fl);
     const hand = limb(elbow, sh + el, d.fore, fl);
     if (!reach || (reach.w ?? 1) <= 0) return [elbow, hand];
     const goal = vlerp(hand, reach.target, clamp01(reach.w ?? 1));
-    return ik(chest, goal, d.upper, d.fore, (reach.bend ?? 1) * (fl < 0 ? -1 : 1));
+    return ik(shoulder, goal, d.upper, d.fore, (reach.bend ?? 1) * (fl < 0 ? -1 : 1));
   };
   const [elbowA, handA] = arm(open(p.shA, 0.1), p.elA, fA, o.reachA);
   const [elbowB, handB] = arm(open(p.shB, 0.1), p.elB, fB, o.reachB);
-  return { pelvis, chest, head, kneeA, footA, kneeB, footB, elbowA, handA, elbowB, handB, f };
+  return {
+    pelvis,
+    chest,
+    shoulder,
+    head,
+    kneeA,
+    footA,
+    kneeB,
+    footB,
+    elbowA,
+    handA,
+    elbowB,
+    handB,
+    f,
+  };
 }
