@@ -11,6 +11,7 @@ import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
 import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HeroCrew } from "@/components/landing/figures/hero-crew";
 import { HeroRelay } from "@/components/landing/figures/hero-relay";
 import { BlueArt } from "@/components/landing/landing-blue";
 import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
@@ -101,6 +102,7 @@ export default function HomePage() {
           className="relative flex min-h-svh flex-col justify-between overflow-hidden"
         >
           <HeroCanvasBackground />
+          <HeroCrew />
 
           {/* CONTINUITY outline: centred behind the capsule, running off the right edge */}
           <div
@@ -133,7 +135,7 @@ export default function HomePage() {
           {/* What-if readout (desktop): the same numbers as the simulator below */}
           <div className="pointer-events-none absolute inset-x-0 bottom-[25.8%] z-30 hidden lg:block">
             <div className="mx-auto flex max-w-7xl justify-end px-12">
-              <div className="pointer-events-auto">
+              <div className="pointer-events-auto" data-fig="readout">
                 <HeroReadout />
               </div>
             </div>
@@ -158,6 +160,7 @@ export default function HomePage() {
               <div className="hero-in hero-in-3 mt-9 flex flex-col items-center gap-4 lg:items-start">
                 <Link
                   href="#simulator"
+                  data-fig="cta"
                   className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold transition-colors"
                 >
                   <span className="bg-page/70 h-2 w-2 rounded-full" />

@@ -249,6 +249,8 @@ export type SolveOptions = {
   lift?: number;
   /** Pin the pelvis instead of standing on the ground (sitting). */
   pelvisY?: number;
+  /** Shift the head: looking at something (a cursor) without turning the body. */
+  gaze?: Vec;
   reachA?: Reach;
   reachB?: Reach;
 };
@@ -272,20 +274,28 @@ export function solve(
   };
   const tilt = p.lean + p.head;
   const r = d.gap + d.head;
-  const head = { x: chest.x + f * Math.sin(tilt) * r, y: chest.y - Math.cos(tilt) * r };
-  const kneeA = limb(pelvis, p.hipA, d.thigh, f);
-  const kneeB = limb(pelvis, p.hipB, d.thigh, f);
-  const footA = limb(kneeA, p.hipA - p.kneeA, d.shin, f);
-  const footB = limb(kneeB, p.hipB - p.kneeB, d.shin, f);
+  const head = {
+    x: chest.x + f * Math.sin(tilt) * r + (o.gaze?.x ?? 0),
+    y: chest.y - Math.cos(tilt) * r + (o.gaze?.y ?? 0),
+  };
+  // Facing 0 is the front view: the near limbs open to one side and the far limbs to the other,
+  // so a figure that turns to the viewer does not collapse into a line. Continuous in f.
+  const spread = (1 - Math.abs(f)) * 0.45;
+  const fA = f + spread;
+  const fB = f - spread;
+  const kneeA = limb(pelvis, p.hipA, d.thigh, fA);
+  const kneeB = limb(pelvis, p.hipB, d.thigh, fB);
+  const footA = limb(kneeA, p.hipA - p.kneeA, d.shin, fA);
+  const footB = limb(kneeB, p.hipB - p.kneeB, d.shin, fB);
 
-  const arm = (sh: number, el: number, reach?: Reach): [Vec, Vec] => {
-    const elbow = limb(chest, sh, d.upper, f);
-    const hand = limb(elbow, sh + el, d.fore, f);
+  const arm = (sh: number, el: number, fl: number, reach?: Reach): [Vec, Vec] => {
+    const elbow = limb(chest, sh, d.upper, fl);
+    const hand = limb(elbow, sh + el, d.fore, fl);
     if (!reach || (reach.w ?? 1) <= 0) return [elbow, hand];
     const goal = vlerp(hand, reach.target, clamp01(reach.w ?? 1));
-    return ik(chest, goal, d.upper, d.fore, (reach.bend ?? 1) * (f < 0 ? -1 : 1));
+    return ik(chest, goal, d.upper, d.fore, (reach.bend ?? 1) * (fl < 0 ? -1 : 1));
   };
-  const [elbowA, handA] = arm(p.shA, p.elA, o.reachA);
-  const [elbowB, handB] = arm(p.shB, p.elB, o.reachB);
+  const [elbowA, handA] = arm(p.shA, p.elA, fA, o.reachA);
+  const [elbowB, handB] = arm(p.shB, p.elB, fB, o.reachB);
   return { pelvis, chest, head, kneeA, footA, kneeB, footB, elbowA, handA, elbowB, handB };
 }

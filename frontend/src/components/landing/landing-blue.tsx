@@ -12,6 +12,8 @@ import {
 
 import { RelayMark } from "@/components/brand";
 import { FooterSitter } from "@/components/landing/figures/footer-sitter";
+import { Hauled } from "@/components/landing/figures/hauled";
+import { SignHolder } from "@/components/landing/figures/sign-holder";
 import { HeroSandbox } from "@/components/landing/hero-sandbox";
 import { Chip, Feature, body, panel } from "@/components/landing/landing-parts";
 import { MemoryReplayPreview } from "@/components/landing/memory-replay-preview";
@@ -602,30 +604,32 @@ export function BlueHalf() {
                   off, nothing breaks: you get labelled search and rule-based briefs.
                 </p>
               </div>
-              <div className="glass md:divide-line/10 mt-12 grid overflow-clip md:mt-14 md:grid-cols-3 md:divide-x">
-                {PRINCIPLES.map((p) => (
-                  <div key={p.num} className="reveal p-8">
-                    <span
-                      className="font-bebas text-7xl leading-none"
-                      style={{ color: "transparent", WebkitTextStroke: `1.5px ${p.tone}` }}
-                    >
-                      {p.num}
-                    </span>
-                    <h3 className="font-display text-strong mt-4 text-4xl">{p.title}</h3>
-                    <ul className="text-fg-mute mt-5 space-y-3 text-sm leading-relaxed">
-                      {p.points.map((t) => (
-                        <li key={t} className="flex gap-2.5">
-                          <span
-                            className="mt-2 h-1 w-1 shrink-0 rounded-full"
-                            style={{ background: p.tone }}
-                          />
-                          {t}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+              <Hauled className="mt-12 md:mt-14">
+                <div className="glass md:divide-line/10 grid overflow-clip md:grid-cols-3 md:divide-x">
+                  {PRINCIPLES.map((p) => (
+                    <div key={p.num} className="reveal p-8">
+                      <span
+                        className="font-bebas text-7xl leading-none"
+                        style={{ color: "transparent", WebkitTextStroke: `1.5px ${p.tone}` }}
+                      >
+                        {p.num}
+                      </span>
+                      <h3 className="font-display text-strong mt-4 text-4xl">{p.title}</h3>
+                      <ul className="text-fg-mute mt-5 space-y-3 text-sm leading-relaxed">
+                        {p.points.map((t) => (
+                          <li key={t} className="flex gap-2.5">
+                            <span
+                              className="mt-2 h-1 w-1 shrink-0 rounded-full"
+                              style={{ background: p.tone }}
+                            />
+                            {t}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </Hauled>
 
               <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 {EVAL.map((e) => (
@@ -657,30 +661,34 @@ export function BlueHalf() {
                   description="Continuity data is sensitive. Relay is built so the safe path is the only path, and the database enforces it, not just the application."
                 />
               </div>
-              <ul className="glass divide-line/10 divide-y px-7">
-                {SPEC.map((p) => {
-                  const Icon = p.icon;
-                  return (
-                    <li key={p.code} className="reveal flex gap-6 py-8">
-                      <div className="border-line/10 bg-line/[0.04] text-ac flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="text-fg-mute text-xs">{p.code}</span>
-                          <span className="text-ac border-ac/25 bg-ac/10 rounded-full border px-2.5 py-0.5 text-xs">
-                            {p.spec}
-                          </span>
+              <Hauled>
+                <ul className="glass divide-line/10 divide-y px-7">
+                  {SPEC.map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <li key={p.code} className="reveal flex gap-6 py-8">
+                        <div className="border-line/10 bg-line/[0.04] text-ac flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border">
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <h3 className="text-strong mt-3 text-xl leading-snug font-semibold sm:text-2xl">
-                          {p.title}
-                        </h3>
-                        <p className="text-fg-mute mt-3 text-[0.95rem] leading-relaxed">{p.desc}</p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-fg-mute text-xs">{p.code}</span>
+                            <span className="text-ac border-ac/25 bg-ac/10 rounded-full border px-2.5 py-0.5 text-xs">
+                              {p.spec}
+                            </span>
+                          </div>
+                          <h3 className="text-strong mt-3 text-xl leading-snug font-semibold sm:text-2xl">
+                            {p.title}
+                          </h3>
+                          <p className="text-fg-mute mt-3 text-[0.95rem] leading-relaxed">
+                            {p.desc}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Hauled>
             </div>
           </section>
 
@@ -778,9 +786,11 @@ export function BlueHalf() {
                   Open the sample workspace and run a handover end to end: replay the history,
                   simulate the absence, brief the successor, and check it took hold.
                 </p>
-                <div className="mt-10 flex flex-wrap items-center gap-4">
+                <div className="relative mt-10 flex flex-wrap items-center gap-4">
+                  <SignHolder />
                   <Link
                     href="/workspaces"
+                    data-fig="try-cta"
                     className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition-colors"
                   >
                     Open the sample workspace

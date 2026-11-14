@@ -1,5 +1,6 @@
 import { BlueHalf } from "@/components/landing/landing-blue";
 import { CardRider } from "@/components/landing/figures/card-rider";
+import { Hauled } from "@/components/landing/figures/hauled";
 import { SectionHeading } from "@/components/landing/section";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -144,29 +145,31 @@ export function LandingSections() {
             title="Three things go wrong"
             accent="every time."
           />
-          <ul className="glass divide-line/10 mt-12 divide-y px-4 py-2 md:mt-14 md:px-6">
-            {FAILURES.map((f) => (
-              <li
-                key={f.num}
-                className="reveal relative grid gap-6 overflow-clip rounded-xl px-2 py-10 md:grid-cols-[9rem_minmax(0,1.15fr)_minmax(0,1fr)] md:items-center md:gap-10 md:px-6"
-              >
-                <span
-                  aria-hidden
-                  className="lit-bg absolute inset-0 rounded-xl bg-gradient-to-r from-[#3B5BFF]/22 via-[#3B5BFF]/8 to-transparent"
-                />
-                <span className="lit-stroke font-display display-outline relative text-[7rem] leading-[0.8] tracking-wider">
-                  {f.num}
-                </span>
-                <div className="relative">
-                  <span className="text-ac text-xs">{f.tag}</span>
-                  <h3 className="text-strong mt-3 text-2xl leading-snug font-semibold sm:text-3xl">
-                    {f.headline}
-                  </h3>
-                </div>
-                <p className="lit-text relative text-[0.95rem] leading-relaxed">{f.desc}</p>
-              </li>
-            ))}
-          </ul>
+          <Hauled className="mt-12 md:mt-14">
+            <ul className="glass divide-line/10 divide-y px-4 py-2 md:px-6">
+              {FAILURES.map((f) => (
+                <li
+                  key={f.num}
+                  className="reveal relative grid gap-6 overflow-clip rounded-xl px-2 py-10 md:grid-cols-[9rem_minmax(0,1.15fr)_minmax(0,1fr)] md:items-center md:gap-10 md:px-6"
+                >
+                  <span
+                    aria-hidden
+                    className="lit-bg absolute inset-0 rounded-xl bg-gradient-to-r from-[#3B5BFF]/22 via-[#3B5BFF]/8 to-transparent"
+                  />
+                  <span className="lit-stroke font-display display-outline relative text-[7rem] leading-[0.8] tracking-wider">
+                    {f.num}
+                  </span>
+                  <div className="relative">
+                    <span className="text-ac text-xs">{f.tag}</span>
+                    <h3 className="text-strong mt-3 text-2xl leading-snug font-semibold sm:text-3xl">
+                      {f.headline}
+                    </h3>
+                  </div>
+                  <p className="lit-text relative text-[0.95rem] leading-relaxed">{f.desc}</p>
+                </li>
+              ))}
+            </ul>
+          </Hauled>
         </div>
       </section>
 

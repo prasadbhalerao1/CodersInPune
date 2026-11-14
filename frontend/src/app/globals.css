@@ -1224,6 +1224,16 @@ html {
   fill: var(--page);
   stroke: var(--strong);
 }
+.fig-rope {
+  fill: none;
+  stroke: color-mix(in srgb, var(--strong) 70%, transparent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 3 2;
+}
+.fig-arrow {
+  stroke: var(--ac);
+}
 
 /* Reduced transparency: solid surfaces. Last in the file so no later crystal rule overrides it. */
 @media (prefers-reduced-transparency: reduce) {
