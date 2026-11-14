@@ -34,7 +34,7 @@ function SandboxFigureScene({
   const sim = useRef<Sim | null>(null);
 
   const kick = useStage(svg, (dt, w, h, still) => {
-    const H = w < 640 ? 44 : 54;
+    const H = w < 640 ? 62 : 78;
     const d = dims(H);
     const ground = h - d.stroke / 2;
     const s = (sim.current ??= { sig: "", boxes: [], pose: THINK, dip: 0, t: 0 });
@@ -112,7 +112,7 @@ function SandboxFigureScene({
   useEffect(() => kick(), [kick, active, load, boxes, strain]);
 
   return (
-    <div aria-hidden className="relative h-16">
+    <div aria-hidden className="relative h-24">
       <svg
         ref={svg}
         className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"

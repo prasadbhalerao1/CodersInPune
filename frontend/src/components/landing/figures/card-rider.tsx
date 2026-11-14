@@ -2,19 +2,8 @@
 
 import { useRef } from "react";
 
-import {
-  STAND,
-  approach,
-  clamp01,
-  dims,
-  gait,
-  mix,
-  smooth,
-  solve,
-  stride,
-  wave,
-  type Pose,
-} from "./rig";
+import { STAND, approach, clamp01, dims, gait, mix, smooth, solve, stride, type Pose } from "./rig";
+import { wave } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, figure, useStage } from "./stage";
 
 type Stage = "wait" | "run" | "leap" | "hang" | "climb" | "wave" | "fade";
@@ -64,7 +53,7 @@ function CardRiderScene() {
   useStage(svg, (dt, w, h, still) => {
     const el = svg.current;
     if (!el) return;
-    const H = 54;
+    const H = 78;
     const d = dims(H);
     const s = (sim.current ??= {
       stage: "wait",
@@ -237,7 +226,7 @@ function CardRiderScene() {
     <svg
       ref={svg}
       aria-hidden
-      className="pointer-events-none absolute bottom-full left-0 hidden h-[3.5rem] w-[100vw] overflow-visible lg:block"
+      className="pointer-events-none absolute bottom-full left-0 hidden h-[5.5rem] w-[100vw] overflow-visible lg:block"
     >
       <FigureGlyph name="r" />
     </svg>

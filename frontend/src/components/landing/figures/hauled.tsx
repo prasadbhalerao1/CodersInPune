@@ -2,7 +2,8 @@
 
 import { useRef, type ReactNode } from "react";
 
-import { STAND, approach, clamp01, dims, mix, smooth, solve, type Pose, type Vec } from "./rig";
+import { STAND, approach, clamp01, dims, mix, solve, type Pose, type Vec } from "./rig";
+import { haul } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, figure, useStage } from "./stage";
 
 const HAULS = 5;
@@ -41,7 +42,7 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
     const el = svg.current;
     const card = box.current;
     if (!el || !card) return;
-    const H = 54;
+    const H = 80;
     const d = dims(H);
     const s = (sim.current ??= { top: 0, pose: STAND, ph: 0, ty: 0, rope: 1 });
     if (dt === 0 || !s.top) {
@@ -51,20 +52,21 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
     const vh = window.innerHeight;
     const top = s.top - window.scrollY;
     const p = still ? 1 : clamp01((vh * 0.92 - top) / (vh * 0.42));
-    // hauls: the card holds, then jerks up, HAULS times
+    // hauls: each one is a keyed cycle (reach, grip, drive back, recover); the card comes up
+    // only while the rope is being drawn in, so it moves in jerks, in time with the body
     const k = Math.min(HAULS - 1e-6, p * HAULS);
     const step = Math.floor(k);
-    const pe = p >= 1 ? 1 : (step + smooth((k - step - 0.4) / 0.6)) / HAULS;
+    const cycle = haul(k - step);
+    const pe = p >= 1 ? 1 : (step + cycle.draw) / HAULS;
     s.ty = (1 - pe) * DROP;
     card.style.transform = s.ty > 0.5 ? `translate3d(0, ${s.ty.toFixed(1)}px, 0)` : "";
 
     const ground = h - d.stroke / 2;
     const done = p >= 1;
     const corner: Vec = { x: w - 0.08 * H, y: h + s.ty + d.stroke };
-    const x = Math.max(1.6 * H, 0.18 * w);
-    const target = done ? STAND : PULL;
-    const breathe = { ...target, lean: target.lean + (done ? 0.01 : 0.03) * Math.sin(k * 7) };
-    s.pose = still ? target : mix(s.pose, breathe, approach(dt, 9));
+    const x = Math.max(1.6 * H, 0.42 * w);
+    const target = done ? STAND : still ? PULL : cycle.pose;
+    s.pose = still ? target : mix(s.pose, target, approach(dt, done ? 6 : 18));
     s.rope += ((done ? 0 : 1) - s.rope) * (still ? 1 : approach(dt, 6));
 
     // hands alternate along the rope: hand over hand, in time with the hauls
@@ -73,11 +75,11 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
       x: chestGuess.x + (corner.x - chestGuess.x) * t,
       y: chestGuess.y + (corner.y - chestGuess.y) * t,
     });
-    const ph = k * Math.PI * 2;
+    // the lead hand reaches up the rope for the grip, the trailing hand holds closer in
     const reachLen =
       (d.upper + d.fore) / Math.hypot(corner.x - chestGuess.x, corner.y - chestGuess.y);
-    const a = reachLen * (0.55 + 0.3 * Math.sin(ph));
-    const b = reachLen * (0.55 + 0.3 * Math.sin(ph + Math.PI));
+    const a = reachLen * 0.88 * cycle.reach;
+    const b = reachLen * 0.5;
     const j = solve(s.pose, d, x, ground, 1, {
       reachA: done ? undefined : { target: along(a), w: s.rope, bend: -1 },
       reachB: done ? undefined : { target: along(b), w: s.rope, bend: -1 },
@@ -101,7 +103,7 @@ function HauledScene({ children, className }: { children: ReactNode; className?:
       <svg
         ref={svg}
         aria-hidden
-        className="pointer-events-none absolute bottom-full left-0 hidden h-16 w-full overflow-visible md:block"
+        className="pointer-events-none absolute bottom-full left-0 hidden h-24 w-full overflow-visible md:block"
       >
         <path ref={rope} className="fig-rope" />
         <FigureGlyph name="h" />

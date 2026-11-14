@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-import { CHEER, STAND, approach, dims, mix, sit, solve, type Pose, type Vec } from "./rig";
+import { approach, dims, mix, sit, solve, type Pose, type Vec } from "./rig";
+import { STOMP_TIME, cheer, stamping, stomp } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, drawRect, figure, useStage } from "./stage";
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -36,7 +37,7 @@ function SignHolderScene() {
     const el = svg.current;
     const btn = el?.parentElement?.querySelector<HTMLElement>('[data-fig="try-cta"]');
     if (!el || !btn) return;
-    const H = 40;
+    const H = 58;
     const d = dims(H);
     const s = (sim.current ??= {
       t: 0,
@@ -69,7 +70,7 @@ function SignHolderScene() {
       };
       if (s.st === "sit" && s.hover) go("cheer");
       else if (s.st === "sit" && near) go("stomp");
-      else if (s.st === "stomp" && (s.stt > 1.4 || s.hover)) go(s.hover ? "cheer" : "sit");
+      else if (s.st === "stomp" && (s.stt > STOMP_TIME || s.hover)) go(s.hover ? "cheer" : "sit");
       else if (s.st === "cheer" && !s.hover && s.stt > 0.6) go("sit");
     }
 
@@ -81,31 +82,15 @@ function SignHolderScene() {
       s.pose = still ? p : mix(s.pose, p, approach(dt, 8));
       j = solve(s.pose, d, ledge.x, ledge.y, 1, { pelvisY: ledge.y - d.stroke * 0.6 });
     } else if (s.st === "stomp") {
-      // up on the feet, stamping with the near foot three times
-      const k = s.stt / 1.4;
-      const stamp = Math.max(0, Math.sin(k * Math.PI * 6)) * (k < 0.9 ? 1 : 0);
-      const p: Pose = {
-        ...STAND,
-        ...HOLD_UP,
-        hipA: 0.25 + 0.9 * stamp,
-        kneeA: 0.1 + 1.4 * stamp,
-        lean: 0.08,
-      };
-      s.pose = mix(s.pose, p, approach(dt, 14));
-      dip = stamp < 0.15 && k > 0.1 && k < 0.9 ? 2.5 : 0;
+      // up on the feet, three keyed stamps; the button dips as each one lands
+      const p: Pose = { ...stomp(s.stt), ...HOLD_UP };
+      s.pose = mix(s.pose, p, approach(dt, 20));
+      dip = stamping(s.stt) ? 3 : 0;
       j = solve(s.pose, d, ledge.x + 0.1 * H, ledge.y, 1);
     } else {
-      const p: Pose = {
-        ...CHEER,
-        shB: 2.7,
-        elB: 0.2,
-        shA: 2.95 + 0.1 * Math.sin(s.stt * 11),
-        lean: 0,
-      };
-      s.pose = mix(s.pose, p, approach(dt, 12));
-      j = solve(s.pose, d, ledge.x + 0.1 * H, ledge.y, 1, {
-        lift: Math.abs(Math.sin(s.stt * 7)) * 0.18 * H,
-      });
+      const ch = cheer(s.stt);
+      s.pose = mix(s.pose, { ...ch.pose, ...HOLD_UP }, approach(dt, 16));
+      j = solve(s.pose, d, ledge.x + 0.1 * H, ledge.y, 1, { lift: ch.lift * H });
     }
     btn.style.transform = dip ? `translate3d(0, ${dip}px, 0)` : "";
     drawFigure(figure(el, "s"), j, d, { groundY: s.st === "sit" ? undefined : ledge.y });

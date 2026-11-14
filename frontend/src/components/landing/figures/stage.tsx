@@ -83,13 +83,24 @@ export function useStage(ref: RefObject<SVGSVGElement | null>, frame: Frame) {
   return useCallback(() => kickRef.current(), []);
 }
 
-export type FigureEls = {
-  g: SVGGElement;
-  shadow: SVGEllipseElement;
-  far: SVGPathElement;
-  near: SVGPathElement;
-  head: SVGCircleElement;
-};
+const PARTS = [
+  "farThigh",
+  "farShin",
+  "farUpper",
+  "farFore",
+  "torso",
+  "nearThigh",
+  "nearShin",
+  "nearUpper",
+  "nearFore",
+  "head",
+] as const;
+type Part = (typeof PARTS)[number];
+
+export type FigureEls = { g: SVGGElement; shadow: SVGEllipseElement } & Record<
+  Part,
+  SVGPathElement | SVGCircleElement
+>;
 
 const cache = new WeakMap<SVGSVGElement, Map<string, FigureEls>>();
 
@@ -102,29 +113,48 @@ export function figure(svg: SVGSVGElement | null, name: string): FigureEls | nul
   if (hit?.g.isConnected) return hit;
   const g = svg.querySelector<SVGGElement>(`g[data-fig="${name}"]`);
   const shadow = g?.querySelector<SVGEllipseElement>(".fig-shadow");
-  const far = g?.querySelector<SVGPathElement>(".fig-far");
-  const near = g?.querySelector<SVGPathElement>(".fig-near");
-  const head = g?.querySelector<SVGCircleElement>(".fig-head");
-  if (!g || !shadow || !far || !near || !head) return null;
-  const els = { g, shadow, far, near, head };
+  if (!g || !shadow) return null;
+  const els = { g, shadow } as FigureEls;
+  for (const part of PARTS) {
+    const el = g.querySelector<SVGPathElement | SVGCircleElement>(`[data-part="${part}"]`);
+    if (!el) return null;
+    els[part] = el;
+  }
   byName.set(name, els);
   return els;
 }
 
-/** One figure: a ground shadow, the far limbs (dimmed for depth), the near limbs and torso, a head. */
+/**
+ * One figure, drawn back to front like a cut-out: the ground shadow, the far leg and arm (dimmed,
+ * for depth), the torso, the near leg and arm, the head as a ring. Every segment is its own
+ * stroke with its own weight, heavier at the trunk and thighs and lighter at the forearms.
+ */
 export function FigureGlyph({ name }: { name: string }) {
   return (
     <g data-fig={name} className="fig-g">
       <ellipse className="fig-shadow" />
-      <path className="fig fig-far" />
-      <path className="fig fig-near" />
-      <circle className="fig-head" />
+      <g className="fig-far">
+        <path data-part="farThigh" className="fig" />
+        <path data-part="farShin" className="fig" />
+        <path data-part="farUpper" className="fig" />
+        <path data-part="farFore" className="fig" />
+      </g>
+      <path data-part="torso" className="fig" />
+      <path data-part="nearThigh" className="fig" />
+      <path data-part="nearShin" className="fig" />
+      <path data-part="nearUpper" className="fig" />
+      <path data-part="nearFore" className="fig" />
+      <circle data-part="head" className="fig-head" />
     </g>
   );
 }
 
 const n = (v: number) => Math.round(v * 10) / 10;
 const pt = (p: Vec) => `${n(p.x)} ${n(p.y)}`;
+const seg = (el: Element, a: Vec, b: Vec, w: number, tail = "") => {
+  el.setAttribute("d", `M${pt(a)}L${pt(b)}${tail}`);
+  el.setAttribute("stroke-width", String(n(w)));
+};
 
 export function drawFigure(
   f: FigureEls | null,
@@ -133,32 +163,41 @@ export function drawFigure(
   o: { opacity?: number; groundY?: number } = {},
 ) {
   if (!f) return;
-  const { g, far, near, head, shadow } = f;
-  far.setAttribute(
-    "d",
-    `M${pt(j.footB)}L${pt(j.kneeB)}L${pt(j.pelvis)}M${pt(j.chest)}L${pt(j.elbowB)}L${pt(j.handB)}`,
-  );
-  near.setAttribute(
-    "d",
-    `M${pt(j.footA)}L${pt(j.kneeA)}L${pt(j.pelvis)}L${pt(j.chest)}L${pt(j.elbowA)}L${pt(j.handA)}`,
-  );
-  const sw = String(n(d.stroke));
-  far.setAttribute("stroke-width", sw);
-  near.setAttribute("stroke-width", sw);
+  // feet point the way the figure faces and shorten as it turns to the viewer; a planted foot
+  // lies flat, a lifted one hangs from the ankle
+  const side = Math.sign(j.f) || 1;
+  const reach = d.foot * Math.max(0.35, Math.abs(j.f));
+  const foot = (knee: Vec, ankle: Vec) => {
+    const up = o.groundY === undefined ? 0.5 : clamp01((o.groundY - ankle.y) / (0.3 * d.H));
+    const shinX = (ankle.x - knee.x) / (Math.hypot(ankle.x - knee.x, ankle.y - knee.y) || 1);
+    return `l${n(side * reach * (1 - 0.35 * up))} ${n(reach * (0.15 + 0.5 * up) - shinX * side * reach * 0.2 * up)}`;
+  };
+  seg(f.farThigh, j.pelvis, j.kneeB, d.wThigh);
+  seg(f.farShin, j.kneeB, j.footB, d.wShin, foot(j.kneeB, j.footB));
+  seg(f.farUpper, j.chest, j.elbowB, d.wUpper);
+  seg(f.farFore, j.elbowB, j.handB, d.wFore);
+  seg(f.torso, j.pelvis, j.chest, d.wTorso);
+  seg(f.nearThigh, j.pelvis, j.kneeA, d.wThigh);
+  seg(f.nearShin, j.kneeA, j.footA, d.wShin, foot(j.kneeA, j.footA));
+  seg(f.nearUpper, j.chest, j.elbowA, d.wUpper);
+  seg(f.nearFore, j.elbowA, j.handA, d.wFore);
+  const head = f.head;
   head.setAttribute("cx", String(n(j.head.x)));
   head.setAttribute("cy", String(n(j.head.y)));
-  head.setAttribute("r", String(n(d.head)));
-  g.style.opacity = String(clamp01(o.opacity ?? 1));
+  head.setAttribute("r", String(n(d.head - d.wHead / 2)));
+  head.setAttribute("stroke-width", String(n(d.wHead)));
+  f.g.style.opacity = String(clamp01(o.opacity ?? 1));
+  const shadow = f.shadow;
   if (o.groundY === undefined) {
     shadow.setAttribute("rx", "0");
     return;
   }
-  // the shadow tightens as the figure leaves the ground
+  // the shadow sits under the feet and tightens as the figure leaves the ground
   const air = clamp01((o.groundY - Math.max(j.footA.y, j.footB.y)) / (0.5 * d.H));
-  shadow.setAttribute("cx", String(n(j.pelvis.x)));
+  shadow.setAttribute("cx", String(n((j.footA.x + j.footB.x) / 2)));
   shadow.setAttribute("cy", String(n(o.groundY)));
-  shadow.setAttribute("rx", String(n(0.24 * d.H * (1 - 0.4 * air))));
-  shadow.setAttribute("ry", String(n(0.035 * d.H)));
+  shadow.setAttribute("rx", String(n(0.26 * d.H * (1 - 0.45 * air))));
+  shadow.setAttribute("ry", String(n(0.032 * d.H)));
 }
 
 /** A baton gripped across the hand, square to the forearm. */

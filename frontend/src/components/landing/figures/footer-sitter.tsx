@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-import { approach, dims, mix, sit, smooth, solve, wave, type Vec } from "./rig";
+import { approach, dims, mix, sit, smooth, solve, type Vec } from "./rig";
+import { wave } from "./gestures";
 import { FigureGlyph, drawFigure, useStage, figure, FIGURES_ON } from "./stage";
 
 type Ledge = { x: number; y: number; size: number };
@@ -28,7 +29,7 @@ function FooterSitterScene() {
     const shown = still ? 1 : s.arrive < 0 ? 0 : smooth(s.arrive / 0.5);
     s.waveW += ((s.near && !still ? 1 : 0) - s.waveW) * approach(dt, 6);
 
-    const H = Math.min(70, Math.max(28, l.size * 0.17));
+    const H = Math.min(100, Math.max(38, l.size * 0.24));
     const d = dims(H);
     const f = 1;
     let p = sit(still ? 0 : s.t);

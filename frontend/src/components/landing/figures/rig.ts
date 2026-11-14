@@ -125,11 +125,6 @@ export const PRESENT = pose({ lean: 0.06, head: 0.08, shA: 1.2, elA: 0.28, shB: 
 /** Baton held up. */
 export const CHEER = pose({ lean: -0.04, head: -0.22, shA: 2.95, elA: 0.12, shB: -0.12, elB: 0.3 });
 
-export const wave = (t: number): Pose =>
-  pose({ head: -0.06, shA: 2.7, elA: 0.45 + 0.4 * Math.sin(t * 9) });
-
-export const nod = (t: number): Pose => pose({ head: 0.08 + 0.2 * Math.max(0, Math.sin(t * 5.5)) });
-
 /** Sitting on a ledge with the legs over the edge, swinging out of step. */
 export const sit = (t: number): Pose =>
   pose({
@@ -178,18 +173,34 @@ export const runLift = (phase: number, run: number, H: number) =>
 
 export type Dims = ReturnType<typeof dims>;
 
-/** Proportions for a figure `H` pixels tall (sole to crown), pictogram style. */
+/**
+ * Proportions for a figure `H` pixels tall (sole to crown), in the classic Pivot stick-figure
+ * canon: long limbs, the head a ring sitting right on the torso, and segment weights that taper
+ * from the trunk and thighs out to the forearms. Ratios are measured from that canon (a figure
+ * about 251 units tall: torso 78, thigh 66, shin 63, upper arm 53, forearm 48, head 44 across;
+ * weights 11, 11, 10, 9, 8, ring 8).
+ */
 export function dims(H: number) {
+  const w = (units: number) => Math.max(1.4, (units / 251) * H);
   return {
     H,
-    head: 0.085 * H,
-    gap: 0.03 * H,
-    torso: 0.3 * H,
-    thigh: 0.235 * H,
-    shin: 0.235 * H,
-    upper: 0.165 * H,
-    fore: 0.155 * H,
-    stroke: Math.max(1.6, 0.052 * H),
+    head: 0.0876 * H,
+    gap: 0,
+    torso: 0.311 * H,
+    thigh: 0.263 * H,
+    shin: 0.251 * H,
+    upper: 0.211 * H,
+    fore: 0.191 * H,
+    foot: 0.07 * H,
+    /** Per-segment line weights. */
+    wTorso: w(11),
+    wThigh: w(11),
+    wShin: w(10),
+    wUpper: w(9),
+    wFore: w(8),
+    wHead: w(8),
+    /** The base weight props (batons, boxes, ropes) are drawn at. */
+    stroke: w(9),
   };
 }
 
@@ -205,6 +216,8 @@ export type Joints = {
   handA: Vec;
   elbowB: Vec;
   handB: Vec;
+  /** The facing the joints were solved with (1 right, -1 left, 0 towards the viewer). */
+  f: number;
 };
 
 const limb = (o: Vec, angle: number, len: number, f: number): Vec => ({
@@ -280,13 +293,19 @@ export function solve(
   };
   // Facing 0 is the front view: the near limbs open to one side and the far limbs to the other,
   // so a figure that turns to the viewer does not collapse into a line. Continuous in f.
-  const spread = (1 - Math.abs(f)) * 0.45;
+  const spread = 1 - Math.abs(f);
   const fA = f + spread;
   const fB = f - spread;
-  const kneeA = limb(pelvis, p.hipA, d.thigh, fA);
-  const kneeB = limb(pelvis, p.hipB, d.thigh, fB);
-  const footA = limb(kneeA, p.hipA - p.kneeA, d.shin, fA);
-  const footB = limb(kneeB, p.hipB - p.kneeB, d.shin, fB);
+  // Seen from the front, limbs open outwards: blend each angle towards its magnitude plus a
+  // little spread as the figure turns to the viewer. In side view (|f| = 1) this is a no-op.
+  const front = 1 - Math.abs(f);
+  const open = (angle: number, extra: number) => lerp(angle, Math.abs(angle) + extra, front);
+  const hipA = open(p.hipA, 0.1);
+  const hipB = open(p.hipB, 0.1);
+  const kneeA = limb(pelvis, hipA, d.thigh, fA);
+  const kneeB = limb(pelvis, hipB, d.thigh, fB);
+  const footA = limb(kneeA, hipA - p.kneeA, d.shin, fA);
+  const footB = limb(kneeB, hipB - p.kneeB, d.shin, fB);
 
   const arm = (sh: number, el: number, fl: number, reach?: Reach): [Vec, Vec] => {
     const elbow = limb(chest, sh, d.upper, fl);
@@ -295,7 +314,7 @@ export function solve(
     const goal = vlerp(hand, reach.target, clamp01(reach.w ?? 1));
     return ik(chest, goal, d.upper, d.fore, (reach.bend ?? 1) * (fl < 0 ? -1 : 1));
   };
-  const [elbowA, handA] = arm(p.shA, p.elA, fA, o.reachA);
-  const [elbowB, handB] = arm(p.shB, p.elB, fB, o.reachB);
-  return { pelvis, chest, head, kneeA, footA, kneeB, footB, elbowA, handA, elbowB, handB };
+  const [elbowA, handA] = arm(open(p.shA, 0.1), p.elA, fA, o.reachA);
+  const [elbowB, handB] = arm(open(p.shB, 0.1), p.elB, fB, o.reachB);
+  return { pelvis, chest, head, kneeA, footA, kneeB, footB, elbowA, handA, elbowB, handB, f };
 }

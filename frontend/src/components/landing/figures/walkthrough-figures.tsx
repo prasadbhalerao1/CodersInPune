@@ -12,17 +12,16 @@ import {
   dims,
   gait,
   mix,
-  nod,
   smooth,
   solve,
   stride,
   vlerp,
-  wave,
   type Joints,
   type Pose,
   type Reach,
   type Vec,
 } from "./rig";
+import { nod, wave } from "./gestures";
 import {
   FigureGlyph,
   drawBaton,
@@ -57,7 +56,7 @@ function WalkthroughFiguresScene({ step }: { step: number }) {
   const sim = useRef<Sim | null>(null);
 
   const kick = useStage(svg, (dt, w, h, still) => {
-    const H = w < 640 ? 42 : 52;
+    const H = w < 640 ? 60 : 76;
     const dm = dims(H);
     const ground = h - dm.stroke / 2;
     const s = (sim.current ??= {
@@ -176,7 +175,7 @@ function WalkthroughFiguresScene({ step }: { step: number }) {
   useEffect(() => kick(), [kick, step]);
 
   return (
-    <div aria-hidden className="relative h-16">
+    <div aria-hidden className="relative h-24">
       <svg
         ref={svg}
         className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"

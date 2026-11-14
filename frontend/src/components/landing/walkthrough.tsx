@@ -93,7 +93,7 @@ export function Walkthrough() {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="glass min-w-0 self-start overflow-clip p-2 lg:mt-16">
+      <div className="glass min-w-0 self-start overflow-clip p-2 lg:mt-24">
         <ol className="flex gap-2 overflow-x-auto lg:flex-col lg:gap-1" aria-label="Workflow steps">
           {STEPS.map((s, i) => (
             <li key={s.key}>

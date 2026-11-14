@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 
 import {
-  CHEER,
   STAND,
   approach,
   clamp01,
@@ -13,10 +12,10 @@ import {
   smooth,
   solve,
   stride,
-  wave,
   type Pose,
   type Vec,
 } from "./rig";
+import { BECKON_TIME, KNOCK_TIME, SHOVE_TIME, beckon, cheer, knock, shove, wave } from "./gestures";
 import { FigureGlyph, FIGURES_ON, drawFigure, figure, useStage } from "./stage";
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -81,7 +80,6 @@ const STARTLE: Pose = {
   hipB: 0.35,
   kneeB: 0.4,
 };
-const KNOCK: Pose = { ...FRONT, shA: 1.75, elA: 1.5, head: -0.08 };
 
 /**
  * The hero's crew, and the one scene that talks to the viewer. Two figures carry the readout
@@ -98,7 +96,7 @@ function HeroCrewScene() {
   useStage(svg, (dt, w, h, still) => {
     const el = svg.current;
     if (!el) return;
-    const H = w < 1280 ? 50 : 58;
+    const H = w < 1280 ? 72 : 86;
     const d = dims(H);
     const s = (sim.current ??= {
       t: 0,
@@ -242,7 +240,7 @@ function HeroCrewScene() {
       } else if (s.greet === "point" && s.gt > 1.1) {
         s.greet = "shove";
         s.gt = 0;
-      } else if (s.greet === "shove" && s.gt > 0.8) {
+      } else if (s.greet === "shove" && s.gt > SHOVE_TIME) {
         s.greet = "idle";
         s.gt = 0;
         s.idleSince = s.t;
@@ -266,10 +264,10 @@ function HeroCrewScene() {
       } else if (s.greet === "flinch" && s.gt > 0.9) {
         s.greet = "idle";
         s.gt = 0;
-      } else if (s.greet === "beckon" && s.gt > 1.8) {
+      } else if (s.greet === "beckon" && s.gt > BECKON_TIME) {
         s.greet = "idle";
         s.gt = 0;
-      } else if (s.greet === "knock" && s.gt > 2.2) {
+      } else if (s.greet === "knock" && s.gt > KNOCK_TIME) {
         s.greet = "idle";
         s.gt = 0;
         s.idleSince = s.t - 2; // knock again sooner if they still do not move
@@ -279,64 +277,53 @@ function HeroCrewScene() {
       let fTarget = 0;
       let reachA: { target: Vec; w: number; bend?: number } | undefined;
       let xTarget = standX;
-      let shove = 0;
+      let push = 0;
+      let hop = 0;
       if (s.greet === "walk") {
         pose = gait(s.a.ph, 0.75);
         fTarget = -1;
       } else if (s.greet === "wave") {
-        pose = {
-          ...wave(s.gt),
-          hipA: FRONT.hipA,
-          hipB: FRONT.hipB,
-          shB: FRONT.shB,
-          elB: FRONT.elB,
-          lean: 0,
-        };
+        pose = { ...FRONT, ...pick(wave(s.gt)) };
       } else if (s.greet === "point") {
         pose = { ...FRONT, head: 0.05 };
         reachA = { target: ctaMid, w: smooth(s.gt / 0.4), bend: -1 };
         fTarget = -0.35;
       } else if (s.greet === "shove") {
-        const k = s.gt / 0.8;
-        shove = Math.sin(Math.PI * clamp01((k - 0.25) / 0.5)) * 9;
-        pose = { ...FRONT, lean: 0.25 * Math.sin(Math.PI * k), head: 0.1 };
-        reachA = { target: { x: ctaMid.x - shove, y: ctaMid.y }, w: 1, bend: -1 };
+        // wind back, drive through, hold, recover; the button travels with the hand
+        const sh = shove(s.gt);
+        pose = { ...FRONT, ...pick(sh.pose) };
+        push = sh.push;
+        const contact = smooth(clamp01(s.gt / 0.3));
+        reachA = { target: { x: ctaMid.x - push * 12, y: ctaMid.y }, w: contact * 0.95, bend: -1 };
         fTarget = -0.6;
-        xTarget = standX - 0.15 * H;
+        xTarget = standX - 0.1 * H - push * 0.12 * H;
       } else if (s.greet === "flinch") {
         const k = s.gt / 0.9;
         pose = mix(STARTLE, FRONT, smooth((k - 0.55) / 0.45));
         const away = s.pointer && s.pointer.x < s.a.x ? 1 : -1;
         xTarget = standX + away * 0.45 * H * Math.sin(Math.PI * Math.min(1, k * 1.3));
       } else if (s.greet === "cheer") {
-        pose = { ...CHEER, hipA: FRONT.hipA, hipB: FRONT.hipB, shB: 2.75, elB: 0.15, lean: 0 };
-        pose = {
-          ...pose,
-          shA: 2.95 + 0.15 * Math.sin(s.gt * 12),
-          shB: 2.75 - 0.15 * Math.sin(s.gt * 12),
-        };
+        const ch = cheer(s.gt);
+        pose = ch.pose;
+        hop = ch.lift * H;
       } else if (s.greet === "beckon") {
-        // "come on down": the arm sweeps from raised to pointing down, twice
-        const sweep = 0.5 - 0.5 * Math.cos(s.gt * 7);
-        pose = { ...FRONT, shA: 2.6 - 1.7 * sweep, elA: 0.3 + 0.5 * sweep, head: 0.2 * sweep };
+        pose = { ...FRONT, ...pick(beckon(s.gt)) };
       } else {
-        // knock: forearm raps against the glass, three times
-        const rap = Math.max(0, Math.sin(s.gt * 12)) * (s.gt < 1.7 ? 1 : 0);
-        pose = { ...KNOCK, elA: KNOCK.elA - 0.5 * rap, lean: 0.12 * (s.gt < 1.7 ? 1 : 0) };
+        pose = { ...FRONT, ...pick(knock(s.gt)) };
       }
       if (s.greet !== "walk") s.a.x += (xTarget - s.a.x) * approach(dt, 10);
       s.a.f += (fTarget - s.a.f) * approach(dt, 8);
       s.a.pose = still ? pose : mix(s.a.pose, pose, approach(dt, s.greet === "walk" ? 16 : 9));
 
       // the real button moves when shoved
-      ctaEl.style.transform = shove > 0.3 ? `translate3d(${(-shove).toFixed(1)}px, 0, 0)` : "";
+      ctaEl.style.transform = push > 0.02 ? `translate3d(${(-push * 12).toFixed(1)}px, 0, 0)` : "";
       const gaze =
         s.pointer && (s.greet === "idle" || s.greet === "cheer" || s.greet === "beckon")
           ? gazeTo(s.pointer, { x: s.a.x, y: groundCta - 0.9 * H }, H)
           : s.greet === "knock"
             ? { x: 0, y: 0.03 * H }
             : undefined;
-      const ja = solve(s.a.pose, d, s.a.x, groundCta, s.a.f, { reachA, gaze });
+      const ja = solve(s.a.pose, d, s.a.x, groundCta, s.a.f, { reachA, gaze, lift: hop });
       drawFigure(figure(el, "a"), ja, d, { groundY: groundCta });
     }
   });
@@ -391,6 +378,11 @@ function HeroCrewScene() {
       <FigureGlyph name="a" />
     </svg>
   );
+}
+
+/** The upper body of a keyed pose: arm, lean and head (the legs keep the stance). */
+function pick(p: Pose): Partial<Pose> {
+  return { shA: p.shA, elA: p.elA, lean: p.lean, head: p.head };
 }
 
 /** A small head shift towards a point: looking at it. */

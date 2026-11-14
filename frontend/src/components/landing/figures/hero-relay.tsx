@@ -14,11 +14,11 @@ import {
   solve,
   stride,
   vlerp,
-  wave,
   type Dims,
   type Joints,
   type Pose,
 } from "./rig";
+import { wave } from "./gestures";
 import { FigureGlyph, drawBaton, drawFigure, useStage, figure, FIGURES_ON } from "./stage";
 
 type Runner = { x: number; v: number; ph: number; op: number };
@@ -33,7 +33,7 @@ type Sim = {
   clock: number;
 };
 
-const sizeFor = (w: number) => (w < 640 ? 40 : w < 1024 ? 50 : 60);
+const sizeFor = (w: number) => (w < 640 ? 54 : w < 1024 ? 70 : 86);
 
 /**
  * "Pass the accountability", acted out along the top edge of the hero's bottom bar: a runner
@@ -156,7 +156,7 @@ function HeroRelayScene() {
     <svg
       ref={svg}
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 bottom-full h-24 w-full overflow-visible"
+      className="pointer-events-none absolute inset-x-0 bottom-full h-32 w-full overflow-visible"
     >
       <FigureGlyph name="a" />
       <FigureGlyph name="b" />
