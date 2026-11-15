@@ -309,8 +309,15 @@ def settled_state(run: AgentRun) -> str:
 
 
 async def start_analysis(
-    access: WorkspaceAccess, case_id: uuid.UUID, settings: Settings, jobs: procrastinate.App
+    access: WorkspaceAccess,
+    case_id: uuid.UUID,
+    settings: Settings,
+    jobs: procrastinate.App | None,
+    *,
+    driver: str = "queue",
 ) -> AgentRun:
+    """Record the evidence and rule-based findings, then hand the AI steps to `driver`:
+    the job queue, or the Autopilot, which runs them in its own request (`run_step`)."""
     authorize(access, Permission.AI_RUN)
     session = access.session
     case = await continuity._load(access, case_id)
@@ -342,6 +349,7 @@ async def start_analysis(
             "partial_sources": pool.partial_sources,
             "steps": steps,
             "ai": "on" if steps else ("off" if gateway.configured else "not_configured"),
+            "driver": driver,
         },
         started_at=_now(),
     )
@@ -353,9 +361,9 @@ async def start_analysis(
     _event(session, run, "deterministic", "claims_recorded", claims=len(claims), evidence=len(ids))
     if pool.partial_sources:
         _event(session, run, "evidence", "partial_sources", "warning", sources=pool.partial_sources)
-    if steps:
+    if steps and jobs is not None:
         await _queue(session, jobs, run)
-    else:
+    elif not steps:
         finish(run, settled_state(run))
     audit.record(
         session,
@@ -406,11 +414,31 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     if _now() - started > RUN_TIME_LIMIT:
         finish(run, "timed_out", "run_time_limit")
         return
+    if not await run_step(session, run, ctx.settings):
+        return
+    if run.step < len(steps) and ctx.jobs is not None:
+        await _queue(session, ctx.jobs, run)
+    else:
+        failed = run.checkpoint.get("failed_steps", [])
+        all_failed = failed and len(failed) == len(steps)
+        finish(run, "failed" if all_failed else settled_state(run))
+
+
+def checkpoint_step(run: AgentRun) -> str | None:
+    """The AI step a run will execute next, or None when all have run."""
+    steps: list[str] = run.checkpoint.get("steps", [])
+    return steps[run.step] if run.step < len(steps) else None
+
+
+async def run_step(session: AsyncSession, run: AgentRun, settings: Settings) -> bool:
+    """Run the analysis step `run.step` and advance. False when the run stopped meanwhile
+    (cancelled, or timed out); the queue handler and the Autopilot both drive runs with it."""
+    steps: list[str] = run.checkpoint.get("steps", [])
     name = steps[run.step]
     spec = capability(name)
     if not await ai_enabled(session, name):
         _event(session, run, name, "skipped_disabled")
-    elif await monthly_tokens_left(session, ctx.settings) < spec.token_budget:
+    elif await monthly_tokens_left(session, settings) < spec.token_budget:
         _event(session, run, name, "monthly_budget_exhausted", "warning")
         _mark_failed(run, name)
     else:
@@ -419,7 +447,7 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         pool = pool.for_audience(audience)
         kind = STEP_KINDS.get(name, ANALYSIS_KIND)
         try:
-            result = await gateway_for(ctx.settings).run(
+            result = await gateway_for(settings).run(
                 instructions=caps.instructions(name),
                 prompt=caps.prompt(pool, audience, await _brief(session, run)),
                 output_type=kind.output_type,
@@ -431,16 +459,16 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         except LLMError as error:
             await session.refresh(run, ["state", "cancel_requested"])
             if run.cancel_requested:
-                return
+                return False
             _event(session, run, name, error.code, "error")
             if error.code == "timeout":
                 finish(run, "timed_out", error.code)
-                return
+                return False
             _mark_failed(run, name, error.code)
         else:
             await session.refresh(run, ["state", "cancel_requested"])
             if run.cancel_requested:
-                return  # cancelled while the model was answering: discard the output
+                return False  # cancelled while the model was answering: discard the output
             record_usage(run, result)
             counts = await kind.store(session, run, name, result.output, pool, ids)
             _event(
@@ -453,12 +481,7 @@ async def handle_step(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
                 **counts,
             )
     run.step += 1
-    if run.step < len(steps) and ctx.jobs is not None:
-        await _queue(session, ctx.jobs, run)
-    else:
-        failed = run.checkpoint.get("failed_steps", [])
-        all_failed = failed and len(failed) == len(steps)
-        finish(run, "failed" if all_failed else settled_state(run))
+    return True
 
 
 async def _store_analysis(

@@ -20,6 +20,7 @@ import {
   reviewClaimAction,
 } from "../ai-actions";
 import { CaseAiHeader } from "../ai-nav";
+import { Autopilot } from "./autopilot";
 
 export const metadata: Metadata = { title: "Analysis" };
 
@@ -181,9 +182,10 @@ export default async function AnalysisPage({
   params,
 }: PageProps<"/w/[workspaceId]/cases/[caseId]/analysis">) {
   const { workspaceId, caseId } = await params;
-  const [caseDetail, analysis] = await Promise.all([
+  const [caseDetail, analysis, members] = await Promise.all([
     attempt(api.getCase(workspaceId, caseId)),
     attempt(api.analysis(workspaceId, caseId)),
+    attempt(api.members(workspaceId)),
   ]);
   if (!caseDetail.ok) return <ApiErrorNotice error={caseDetail.error} />;
   if (!analysis.ok) return <ApiErrorNotice error={analysis.error} />;
@@ -224,6 +226,19 @@ export default async function AnalysisPage({
       />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
+          {a.can_run && !active ? (
+            <Autopilot
+              workspaceId={workspaceId}
+              caseId={caseId}
+              recipients={
+                members.ok
+                  ? members.data
+                      .filter((m) => m.status === "active")
+                      .map((m) => ({ user_id: m.user_id, name: m.name }))
+                  : []
+              }
+            />
+          ) : null}
           {run ? (
             <div className="flex flex-col gap-3 rounded-lg border p-4">
               <RunSummary run={run} />

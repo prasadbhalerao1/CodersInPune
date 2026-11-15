@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace, open_workspace_access
-from relay.intelligence import capsules, copilot, interviews, memory, runs
+from relay.intelligence import autopilot, capsules, copilot, interviews, memory, runs
 from relay.intelligence import service as svc
 from relay.jobs.outbox import Jobs
 from relay.shared.rate_limit import rate_limit
@@ -244,6 +244,37 @@ async def copilot_ask_stream(
         capsule_id,
         body,
         request.app.state.settings,
+        reopen=lambda: open_workspace_access(factory, identity, workspace_id),
+    )
+    return StreamingResponse(
+        events,
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post(
+    "/cases/{case_id}/autopilot",
+    dependencies=[rate_limit("ai_run", 20, 600)],
+    response_class=StreamingResponse,
+)
+async def autopilot_run(
+    access: CurrentWorkspace,
+    identity: Identity,
+    workspace_id: uuid.UUID,
+    case_id: uuid.UUID,
+    body: autopilot.AutopilotIn,
+    request: Request,
+    jobs: Jobs,
+) -> StreamingResponse:
+    """Handover Autopilot as server-sent events (see `autopilot.start`)."""
+    factory = request.app.state.session_factory
+    events = await autopilot.start(
+        access,
+        case_id,
+        body,
+        request.app.state.settings,
+        jobs,
         reopen=lambda: open_workspace_access(factory, identity, workspace_id),
     )
     return StreamingResponse(
