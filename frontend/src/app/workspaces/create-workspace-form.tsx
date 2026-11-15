@@ -2,8 +2,6 @@
 
 import { useActionState } from "react";
 
-import { Button } from "@/components/ui/button";
-
 import { createWorkspaceAction, type CreateWorkspaceState } from "./actions";
 
 // `idempotencyKey` is generated once per rendered form, so a double submit or a retry of
@@ -14,39 +12,41 @@ export function CreateWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
     {},
   );
   return (
-    <form
-      action={formAction}
-      className="bg-card border-line/10 flex flex-col gap-3 rounded-2xl border p-5 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-    >
+    <form action={formAction} className="glass-clear flex flex-col gap-4 p-5">
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <div>
-        <h2 className="text-strong text-sm font-bold tracking-wide">START SOVEREIGN WORKSPACE</h2>
-        <p className="text-fg-mute mt-0.5 text-xs">You will be its cryptographic owner.</p>
+        <h2 className="font-syne text-strong text-lg leading-tight font-bold">
+          Start a new workspace
+        </h2>
+        <p className="text-fg-soft mt-1 text-[13px]">You will be its owner.</p>
       </div>
-      <label htmlFor="workspace-name" className="sr-only">
-        Workspace name
-      </label>
-      <div className="mt-1 flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor="workspace-name"
+          className="text-fg-mute font-mono text-[11px] font-semibold tracking-[0.14em] uppercase"
+        >
+          Workspace name
+        </label>
         <input
           id="workspace-name"
           name="name"
           required
           maxLength={100}
           placeholder="e.g. Acme Engineering"
-          className="border-line/10 bg-sunk/40 text-strong placeholder:text-fg-mute focus:border-ac/50 focus:ring-ac/30 h-10 flex-1 rounded-xl border px-3.5 text-xs transition-all outline-none focus:ring-1"
+          className="border-line/15 bg-sunk/60 text-strong placeholder:text-fg-mute/80 focus:border-ac focus:ring-ac/25 h-10 rounded-lg border px-3 text-sm transition-colors outline-none focus:ring-3"
           aria-describedby={state.error ? "workspace-error" : undefined}
         />
-        <Button
-          type="submit"
-          disabled={pending}
-          variant="titaniumGhost"
-          className="!h-10 w-full !justify-center !text-xs"
-        >
-          {pending ? "CREATING..." : "INITIALIZE WORKSPACE ⟶"}
-        </Button>
       </div>
+      <button
+        type="submit"
+        disabled={pending}
+        aria-busy={pending}
+        className="border-line/20 text-strong hover:border-ac hover:text-ac focus-visible:outline-ac inline-flex h-10 w-full items-center justify-center rounded-full border px-5 text-xs font-bold tracking-wider uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-60"
+      >
+        {pending ? "Creating…" : "Create workspace"}
+      </button>
       {state.error ? (
-        <p id="workspace-error" role="alert" className="text-destructive text-sm">
+        <p id="workspace-error" role="alert" className="text-bad text-sm">
           {state.error}
         </p>
       ) : null}

@@ -63,9 +63,9 @@ export const metadata: Metadata = {
   twitter: { card: "summary", title: "Relay", description: SITE_DESCRIPTION },
 };
 
-// Dark is the default and is already in the server-rendered <html class>. This runs before first
-// paint and switches to light only if the visitor explicitly chose it (key v2: values saved while
-// light was the default are deliberately ignored).
+// Light on every load: the server-rendered <html> has no `dark` class, and this runs before first
+// paint to clear anything a cached page or an older build left behind (including the stored
+// preference from when the choice persisted). Dark is a per-visit choice via the theme toggle.
 const THEME_SCRIPT = `try{var d=document.documentElement;d.classList.remove("dark");d.style.colorScheme="light";localStorage.removeItem("relay-theme-v2")}catch(e){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

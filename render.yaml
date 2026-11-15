@@ -1,0 +1,79 @@
+# Render Blueprint for the Relay API and worker (see deployment.md).
+# The web app runs on Vercel and the database on Neon (or any Postgres 18), so neither is
+# declared here. Secrets use `sync: false`: Render asks for them on the first Blueprint
+# sync and never stores them in this file.
+envVarGroups:
+  - name: relay-backend
+    envVars:
+      - key: RELAY_ENVIRONMENT
+        value: production
+      - key: RELAY_JSON_LOGS
+        value: "true"
+      - key: RELAY_DATABASE_URL # relay_app role, direct (non-pooled) host
+        sync: false
+      - key: RELAY_FRONTEND_BASE_URL # https://<your web domain>
+        sync: false
+      - key: RELAY_WORKOS_CLIENT_ID
+        sync: false
+      - key: RELAY_WORKOS_API_KEY
+        sync: false
+      - key: RELAY_INTEGRATION_ENCRYPTION_KEY
+        sync: false
+      - key: RELAY_RESEND_API_KEY
+        sync: false
+      - key: RELAY_EMAIL_FROM
+        sync: false
+      - key: RELAY_LLM_PROVIDERS # e.g. gemini,groq
+        sync: false
+      - key: RELAY_GEMINI_KEY_1
+        sync: false
+      - key: RELAY_GEMINI_KEY_2
+        sync: false
+      - key: RELAY_GEMINI_KEY_3
+        sync: false
+      - key: RELAY_GEMINI_KEY_4
+        sync: false
+      - key: RELAY_LLM_PRICE_INPUT # USD per million tokens, from your provider
+        sync: false
+      - key: RELAY_LLM_PRICE_OUTPUT
+        sync: false
+      - key: RELAY_GROQ_API_KEY
+        sync: false
+      - key: RELAY_OPS_TOKEN # same value as the GitHub secret RELAY_OPS_TOKEN (Monitor)
+        sync: false
+
+services:
+  # Pilot setup: one free web service that also runs the job worker in-process
+  # (RELAY_EMBEDDED_WORKER). Free instances sleep after 15 idle minutes; the Monitor
+  # workflow's 10-minute checks keep it awake. For production switch the API to
+  # "starter" or higher, set RELAY_EMBEDDED_WORKER=false and enable relay-worker below.
+  - type: web
+    name: relay-api
+    runtime: docker
+    plan: free
+    region: singapore # keep in the same region as the database
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health/ready
+    autoDeploy: true
+    envVars:
+      - fromGroup: relay-backend
+      - key: PORT
+        value: "8000"
+      - key: RELAY_EMBEDDED_WORKER
+        value: "true"
+      - key: RELAY_GITHUB_WEBHOOK_SECRET
+        sync: false
+
+  # Production worker (background workers have no free plan):
+  # - type: worker
+  #   name: relay-worker
+  #   runtime: docker
+  #   plan: starter
+  #   region: singapore
+  #   dockerContext: ./backend
+  #   dockerfilePath: ./backend/Dockerfile
+  #   dockerCommand: relay-worker
+  #   autoDeploy: true
+  #   envVars:
+  #     - fromGroup: relay-backend

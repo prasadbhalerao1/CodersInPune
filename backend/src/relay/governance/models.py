@@ -1,0 +1,141 @@
+"""Workspace continuity policies. See migration 0020."""
+
+import uuid
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
+
+from relay.shared.db.base import Base
+
+SCHEMA = "governance"
+
+
+class WorkspacePolicy(Base):
+    """At most one row per workspace; no row means the defaults."""
+
+    __tablename__ = "workspace_policy"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id"),
+        CheckConstraint("knowledge_review_days BETWEEN 7 AND 730", name="knowledge_review_days"),
+        CheckConstraint("retention_days BETWEEN 30 AND 3650", name="retention_days"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    critical_requires_backup: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    knowledge_review_days: Mapped[int] = mapped_column(Integer, server_default="90")
+    # How long operational records (read notifications, sync and AI step history) are kept.
+    retention_days: Mapped[int] = mapped_column(Integer, server_default="365")
+    updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SavedView(Base):
+    """A person's named filter for a list page; `query` is the page's URL query string."""
+
+    __tablename__ = "saved_view"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "user_id", "page", "name"),
+        CheckConstraint(
+            "page IN ('cases', 'responsibilities', 'assets', 'knowledge')", name="page"
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
+        CheckConstraint("char_length(query) <= 1000", name="query_length"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    page: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    query: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CriticalityPolicy(Base):
+    """Per criticality tier; no row means the built-in defaults (governance.service)."""
+
+    __tablename__ = "criticality_policy"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "criticality"),
+        CheckConstraint(
+            "criticality IN ('critical', 'high', 'standard', 'low')", name="criticality"
+        ),
+        CheckConstraint("review_days BETWEEN 7 AND 730", name="review_days"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    criticality: Mapped[str] = mapped_column(Text)
+    requires_backup: Mapped[bool] = mapped_column(Boolean)
+    review_days: Mapped[int] = mapped_column(Integer)
+    requires_accountable_contact: Mapped[bool] = mapped_column(Boolean)
+    updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("identity.user_account.id"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConnectorRun(Base):
+    """One sync run of a connector: the history behind its health."""
+
+    __tablename__ = "connector_run"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("provider IN ('github', 'linear', 'notion')", name="provider"),
+        CheckConstraint("status IN ('ok', 'partial', 'error', 'skipped')", name="status"),
+        Index(None, "tenant_id", "connection_ref"),
+        Index(None, "tenant_id", "finished_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    provider: Mapped[str] = mapped_column(Text)
+    connection_ref: Mapped[uuid.UUID]
+    status: Mapped[str] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    duration_ms: Mapped[int] = mapped_column(Integer, server_default="0")
+    finished_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class MetricSnapshot(Base):
+    """Metrics as computed at a moment, with definitions and denominators (append-only)."""
+
+    __tablename__ = "metric_snapshot"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("trigger IN ('manual', 'scheduled')", name="trigger"),
+        CheckConstraint("period_end > period_start", name="period"),
+        Index(None, "tenant_id", "taken_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    metrics: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    trigger: Mapped[str] = mapped_column(Text, server_default="manual")
+    taken_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("identity.user_account.id"))
+    taken_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

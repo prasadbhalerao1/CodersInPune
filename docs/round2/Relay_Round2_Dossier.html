@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay Round 2 Project Dossier &amp; Architecture Specification</title>
+<style>
+  :root {
+    --ink: #14202e;
+    --muted: #5b6876;
+    --line: #d5dde5;
+    --soft: #f3f6f9;
+    --navy: #0f2a43;
+    --teal: #0f8a7e;
+    --teal-soft: #e4f4f2;
+    --amber: #a8600a;
+    --amber-soft: #fdf1df;
+    --red: #a8322a;
+    --red-soft: #fbe7e5;
+    --green: #2f7a3d;
+    --green-soft: #e6f3e8;
+    --blue: #2a5b9a;
+    --blue-soft: #e6eef8;
+  }
+  @page {
+    size: A4;
+    margin: 14mm 14mm 14mm 14mm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.6pt;
+    line-height: 1.45;
+  }
+  .wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+  h1 {
+    font-size: 26pt;
+    line-height: 1.1;
+    margin: 0 0 4px;
+    color: var(--navy);
+    letter-spacing: -0.5px;
+  }
+  h2 {
+    font-size: 14pt;
+    color: var(--navy);
+    margin: 20px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--teal);
+    page-break-after: avoid;
+  }
+  h2 .num {
+    color: var(--teal);
+    margin-right: 8px;
+  }
+  h3 {
+    font-size: 10.8pt;
+    color: var(--navy);
+    margin: 12px 0 4px;
+    page-break-after: avoid;
+  }
+  p { margin: 4px 0 6px; }
+  ul, ol { margin: 3px 0 6px; padding-left: 18px; }
+  li { margin: 2px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 10px;
+    font-size: 8.8pt;
+    page-break-inside: avoid;
+  }
+  tr { page-break-inside: avoid; }
+  th {
+    background: var(--navy);
+    color: #fff;
+    text-align: left;
+    padding: 5px 7px;
+    font-weight: 600;
+  }
+  td {
+    padding: 5px 7px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafbfc; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.5pt;
+    background: var(--soft);
+    padding: 0 3px;
+    border-radius: 3px;
+    color: var(--navy);
+  }
+  .break { page-break-before: always; }
+  .avoid { page-break-inside: avoid; }
+  figure {
+    margin: 8px 0 10px;
+    page-break-inside: avoid;
+  }
+  figure svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  figcaption {
+    font-size: 8.2pt;
+    color: var(--muted);
+    margin-top: 3px;
+    font-style: italic;
+    text-align: center;
+  }
+  .lede {
+    font-size: 10.5pt;
+    color: #2b3a49;
+    line-height: 1.48;
+  }
+  .callout {
+    border-left: 4px solid var(--teal);
+    background: var(--teal-soft);
+    padding: 7px 11px;
+    margin: 8px 0;
+    page-break-inside: avoid;
+    font-size: 9.2pt;
+  }
+  .callout.warn {
+    border-color: var(--amber);
+    background: var(--amber-soft);
+  }
+  .callout b { color: var(--navy); }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    page-break-inside: avoid;
+  }
+  .grid3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    page-break-inside: avoid;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #fff;
+    page-break-inside: avoid;
+  }
+  .card h4 {
+    margin: 0 0 3px;
+    font-size: 9.6pt;
+    color: var(--navy);
+  }
+  .card p {
+    margin: 2px 0;
+    font-size: 8.8pt;
+  }
+  .small {
+    font-size: 8.4pt;
+    color: var(--muted);
+  }
+  .cover {
+    padding-top: 10px;
+    page-break-after: always;
+  }
+  .kicker {
+    color: var(--teal);
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    font-size: 8.4pt;
+    text-transform: uppercase;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 3px 12px;
+    margin: 12px 0;
+    font-size: 9.2pt;
+  }
+  .meta div:nth-child(odd) {
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 7.6pt;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .p-ok { background: var(--green-soft); color: var(--green); }
+  .p-warn { background: var(--amber-soft); color: var(--amber); }
+  .p-bad { background: var(--red-soft); color: var(--red); }
+  .p-info { background: var(--blue-soft); color: var(--blue); }
+  .cite {
+    font-family: Consolas, monospace;
+    font-size: 7.8pt;
+    background: var(--blue-soft);
+    color: var(--blue);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .mock {
+    border: 1px solid #b9c6d3;
+    border-radius: 7px;
+    overflow: hidden;
+    page-break-inside: avoid;
+    margin: 8px 0 10px;
+    font-size: 8.8pt;
+  }
+  .mock-head {
+    background: var(--navy);
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 8.8pt;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+  }
+  .mock-body {
+    padding: 7px 10px;
+    background: #fff;
+  }
+  .mock-sec {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 8.4pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 5px 0 2px;
+  }
+  .mock-row {
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .mock-foot {
+    background: var(--soft);
+    padding: 5px 10px;
+    font-size: 8pt;
+    color: var(--muted);
+  }
+  .toc {
+    columns: 2;
+    column-gap: 24px;
+    font-size: 9.1pt;
+    padding-left: 16px;
+    margin: 4px 0;
+  }
+  .score td:last-child { white-space: nowrap; }
+  .team td:first-child { font-weight: 600; white-space: nowrap; }
+  footer.doc {
+    margin-top: 20px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    font-size: 8pt;
+    color: var(--muted);
+    text-align: center;
+  }
+  @media print {
+    .wrap { max-width: none; padding: 0; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===================== PAGE 1: COVER ===================== -->
+<section class="cover">
+  <div class="kicker">Round 2 Submission &middot; The Build &amp; Production Deployment</div>
+  <h1>Relay</h1>
+  <p class="lede" style="font-size:12.5pt;margin-top:0;color:var(--muted)">Accountability that transfers, with proof</p>
+  <p class="lede" style="font-size:9.8pt;margin-bottom:8px">When someone who owns critical operational responsibilities leaves, goes on leave, or transfers projects, the knowledge does not leave in one piece. It is scattered across repositories, issue trackers, documents, and individual heads. Relay builds an authoritative live map of who is accountable for what, detects continuity risks before they cause outages, ingests verified evidence across GitHub, Linear, and Notion, and conducts handovers as governed, audited cases with provable readiness.</p>
+
+  <div class="meta">
+    <div>Product</div><div>Relay (Organisational Continuity SaaS)</div>
+    <div>Team</div><div>WeCoders</div>
+    <div>Members</div><div>Prasad Bhalerao (Architecture &amp; Platform), Aayush Deshpande (Integrations &amp; Intelligence)</div>
+    <div>Live Project</div><div><code>https://relay-continuity-nine.vercel.app</code> (Deployed on Vercel)</div>
+    <div>API Endpoint</div><div><code>https://relay-api-3m85.onrender.com</code> (Deployed on Render)</div>
+    <div>Source Code</div><div><code>https://github.com/prasadbhalerao1/CodersInPune</code> (Public repository)</div>
+    <div>Document</div><div>Round 2 Project Dossier &amp; Architecture Specification, Version 2.0</div>
+    <div>Build Status</div><div>Deployed, verified, 250+ backend tests, 18 Playwright e2e tests, clean CI.</div>
+  </div>
+
+  <h3 style="margin-top:8px">Judging criteria execution map</h3>
+  <table class="score" style="margin-bottom:6px">
+    <tr><th style="width:24%">Judging Dimension</th><th>What was built, deployed, and verified</th><th style="width:13%">Reference</th></tr>
+    <tr><td><b>Live Product &amp; UX</b></td><td>Fully deployed on Vercel and Render with Neon PostgreSQL 18. Responsive Next.js 16 UI with strict neutral styling, WorkOS AuthKit sessions, real GitHub OAuth, and live Gemini intelligence.</td><td>Section 1 &amp; 5</td></tr>
+    <tr><td><b>Multi-Source Ingestion</b></td><td>Three deep connectors: GitHub App (read-only, HMAC webhooks, CODEOWNERS), Linear OAuth 2.0 (projects, issues, 90-day activity signals), and Notion OAuth (fail-closed page-to-knowledge mapping, SHA hashes).</td><td>Section 3</td></tr>
+    <tr><td><b>Governed AI Safety</b></td><td>4-stage PydanticAI pipeline in an untrusted-content envelope. Read-only tools, mathematical citation pruning (unreferenced proposals dropped), 100% conflict recall on 31-case CI evaluation set.</td><td>Section 4</td></tr>
+    <tr><td><b>Tenancy &amp; Security</b></td><td>Zero-trust PostgreSQL forced RLS on all 84 tables. Restricted <code>relay_app</code> role (no superuser, no BYPASSRLS, zero DELETE grant on audit logs). Distributed rate limiting in PostgreSQL.</td><td>Section 2 &amp; 5</td></tr>
+    <tr><td><b>Continuous Verification</b></td><td>Evidence audience boundaries (private repos/Linear projects fail closed). Changes to sources cited in approved handovers automatically trigger a "Changed since review" warning banner.</td><td>Section 3 &amp; 6</td></tr>
+  </table>
+
+  <h3 style="margin-top:6px">Contents</h3>
+  <ol class="toc">
+    <li>Understanding the problem and solution</li>
+    <li>Architecture and request data flow</li>
+    <li>Multi-tool integration engine</li>
+    <li>Governed AI pipeline &amp; evaluation</li>
+    <li>Production deployment &amp; security</li>
+    <li>Handover cases, rehearsal &amp; audit</li>
+    <li>What changed from Round 1 and why</li>
+    <li>Three deliverable improvements for Round 3</li>
+    <li>Pilot limitations and honest assessment</li>
+    <li>Production verification metrics</li>
+  </ol>
+</section>
+
+<!-- ===================== PAGE 2: PROBLEM & SOLUTION ===================== -->
+<section class="break">
+<h2><span class="num">1</span>Understanding the problem and solution</h2>
+
+<p>Every growing team hits the same crisis: someone who "just knew how everything worked" leaves or becomes unavailable. The codebase stays in GitHub, tickets sit in Linear, runbooks reside in Notion, but the operational context, unwritten edge cases, and active accountability disappear. The incoming owner spends their first months guessing, while managers discover unowned services only after a customer-facing outage.</p>
+
+<h3>1.1 The three core product promises</h3>
+<ul>
+  <li><b>1. Understand the organisation:</b> Establish a live map of people, teams, departments, responsibilities, and assets. Track who is accountable as primary, backup, or co-owner with an immutable history.</li>
+  <li><b>2. Keep work moving:</b> Ingest read-only operational signals across GitHub, Linear, and Notion. Identify continuity risks (no backup, single-point-of-failure, stale knowledge, unowned assets) and calculate a live Continuity Debt score.</li>
+  <li><b>3. Verify the transfer:</b> Coordinate handovers through structured continuity cases. The AI drafts evidence-backed findings and proposals; human managers review and accept them; and the incoming owner acknowledges a specific, immutable version.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f2a43"/></marker>
+    <marker id="m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f8a7e"/></marker>
+  </defs>
+  <!-- Organisation Map -->
+  <rect x="20" y="15" width="210" height="175" rx="6" fill="#e6eef8" stroke="#9fb6d4"/>
+  <text x="35" y="38" font-size="11" font-weight="700" fill="#0f2a43">Live Organisation Map</text>
+  <text x="35" y="60" font-size="9" fill="#14202e">&bull; People, Teams, Departments</text>
+  <text x="35" y="78" font-size="9" fill="#14202e">&bull; Critical Responsibilities</text>
+  <text x="35" y="96" font-size="9" fill="#14202e">&bull; Primary &amp; Backup Owners</text>
+  <text x="35" y="114" font-size="9" fill="#14202e">&bull; Assets &amp; Stewardship</text>
+  <text x="35" y="142" font-size="9" font-weight="600" fill="#2a5b9a">Continuity Debt: 32 pts</text>
+  <text x="35" y="160" font-size="8.5" fill="#5b6876">8 active ownership risks</text>
+
+  <!-- Connectors -->
+  <line x1="230" y1="102" x2="275" y2="102" stroke="#0f2a43" stroke-width="2" marker-end="url(#m1)"/>
+
+  <!-- Ingestion & Intelligence -->
+  <rect x="275" y="15" width="210" height="175" rx="6" fill="#e4f4f2" stroke="#7cc3bb"/>
+  <text x="290" y="38" font-size="11" font-weight="700" fill="#0f8a7e">Evidence &amp; Intelligence</text>
+  <text x="290" y="60" font-size="9" fill="#14202e">&bull; GitHub: Repos &amp; CODEOWNERS</text>
+  <text x="290" y="78" font-size="9" fill="#14202e">&bull; Linear: Issues &amp; Cycles</text>
+  <text x="290" y="96" font-size="9" fill="#14202e">&bull; Notion: Mapped Runbooks</text>
+  <text x="290" y="122" font-size="9.2" font-weight="600" fill="#0f8a7e">AI Proposal Engine</text>
+  <text x="290" y="140" font-size="8.5" fill="#5b6876">&bull; Gemini key-rotated gateway</text>
+  <text x="290" y="156" font-size="8.5" fill="#5b6876">&bull; Citation verification (0 leaks)</text>
+  <text x="290" y="172" font-size="8.5" fill="#5b6876">&bull; 100% conflict detection</text>
+
+  <!-- Connectors -->
+  <line x1="485" y1="102" x2="530" y2="102" stroke="#0f8a7e" stroke-width="2" marker-end="url(#m2)"/>
+
+  <!-- Continuity Cases -->
+  <rect x="530" y="15" width="210" height="175" rx="6" fill="#fff" stroke="#0f2a43" stroke-width="1.5"/>
+  <text x="545" y="38" font-size="11" font-weight="700" fill="#0f2a43">Governed Case &amp; Capsule</text>
+  <text x="545" y="60" font-size="9" fill="#14202e">&bull; Departure / Coverage Case</text>
+  <text x="545" y="78" font-size="9" fill="#14202e">&bull; Knowledge Interview</text>
+  <text x="545" y="96" font-size="9" fill="#14202e">&bull; Human Proposal Review</text>
+  <text x="545" y="114" font-size="9" fill="#14202e">&bull; Supervised Rehearsal</text>
+  <text x="545" y="142" font-size="9" font-weight="600" fill="#2f7a3d">Formal Acknowledgement</text>
+  <text x="545" y="160" font-size="8.5" fill="#5b6876">Immutable audit log receipt</text>
+</svg>
+<figcaption>Figure 1. The Relay Core Continuity Loop: mapping ownership, fusing multi-tool evidence, and executing audited handovers.</figcaption>
+</figure>
+
+<h3>1.2 The 8 deterministic continuity risk rules</h3>
+<p>Relay calculates Continuity Debt using fully transparent, deterministic rules without LLM dependency:</p>
+<table>
+  <tr><th>Rule Code</th><th>Risk Description</th><th>Severity</th><th>Trigger Condition</th></tr>
+  <tr><td><code>R01</code></td><td>Critical responsibility with single owner</td><td><span class="pill p-bad">High</span></td><td>Critical responsibility has active primary but zero active backup.</td></tr>
+  <tr><td><code>R02</code></td><td>Backup is the same person as primary</td><td><span class="pill p-bad">High</span></td><td>Primary owner user ID matches the assigned backup owner user ID.</td></tr>
+  <tr><td><code>R03</code></td><td>Team-owned without accountable contact</td><td><span class="pill p-bad">High</span></td><td>Responsibility is assigned to a team with no designated individual lead.</td></tr>
+  <tr><td><code>R04</code></td><td>No production deploy backup</td><td><span class="pill p-bad">High</span></td><td>Critical deployment asset lacks verified secondary operator credentials.</td></tr>
+  <tr><td><code>R05</code></td><td>Stale operational runbook</td><td><span class="pill p-warn">Medium</span></td><td>Knowledge item has not been reviewed by its steward within 90 days.</td></tr>
+  <tr><td><code>R06</code></td><td>Asset without stewarding responsibility</td><td><span class="pill p-warn">Medium</span></td><td>Infrastructure asset or service repo lacks any registered responsibility.</td></tr>
+  <tr><td><code>R07</code></td><td>Overdue continuity case task</td><td><span class="pill p-warn">Medium</span></td><td>Task past scheduled due date blocks case execution milestone.</td></tr>
+  <tr><td><code>R08</code></td><td>Ownership discrepancy signal</td><td><span class="pill p-info">Info</span></td><td>Linear 90-day issue activity contradicts registered ownership catalog.</td></tr>
+</table>
+</section>
+
+<!-- ===================== PAGE 3: ARCHITECTURE & REQUEST DATA FLOW ===================== -->
+<section class="break">
+<h2><span class="num">2</span>Architecture and request data flow</h2>
+
+<p>Relay is engineered as a resilient modular monolith. All business logic, tenancy enforcement, and policy evaluations live in Python. Next.js 16 acts purely as a presentation layer using Server Components and Server Actions, passing the verified WorkOS bearer token down to FastAPI.</p>
+
+<figure>
+<svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f2a43"/></marker>
+  </defs>
+  <!-- Browser -->
+  <rect x="20" y="25" width="130" height="55" rx="5" fill="#f8fafc" stroke="#64748b"/>
+  <text x="85" y="47" font-size="10" text-anchor="middle" font-weight="700" fill="#0f172a">Browser Client</text>
+  <text x="85" y="63" font-size="8.2" text-anchor="middle" fill="#64748b">WorkOS Session</text>
+
+  <line x1="150" y1="52" x2="195" y2="52" stroke="#0f2a43" stroke-width="1.8" marker-end="url(#arr)"/>
+  <text x="172" y="45" font-size="7.5" text-anchor="middle" fill="#64748b">HTTPS</text>
+
+  <!-- Next.js -->
+  <rect x="195" y="15" width="145" height="75" rx="6" fill="#e6eef8" stroke="#9fb6d4"/>
+  <text x="267" y="38" font-size="10" text-anchor="middle" font-weight="700" fill="#0f2a43">Next.js 16 (Vercel)</text>
+  <text x="267" y="53" font-size="8.2" text-anchor="middle" fill="#2a5b9a">Server Components</text>
+  <text x="267" y="67" font-size="8.2" text-anchor="middle" fill="#2a5b9a">Server Actions</text>
+  <text x="267" y="80" font-size="7.5" text-anchor="middle" fill="#5b6876">No business logic</text>
+
+  <line x1="340" y1="52" x2="385" y2="52" stroke="#0f2a43" stroke-width="1.8" marker-end="url(#arr)"/>
+  <text x="362" y="45" font-size="7.5" text-anchor="middle" fill="#64748b">Bearer JWT</text>
+
+  <!-- FastAPI -->
+  <rect x="385" y="8" width="165" height="90" rx="6" fill="#e4f4f2" stroke="#7cc3bb"/>
+  <text x="467" y="30" font-size="10.5" text-anchor="middle" font-weight="700" fill="#0f8a7e">FastAPI (Render)</text>
+  <text x="467" y="47" font-size="8.2" text-anchor="middle" fill="#14202e">15 Domain Modules</text>
+  <text x="467" y="62" font-size="8" text-anchor="middle" fill="#5b6876">auth &rarr; membership &rarr; authorize()</text>
+  <text x="467" y="76" font-size="8" text-anchor="middle" fill="#5b6876">Transaction Unit of Work</text>
+  <text x="467" y="89" font-size="8" text-anchor="middle" fill="#0f8a7e">Embedded Worker (Pilot)</text>
+
+  <line x1="550" y1="52" x2="595" y2="52" stroke="#0f2a43" stroke-width="1.8" marker-end="url(#arr)"/>
+  <text x="572" y="45" font-size="7.5" text-anchor="middle" fill="#64748b">Async pg</text>
+
+  <!-- PostgreSQL 18 -->
+  <rect x="595" y="12" width="145" height="82" rx="6" fill="#fff" stroke="#0f2a43" stroke-width="2"/>
+  <text x="667" y="35" font-size="10" text-anchor="middle" font-weight="700" fill="#0f2a43">PostgreSQL 18</text>
+  <text x="667" y="50" font-size="8.2" text-anchor="middle" fill="#0f8a7e">Neon Serverless (SG)</text>
+  <text x="667" y="65" font-size="8" text-anchor="middle" fill="#a8322a">Forced RLS (84 tables)</text>
+  <text x="667" y="79" font-size="7.8" text-anchor="middle" fill="#5b6876">Procrastinate Outbox</text>
+
+  <!-- External Integrations & Worker below -->
+  <rect x="20" y="135" width="720" height="95" rx="6" fill="#fafbfc" stroke="#cbd5e1"/>
+  <text x="35" y="155" font-size="9.5" font-weight="700" fill="#0f2a43">Background Worker &amp; External Integration Layer</text>
+
+  <g transform="translate(35, 165)">
+    <rect x="0" y="0" width="150" height="46" rx="4" fill="#fff" stroke="#cbd5e1"/>
+    <text x="75" y="19" font-size="8.8" font-weight="600" text-anchor="middle" fill="#0f2a43">GitHub App</text>
+    <text x="75" y="34" font-size="7.6" text-anchor="middle" fill="#5b6876">HMAC Webhooks &amp; Repos</text>
+  </g>
+  <g transform="translate(205, 165)">
+    <rect x="0" y="0" width="150" height="46" rx="4" fill="#fff" stroke="#cbd5e1"/>
+    <text x="75" y="19" font-size="8.8" font-weight="600" text-anchor="middle" fill="#0f2a43">Linear OAuth 2.0</text>
+    <text x="75" y="34" font-size="7.6" text-anchor="middle" fill="#5b6876">Projects &amp; Issue Sync</text>
+  </g>
+  <g transform="translate(375, 165)">
+    <rect x="0" y="0" width="150" height="46" rx="4" fill="#fff" stroke="#cbd5e1"/>
+    <text x="75" y="19" font-size="8.8" font-weight="600" text-anchor="middle" fill="#0f2a43">Notion OAuth</text>
+    <text x="75" y="34" font-size="7.6" text-anchor="middle" fill="#5b6876">Mapped Page Hierarchies</text>
+  </g>
+  <g transform="translate(545, 165)">
+    <rect x="0" y="0" width="150" height="46" rx="4" fill="#fff" stroke="#cbd5e1"/>
+    <text x="75" y="19" font-size="8.8" font-weight="600" text-anchor="middle" fill="#0f2a43">Gemini 3.5 Flash-Lite</text>
+    <text x="75" y="34" font-size="7.6" text-anchor="middle" fill="#5b6876">4-Key Rotating Gateway</text>
+  </g>
+</svg>
+<figcaption>Figure 2. Production Architecture: zero Redis dependencies, transactional outbox, and forced RLS isolation.</figcaption>
+</figure>
+
+<h3>2.1 Database-enforced multitenancy</h3>
+<p>Unlike conventional multi-tenant apps that rely solely on application-level filtering (e.g. <code>WHERE tenant_id = ?</code>), Relay enforces isolation in the database engine itself:</p>
+<ul>
+  <li><b>Forced Row-Level Security:</b> <code>ALTER TABLE ... FORCE ROW LEVEL SECURITY</code> is applied across all 84 tenant tables. Table owners cannot bypass RLS.</li>
+  <li><b>Restricted App Role:</b> The API connects as <code>relay_app</code>, which owns zero schema, has no <code>SUPERUSER</code> or <code>BYPASSRLS</code> rights, and holds zero <code>DELETE</code> privileges on audit tables.</li>
+  <li><b>Transaction-Scoped Context:</b> Every API request establishes tenant context via <code>SELECT set_config('app.tenant_id', :id, true)</code>. Because the third parameter is <code>true</code>, the configuration automatically clears when the transaction commits, preventing connection pool context bleed.</li>
+</ul>
+</section>
+
+<!-- ===================== PAGE 4: MULTI-TOOL INTEGRATIONS ===================== -->
+<section class="break">
+<h2><span class="num">3</span>Multi-tool integration engine</h2>
+
+<p>Relay does not replace an organisation's existing systems. It connects to them read-only and synthesizes a live continuity fabric across code, tickets, and documentation.</p>
+
+<div class="grid3">
+  <div class="card">
+    <h4>GitHub App Integration</h4>
+    <p>Read-only repository access. Ingests metadata, <code>CODEOWNERS</code>, Backstage <code>catalog-info.yaml</code>, PRs, and issues.</p>
+    <p class="small"><b>Webhooks:</b> HMAC-SHA256 authenticated, deduplicated by delivery ID. Recovers missed events via 6-hour outbox cron.</p>
+    <p><span class="pill p-ok">Live Verified</span></p>
+  </div>
+  <div class="card">
+    <h4>Linear OAuth 2.0</h4>
+    <p>Discovers teams, projects, active cycles, and issues. Analyzes 90-day contributor density to map Linear profiles to Relay members.</p>
+    <p class="small"><b>Signals:</b> Emits ownership discrepancy alerts when declared owners differ from active assignees.</p>
+    <p><span class="pill p-ok">Live Verified</span></p>
+  </div>
+  <div class="card">
+    <h4>Notion Knowledge Mapping</h4>
+    <p>Hierarchical page discovery. Operates strictly fail-closed: pages are only ingested when explicitly mapped to a responsibility.</p>
+    <p class="small"><b>Drift:</b> Retains SHA-256 revision hashes to flag edited runbooks with "Changed since cited".</p>
+    <p><span class="pill p-ok">Live Verified</span></p>
+  </div>
+</div>
+
+<h3>3.1 Source permission and audience boundary</h3>
+<p>Relay never assumes all workspace members should see every connected resource. Every imported repository, project, and document carries an explicit <code>audience</code>:</p>
+<ul>
+  <li><b>Private Repositories &amp; Linear Projects:</b> Automatically default to <code>managers</code> only upon sync.</li>
+  <li><b>Audited Widening:</b> An admin can widen an audience to <code>workspace</code>, but this action is recorded permanently in the audit log.</li>
+  <li><b>Automatic Re-narrowing:</b> If a repository is changed from public to private on GitHub, Relay automatically re-narrows its audience back to managers on the next webhook delivery.</li>
+  <li><b>Inherited Context:</b> AI claims and context capsules inherit the narrowest audience among their cited sources. A non-manager viewing a capsule will never see citations or summaries derived from manager-only sources.</li>
+</ul>
+
+<div class="mock">
+  <div class="mock-head">
+    <span>Integrations &middot; Active Connections</span>
+    <span style="font-weight:normal">Northwind Labs (demo)</span>
+  </div>
+  <div class="mock-body">
+    <div class="mock-sec">Connected Source Repositories &amp; Workspaces</div>
+    <div class="mock-row">
+      <div><b>prasadbhalerao1/CodersInPune</b> <span class="cite">GitHub</span> <span class="pill p-ok">Synced</span></div>
+      <div>Audience: <b>Workspace</b> (Public repo) &middot; <span class="small">Last sync: 2 min ago</span></div>
+    </div>
+    <div class="mock-row">
+      <div><b>Payments Core &middot; Team PAY</b> <span class="cite">Linear</span> <span class="pill p-ok">Synced</span></div>
+      <div>Audience: <b>Managers</b> (Private project) &middot; <span class="small">8 active issues</span></div>
+    </div>
+    <div class="mock-row">
+      <div><b>Production Deploy Runbook v2</b> <span class="cite">Notion</span> <span class="pill p-ok">Mapped</span></div>
+      <div>Audience: <b>Workspace</b> &middot; <span class="small">SHA: 8f2a1b9c &middot; Active knowledge</span></div>
+    </div>
+  </div>
+  <div class="mock-foot">Source code, PR bodies, and review comments are strictly excluded from ingestion. 30-day purge post-disconnect.</div>
+</div>
+</section>
+
+<!-- ===================== PAGE 5: GOVERNED AI PIPELINE ===================== -->
+<section class="break">
+<h2><span class="num">4</span>Governed AI pipeline &amp; evaluation</h2>
+
+<p>Relay treats LLMs as drafting engines, never as autonomous decision-makers. AI models operate inside an untrusted-content envelope with read-only tools and produce proposals only. No model can alter ownership, reassign tasks, or change system state.</p>
+
+<figure>
+<svg viewBox="0 0 760 180" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f8a7e"/></marker>
+  </defs>
+  <!-- Step 1 -->
+  <rect x="20" y="20" width="125" height="115" rx="5" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="82" y="40" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0f2a43">1. Envelope</text>
+  <text x="82" y="60" font-size="7.8" text-anchor="middle" fill="#5b6876">Collects viewer-</text>
+  <text x="82" y="73" font-size="7.8" text-anchor="middle" fill="#5b6876">authorized evidence</text>
+  <text x="82" y="94" font-size="7.8" text-anchor="middle" fill="#a8600a">Untrusted envelope</text>
+  <text x="82" y="108" font-size="7.5" text-anchor="middle" fill="#5b6876">Prevents injection</text>
+
+  <line x1="145" y1="78" x2="175" y2="78" stroke="#0f8a7e" stroke-width="1.8" marker-end="url(#am)"/>
+
+  <!-- Step 2 -->
+  <rect x="175" y="20" width="125" height="115" rx="5" fill="#e4f4f2" stroke="#7cc3bb"/>
+  <text x="237" y="40" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0f8a7e">2. Rules Engine</text>
+  <text x="237" y="60" font-size="7.8" text-anchor="middle" fill="#14202e">Deterministic checks</text>
+  <text x="237" y="76" font-size="7.8" text-anchor="middle" fill="#5b6876">&bull; Missing owners</text>
+  <text x="237" y="90" font-size="7.8" text-anchor="middle" fill="#5b6876">&bull; Stale runbooks</text>
+  <text x="237" y="104" font-size="7.8" text-anchor="middle" fill="#5b6876">&bull; Overdue reviews</text>
+  <text x="237" y="120" font-size="7.6" font-weight="600" text-anchor="middle" fill="#0f8a7e">Zero LLM tokens</text>
+
+  <line x1="300" y1="78" x2="330" y2="78" stroke="#0f8a7e" stroke-width="1.8" marker-end="url(#am)"/>
+
+  <!-- Step 3 -->
+  <rect x="330" y="20" width="135" height="115" rx="5" fill="#e6eef8" stroke="#9fb6d4"/>
+  <text x="397" y="40" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0f2a43">3. PydanticAI</text>
+  <text x="397" y="58" font-size="7.8" text-anchor="middle" fill="#2a5b9a">4 Pipeline Steps:</text>
+  <text x="397" y="73" font-size="7.6" text-anchor="middle" fill="#5b6876">Discovery &bull; Impact</text>
+  <text x="397" y="87" font-size="7.6" text-anchor="middle" fill="#5b6876">Steward &bull; Planner</text>
+  <text x="397" y="104" font-size="7.8" text-anchor="middle" fill="#0f2a43">Key rotation (1..4)</text>
+  <text x="397" y="119" font-size="7.4" text-anchor="middle" fill="#5b6876">Fallback to Groq/local</text>
+
+  <line x1="465" y1="78" x2="495" y2="78" stroke="#0f8a7e" stroke-width="1.8" marker-end="url(#am)"/>
+
+  <!-- Step 4 -->
+  <rect x="495" y="20" width="115" height="115" rx="5" fill="#fdf1df" stroke="#d5b27a"/>
+  <text x="552" y="40" font-size="9.5" font-weight="700" text-anchor="middle" fill="#a8600a">4. Validator</text>
+  <text x="552" y="60" font-size="7.8" text-anchor="middle" fill="#14202e">Citation Pruner:</text>
+  <text x="552" y="75" font-size="7.5" text-anchor="middle" fill="#a8322a">Drops uncited claims</text>
+  <text x="552" y="88" font-size="7.5" text-anchor="middle" fill="#a8322a">Rejects invented refs</text>
+  <text x="552" y="104" font-size="7.5" text-anchor="middle" fill="#14202e">Requires 2 sources</text>
+  <text x="552" y="118" font-size="7.5" text-anchor="middle" fill="#14202e">to flag a conflict</text>
+
+  <line x1="610" y1="78" x2="635" y2="78" stroke="#0f8a7e" stroke-width="1.8" marker-end="url(#am)"/>
+
+  <!-- Step 5 -->
+  <rect x="635" y="20" width="105" height="115" rx="5" fill="#fff" stroke="#0f2a43" stroke-width="1.5"/>
+  <text x="687" y="40" font-size="9.5" font-weight="700" text-anchor="middle" fill="#0f2a43">5. Review</text>
+  <text x="687" y="60" font-size="7.8" text-anchor="middle" fill="#2f7a3d">Proposal Tray</text>
+  <text x="687" y="76" font-size="7.5" text-anchor="middle" fill="#5b6876">Human manager:</text>
+  <text x="687" y="90" font-size="7.5" text-anchor="middle" fill="#5b6876">Accept &bull; Edit &bull; Reject</text>
+  <text x="687" y="114" font-size="7.5" text-anchor="middle" fill="#0f2a43">Audited commit</text>
+</svg>
+<figcaption>Figure 3. The Governed AI Pipeline: untrusted containment, deterministic citation validation, and human approval gate.</figcaption>
+</figure>
+
+<h3>4.1 Labelled AI evaluation dataset (31 test cases)</h3>
+<p>To ensure model updates do not introduce hallucinations or security leaks, we engineered a reproducible, labelled evaluation benchmark (<code>backend/tests/intelligence/eval_dataset.py</code>) executed in CI with deterministic fixtures, plus an opt-in live Gemini test mode:</p>
+
+<table>
+  <tr><th>Evaluation Category</th><th>Cases</th><th>Evaluation Metric</th><th>CI Result</th></tr>
+  <tr><td><b>Supported claims</b></td><td>4</td><td>Citation accuracy &amp; groundedness</td><td><span class="pill p-ok">100% verified</span></td></tr>
+  <tr><td><b>Unsupported claims</b></td><td>6</td><td>Hallucination pruning rate</td><td><span class="pill p-ok">0 of 6 stored (100% blocked)</span></td></tr>
+  <tr><td><b>Conflicting runbooks</b></td><td>3</td><td>Conflict detection recall (2+ sources)</td><td><span class="pill p-ok">100% recall (0 false pos)</span></td></tr>
+  <tr><td><b>Stale knowledge detection</b></td><td>2</td><td>Timestamp &amp; revision drift check</td><td><span class="pill p-ok">100% flagged</span></td></tr>
+  <tr><td><b>Prompt injection attempts</b></td><td>2</td><td>Indirect prompt override resistance</td><td><span class="pill p-ok">Zero effect (no state change)</span></td></tr>
+  <tr><td><b>Restricted source leakage</b></td><td>3</td><td>Audience boundary isolation</td><td><span class="pill p-ok">Zero leaks (all blocked)</span></td></tr>
+  <tr><td><b>Duplicate task proposals</b></td><td>3</td><td>Case task deduplication</td><td><span class="pill p-ok">0 duplicate proposals</span></td></tr>
+  <tr><td><b>Partial connector availability</b></td><td>2</td><td>Partial-state warning indicators</td><td><span class="pill p-ok">100% flagged as partial</span></td></tr>
+</table>
+</section>
+
+<!-- ===================== PAGE 6: DEPLOYMENT & SECURITY ===================== -->
+<section class="break">
+<h2><span class="num">5</span>Production deployment &amp; security</h2>
+
+<p>Relay is deployed on managed production infrastructure, maintaining complete separation between application execution, background processing, and database storage.</p>
+
+<table>
+  <tr><th style="width:20%">Component</th><th style="width:28%">Provider &amp; Tier</th><th>Operational Status &amp; Configuration</th></tr>
+  <tr>
+    <td><b>Frontend</b></td>
+    <td>Vercel (Production)</td>
+    <td><code>https://relay-continuity-nine.vercel.app</code> &middot; Next.js 16 App Router, CSP, HSTS, X-Frame-Options: DENY.</td>
+  </tr>
+  <tr>
+    <td><b>API &amp; Worker</b></td>
+    <td>Render (Free Tier &middot; SG)</td>
+    <td><code>https://relay-api-3m85.onrender.com</code> &middot; Embedded Procrastinate worker, docs disabled in prod, 401 anonymous rejected.</td>
+  </tr>
+  <tr>
+    <td><b>Database</b></td>
+    <td>Neon PostgreSQL 18.6</td>
+    <td>AWS Singapore (<code>aws-ap-southeast-1</code>). 84 tables under forced RLS. Roles <code>relay_owner</code> and <code>relay_app</code> verified <code>f|f|f</code>.</td>
+  </tr>
+  <tr>
+    <td><b>Authentication</b></td>
+    <td>WorkOS AuthKit</td>
+    <td>Production redirect URL configured. HTTP-only session cookies, JWKS signature verification.</td>
+  </tr>
+  <tr>
+    <td><b>Observability</b></td>
+    <td>GitHub Actions Monitor</td>
+    <td>Runs every 10 minutes against <code>/health/ops</code>. Automatically opens and closes GitHub incident issues alerting the owner.</td>
+  </tr>
+  <tr>
+    <td><b>Backups</b></td>
+    <td>Automated Nightly Drill</td>
+    <td>Encrypted pg_dump restored nightly into an ephemeral PostgreSQL 18 instance to verify RLS survival and row count parity.</td>
+  </tr>
+</table>
+
+<h3>5.1 Distributed rate limiting without Redis</h3>
+<p>To support multi-replica horizontal scaling without introducing an external Redis cluster, rate limits are implemented directly in PostgreSQL via a <code>SECURITY DEFINER</code> function (migration <code>0038</code>). Atomic token-bucket counters are updated per-tenant and per-action (e.g. login, OAuth start, AI analysis, sync) in single atomic queries. The restricted <code>relay_app</code> role can execute the check function but cannot tamper with counter rows.</p>
+</section>
+
+<!-- ===================== PAGE 7: CASE MANAGEMENT, REHEARSAL & AUDIT ===================== -->
+<section class="break">
+<h2><span class="num">6</span>Handover cases, rehearsal &amp; audit</h2>
+
+<p>Continuity cases govern the entire lifecycle of organisational changes: departures, leaves, role changes, and project reassignments. Every change is tracked through an explicit state machine with separation of duties.</p>
+
+<div class="mock">
+  <div class="mock-head">
+    <span>Case #01a1c6be &middot; Arjun Rao Departure Handover</span>
+    <span class="pill p-warn">Awaiting Review</span>
+  </div>
+  <div class="mock-body">
+    <div class="mock-sec">Inherited Responsibilities (In Scope)</div>
+    <div class="mock-row">
+      <div><b>Production Deployments</b> <span class="pill p-bad">Critical</span> &rarr; Recipient: <b>Dev Patel</b></div>
+      <div><span class="cite">Notion: Deploy Runbook</span> <span class="pill p-warn">Changed since cited</span></div>
+    </div>
+    <div class="mock-sec">Supervised Operational Rehearsal Checklist</div>
+    <div class="mock-row">
+      <div>&#9745; 1. Verify staging Kubernetes cluster deploy credentials</div>
+      <div><span class="small">Confirmed by Dev Patel &middot; 10 Nov 18:42</span></div>
+    </div>
+    <div class="mock-row">
+      <div>&#9744; 2. Execute dry-run rollback drill of Payments Service</div>
+      <div><span class="small" style="color:var(--amber)">Pending supervisor sign-off</span></div>
+    </div>
+    <div class="mock-sec">AI Proposal Tray (Human Decision Required)</div>
+    <div class="mock-row">
+      <div><b>Resolve conflicting deployment runbooks</b> (Notion vs GitHub Actions)</div>
+      <div><button style="font-size:7.6pt;padding:2px 6px;background:var(--navy);color:#fff;border:none;border-radius:3px">Accept Task</button> <span class="small" style="color:var(--muted)">Dismiss</span></div>
+    </div>
+  </div>
+  <div class="mock-foot">Two-party verification required: Approver must differ from Initiator. Formal acknowledgement locks plan version.</div>
+</div>
+
+<h3>6.1 Immutable transaction-coupled audit trail</h3>
+<p>Audit events commit within the exact same database transaction as domain changes. A PostgreSQL table trigger strictly forbids <code>UPDATE</code> or <code>DELETE</code> operations on audit records, ensuring that neither an API vulnerability nor a compromised application process can erase historical records.</p>
+</section>
+
+<!-- ===================== PAGE 8: ROUND 1 VS ROUND 2 ===================== -->
+<section class="break">
+<h2><span class="num">7</span>What changed from Round 1 and why</h2>
+
+<p>Relay expanded significantly from the initial Round 1 concept to solve the real operational bottlenecks discovered during development:</p>
+
+<table>
+  <tr><th style="width:25%">Area</th><th style="width:35%">Round 1 Proposal</th><th>Round 2 Implemented Reality &amp; Justification</th></tr>
+  <tr>
+    <td><b>Product Scope</b></td>
+    <td>Single-tool engineering offboarding centered solely on GitHub.</td>
+    <td><b>Multi-source organisational continuity:</b> Connects GitHub (code/PRs), Linear (issues/cycles), and Notion (runbooks) into unified continuity graphs across departments.</td>
+  </tr>
+  <tr>
+    <td><b>Infrastructure Stack</b></td>
+    <td>External Redis queue and planned vector database.</td>
+    <td><b>PostgreSQL-native architecture:</b> Procrastinate transactional outbox, PostgreSQL full-text search, and atomic <code>SECURITY DEFINER</code> rate limiting eliminate split-brain risks and zero-cost hosting feasibility.</td>
+  </tr>
+  <tr>
+    <td><b>AI Governance</b></td>
+    <td>Autonomous agent actions creating tasks directly.</td>
+    <td><b>Proposal-only agency:</b> AI operates with read-only tools in an untrusted sandbox; every proposal waits in a tray for human manager approval.</td>
+  </tr>
+  <tr>
+    <td><b>Notion Integration</b></td>
+    <td>Unrestricted workspace document ingestion.</td>
+    <td><b>Fail-closed admin mapping:</b> Discovers page hierarchy but only imports pages explicitly mapped to a responsibility, tracking SHA-256 revision hashes.</td>
+  </tr>
+  <tr>
+    <td><b>Handover Format</b></td>
+    <td>Downloadable static PDF and Markdown files.</td>
+    <td><b>Per-viewer dynamic context capsules:</b> Re-evaluated on every render to enforce live permissions, with explicit omissions reporting for unauthorized items.</td>
+  </tr>
+</table>
+
+<h2><span class="num">8</span>Three deliverable improvements for Round 3</h2>
+
+<p>Each improvement builds on parts that already work in Round 2: the cited AI pipeline, the risk engine, ownership history and the GitHub, Linear and Notion connectors. Full scope and acceptance criteria are in <code>docs/improvements.md</code>.</p>
+
+<div class="grid3">
+  <div class="card">
+    <h4>1. AI Handover Copilot</h4>
+    <p><b>What it is:</b> When a responsibility transfers, Relay generates a case-specific Handover Brief from the responsibility, ownership history, connected GitHub, Linear and Notion evidence, knowledge, open work and existing risks. It highlights what the incoming owner must know, missing or conflicting information, important changes and recommended handover tasks, each with supporting evidence.</p>
+    <p class="small"><b>User impact:</b> The incoming owner can ask questions about the handover and gets answers grounded only in the authorised evidence attached to that case. If the evidence does not cover a question, the answer says so.</p>
+  </div>
+  <div class="card">
+    <h4>2. "What If?" Continuity Simulator</h4>
+    <p><b>What it is:</b> A simulation mode for testing what happens if a key person becomes unavailable. A manager selects a person and sees the affected responsibilities, assets, risks, open work, knowledge gaps and single-person dependencies.</p>
+    <p class="small"><b>User impact:</b> The manager picks a possible backup or temporary owner and previews the resulting coverage and remaining risks, without changing any real ownership records. Readiness is tested before an absence or departure happens.</p>
+  </div>
+  <div class="card">
+    <h4>3. Project Memory Replay</h4>
+    <p><b>What it is:</b> An interactive timeline that reconstructs how a project evolved. Commits, pull requests, issues and linked documentation are grouped into events such as major implementations, technical changes, bug fixes, incidents and documentation updates. AI explains what happened, why it matters and how events connect, with source links and clear uncertainty labels.</p>
+    <p class="small"><b>User impact:</b> Incoming owners browse the project chronologically, filter by category, play back its evolution and inspect the evidence behind each event. They learn how the project reached its current state, not only what it is today.</p>
+  </div>
+</div>
+</section>
+
+<!-- ===================== PAGE 9: METRICS & LIMITS ===================== -->
+<section class="break">
+<h2><span class="num">9</span>Pilot limitations and honest assessment</h2>
+
+<p>Relay adheres to strict truth-in-advertising. We openly document current operational boundaries:</p>
+<ul>
+  <li><b>Render Free-Tier Spin-Down:</b> The free API instance spins down after 15 minutes of inactivity. First requests experience a 30-50s wake-up delay. This is actively mitigated by our 10-minute automated GitHub Actions monitor.</li>
+  <li><b>Transactional Email Provider:</b> Render free hosting blocks outbound SMTP. Live email delivery requires configuring a verified third-party provider (such as Resend).</li>
+  <li><b>Gemini Free-Tier Privacy Notice:</b> Current API keys use Google's free tier. While the application code prevents data leaks, production customer deployments must move to a paid Google Cloud agreement for enterprise zero-training guarantees.</li>
+  <li><b>Per-User Source ACL Mirroring:</b> Private repos fail closed (managers-only). Dynamic per-user mirroring of individual GitHub/Notion ACLs is on the roadmap after Round 3.</li>
+</ul>
+
+<h2><span class="num">10</span>Production verification metrics</h2>
+
+<table>
+  <tr><th>Verification Suite</th><th>Target / Baseline</th><th>Verified Result</th></tr>
+  <tr><td><b>Backend Test Suite</b></td><td>All domain modules &amp; migrations</td><td><span class="pill p-ok">250+ Passed (0 failures)</span></td></tr>
+  <tr><td><b>Static Analysis &amp; Types</b></td><td>Ruff &amp; Mypy strict</td><td><span class="pill p-ok">Clean across 192 Python files</span></td></tr>
+  <tr><td><b>Frontend Code Quality</b></td><td>ESLint, Prettier, TypeScript</td><td><span class="pill p-ok">Clean build, zero type errors</span></td></tr>
+  <tr><td><b>Browser E2E Suite</b></td><td>Playwright on production build</td><td><span class="pill p-ok">18 of 18 scenarios passed</span></td></tr>
+  <tr><td><b>API Read Latency</b></td><td>SRS Target: p95 &le; 500 ms</td><td><span class="pill p-ok">p95 &le; 383 ms at 1,000 responsibilities</span></td></tr>
+  <tr><td><b>Live AI Analysis</b></td><td>Gemini 3.5 Flash-Lite rotation</td><td><span class="pill p-ok">14.2s runtime, conflicting runbooks flagged</span></td></tr>
+  <tr><td><b>Product Walkthrough Video</b></td><td>1080p, 30 FPS master recording</td><td><span class="pill p-ok">3m 53s MP4 with Kokoro voiceover</span></td></tr>
+</table>
+
+<div style="margin-top: 14px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 4px; font-size: 8.5pt; line-height: 1.5;">
+  <b style="color: var(--navy); font-size: 9pt;">Production Access &amp; Deliverable Verification:</b><br/>
+  &bull; <b>Live Application:</b> <a href="https://relay-continuity-nine.vercel.app" style="color: var(--teal); text-decoration: none;">https://relay-continuity-nine.vercel.app</a> (Production deployment on Vercel)<br/>
+  &bull; <b>API Health &amp; Docs:</b> <a href="https://relay-api-3m85.onrender.com/health" style="color: var(--teal); text-decoration: none;">https://relay-api-3m85.onrender.com/health</a> (Render, Singapore AWS region)<br/>
+  &bull; <b>Public Source Code:</b> <a href="https://github.com/prasadbhalerao1/CodersInPune" style="color: var(--teal); text-decoration: none;">https://github.com/prasadbhalerao1/CodersInPune</a> (Branch <code>main</code>, commit verified)<br/>
+  &bull; <b>Product Walkthrough Video:</b> <code>artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4</code> (Local 1080p MP4 master)
+</div>
+
+<footer class="doc">
+  Relay &middot; Organisational Continuity Platform &middot; Round 2 Build Dossier &middot; WeCoders &middot; 11 November 2026
+</footer>
+</section>
+
+</div>
+</body>
+</html>

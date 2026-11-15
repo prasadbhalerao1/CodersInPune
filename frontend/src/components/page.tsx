@@ -13,7 +13,8 @@ export function PageHeader({
   return (
     <header className="bg-background/85 sticky top-0 z-10 flex min-h-14 shrink-0 items-center justify-between gap-4 border-b px-6 py-3 backdrop-blur">
       <div className="min-w-0">
-        <h1 className="truncate text-[15px] font-semibold">{title}</h1>
+        {/* Syne, as on the landing page: one display face across the product. */}
+        <h1 className="font-heading truncate text-base leading-tight font-bold">{title}</h1>
         {description ? (
           <p className="text-muted-foreground mt-0.5 truncate text-[13px]">{description}</p>
         ) : null}

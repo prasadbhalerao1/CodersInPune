@@ -1,8 +1,7 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { useActionState } from "react";
-
-import { Button } from "@/components/ui/button";
 
 import { createSampleWorkspaceAction, type CreateWorkspaceState } from "./actions";
 
@@ -14,38 +13,34 @@ export function SampleWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
     {},
   );
   return (
-    <form
-      action={formAction}
-      className="border-ac/30 flex flex-col gap-3 rounded-2xl border bg-gradient-to-b from-[#141A28] to-[#0A0D15] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.6)] backdrop-blur-xl"
-    >
+    <form action={formAction} className="glass flex flex-col gap-4 p-5">
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <div>
-        <div className="flex items-center gap-2">
-          <span className="jewel-chartreuse" />
-          <h2 className="text-strong text-sm font-bold tracking-wide">
-            EXPLORE SAMPLE WORKSPACE // RECOMMENDED
-          </h2>
-        </div>
-        <p className="text-fg-mute mt-2 text-xs leading-relaxed">
-          Instantly stages &ldquo;Northwind Labs (demo)&rdquo;: a fully articulated team with real
-          continuity vulnerabilities, absence blast radius simulations, an active departure case,
-          and a verified handover dossier.
+        <span className="text-ac font-mono text-[11px] font-semibold tracking-[0.18em] uppercase">
+          Recommended
+        </span>
+        <h2 className="font-syne text-strong mt-1.5 text-lg leading-tight font-bold">
+          Explore a sample workspace
+        </h2>
+        <p className="text-fg-soft mt-2 text-[13px] leading-relaxed">
+          Creates &ldquo;Northwind Labs (demo)&rdquo;: a synthetic team with ownership gaps, a
+          departure case in progress and a handover capsule to review. It never touches real data.
         </p>
       </div>
-      <div className="mt-2">
-        <Button
-          type="submit"
-          disabled={pending}
-          aria-busy={pending}
-          variant="titanium"
-          className="!h-11 w-full !justify-center !text-xs"
-        >
-          <span className="jewel-emerald" />
-          <span>{pending ? "STAGING WORKSPACE..." : "ENTER DEMO WORKSPACE ⟶"}</span>
-        </Button>
-      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        aria-busy={pending}
+        className="group bg-cta text-cta-fg hover:bg-cta-hover focus-visible:outline-ac inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-5 text-xs font-bold tracking-wider uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-60"
+      >
+        {pending ? "Creating sample…" : "Create sample workspace"}
+        <ArrowRight
+          aria-hidden
+          className="size-3.5 transition-transform group-hover:translate-x-0.5"
+        />
+      </button>
       {state.error ? (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-bad text-sm">
           {state.error}
         </p>
       ) : null}
