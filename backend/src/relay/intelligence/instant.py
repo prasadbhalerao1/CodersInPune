@@ -29,6 +29,8 @@ REASONS = {
     "timeout": "The AI provider took too long to answer.",
     "quota_exhausted": "The AI provider is rate-limiting requests; try again in a minute.",
     "stream_interrupted": "The answer was cut off before it finished; ask again.",
+    "invalid_model_output": "The model's reply didn't match the required format, so it was "
+    "discarded rather than trusted.",
 }
 DEFAULT_REASON = "The AI provider could not answer just now."
 

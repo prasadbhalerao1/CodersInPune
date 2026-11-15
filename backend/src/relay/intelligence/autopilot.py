@@ -22,7 +22,7 @@ from sqlalchemy import select
 from relay.config import Settings
 from relay.continuity import service as continuity
 from relay.identity.workspace_access import WorkspaceAccess
-from relay.intelligence import capsules, interviews, runs
+from relay.intelligence import capsules, instant, interviews, runs
 from relay.intelligence import service as svc
 from relay.intelligence.models import AgentRun, AgentRunEvent, Claim
 from relay.intelligence.registry import capability
@@ -214,11 +214,9 @@ def _settled(step: Step, event: AgentRunEvent | None) -> Step:
 
 
 def _failure(code: str) -> str:
-    return {
-        "monthly_budget_exhausted": "Skipped: this month's AI budget is used up.",
-        "timeout": "The model took too long; the steps before it are kept.",
-        "rate_limited": "The AI provider is busy right now; try again in a minute.",
-    }.get(code, "The model could not finish this step; the steps before it are kept.")
+    if code == "monthly_budget_exhausted":
+        return "Skipped: this month's AI budget is used up."
+    return f"{instant.reason_text(code)} The steps before it are kept."
 
 
 async def _follow_ups(
