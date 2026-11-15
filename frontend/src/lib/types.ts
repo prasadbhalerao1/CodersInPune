@@ -1994,3 +1994,13 @@ export type ContinuationPlan = {
   starts_at: string;
   phases: { days: 30 | 60 | 90; title: string; goal: string; steps: PlanStep[] }[];
 };
+
+export type SlackStatus = {
+  connected: boolean;
+  channel: string | null;
+  connected_at: string | null;
+  last_posted_at: string | null;
+  last_error: string | null;
+  can_manage: boolean;
+  available: boolean;
+};

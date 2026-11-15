@@ -9,6 +9,7 @@ import type {
   ExpertiseMap,
   MeetingDetail,
   MeetingSummary,
+  SlackStatus,
   AiAdminView,
   AnswerView,
   HistoryAnswer,
@@ -426,6 +427,7 @@ export const api = {
   expertise: (id: string) => relayFetch<ExpertiseMap>(`${ws(id)}/search/expertise`),
   plan: (id: string, caseId: string) =>
     relayFetch<ContinuationPlan>(`${ws(id)}/cases/${caseId}/plan`),
+  slack: (id: string) => relayFetch<SlackStatus>(`${ws(id)}/integrations/slack`),
   decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

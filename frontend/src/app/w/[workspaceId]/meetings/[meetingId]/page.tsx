@@ -1,4 +1,4 @@
-import { Check, ListChecks, RefreshCw, X } from "lucide-react";
+import { Check, ListChecks, RefreshCw, Send, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -11,6 +11,7 @@ import { api } from "@/lib/relay-api";
 import type { MeetingItemView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { shareMeetingToSlackAction } from "../../integrations/slack/actions";
 import { reextractMeetingAction, reviewMeetingItemAction } from "../actions";
 import { KIND_LABEL } from "../kinds";
 
@@ -32,7 +33,10 @@ export default async function MeetingPage({
   params,
 }: PageProps<"/w/[workspaceId]/meetings/[meetingId]">) {
   const { workspaceId, meetingId } = await params;
-  const meeting = await attempt(api.meeting(workspaceId, meetingId));
+  const [meeting, slack] = await Promise.all([
+    attempt(api.meeting(workspaceId, meetingId)),
+    attempt(api.slack(workspaceId)),
+  ]);
   if (!meeting.ok) return <ApiErrorNotice error={meeting.error} />;
   const m = meeting.data;
   const base = `/w/${workspaceId}`;
@@ -57,11 +61,20 @@ export default async function MeetingPage({
         }`}
         actions={
           m.can_review ? (
-            <ActionForm action={reextractMeetingAction.bind(null, workspaceId, m.id)}>
-              <SubmitButton size="sm" variant="outline" pendingLabel="Reading…">
-                <RefreshCw aria-hidden className="size-3.5" /> Read again
-              </SubmitButton>
-            </ActionForm>
+            <span className="flex gap-2">
+              {slack.ok && slack.data.connected ? (
+                <ActionForm action={shareMeetingToSlackAction.bind(null, workspaceId, m.id)}>
+                  <SubmitButton size="sm" variant="outline" pendingLabel="Posting…">
+                    <Send aria-hidden className="size-3.5" /> Post to #{slack.data.channel}
+                  </SubmitButton>
+                </ActionForm>
+              ) : null}
+              <ActionForm action={reextractMeetingAction.bind(null, workspaceId, m.id)}>
+                <SubmitButton size="sm" variant="outline" pendingLabel="Reading…">
+                  <RefreshCw aria-hidden className="size-3.5" /> Read again
+                </SubmitButton>
+              </ActionForm>
+            </span>
           ) : undefined
         }
       />

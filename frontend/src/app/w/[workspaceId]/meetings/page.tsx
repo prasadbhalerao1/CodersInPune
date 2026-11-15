@@ -59,7 +59,8 @@ export default async function MeetingsPage({ params }: PageProps<"/w/[workspaceI
                     {(["decision", "action", "question", "risk"] as const).map((k) =>
                       m.counts[k] ? (
                         <span key={k} className="text-muted-foreground text-xs tabular-nums">
-                          {m.counts[k]} {m.counts[k] === 1 ? SINGULAR[k] : KIND_LABEL[k].toLowerCase()}
+                          {m.counts[k]}{" "}
+                          {m.counts[k] === 1 ? SINGULAR[k] : KIND_LABEL[k].toLowerCase()}
                         </span>
                       ) : null,
                     )}
