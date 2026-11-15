@@ -10,6 +10,7 @@ the restricted `relay_app` role, so row-level security is exercised on every que
 |---|---|---:|---|
 | Backend (API, services, security, AI validation) | `backend/tests` | 314 (+2 opt-in) | All pass (2026-11-15, 4.3 min) |
 | of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `intelligence/test_handover.py`, `test_guidance.py`, `test_sample_workspace.py` | 45 | All pass |
+| New in Round 3 (Autopilot, meetings, decision log, Ask Relay, expertise, 30/60/90) | `intelligence/test_autopilot.py`, `intelligence/test_meetings.py`, `intelligence/test_ask.py`, `test_expertise.py`, `test_continuation_plan.py` | 17 | All pass (2026-11-16) |
 | Browser journeys, public (no account) | `frontend/e2e/public.spec.ts` | 6 | Pass (CI and locally) |
 | Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 12 + 5 (+ 6 public) | All pass locally (2026-11-12) |
 | Static checks | ruff, mypy (strict), ESLint, TypeScript, Prettier | | Clean |

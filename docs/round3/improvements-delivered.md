@@ -145,6 +145,26 @@ timeline follows a responsibility, because that is the unit a successor inherits
 
 ---
 
+## Beyond the three: what else shipped in Round 3
+
+Each of these works on real workspace records, is permission-checked inside its service, and
+ends in something a person accepts. None of them changes data on its own.
+
+| Feature | Where in the app | What it does | Code and tests |
+|---|---|---|---|
+| **Handover Autopilot** | Case → Analysis → *Run Autopilot* | One click runs the whole case analysis while you watch: it reads the case, gathers the evidence you can see, checks the continuity rules, runs the four AI reviewers (each tool call is shown), then queues the exit interview and the handover brief. It ends with the proposals waiting for review. A run interrupted by a closed tab resumes where it stopped. | `intelligence/autopilot.py`, `tests/intelligence/test_autopilot.py` |
+| **Meeting intelligence** | Meetings | Paste notes or a transcript and get decisions, actions (with owner and due date), open questions and risks, each linked to the line it came from. Accepting a decision records it as decision knowledge (an ADR) on the responsibility. Accepting an action adds a task to the case, assigned to the named member. With AI off, rules do the extraction. | `intelligence/meetings.py`, `tests/intelligence/test_meetings.py` |
+| **Decision log** | Decision log | Every decision in one timeline: recorded ADRs, decisions from meetings, and decisions reconstructed by analyses, each linked to its source and filterable by origin. | `intelligence/meetings.py` (`decision_log`) |
+| **Ask Relay** | Ask Relay | Workspace-wide questions answered as they stream, from records the asker may open (responsibilities, knowledge, cases, people, risks, GitHub and Linear work, meeting items). A citation of anything outside the evidence is removed, and an answer that cites nothing becomes "not in the records". | `intelligence/ask.py`, `tests/intelligence/test_ask.py` |
+| **Expertise map** | Expertise map | A responsibilities × people grid showing who holds each one and who wrote its knowledge. The most fragile work comes first. It separates a backup *on paper* from a *capable* backup who has documented the work. | `search/service.py` (`expertise_map`), `tests/test_expertise.py` |
+| **30/60/90 continuation plan** | Case → 30/60/90 plan | A first-90-days plan for the successor, built from the case: shadowing on critical work, taking the lead, documenting undocumented work, training a backup. Each step says why, and any step can be added to the case's tasks. | `continuity/plan.py`, `tests/test_continuation_plan.py` |
+
+The sample workspace includes three recorded meetings: Arjun's handover kickoff, a refund incident review and a
+platform sync. Some of their items are already accepted, so the Decision log, the case's tasks and Ask Relay all have
+real content from the first click.
+
+---
+
 ## How the three connect
 
 Memory replay shows how a responsibility got here → the simulator shows what breaks if its

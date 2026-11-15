@@ -30,6 +30,12 @@ const GROUPS: { title: string; intro: string; keys: ExplainKey[] }[] = [
     keys: ["copilot", "simulation", "memory_replay"],
   },
   {
+    title: "Working with AI, safely",
+    intro:
+      "Features that do the busywork and stop before anything changes: a person accepts every result.",
+    keys: ["autopilot", "ask_relay", "meetings", "decision_log", "continuation_plan"],
+  },
+  {
     title: "Numbers and how they are calculated",
     intro:
       "Every number in Relay can be traced to the records behind it. The ⓘ next to a number in the app opens the same definition you see here.",
@@ -42,6 +48,7 @@ const GROUPS: { title: string; intro: string; keys: ExplainKey[] }[] = [
       "key_person",
       "freshness",
       "follow_through",
+      "expertise",
     ],
   },
   {
