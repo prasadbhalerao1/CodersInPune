@@ -103,6 +103,7 @@ class ConnectorRun(Base):
         CheckConstraint("provider IN ('github', 'linear', 'notion')", name="provider"),
         CheckConstraint("status IN ('ok', 'partial', 'error', 'skipped')", name="status"),
         Index(None, "tenant_id", "connection_ref"),
+        Index(None, "tenant_id", "finished_at"),
         {"schema": SCHEMA},
     )
 

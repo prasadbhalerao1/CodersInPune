@@ -39,7 +39,7 @@ from relay.intelligence.models import (
     Proposal,
 )
 from relay.intelligence.registry import CAPABILITIES, capability
-from relay.policy.permissions import Permission, authorize, role_allows
+from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import LongText, Name, StrictInput
 from relay.shared.errors import ApiError
 
@@ -306,11 +306,20 @@ def _proposal_view(p: Proposal, evidence: dict[uuid.UUID, EvidenceView]) -> Prop
 
 
 async def case_proposals(access: WorkspaceAccess, case_id: uuid.UUID) -> list[ProposalView]:
+    # Review fix (guardrail 11). Before: this service read AI proposals without calling
+    # authorize(), relying on its only caller (get_analysis) to have checked AI_READ, and
+    # filtered by a hand-written tenant comparison. Now: it authorizes itself and lists with
+    # visible(). Why: the permission check lives inside the service, so a future caller
+    # (a new endpoint, a job) cannot read proposals without it.
+    authorize(access, Permission.AI_READ)
     session = access.session
     proposals = list(
         await session.scalars(
             select(Proposal)
-            .where(Proposal.case_id == case_id, Proposal.tenant_id == access.tenant_id)
+            .where(
+                Proposal.case_id == case_id,
+                visible(access, Permission.AI_READ, Proposal.tenant_id),
+            )
             .order_by(Proposal.status != "pending", Proposal.created_at.desc())
             .limit(100)
         )
@@ -672,9 +681,11 @@ class RunDetail(RunView):
 
 async def list_runs(access: WorkspaceAccess) -> list[RunView]:
     authorize(access, Permission.AI_READ)  # runs hold identifiers and metrics only
+    # Review fix (guardrail 11): lists filter with visible(), not a hand-written tenant
+    # comparison, so the list can never widen beyond what AI_READ allows.
     rows = await access.session.scalars(
         select(AgentRun)
-        .where(AgentRun.tenant_id == access.tenant_id)
+        .where(visible(access, Permission.AI_READ, AgentRun.tenant_id))
         .order_by(AgentRun.created_at.desc())
         .limit(100)
     )

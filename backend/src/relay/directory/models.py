@@ -140,6 +140,7 @@ class TeamMember(Base):
             ["directory.person.tenant_id", "directory.person.id"],
             name="fk_team_member_person",
         ),
+        Index(None, "tenant_id", "person_id"),
         {"schema": SCHEMA},
     )
 

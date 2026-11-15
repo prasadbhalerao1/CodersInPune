@@ -97,6 +97,7 @@ class NotionSource(Base):
         CheckConstraint(
             "(responsibility_id IS NULL) = (visibility IS NULL)", name="mapping_complete"
         ),
+        Index(None, "tenant_id", "responsibility_id"),
         {"schema": SCHEMA},
     )
 

@@ -16,8 +16,15 @@ class Settings(BaseSettings):
 
     environment: Literal["local", "test", "staging", "production"] = "local"
     database_url: str = Field(description="postgresql+psycopg:// URL for the application role")
-    db_pool_size: int = 5
-    db_max_overflow: int = 5
+    # Review fix (fail fast). Before: plain `int`s, so `RELAY_DB_POOL_SIZE=0` or a negative
+    # value was accepted at start-up and only failed later inside SQLAlchemy at the first
+    # request, and the pool-wait timeout could not be tuned at all. Now: bounded, and
+    # `db_pool_timeout_seconds` is explicit (30 s is SQLAlchemy's own default, so behaviour
+    # is unchanged unless set). Why: a bad value is rejected when the process starts, and an
+    # operator can make an overloaded API fail requests sooner instead of queueing them.
+    db_pool_size: int = Field(default=5, ge=1, le=100)
+    db_max_overflow: int = Field(default=5, ge=0, le=100)
+    db_pool_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     db_ready_timeout_seconds: float = 2.0
     api_host: str = "127.0.0.1"
     api_port: int = 8000

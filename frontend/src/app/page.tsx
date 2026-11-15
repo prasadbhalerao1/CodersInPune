@@ -3,19 +3,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ArrowRight } from "lucide-react";
 
-import { Walkthrough } from "@/components/landing/walkthrough";
-import { RelayLines } from "@/components/brand";
-import { RelayMark } from "@/components/workspace-heading";
+import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
+import { Petals } from "@/components/landing/petals";
+import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
+import { HeroReadout } from "@/components/landing/hero-readout";
+import { RelayMark } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { HeroCrew } from "@/components/landing/figures/hero-crew";
+import { Interlude } from "@/components/landing/figures/interlude";
+import { Films } from "@/components/landing/figures/films";
+import { HeroRelay } from "@/components/landing/figures/hero-relay";
+import { BlueArt } from "@/components/landing/landing-blue";
+import { LandingFooter, LandingSections } from "@/components/landing/landing-sections";
+import { StickyHeader } from "@/components/landing/sticky-header";
 import { REPO_URL, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Relay — continuity when people and responsibilities change",
+  title: { absolute: "Relay: keep work moving when people move on" },
   description:
-    "Relay finds what someone owns, reconstructs the context from your tools with cited evidence, and moves ownership through reviewed, auditable handovers.",
+    "When lead engineers leave, the work shouldn't stall. Relay forecasts what an absence breaks and hands the work over with cited evidence.",
 };
 
-// Structured data so search and AI crawlers can tell what the product is and does.
 const STRUCTURED_DATA = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -35,242 +45,203 @@ const STRUCTURED_DATA = JSON.stringify({
   ],
 }).replace(/</g, "\\u003c");
 
-const PROBLEMS = [
-  {
-    stat: "Single owner",
-    text: "Critical work quietly depends on one person until the day they leave or go on leave.",
-  },
-  {
-    stat: "Scattered context",
-    text: "Decisions live in PRs, tickets and old docs nobody can find, or that quietly went stale.",
-  },
-  {
-    stat: "Unclear handovers",
-    text: "Ownership moves in a chat message, with no record of what was handed over or missed.",
-  },
-];
-
-const FEATURES = [
-  {
-    title: "Responsibility catalogue",
-    text: "Who owns what, with primary, backup and co-owners, review cadence, escalation paths and full ownership history.",
-    detail: "Restricted responsibilities stay hidden at the database, not just the UI.",
-  },
-  {
-    title: "Continuity cases",
-    text: "Onboarding, transfer, coverage, departure and project handover, with an explicit state model, approvals and readiness.",
-    detail: "Separation of duties on critical changes; blockers escalate on their own.",
-  },
-  {
-    title: "Evidence-backed analysis",
-    text: "Findings labelled Fact, Rule, AI inference, Conflict or Missing evidence, each citing its source.",
-    detail: "Uncited claims are dropped; managers-only evidence never reaches a member.",
-  },
-  {
-    title: "Handover capsules",
-    text: "A role-specific handover, versioned, redacted where needed, approved by a second person and acknowledged.",
-    detail: "Omissions are listed, so the recipient knows what they can't see.",
-  },
-  {
-    title: "Governed knowledge",
-    text: "Versions you can compare, stewards who verify, disputes that keep history, and validity windows.",
-    detail: "Imported pages stay unverified until a person checks them.",
-  },
-  {
-    title: "Connected, read-only by default",
-    text: "GitHub, Linear and Notion feed evidence. Creating an issue needs explicit approval of its exact content.",
-    detail: "Retries can't create duplicates; every write leaves a receipt.",
-  },
-];
-
-const PRINCIPLES = [
-  [
-    "People decide",
-    "AI drafts proposals; it holds no write tools. Every change is approved and audited.",
-  ],
-  [
-    "Least privilege",
-    "Tenant isolation with row-level security, scoped roles and fail-closed restricted data.",
-  ],
-  [
-    "Honest about gaps",
-    "Stale, partial or missing sources are shown as such, never filled in by a model.",
-  ],
-  ["Yours to take", "Export your workspace and audit log any time; retention is yours to set."],
-] as const;
-
 export default function HomePage() {
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="bg-background/80 sticky top-0 z-20 border-b backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <RelayMark className="size-6" />
-            Relay
+    <div className="landing-root bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
+
+      <Interlude />
+      <Films />
+      <BlueArt />
+
+      {/* Floating header over the hero (no bar, no border, as in the reference) */}
+      <StickyHeader>
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-2 items-center px-6 sm:px-8 lg:grid-cols-[1fr_auto_1fr] lg:px-12">
+          <Link href="/" className="group flex items-center gap-2.5 justify-self-start">
+            <RelayMark className="h-8 w-8 drop-shadow-[0_0_10px_rgba(90,120,255,0.5)]" />
+            <span className="text-strong font-sans text-[22px] font-medium tracking-tight">
+              Relay
+            </span>
           </Link>
-          <nav aria-label="Sections" className="text-muted-foreground hidden gap-5 text-sm sm:flex">
-            <a href="#how" className="hover:text-foreground">
-              How it works
+
+          <nav
+            aria-label="Sections"
+            className="text-fg-soft glass hidden items-center gap-5 !rounded-full px-5 py-2.5 text-[13px] lg:flex xl:gap-8 xl:px-7"
+          >
+            <a href="#overview" className="hover:text-strong hidden transition-colors xl:inline">
+              Overview
             </a>
-            <a href="#features" className="hover:text-foreground">
+            <a href="#exposure" className="hover:text-strong transition-colors">
+              Problem
+            </a>
+            <a href="#product" className="hover:text-strong transition-colors">
               Product
             </a>
-            <a href="#trust" className="hover:text-foreground">
+            <a href="#how" className="hover:text-strong transition-colors">
+              How it works
+            </a>
+            <a href="#trust" className="hover:text-strong transition-colors">
               Trust
             </a>
+            <a href="#try" className="hover:text-strong transition-colors">
+              Try it
+            </a>
           </nav>
-          <span className="flex-1" />
-          <Suspense fallback={null}>
-            <PrimaryAction compact />
-          </Suspense>
-        </div>
-      </header>
 
-      <main className="flex-1">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
-        <section className="relative overflow-hidden border-b">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)] [background-size:44px_44px] opacity-60"
-          />
-          <RelayLines
-            animated
-            className="absolute inset-y-0 right-0 hidden h-full w-[46%] lg:block"
-          />
-          <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 pt-20 pb-20 sm:px-6 sm:pt-28">
-            <p className="bg-card/80 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-xs backdrop-blur">
-              <span aria-hidden className="bg-baton size-1.5 rounded-full" />
-              Organisational continuity, with evidence
-            </p>
-            <h1 className="font-display max-w-3xl text-5xl leading-[1.02] text-balance sm:text-7xl">
-              When people move on, <em className="text-primary">the work</em> shouldn&apos;t stall.
-            </h1>
-            <p className="text-muted-foreground max-w-2xl text-lg text-pretty">
-              Relay finds everything someone owns, rebuilds the context from the tools you already
-              use, and moves responsibility through a reviewed handover that cites its sources.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Suspense fallback={null}>
-                <PrimaryAction />
-              </Suspense>
-              <a href="#how" className="text-muted-foreground hover:text-foreground text-sm">
-                See how it works ↓
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-b">
-          <div className="mx-auto grid max-w-6xl gap-px overflow-hidden px-4 py-12 sm:grid-cols-3 sm:px-6">
-            {PROBLEMS.map((p, i) => (
-              <div key={p.stat} className="flex flex-col gap-1 p-4">
-                <p className="font-display text-baton-foreground/70 dark:text-baton text-3xl">
-                  0{i + 1}
-                </p>
-                <p className="text-sm font-semibold">{p.stat}</p>
-                <p className="text-muted-foreground text-sm">{p.text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section id="how" className="scroll-mt-16 border-b">
-          <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-20 sm:px-6">
-            <div className="max-w-2xl">
-              <h2 className="font-display text-4xl tracking-tight">
-                From a change to a reviewed handover
-              </h2>
-              <p className="text-muted-foreground mt-2">
-                The whole loop, as it runs in the product. Click a step, or let it play.
-              </p>
-            </div>
-            <Walkthrough />
-          </div>
-        </section>
-
-        <section id="features" className="scroll-mt-16 border-b">
-          <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-20 sm:px-6">
-            <h2 className="font-display max-w-2xl text-4xl tracking-tight">
-              One place for who owns what, and how it moves
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURES.map((f) => (
-                <div
-                  key={f.title}
-                  tabIndex={0}
-                  className="group bg-card lift hover:border-primary/30 focus-visible:border-primary/30 flex flex-col gap-2 rounded-xl border p-5 shadow-xs outline-none"
-                >
-                  <p className="font-medium">{f.title}</p>
-                  <p className="text-muted-foreground text-sm">{f.text}</p>
-                  <p className="text-sm opacity-70 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                    {f.detail}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="trust" className="scroll-mt-16 border-b">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.4fr]">
-            <div>
-              <h2 className="font-display text-4xl tracking-tight">Built to be trusted with it</h2>
-              <p className="text-muted-foreground mt-2">
-                Continuity data is sensitive. Relay is designed so the safe path is the only path.
-              </p>
-            </div>
-            <dl className="grid gap-6 sm:grid-cols-2">
-              {PRINCIPLES.map(([title, text]) => (
-                <div key={title} className="border-l pl-4">
-                  <dt className="font-medium">{title}</dt>
-                  <dd className="text-muted-foreground mt-1 text-sm">{text}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </section>
-
-        <section>
-          <div className="mx-auto flex max-w-6xl flex-col items-start gap-5 px-4 py-20 sm:px-6">
-            <h2 className="font-display max-w-2xl text-4xl tracking-tight">
-              Start with one handover. Keep the habit.
-            </h2>
-            <Suspense fallback={null}>
-              <PrimaryAction />
+          <div className="flex items-center gap-3 justify-self-end">
+            <ThemeToggle hint />
+            <Suspense fallback={<NavActionLink label="LAUNCH SANDBOX" short="SANDBOX" />}>
+              <PrimaryNavAction />
             </Suspense>
           </div>
+        </div>
+      </StickyHeader>
+
+      <main className="relative">
+        {/* ==========================================================================
+            HERO SECTION
+            ========================================================================== */}
+        <section
+          id="overview"
+          className="relative flex min-h-svh flex-col justify-between overflow-hidden"
+        >
+          <HeroCanvasBackground />
+          <HeroCrew />
+
+          {/* CONTINUITY outline: centred behind the capsule, running off the right edge */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-[13%] right-[7%] z-[12] hidden select-none lg:block"
+          >
+            <span className="font-bebas hero-outline block text-[clamp(5rem,12vw,12rem)] leading-none tracking-[0.03em] whitespace-nowrap">
+              CONTINUITY
+            </span>
+          </div>
+
+          {/* Orchid behind the capsule: in front of the slash, behind the capsule */}
+          <Petals
+            variant="light"
+            className="pointer-events-none absolute right-[-3%] bottom-[-4%] z-[6] hidden h-[94%] w-[68vw] max-w-[1150px] [mask-image:radial-gradient(closest-side,#000_64%,transparent_100%)] lg:block"
+            petals={[
+              { x: 480, y: 800, rot: -70, s: 1.2, o: 0.8, blur: true },
+              { x: 600, y: 800, rot: -38, s: 1.45, o: 0.95 },
+              { x: 760, y: 800, rot: -6, s: 1.7, o: 1 },
+              { x: 920, y: 800, rot: 30, s: 1.5, o: 0.95 },
+              { x: 1040, y: 800, rot: 62, s: 1.2, o: 0.8, blur: true },
+            ]}
+          />
+
+          {/* Capsule: large, diagonal, overlapping the copy column (desktop) */}
+          <div className="pointer-events-none absolute top-1/2 right-[5%] z-10 hidden w-[60vw] max-w-[1080px] -translate-y-[50%] lg:block">
+            <QuantumCapsule3D />
+          </div>
+
+          {/* What-if readout (desktop): the same numbers as the simulator below */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-[25.8%] z-30 hidden lg:block">
+            <div className="mx-auto flex max-w-7xl justify-end px-12">
+              <div className="pointer-events-auto" data-fig="readout">
+                <HeroReadout />
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 pt-28 pb-14 sm:px-8 lg:px-12">
+            <div className="mx-auto max-w-[640px] text-center lg:mx-0 lg:text-left">
+              <h1 className="hero-in flex flex-col items-center select-none lg:items-start">
+                <span className="font-display text-ac text-[clamp(3.4rem,7.6vw,6.6rem)] leading-[0.9] tracking-[-0.02em] italic">
+                  Pass the
+                </span>
+                <span className="font-display text-strong text-[clamp(2.8rem,6.4vw,5.6rem)] leading-[0.95] tracking-[-0.01em]">
+                  accountability.
+                </span>
+              </h1>
+
+              <p className="hero-in hero-in-2 scrim text-fg-soft mx-auto mt-6 max-w-[28rem] text-[1.1rem] leading-snug lg:mx-0">
+                When lead engineers leave, the work shouldn&apos;t stall. Relay simulates an
+                absence&apos;s blast radius and hands the work over with cited evidence.
+              </p>
+
+              <div className="hero-in hero-in-3 mt-9 flex flex-col items-center gap-4 lg:items-start">
+                <Link
+                  href="#simulator"
+                  data-fig="cta"
+                  className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold transition-colors"
+                >
+                  <span className="bg-page/70 h-2 w-2 rounded-full" />
+                  <span>INITIALIZE SIMULATOR</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+                <a
+                  href="#how"
+                  className="glass-clear text-fg-soft hover:text-strong inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 !rounded-full px-6 text-sm font-medium transition-colors"
+                >
+                  <span>(▷) SYSTEM FILM</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Capsule + card stacked under the copy on small screens */}
+            <div className="relative mt-12 overflow-clip rounded-3xl bg-gradient-to-br from-[#3A58FF] via-[#1D32C2] to-[#08104A] px-3 pt-6 pb-5 lg:hidden">
+              <Petals
+                variant="light"
+                className="pointer-events-none absolute inset-0 h-full w-full opacity-90"
+                petals={[
+                  { x: 480, y: 800, rot: -70, s: 1.2, o: 0.8, blur: true },
+                  { x: 600, y: 800, rot: -38, s: 1.45, o: 0.95 },
+                  { x: 760, y: 800, rot: -6, s: 1.7, o: 1 },
+                  { x: 920, y: 800, rot: 30, s: 1.5, o: 0.95 },
+                  { x: 1040, y: 800, rot: 62, s: 1.2, o: 0.8, blur: true },
+                ]}
+              />
+              <QuantumCapsule3D />
+              <div className="mt-2 flex justify-center">
+                <HeroReadout />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom hairline bar */}
+          <div className="border-line/[0.1] bg-page/80 relative z-20 w-full shrink-0 border-t py-2.5 backdrop-blur-md">
+            <HeroRelay />
+            <div className="text-fg-mute mx-auto flex max-w-7xl flex-wrap items-center justify-start gap-x-3 px-6 text-xs sm:px-8 lg:px-12">
+              <span>Reads GitHub, Linear and Notion</span>
+              <span aria-hidden>·</span>
+              <span>Read-only</span>
+              <span aria-hidden>·</span>
+              <span>AI proposes, people decide</span>
+            </div>
+          </div>
         </section>
+
+        <LandingSections />
       </main>
 
-      <footer className="border-t">
-        <div className="text-muted-foreground mx-auto flex max-w-6xl flex-wrap gap-4 px-4 py-6 text-xs sm:px-6">
-          <span>Relay</span>
-          <span className="flex-1" />
-          <span>Read-only integrations by default · Human approval for every change</span>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }
 
-async function PrimaryAction({ compact = false }: { compact?: boolean }) {
-  // withAuth reads the clock for token expiry: render this part at request time.
+function NavActionLink({ label, short }: { label: string; short: string }) {
+  return (
+    <Link
+      href="/workspaces"
+      aria-label={label}
+      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2 rounded-full px-5 text-xs font-bold tracking-wider whitespace-nowrap transition-colors"
+    >
+      {/* the full label from 640px; a phone header has room for one word */}
+      <span className="sm:hidden">{short}</span>
+      <span className="hidden sm:inline">{label}</span>
+      <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
+
+async function PrimaryNavAction() {
   await connection();
   const { user } = await withAuth();
-  const className = compact
-    ? "bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium"
-    : "bg-primary text-primary-foreground inline-flex h-10 items-center rounded-lg px-5 text-sm font-medium shadow-sm transition-transform hover:-translate-y-px";
-  if (user) {
-    return (
-      <Link href="/workspaces" className={className}>
-        {compact ? "Open Relay" : "Go to your workspaces →"}
-      </Link>
-    );
-  }
-  // A plain link (not prefetched) so navigation, not prefetching, starts sign-in.
-  return (
-    <a href="/sign-in" className={className}>
-      {compact ? "Sign in" : "Get started →"}
-    </a>
+  return user ? (
+    <NavActionLink label="WORKSPACES" short="WORKSPACES" />
+  ) : (
+    <NavActionLink label="LAUNCH SANDBOX" short="SANDBOX" />
   );
 }

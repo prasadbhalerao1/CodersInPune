@@ -24,7 +24,7 @@ from zoneinfo import available_timezones
 
 import procrastinate
 from pydantic import AwareDatetime, BaseModel, HttpUrl, model_validator
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
@@ -873,10 +873,12 @@ async def remove_scope_item(
     item = await access.session.get(CaseScopeItem, item_id)
     if item is None or item.case_id != case_id:
         raise ApiError(404, "scope_item_not_found", "Scope item not found.")
-    for criterion in await access.session.scalars(
-        select(CaseReadinessCriterion).where(CaseReadinessCriterion.scope_item_id == item_id)
-    ):
-        await access.session.delete(criterion)
+    # Review fix. Before: each readiness criterion was loaded as an ORM object and deleted
+    # with its own DELETE statement. Now: one bulk DELETE. Why: one round-trip instead of
+    # 1 + N, and nothing is hydrated just to be thrown away.
+    await access.session.execute(
+        delete(CaseReadinessCriterion).where(CaseReadinessCriterion.scope_item_id == item_id)
+    )
     await access.session.execute(
         update(CaseTask).where(CaseTask.scope_item_id == item_id).values(scope_item_id=None)
     )

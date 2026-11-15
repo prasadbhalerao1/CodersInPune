@@ -125,6 +125,7 @@ class AgentRun(Base):
         CheckConstraint(_in("state", RUN_STATES), name="state"),
         CheckConstraint("trigger IN ('manual', 'automation', 'retry')", name="trigger"),
         Index(None, "tenant_id", "case_id"),
+        Index(None, "tenant_id", "created_at"),
         {"schema": SCHEMA},
     )
 
@@ -269,6 +270,7 @@ class Proposal(Base):
         CheckConstraint("reason IS NULL OR char_length(reason) <= 1000", name="reason_length"),
         Index(None, "tenant_id", "case_id"),
         Index(None, "tenant_id", "fingerprint"),
+        Index(None, "tenant_id", "reviewed_at"),
         {"schema": SCHEMA},
     )
 

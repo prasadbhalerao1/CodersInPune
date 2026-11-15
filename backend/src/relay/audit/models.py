@@ -37,6 +37,7 @@ class AuditEvent(Base):
             "(actor_type = 'user') = (actor_user_id IS NOT NULL)", name="actor_consistency"
         ),
         Index(None, "tenant_id", "occurred_at"),
+        Index(None, "tenant_id", "actor_user_id"),
         {"schema": SCHEMA},
     )
 

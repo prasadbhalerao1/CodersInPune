@@ -129,6 +129,23 @@ async def test_jwks_outage_without_cached_keys_is_unavailable_not_invalid(
         await verifier.verify(make_token(key))
 
 
+async def test_stale_cache_during_outage_refreshes_at_most_once_per_cooldown(
+    verifier: WorkOSTokenVerifier,
+    jwks: JwksServer,
+    key: SigningKey,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Before the review fix a stale cache skipped the cooldown, so every request during an
+    outage made its own JWKS call. The cached keys must keep verifying, with one retry."""
+    await verifier.verify(make_token(key))
+    jwks.available = False
+    real_monotonic = time.monotonic
+    monkeypatch.setattr(time, "monotonic", lambda: real_monotonic() + 700)  # cache now stale
+    for _ in range(6):
+        await verifier.verify(make_token(key))
+    assert jwks.requests == 2  # the first fetch, plus a single failed refresh
+
+
 async def test_cached_keys_survive_jwks_outage(
     verifier: WorkOSTokenVerifier, jwks: JwksServer, key: SigningKey
 ) -> None:

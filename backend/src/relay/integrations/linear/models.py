@@ -112,6 +112,7 @@ class LinearProject(Base):
         _fk(["connection_ref"], "integrations.linear_connection", "fk_linear_project_connection"),
         _fk(["responsibility_id"], "catalog.responsibility", "fk_linear_project_responsibility"),
         CheckConstraint("audience IN ('workspace', 'managers')", name="audience"),
+        Index(None, "tenant_id", "responsibility_id"),
         {"schema": SCHEMA},
     )
 

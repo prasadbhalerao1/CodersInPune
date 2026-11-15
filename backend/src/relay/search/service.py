@@ -25,6 +25,7 @@ from relay.integrations.github.models import GitHubRepository, GitHubWorkItem
 from relay.integrations.linear.models import LinearIssue, LinearTeam
 from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.risks.models import RiskRecord
+from relay.shared.text import like_pattern
 
 Kind = Literal[
     "responsibility",
@@ -74,8 +75,7 @@ class ExpertView(BaseModel):
 
 
 def _like(column: Any, q: str) -> ColumnElement[bool]:
-    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    result: ColumnElement[bool] = column.ilike(f"%{escaped}%", escape="\\")
+    result: ColumnElement[bool] = column.ilike(like_pattern(q), escape="\\")
     return result
 
 

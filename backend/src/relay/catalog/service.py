@@ -33,6 +33,7 @@ from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared import pagination
 from relay.shared.api_types import LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
+from relay.shared.text import like_pattern
 
 Criticality = Literal["critical", "high", "standard", "low"]
 Role = Literal["primary", "co_owner", "backup"]
@@ -239,10 +240,6 @@ def _state(a: OwnershipAssignment, now: datetime) -> Literal["current", "schedul
     if a.valid_to is not None and a.valid_to <= now:
         return "ended"
     return "current"
-
-
-def _pattern(q: str) -> str:
-    return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
 
 async def assignee_views(
@@ -498,9 +495,9 @@ async def list_responsibilities(
     if q:
         stmt = stmt.where(
             or_(
-                Responsibility.name.ilike(_pattern(q)),
-                Responsibility.description.ilike(_pattern(q)),
-                Responsibility.category.ilike(_pattern(q)),
+                Responsibility.name.ilike(like_pattern(q)),
+                Responsibility.description.ilike(like_pattern(q)),
+                Responsibility.category.ilike(like_pattern(q)),
             )
         )
     keyset = pagination.after_key((Responsibility.name, Responsibility.id), after, (str, uuid.UUID))

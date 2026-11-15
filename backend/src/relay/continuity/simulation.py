@@ -670,13 +670,21 @@ async def candidates(
             )
         ):
             add(pid, "Same department", 1)
-    active = set(
-        await session.scalars(
-            select(Person.id).where(
-                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
-                Person.status == "active",
+    # Review fix (over-fetching). Before: the id of every active person in the workspace was
+    # loaded only to filter the few candidates collected above. Now: only the candidates are
+    # checked. Why: bounded by the candidate signals, not by headcount.
+    active = (
+        set(
+            await session.scalars(
+                select(Person.id).where(
+                    visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+                    Person.status == "active",
+                    Person.id.in_(list(signals)),
+                )
             )
         )
+        if signals
+        else set()
     )
     ranked = sorted(
         (pid for pid in signals if pid in active),

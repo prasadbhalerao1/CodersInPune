@@ -28,14 +28,33 @@ class TokenGrant:
         if not isinstance(token, str):
             return None
         refresh = body.get("refresh_token")
-        expires_in = body.get("expires_in")
         return cls(
             access_token=token,
             refresh_token=refresh if isinstance(refresh, str) else None,
-            expires_at=datetime.now(UTC) + timedelta(seconds=int(expires_in))
-            if isinstance(expires_in, int | float)
-            else None,
+            expires_at=_expiry(body.get("expires_in")),
         )
+
+
+def _expiry(expires_in: object) -> datetime | None:
+    """When a token expires, from an OAuth `expires_in` (seconds).
+
+    Review fix. Before: only an int/float was accepted, so a provider sending
+    `"expires_in": "3600"` (a string, which some do) produced no expiry; the token was
+    treated as long-lived and never refreshed ahead of time, failing with a 401 instead.
+    Also `True` (a bool is an int) became a 1-second expiry. Now: numeric strings are
+    accepted, bools and non-positive values are not. Why: proactive refresh works for
+    every provider shape.
+    """
+    if isinstance(expires_in, bool):
+        return None
+    if isinstance(expires_in, str):
+        try:
+            expires_in = float(expires_in)
+        except ValueError:
+            return None
+    if not isinstance(expires_in, int | float) or expires_in <= 0:
+        return None
+    return datetime.now(UTC) + timedelta(seconds=int(expires_in))
 
 
 class TokenHolder(Protocol):

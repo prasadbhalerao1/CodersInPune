@@ -192,6 +192,7 @@ class CaseScopeItem(Base):
         CheckConstraint(
             "num_nonnulls(recipient_person_id, recipient_team_id) <= 1", name="one_recipient"
         ),
+        Index(None, "tenant_id", "responsibility_id"),
         {"schema": SCHEMA},
     )
 
@@ -322,6 +323,7 @@ class CaseReadinessCriterion(Base):
             "status NOT IN ('blocked', 'needs_review', 'unable_to_assess') OR note IS NOT NULL",
             name="explained",
         ),
+        Index(None, "tenant_id", "scope_item_id"),
         {"schema": SCHEMA},
     )
 
@@ -425,6 +427,7 @@ class CaseKnowledge(Base):
             unique=True,
             postgresql_where=text("knowledge_item_id IS NOT NULL"),
         ),
+        Index(None, "tenant_id", "recorded_at"),
         {"schema": SCHEMA},
     )
 

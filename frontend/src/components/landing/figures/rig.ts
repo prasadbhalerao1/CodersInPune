@@ -1,0 +1,447 @@
+/**
+ * A small 2D skeletal rig for the landing page's figures.
+ *
+ * What it borrows from the usual ways stick figures are animated:
+ * - Keyframed poses, as in hand-animated loops: a pose is a set of joint angles, and gestures
+ *   (wave, read, hand over, cheer, sit) are poses blended with easing.
+ * - Procedural gait, as in game locomotion: walking and running are functions of a phase that
+ *   advances with the distance travelled, so the feet never skate faster than the body moves.
+ * - Forward kinematics for the skeleton, plus analytic two-bone inverse kinematics so a hand can
+ *   land exactly on a target: the other runner's hand, a ledge, a stack of boxes.
+ * - Ground contact: the pelvis height is solved from the legs, so the lowest foot always rests
+ *   on the element the figure stands on.
+ *
+ * Conventions: SVG space (y grows downwards). Limb angles are absolute, measured from straight
+ * down, positive towards the direction the figure faces. A knee bends the shin back, an elbow
+ * bends the forearm forward. Limb "A" is the near side, "B" the far side.
+ */
+
+export type Vec = { x: number; y: number };
+
+export type Pose = {
+  lean: number;
+  head: number;
+  hipA: number;
+  kneeA: number;
+  hipB: number;
+  kneeB: number;
+  shA: number;
+  elA: number;
+  shB: number;
+  elB: number;
+};
+
+const KEYS = [
+  "lean",
+  "head",
+  "hipA",
+  "kneeA",
+  "hipB",
+  "kneeB",
+  "shA",
+  "elA",
+  "shB",
+  "elB",
+] as const satisfies readonly (keyof Pose)[];
+
+export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+export const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+export const smooth = (t: number) => {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
+};
+/** Frame-rate independent exponential approach: the share of the gap to close this frame. */
+export const approach = (dt: number, rate: number) => 1 - Math.exp(-dt * rate);
+export const vlerp = (a: Vec, b: Vec, t: number): Vec => ({
+  x: lerp(a.x, b.x, t),
+  y: lerp(a.y, b.y, t),
+});
+
+export function mix(a: Pose, b: Pose, t: number): Pose {
+  const out = { ...a };
+  for (const k of KEYS) out[k] = lerp(a[k], b[k], t);
+  return out;
+}
+
+// ── Poses ────────────────────────────────────────────────────────────────────────────────
+
+export const STAND: Pose = {
+  // a side view of someone standing is nearly a line, so the rest pose keeps a little spread:
+  // weight on the near leg, the far leg a step back, the arms just clear of the body
+  lean: 0.02,
+  head: 0,
+  hipA: 0.16,
+  kneeA: 0.1,
+  hipB: -0.2,
+  kneeB: 0.06,
+  shA: 0.34,
+  elA: 0.3,
+  shB: -0.3,
+  elB: 0.22,
+};
+
+const pose = (p: Partial<Pose>): Pose => ({ ...STAND, ...p });
+
+/** Receiver in the exchange zone: crouched, leaning, far hand reaching back for the baton. */
+export const READY = pose({
+  lean: 0.42,
+  head: -0.3,
+  hipA: 0.55,
+  kneeA: 0.95,
+  hipB: -0.25,
+  kneeB: 0.5,
+  shA: 0.5,
+  elA: 1.2,
+  shB: -1.05,
+  elB: 0.12,
+});
+
+/** Arms forward, forearms level: ready to take the load. */
+export const CARRY = pose({ lean: -0.05, head: 0.12, shA: 0.72, elA: 0.92, shB: 0.62, elB: 1.0 });
+
+/** Carrying more than one person should: knees give, the back rounds. */
+export const STRAIN = pose({
+  lean: 0.14,
+  head: 0.22,
+  hipA: 0.32,
+  kneeA: 0.62,
+  hipB: 0.12,
+  kneeB: 0.5,
+  shA: 0.6,
+  elA: 1.02,
+  shB: 0.52,
+  elB: 1.08,
+});
+
+/** Hand to chin, looking down at the work. */
+export const THINK = pose({ head: 0.26, shA: 0.28, elA: 2.55, shB: 0.4, elB: 1.25 });
+
+/** Reading a document held at chest height. */
+export const READ = pose({ lean: 0.05, head: 0.4, shA: 0.55, elA: 1.25, shB: 0.45, elB: 1.32 });
+
+/** Holding a document out to someone. */
+export const PRESENT = pose({ lean: 0.06, head: 0.08, shA: 1.2, elA: 0.28, shB: 0.1, elB: 0.2 });
+
+/** Baton held up. */
+export const CHEER = pose({ lean: -0.04, head: -0.22, shA: 2.95, elA: 0.12, shB: -0.12, elB: 0.3 });
+
+/** Sitting on a ledge with the legs over the edge, swinging out of step. */
+export const sit = (t: number): Pose =>
+  pose({
+    lean: -0.12,
+    head: 0.05 + 0.1 * Math.sin(t * 0.7),
+    hipA: 1.5,
+    kneeA: 1.45 + 0.28 * Math.sin(t * 2.4),
+    hipB: 1.42,
+    kneeB: 1.45 + 0.28 * Math.sin(t * 2.4 + 1.9),
+  });
+
+// ── Locomotion ───────────────────────────────────────────────────────────────────────────
+//
+// Walk and run are keyed from the phases of a real stride, per leg, over one full cycle
+// (two steps; leg B runs half a cycle behind leg A):
+//
+//   walk: contact (heel strike, leg ahead) → loading (knee takes the weight) → mid-stance
+//         (leg under the body, straight) → toe-off (leg behind) → swing (knee folds to clear
+//         the ground) → terminal swing (leg reaches ahead) → contact.
+//   run:  contact (foot lands nearly under the body) → down (deepest knee bend) → push-off
+//         (leg extended behind) → heel recovery (heel kicked up towards the seat) → knee drive
+//         (thigh high, ahead) → reach → paw back → contact. Both feet are off the ground twice
+//         per cycle: that flight phase is what makes it a run and not a fast walk.
+//
+// Keys are joined with periodic Hermite splines whose tangents come from the neighbouring keys,
+// so every joint moves with continuous velocity: no hitch at any key, which is what reads as
+// smooth. Arms swing opposite their leg; the trunk dips on each loading and the head counters.
+
+type Track = readonly (readonly [number, number])[];
+
+/** A periodic spline through keyed (phase 0..1, value) pairs, sampled at `p` (any real). */
+function loop(track: Track, p: number) {
+  const n = track.length;
+  const x = ((p % 1) + 1) % 1;
+  let i = n - 1;
+  for (let k = 0; k < n; k++) {
+    if (track[k]![0] > x) {
+      i = k - 1;
+      break;
+    }
+  }
+  if (i < 0) i = n - 1;
+  const at = (k: number) => {
+    const j = ((k % n) + n) % n;
+    const wraps = Math.floor(k / n);
+    return [track[j]![0] + wraps, track[j]![1]] as const;
+  };
+  const [t0, v0] = at(i);
+  const [t1, v1] = at(i + 1);
+  const [tm, vm] = at(i - 1);
+  const [t2, v2] = at(i + 2);
+  const span = t1 - t0;
+  const m0 = ((v1 - vm) / (t1 - tm)) * span;
+  const m1 = ((v2 - v0) / (t2 - t0)) * span;
+  let u = (x < t0 ? x + 1 : x) - t0;
+  u = span > 0 ? u / span : 0;
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (
+    (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * m0 + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * m1
+  );
+}
+
+const WALK_HIP: Track = [
+  [0.0, 0.38],
+  [0.12, 0.24],
+  [0.3, 0.02],
+  [0.5, -0.36],
+  [0.62, -0.12],
+  [0.75, 0.22],
+  [0.88, 0.42],
+];
+const WALK_KNEE: Track = [
+  [0.0, 0.04],
+  [0.12, 0.24],
+  [0.3, 0.07],
+  [0.5, 0.32],
+  [0.62, 1.02],
+  [0.75, 0.82],
+  [0.88, 0.14],
+];
+const RUN_HIP: Track = [
+  [0.0, 0.42],
+  [0.1, 0.08],
+  [0.25, -0.58],
+  [0.36, -0.42],
+  [0.5, 0.25],
+  [0.66, 1.2],
+  [0.8, 0.95],
+  [0.92, 0.6],
+];
+const RUN_KNEE: Track = [
+  [0.0, 0.24],
+  [0.1, 0.62],
+  [0.25, 0.22],
+  [0.36, 1.85],
+  [0.5, 2.2],
+  [0.66, 1.65],
+  [0.8, 0.62],
+  [0.92, 0.32],
+];
+
+/** A walk (run = 0) through a run (run = 1) at the given phase (radians, 2π per cycle). */
+export function gait(phase: number, run: number): Pose {
+  const p = phase / (2 * Math.PI);
+  const leg = (q: number) => ({
+    hip: lerp(loop(WALK_HIP, q), loop(RUN_HIP, q), run),
+    knee: lerp(loop(WALK_KNEE, q), loop(RUN_KNEE, q), run),
+  });
+  const a = leg(p);
+  const b = leg(p + 0.5);
+  // arms: each swings forward as the opposite leg does; the forearm trails the upper arm
+  const swing = (q: number) => Math.cos(2 * Math.PI * (q - lerp(0.5, 0.65, run)));
+  const armAmp = lerp(0.3, 0.85, run);
+  const elbow = lerp(0.28, 1.5, run);
+  const fwdA = swing(p);
+  const fwdB = swing(p + 0.5);
+  const lagA = Math.max(0, swing(p - 0.07));
+  const lagB = Math.max(0, swing(p + 0.43));
+  // the trunk dips on each loading (twice per cycle) and the head counters to stay level
+  const dip = Math.cos(4 * Math.PI * (p - lerp(0.12, 0.1, run)));
+  return {
+    lean: lerp(0.04, 0.24, run) + lerp(0.015, 0.03, run) * dip,
+    head: lerp(0, -0.14, run) - lerp(0.02, 0.045, run) * dip,
+    hipA: a.hip,
+    kneeA: a.knee,
+    hipB: b.hip,
+    kneeB: b.knee,
+    shA: lerp(0.06, 0.18, run) + armAmp * fwdA,
+    elA: elbow + lerp(0.15, 0.4, run) * lagA,
+    shB: lerp(0.06, 0.18, run) + armAmp * fwdB,
+    elB: elbow + lerp(0.15, 0.4, run) * lagB,
+  };
+}
+
+/** Distance covered by one full gait cycle (two steps), from a stroll to a sprint. */
+export const stride = (run: number, H: number) => lerp(0.85, 2.3, run) * H;
+
+/**
+ * Height to add to a ground-contact solve so a run has its flight phase: during stance the
+ * foot stays planted; between steps the body rises off the ground. Pass the pose and dims;
+ * without them this falls back to a simple bob.
+ */
+export function runLift(phase: number, run: number, H: number, pose?: Pose, d?: Dims) {
+  const p = phase / (2 * Math.PI);
+  if (!pose || !d) return (run * 0.05 * H * (1 - Math.cos(2 * phase))) / 2;
+  const leg = d.thigh + d.shin;
+  // highest mid-flight (just after push-off), lowest at the deepest knee bend
+  const target = 0.9 * leg + 0.05 * H * Math.cos(4 * Math.PI * (p - 0.35));
+  return run * Math.max(0, target - legDrop(pose, d));
+}
+
+// ── Skeleton ─────────────────────────────────────────────────────────────────────────────
+
+export type Dims = ReturnType<typeof dims>;
+
+/**
+ * Proportions for a figure `H` pixels tall (sole to crown), in the studio stick-figure style:
+ * one heavy, even line weight (about 7% of the height) with round ends, a large solid head
+ * (about a fifth of the height) sitting just above a long torso, shoulders set a little below
+ * the neck, and no feet. The weight is what makes a line figure read as a body rather than
+ * as a sketch.
+ */
+export function dims(H: number) {
+  const w = (share: number) => Math.max(2, share * H);
+  return {
+    H,
+    head: 0.1 * H,
+    gap: 0.014 * H,
+    torso: 0.355 * H,
+    /** How far below the top of the torso the arms attach (share of the torso). */
+    shoulder: 0.14,
+    thigh: 0.225 * H,
+    shin: 0.222 * H,
+    upper: 0.175 * H,
+    fore: 0.165 * H,
+    foot: 0,
+    /** Per-segment line weights: nearly even, a touch heavier through the trunk and thighs. */
+    wTorso: w(0.078),
+    wThigh: w(0.074),
+    wShin: w(0.07),
+    wUpper: w(0.068),
+    wFore: w(0.066),
+    wHead: 0,
+    /** The base weight props (batons, boxes, ropes) are drawn at. */
+    stroke: w(0.05),
+  };
+}
+
+export type Joints = {
+  pelvis: Vec;
+  chest: Vec;
+  /** Where the arms attach: a little below the top of the torso. */
+  shoulder: Vec;
+  head: Vec;
+  kneeA: Vec;
+  footA: Vec;
+  kneeB: Vec;
+  footB: Vec;
+  elbowA: Vec;
+  handA: Vec;
+  elbowB: Vec;
+  handB: Vec;
+  /** The facing the joints were solved with (1 right, -1 left, 0 towards the viewer). */
+  f: number;
+};
+
+const limb = (o: Vec, angle: number, len: number, f: number): Vec => ({
+  x: o.x + f * Math.sin(angle) * len,
+  y: o.y + Math.cos(angle) * len,
+});
+
+/** How far below the pelvis the lower foot sits. */
+export function legDrop(p: Pose, d: Dims) {
+  const a = d.thigh * Math.cos(p.hipA) + d.shin * Math.cos(p.hipA - p.kneeA);
+  const b = d.thigh * Math.cos(p.hipB) + d.shin * Math.cos(p.hipB - p.kneeB);
+  return Math.max(a, b);
+}
+
+/**
+ * Analytic two-bone IK: the joint between two bones (lengths l1, l2) from `a` such that the
+ * end lands on `t`, or as close as the bones reach. `bend` (±1) picks which side the joint
+ * folds to. Returns [middle joint, end].
+ */
+export function ik(a: Vec, t: Vec, l1: number, l2: number, bend: number): [Vec, Vec] {
+  const dx = t.x - a.x;
+  const dy = t.y - a.y;
+  const raw = Math.hypot(dx, dy) || 1e-6;
+  const dist = Math.min(l1 + l2 - 1e-3, Math.max(Math.abs(l1 - l2) + 1e-3, raw));
+  const cos = (l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist);
+  const ang = Math.atan2(dy, dx) + bend * Math.acos(Math.max(-1, Math.min(1, cos)));
+  const mid = { x: a.x + Math.cos(ang) * l1, y: a.y + Math.sin(ang) * l1 };
+  const end = { x: a.x + (dx / raw) * dist, y: a.y + (dy / raw) * dist };
+  return [mid, end];
+}
+
+export type Reach = {
+  /** Where the hand should go; blended in by `w` (0 = pose, 1 = exactly on target). */
+  target: Vec;
+  w?: number;
+  /** +1 folds the elbow below the shoulder-to-hand line for a figure facing right. */
+  bend?: number;
+};
+
+export type SolveOptions = {
+  /** Extra height above the ground (a run's flight phase, a jump). */
+  lift?: number;
+  /** Pin the pelvis instead of standing on the ground (sitting). */
+  pelvisY?: number;
+  /** Shift the head: looking at something (a cursor) without turning the body. */
+  gaze?: Vec;
+  reachA?: Reach;
+  reachB?: Reach;
+};
+
+/**
+ * Joint positions for a pose. `x` is the pelvis, `groundY` what the feet rest on, `f` the facing
+ * (1 right, -1 left; values in between read as the figure turning).
+ */
+export function solve(
+  p: Pose,
+  d: Dims,
+  x: number,
+  groundY: number,
+  f: number,
+  o: SolveOptions = {},
+): Joints {
+  const pelvis = { x, y: o.pelvisY ?? groundY - legDrop(p, d) - (o.lift ?? 0) };
+  const chest = {
+    x: pelvis.x + f * Math.sin(p.lean) * d.torso,
+    y: pelvis.y - Math.cos(p.lean) * d.torso,
+  };
+  const tilt = p.lean + p.head;
+  const r = d.gap + d.head;
+  const head = {
+    x: chest.x + f * Math.sin(tilt) * r + (o.gaze?.x ?? 0),
+    y: chest.y - Math.cos(tilt) * r + (o.gaze?.y ?? 0),
+  };
+  // Facing 0 is the front view: the near limbs open to one side and the far limbs to the other,
+  // so a figure that turns to the viewer does not collapse into a line. Continuous in f.
+  const spread = 1 - Math.abs(f);
+  const fA = f + spread;
+  const fB = f - spread;
+  // Seen from the front, limbs open outwards: blend each angle towards its magnitude plus a
+  // little spread as the figure turns to the viewer. In side view (|f| = 1) this is a no-op.
+  const front = 1 - Math.abs(f);
+  const open = (angle: number, extra: number) => lerp(angle, Math.abs(angle) + extra, front);
+  const hipA = open(p.hipA, 0.1);
+  const hipB = open(p.hipB, 0.1);
+  const kneeA = limb(pelvis, hipA, d.thigh, fA);
+  const kneeB = limb(pelvis, hipB, d.thigh, fB);
+  const footA = limb(kneeA, hipA - p.kneeA, d.shin, fA);
+  const footB = limb(kneeB, hipB - p.kneeB, d.shin, fB);
+
+  const shoulder = vlerp(chest, pelvis, d.shoulder);
+  const arm = (sh: number, el: number, fl: number, reach?: Reach): [Vec, Vec] => {
+    const elbow = limb(shoulder, sh, d.upper, fl);
+    const hand = limb(elbow, sh + el, d.fore, fl);
+    if (!reach || (reach.w ?? 1) <= 0) return [elbow, hand];
+    const goal = vlerp(hand, reach.target, clamp01(reach.w ?? 1));
+    return ik(shoulder, goal, d.upper, d.fore, (reach.bend ?? 1) * (fl < 0 ? -1 : 1));
+  };
+  const [elbowA, handA] = arm(open(p.shA, 0.1), p.elA, fA, o.reachA);
+  const [elbowB, handB] = arm(open(p.shB, 0.1), p.elB, fB, o.reachB);
+  return {
+    pelvis,
+    chest,
+    shoulder,
+    head,
+    kneeA,
+    footA,
+    kneeB,
+    footB,
+    elbowA,
+    handA,
+    elbowB,
+    handB,
+    f,
+  };
+}

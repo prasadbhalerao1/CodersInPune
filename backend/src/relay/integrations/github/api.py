@@ -7,6 +7,7 @@ from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.integrations.github import review, webhooks
 from relay.integrations.github import service as svc
+from relay.shared.errors import ApiError
 from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/integrations/github", tags=["github"])
@@ -131,6 +132,29 @@ async def webhook(
         event=x_github_event,
         delivery_id=x_github_delivery,
         signature=x_hub_signature_256,
-        body=await request.body(),
+        body=await _read_capped(request, webhooks.MAX_BODY),
     )
     return {"queued": queued}
+
+
+async def _read_capped(request: Request, limit: int) -> bytes:
+    """The request body, refusing anything over `limit` bytes without buffering it.
+
+    Review fix (memory DoS). Before: `await request.body()` buffered the entire upload and
+    only then did `receive` compare it with MAX_BODY. This route is unauthenticated (the
+    signature is checked after reading), so anyone could stream gigabytes into memory.
+    Now: a declared Content-Length over the limit is refused up front, and the stream is
+    read chunk by chunk and abandoned as soon as it crosses the limit. Why: memory per
+    request is bounded by the limit whatever the client sends or claims.
+    """
+    declared = request.headers.get("content-length")
+    if declared is not None and declared.isdigit() and int(declared) > limit:
+        raise ApiError(413, "payload_too_large", "Payload too large.")
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise ApiError(413, "payload_too_large", "Payload too large.")
+        chunks.append(chunk)
+    return b"".join(chunks)

@@ -117,14 +117,24 @@ async def list_events(
             stmt.order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc()).limit(limit)
         )
     )
-    names = {
-        user_id: name or email or "Member"
-        for user_id, name, email in await access.session.execute(
-            select(Membership.user_id, Membership.display_name, Membership.email).where(
-                visible(access, Permission.MEMBER_READ, Membership.tenant_id)
+    # Review fix (over-fetching). Before: every membership in the workspace was loaded to
+    # name the actors of at most `limit` events, so each audit page cost O(members). Now:
+    # only the actors that appear on this page are looked up. Why: the query is bounded by
+    # the page size, not by workspace size.
+    actor_ids = {e.actor_user_id for e in events if e.actor_user_id}
+    names = (
+        {
+            user_id: name or email or "Member"
+            for user_id, name, email in await access.session.execute(
+                select(Membership.user_id, Membership.display_name, Membership.email).where(
+                    visible(access, Permission.MEMBER_READ, Membership.tenant_id),
+                    Membership.user_id.in_(actor_ids),
+                )
             )
-        )
-    }
+        }
+        if actor_ids
+        else {}
+    )
     labels = await _labels(access.session, events)
     return [
         AuditEventView(

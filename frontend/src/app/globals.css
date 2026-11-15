@@ -9,8 +9,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-syne), var(--font-sans);
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-syne: var(--font-syne);
+  --font-bebas: var(--font-bebas-neue), var(--font-syne), sans-serif;
+  --color-obsidian: #06070b;
+  --color-charcoal: #0e1118;
+  --color-crimson: #7e1520;
+  --color-chartreuse: #d2ff00;
+  --color-emerald: #00f5a0;
+  --color-copper: #f59e0b;
   --color-baton: var(--baton);
   --color-baton-foreground: var(--baton-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -54,82 +62,81 @@
 }
 
 :root {
-  /* Relay: calm neutrals with one accent (deep teal). Colour carries meaning, never decoration. */
-  --background: oklch(0.985 0.002 247);
-  --foreground: oklch(0.21 0.012 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.012 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.012 255);
-  --primary: oklch(0.46 0.085 200);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.004 247);
-  --secondary-foreground: oklch(0.25 0.012 255);
-  --muted: oklch(0.965 0.004 247);
-  --muted-foreground: oklch(0.52 0.014 255);
-  --accent: oklch(0.955 0.015 200);
-  --accent-foreground: oklch(0.32 0.06 200);
-  --destructive: oklch(0.56 0.2 27);
-  --success: oklch(0.55 0.12 160);
-  /* Baton: Relay's warm second colour, reserved for the handover moment. */
-  --baton: oklch(0.76 0.14 68);
-  --baton-foreground: oklch(0.3 0.06 60);
-  --warning: oklch(0.7 0.14 70);
-  --border: oklch(0.915 0.005 247);
-  --input: oklch(0.89 0.006 247);
-  --ring: oklch(0.6 0.08 200);
-  --chart-1: oklch(0.46 0.085 200);
-  --chart-2: oklch(0.65 0.08 200);
-  --chart-3: oklch(0.7 0.14 70);
-  --chart-4: oklch(0.56 0.2 27);
-  --chart-5: oklch(0.52 0.014 255);
+  /* Default to Sovereign Obsidian Void */
+  --background: #04060f;
+  --foreground: #f5f5f7;
+  --card: #0a1028;
+  --card-foreground: #f5f5f7;
+  --popover: #0a1028;
+  --popover-foreground: #f5f5f7;
+  --primary: #b8ff3c;
+  --primary-foreground: #04060f;
+  --secondary: #111a3d;
+  --secondary-foreground: #f5f5f7;
+  --muted: #0d1430;
+  --muted-foreground: #94a3c8;
+  --accent: #14204f;
+  --accent-foreground: #ffffff;
+  --destructive: #ff334b;
+  --success: #b8ff3c;
+  --baton: #f59e0b;
+  --baton-foreground: #06070b;
+  --warning: #f59e0b;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #b8ff3c;
+  --chart-1: #b8ff3c;
+  --chart-2: #8fa8ff;
+  --chart-3: #3b5bff;
+  --chart-4: #5b7cfa;
+  --chart-5: #94a3c8;
   --radius: 0.5rem;
-  --sidebar: oklch(0.975 0.003 247);
-  --sidebar-foreground: oklch(0.3 0.012 255);
-  --sidebar-primary: oklch(0.46 0.085 200);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.935 0.006 247);
-  --sidebar-accent-foreground: oklch(0.21 0.012 255);
-  --sidebar-border: oklch(0.915 0.005 247);
-  --sidebar-ring: oklch(0.6 0.08 200);
+  --sidebar: #060a1e;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #b8ff3c;
+  --sidebar-primary-foreground: #04060f;
+  --sidebar-accent: #111a3d;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #b8ff3c;
 }
 
 .dark {
-  --background: oklch(0.17 0.008 255);
-  --foreground: oklch(0.96 0.003 247);
-  --card: oklch(0.205 0.009 255);
-  --card-foreground: oklch(0.96 0.003 247);
-  --popover: oklch(0.205 0.009 255);
-  --popover-foreground: oklch(0.96 0.003 247);
-  --primary: oklch(0.72 0.09 195);
-  --primary-foreground: oklch(0.18 0.02 200);
-  --secondary: oklch(0.26 0.01 255);
-  --secondary-foreground: oklch(0.96 0.003 247);
-  --muted: oklch(0.25 0.01 255);
-  --muted-foreground: oklch(0.7 0.012 255);
-  --accent: oklch(0.28 0.03 200);
-  --accent-foreground: oklch(0.9 0.04 195);
-  --destructive: oklch(0.68 0.18 25);
-  --success: oklch(0.7 0.12 160);
-  --baton: oklch(0.78 0.13 70);
-  --baton-foreground: oklch(0.22 0.04 60);
-  --warning: oklch(0.78 0.13 75);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.62 0.08 200);
-  --chart-1: oklch(0.72 0.09 195);
-  --chart-2: oklch(0.55 0.07 200);
-  --chart-3: oklch(0.78 0.13 75);
-  --chart-4: oklch(0.68 0.18 25);
-  --chart-5: oklch(0.7 0.012 255);
-  --sidebar: oklch(0.19 0.009 255);
-  --sidebar-foreground: oklch(0.85 0.006 247);
-  --sidebar-primary: oklch(0.72 0.09 195);
-  --sidebar-primary-foreground: oklch(0.18 0.02 200);
-  --sidebar-accent: oklch(0.26 0.01 255);
-  --sidebar-accent-foreground: oklch(0.96 0.003 247);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.62 0.08 200);
+  --background: #04060f;
+  --foreground: #f5f5f7;
+  --card: #0a1028;
+  --card-foreground: #f5f5f7;
+  --popover: #0a1028;
+  --popover-foreground: #f5f5f7;
+  --primary: #b8ff3c;
+  --primary-foreground: #04060f;
+  --secondary: #111a3d;
+  --secondary-foreground: #f5f5f7;
+  --muted: #0d1430;
+  --muted-foreground: #94a3c8;
+  --accent: #14204f;
+  --accent-foreground: #ffffff;
+  --destructive: #ff334b;
+  --success: #b8ff3c;
+  --baton: #f59e0b;
+  --baton-foreground: #06070b;
+  --warning: #f59e0b;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #b8ff3c;
+  --chart-1: #b8ff3c;
+  --chart-2: #8fa8ff;
+  --chart-3: #3b5bff;
+  --chart-4: #5b7cfa;
+  --chart-5: #94a3c8;
+  --sidebar: #060a1e;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #b8ff3c;
+  --sidebar-primary-foreground: #04060f;
+  --sidebar-accent: #111a3d;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #b8ff3c;
 }
 
 @layer base {
@@ -282,5 +289,973 @@
 @media (prefers-reduced-motion: reduce) {
   .tour-spotlight {
     transition: none;
+  }
+}
+
+/* ==========================================================================
+   LUXURY CYBER-ORGANIC & EDITORIAL UTILITIES (GROUND TRUTH VISUAL DNA)
+   ========================================================================== */
+
+.font-syne {
+  font-family: var(--font-syne), var(--font-geist-sans), sans-serif;
+}
+
+.font-bebas {
+  font-family: var(--font-bebas-neue), var(--font-syne), sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* Haute-Horlogerie Smoked Obsidian Capsule Button */
+.luxury-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 2.75rem;
+  padding: 0 1.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(26, 31, 42, 0.85) 0%, rgba(10, 13, 19, 0.95) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 28px -6px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f5f5f7;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  user-select: none;
+}
+
+.luxury-btn:hover {
+  transform: translateY(-1px);
+  border-top-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 16px 36px -6px rgba(0, 0, 0, 0.85),
+    0 0 24px rgba(210, 255, 0, 0.18);
+  color: #ffffff;
+}
+
+.luxury-btn:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 6px 14px -3px rgba(0, 0, 0, 0.9);
+}
+
+/* Monumental Display Outline Typography */
+.display-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.08em;
+  user-select: none;
+}
+
+/* Micro Glowing Jewel Beads */
+.jewel-emerald {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #00f5a0;
+  box-shadow:
+    0 0 8px 1px #00f5a0,
+    0 0 16px 2px rgba(0, 245, 160, 0.4);
+  animation: pulse-jewel 2.4s ease-in-out infinite;
+}
+
+.jewel-chartreuse {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #d2ff00;
+  box-shadow:
+    0 0 8px 1px #d2ff00,
+    0 0 16px 2px rgba(210, 255, 0, 0.4);
+  animation: pulse-jewel 2.4s ease-in-out infinite 0.6s;
+}
+
+.jewel-crimson {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #ff334b;
+  box-shadow:
+    0 0 8px 1px #ff334b,
+    0 0 16px 2px rgba(255, 51, 75, 0.4);
+  animation: pulse-jewel 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-jewel {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+}
+
+/* ==========================================================================
+   Landing sections: shared glass card, scroll reveal, marquee
+   ========================================================================== */
+
+.glass-card {
+  position: relative;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 48px -28px rgba(0, 0, 0, 0.9);
+  transition:
+    border-color 250ms ease,
+    transform 250ms ease,
+    box-shadow 250ms ease;
+}
+.glass-card:hover {
+  border-color: rgba(210, 255, 0, 0.32);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 28px 56px -28px rgba(0, 0, 0, 0.95);
+}
+
+/* Scroll reveal, progressively enhanced: browsers without scroll-driven animations
+   simply show the content. */
+@keyframes landing-reveal {
+  from {
+    opacity: 0.25;
+    transform: translateY(14px);
+  }
+}
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: landing-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 28%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+  .marquee-track {
+    animation: none !important;
+  }
+}
+
+@keyframes landing-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: landing-marquee 40s linear infinite;
+}
+
+/* Manifesto: words fill in as the section scrolls through the viewport. */
+.manifesto {
+  view-timeline: --manifesto block;
+}
+@keyframes landing-word-fill {
+  from {
+    color: rgba(241, 237, 230, 0.13);
+  }
+  to {
+    color: #f1ede6;
+  }
+}
+@supports (animation-timeline: view()) {
+  .word-fill {
+    color: rgba(241, 237, 230, 0.13);
+    animation: landing-word-fill linear both;
+    animation-timeline: --manifesto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-fill {
+    animation: none;
+    color: #f1ede6;
+  }
+}
+
+/* ==========================================================================
+   Glass. Needs something behind it to refract: the blue half paints petals and
+   lime orbs underneath, and these surfaces blur, tint and edge-light them.
+   ========================================================================== */
+
+.glass,
+.glass-clear,
+.glass-dark {
+  position: relative;
+  border-radius: 1.25rem;
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+}
+.glass {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.03) 50%,
+      rgba(255, 255, 255, 0.07)
+    ),
+    rgba(8, 14, 40, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 30px 60px -28px rgba(0, 0, 12, 0.85);
+}
+.glass-clear {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 55%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 20px 40px -24px rgba(0, 0, 12, 0.7);
+}
+.glass-dark {
+  background:
+    radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 55%),
+    rgba(6, 10, 28, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 40px 80px -30px rgba(0, 0, 12, 0.9);
+}
+/* Edge light: a 1px gradient border, bright top-left, a hint of lime bottom-right. */
+.glass::before,
+.glass-clear::before,
+.glass-dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.06) 32%,
+    rgba(255, 255, 255, 0.04) 68%,
+    rgba(184, 255, 60, 0.4)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Smoothness: no layout jumps, eased entrances, cheaper glass
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Hero entrance: copy rises in once, in sequence, instead of popping. */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+.hero-in {
+  animation: hero-rise 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.hero-in-2 {
+  animation-delay: 120ms;
+}
+.hero-in-3 {
+  animation-delay: 240ms;
+}
+.hero-in-4 {
+  animation-delay: 360ms;
+}
+
+/* Static decoration is isolated for painting. (No will-change: a 16,000px-tall layer would be a huge texture.) */
+.layer {
+  contain: paint;
+}
+
+/* A lighter blur is visually the same on a dark page and far cheaper to scroll. */
+.glass,
+.glass-clear,
+.glass-dark {
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-in {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Theme. `.dark` on <html> selects the dark palette; everything else is light.
+   Landing colours are semantic (page, strong, fg-soft, fg-mute, line, sunk, ac,
+   peri, coral) so one class works in both themes.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+:root:not(.dark) {
+  --background: #f3f5ff;
+  --foreground: #0b1230;
+  --card: #ffffff;
+  --card-foreground: #0b1230;
+  --popover: #ffffff;
+  --popover-foreground: #0b1230;
+  --primary: #b8ff3c;
+  --primary-foreground: #0b1230;
+  --secondary: #e7ebfb;
+  --secondary-foreground: #0b1230;
+  --muted: #ecf0fb;
+  --muted-foreground: #5b6690;
+  --accent: #dde4ff;
+  --accent-foreground: #0b1230;
+  --destructive: #d92d4a;
+  --success: #1e8e4e;
+  --warning: #b45309;
+  --border: rgba(11, 18, 48, 0.12);
+  --input: rgba(11, 18, 48, 0.16);
+  --ring: #3b5bff;
+  --chart-1: #3b5bff;
+  --chart-2: #1e8e4e;
+  --chart-3: #b45309;
+  --chart-4: #5b7cfa;
+  --chart-5: #5b6690;
+  --sidebar: #eaeefc;
+  --sidebar-foreground: #0b1230;
+  --sidebar-primary: #3b5bff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dde4ff;
+  --sidebar-accent-foreground: #0b1230;
+  --sidebar-border: rgba(11, 18, 48, 0.12);
+  --sidebar-ring: #3b5bff;
+
+  --page: #f3f5ff;
+  --strong: #0b1230;
+  --fg-soft: #2a3566;
+  --fg-mute: #5b6690;
+  --line: #0b1230;
+  --sunk: #ffffff;
+  --ac: #2540c8;
+  --peri: #3a46c2;
+  --coral: #ad1f37;
+  --good: #0a7347;
+  --warn: #9a4507;
+  --bad: #ad1f37;
+
+  --glass-tint: rgba(255, 255, 255, 0.5);
+  --glass-tint-strong: rgba(255, 255, 255, 0.74);
+  --glass-hi: rgba(255, 255, 255, 0.9);
+  --glass-wash-a: rgba(255, 255, 255, 0.4);
+  --glass-wash-b: rgba(255, 255, 255, 0.12);
+  --glass-inset: rgba(255, 255, 255, 0.95);
+  --glass-shadow: rgba(40, 60, 140, 0.24);
+  --glass-edge-a: rgba(255, 255, 255, 1);
+  --glass-edge-b: rgba(59, 91, 255, 0.35);
+}
+
+.dark {
+  --page: #04060f;
+  --strong: #f2eee5;
+  --fg-soft: #cbd5e1;
+  --fg-mute: #a9b7cc;
+  --line: #ffffff;
+  --sunk: #000000;
+  --ac: #b8ff3c;
+  --peri: #8fa8ff;
+  --coral: #ff6b7a;
+  --good: #00f5a0;
+  --warn: #f59e0b;
+  --bad: #ff5468;
+
+  --glass-tint: rgba(8, 14, 40, 0.38);
+  --glass-tint-strong: rgba(6, 10, 28, 0.62);
+  --glass-hi: rgba(255, 255, 255, 0.14);
+  --glass-wash-a: rgba(255, 255, 255, 0.1);
+  --glass-wash-b: rgba(255, 255, 255, 0.03);
+  --glass-inset: rgba(255, 255, 255, 0.38);
+  --glass-shadow: rgba(0, 0, 12, 0.85);
+  --glass-edge-a: rgba(255, 255, 255, 0.6);
+  --glass-edge-b: rgba(184, 255, 60, 0.4);
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-strong: var(--strong);
+  --color-fg-soft: var(--fg-soft);
+  --color-fg-mute: var(--fg-mute);
+  --color-line: var(--line);
+  --color-sunk: var(--sunk);
+  --color-ac: var(--ac);
+  --color-peri: var(--peri);
+  --color-coral: var(--coral);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+}
+
+/* Glass, driven by the variables above. */
+.glass {
+  background:
+    radial-gradient(120% 90% at 0% 0%, var(--glass-hi), transparent 55%),
+    linear-gradient(135deg, var(--glass-wash-a), var(--glass-wash-b) 50%, var(--glass-wash-a)),
+    var(--glass-tint);
+  box-shadow:
+    inset 0 1px 0 var(--glass-inset),
+    0 30px 60px -28px var(--glass-shadow);
+}
+.glass-clear {
+  background:
+    radial-gradient(120% 90% at 0% 0%, var(--glass-hi), transparent 55%),
+    color-mix(in srgb, var(--glass-tint) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--glass-inset),
+    0 20px 40px -24px var(--glass-shadow);
+}
+.glass-dark {
+  background:
+    radial-gradient(120% 70% at 0% 0%, var(--glass-hi), transparent 55%), var(--glass-tint-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-inset),
+    0 40px 80px -30px var(--glass-shadow);
+}
+.glass::before,
+.glass-clear::before,
+.glass-dark::before {
+  background: linear-gradient(
+    135deg,
+    var(--glass-edge-a),
+    rgba(255, 255, 255, 0.06) 32%,
+    rgba(255, 255, 255, 0.04) 68%,
+    var(--glass-edge-b)
+  );
+}
+
+.display-outline {
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--line) 42%, transparent);
+}
+
+@keyframes landing-word-fill {
+  from {
+    color: color-mix(in srgb, var(--strong) 14%, transparent);
+  }
+  to {
+    color: var(--strong);
+  }
+}
+@supports (animation-timeline: view()) {
+  .word-fill {
+    color: color-mix(in srgb, var(--strong) 14%, transparent);
+  }
+}
+
+/* Primary titanium button in light mode. */
+:root:not(.dark) .luxury-btn {
+  background: linear-gradient(180deg, #ffffff, #e7ebfb);
+  color: #0b1230;
+  border-color: rgba(11, 18, 48, 0.14);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 10px 24px -10px rgba(40, 60, 140, 0.35);
+}
+
+/* Light glass needs a hairline outline: white edges vanish on a pale page. */
+:root:not(.dark) .glass,
+:root:not(.dark) .glass-clear,
+:root:not(.dark) .glass-dark {
+  box-shadow:
+    inset 0 1px 0 var(--glass-inset),
+    0 0 0 1px rgba(11, 18, 48, 0.08),
+    0 24px 50px -24px var(--glass-shadow);
+}
+
+/* ==========================================================================
+   Footer wordmark: solid cobalt in light mode, edge-lit glass in dark mode,
+   revealed from the baseline upward as it scrolls into view.
+   ========================================================================== */
+
+:root:not(.dark) {
+  --wm-a: #3b5bff;
+  --wm-b: #a9bdff;
+  --wm-stroke: #1f35b8;
+  --wm-shadow: rgba(40, 70, 220, 0.28);
+  --wm-glow: radial-gradient(
+    ellipse at center,
+    rgba(59, 91, 255, 0.22),
+    rgba(184, 255, 60, 0.16) 45%,
+    transparent 72%
+  );
+}
+.dark {
+  --wm-a: color-mix(in srgb, var(--peri) 30%, transparent);
+  --wm-b: color-mix(in srgb, var(--ac) 8%, transparent);
+  --wm-stroke: color-mix(in srgb, var(--ac) 75%, transparent);
+  --wm-shadow: rgba(184, 255, 60, 0.25);
+  --wm-glow: radial-gradient(ellipse at center, rgba(184, 255, 60, 0.18), transparent 70%);
+}
+.wordmark {
+  color: transparent;
+  background-image: linear-gradient(180deg, var(--wm-a) 0%, var(--wm-b) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 1.5px var(--wm-stroke);
+  filter: drop-shadow(0 14px 26px var(--wm-shadow));
+}
+.wordmark-glow {
+  background: var(--wm-glow);
+}
+@keyframes wordmark-reveal {
+  from {
+    clip-path: inset(100% 0 0 0);
+    opacity: 0.4;
+  }
+  to {
+    clip-path: inset(-10% 0 0 0);
+    opacity: 1;
+  }
+}
+@supports (animation-timeline: view()) {
+  .wordmark {
+    animation: wordmark-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 40%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wordmark {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Pass 2: a palette that works in both themes, text scrims, scroll-lit rows.
+   Light mode drops the neon entirely: cobalt and periwinkle carry the accent,
+   lime survives only in dark mode, where it sits well on navy.
+   ========================================================================== */
+
+:root:not(.dark) {
+  --fg-mute: #3f4a73;
+  --glass-tint: rgba(255, 255, 255, 0.72);
+  --glass-tint-strong: rgba(255, 255, 255, 0.88);
+  --primary: #2540c8;
+  --primary-foreground: #ffffff;
+  --sidebar-primary: #2540c8;
+  --lime: #4a66f0;
+  --cta-bg: #2540c8;
+  --cta-fg: #ffffff;
+  --cta-hover: #1b2fb5;
+  --bloom: rgba(59, 91, 255, 0.18);
+  --wm-glow: radial-gradient(
+    ellipse at center,
+    rgba(59, 91, 255, 0.22),
+    rgba(143, 168, 255, 0.14) 45%,
+    transparent 72%
+  );
+  --orb-bg: radial-gradient(circle at 32% 28%, #f4f7ff 0%, #b9c8ff 24%, #5a74f4 58%, #1b2fb5 100%);
+  --orb-glow: rgba(59, 91, 255, 0.28);
+}
+.dark {
+  --lime: #b8ff3c;
+  --cta-bg: #b8ff3c;
+  --cta-fg: #04060f;
+  --cta-hover: #caff6a;
+  --bloom: rgba(184, 255, 60, 0.16);
+  --orb-bg: radial-gradient(
+    circle at 32% 28%,
+    #f6ffc9 0%,
+    #cfff5e 20%,
+    #b8ff3c 44%,
+    #6f9a12 80%,
+    #2a4008 100%
+  );
+  --orb-glow: rgba(184, 255, 60, 0.22);
+}
+
+@theme inline {
+  --color-lime: var(--lime);
+  --color-cta: var(--cta-bg);
+  --color-cta-fg: var(--cta-fg);
+  --color-cta-hover: var(--cta-hover);
+}
+
+.orb {
+  background: var(--orb-bg);
+  box-shadow:
+    0 0 90px 12px var(--orb-glow),
+    inset -14px -18px 34px rgba(0, 0, 0, 0.3),
+    inset 10px 10px 24px rgba(255, 255, 255, 0.3);
+}
+
+/* A feathered page-coloured patch behind free-standing text, so decoration behind it
+   can never reduce legibility. */
+.scrim {
+  position: relative;
+  isolation: isolate;
+}
+.scrim::before {
+  content: "";
+  position: absolute;
+  inset: -1.25rem -2rem;
+  z-index: -1;
+  border-radius: 2rem;
+  background: color-mix(in srgb, var(--page) 86%, transparent);
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+/* Rows that light up as they cross the middle of the viewport (scroll-driven, not hover).
+   Browsers without scroll timelines simply keep them in the resting state. */
+@keyframes lit-fade {
+  0%,
+  28%,
+  72%,
+  100% {
+    opacity: 0;
+  }
+  44%,
+  56% {
+    opacity: 1;
+  }
+}
+@keyframes lit-stroke {
+  0%,
+  28%,
+  72%,
+  100% {
+    -webkit-text-stroke-color: color-mix(in srgb, var(--line) 42%, transparent);
+  }
+  44%,
+  56% {
+    -webkit-text-stroke-color: var(--ac);
+  }
+}
+@keyframes lit-text {
+  0%,
+  28%,
+  72%,
+  100% {
+    color: var(--fg-mute);
+  }
+  44%,
+  56% {
+    color: var(--strong);
+  }
+}
+.lit-bg {
+  opacity: 0;
+}
+@supports (animation-timeline: view()) {
+  .lit-bg {
+    animation: lit-fade linear both;
+    animation-timeline: view();
+  }
+  .lit-stroke {
+    animation: lit-stroke linear both;
+    animation-timeline: view();
+  }
+  .lit-text {
+    animation: lit-text linear both;
+    animation-timeline: view();
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lit-bg,
+  .lit-stroke,
+  .lit-text {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Pass 3: petals back at full presence, and crystal surfaces.
+   Dark: vivid cobalt petals. Light: pastel lavender petals with white veins, so dark
+   text stays legible over them without hiding the art.
+   ========================================================================== */
+
+.dark {
+  --petal-0: #050b24;
+  --petal-1: #1a38b5;
+  --petal-2: #5f7ff2;
+  --petal-3: #bcccff;
+  --petal-vein: rgba(205, 220, 255, 0.3);
+  --petal-edge: rgba(190, 210, 255, 0.38);
+
+  --cr-streak: rgba(255, 255, 255, 0.065);
+  --cr-streak-soft: rgba(255, 255, 255, 0.035);
+  --cr-sheen: rgba(255, 255, 255, 0.14);
+  --cr-p1: rgba(120, 150, 255, 0.16);
+  --cr-p2: rgba(170, 130, 255, 0.12);
+  --cr-p3: rgba(160, 190, 255, 0.1);
+  --cr-hi: rgba(255, 255, 255, 0.5);
+  --cr-lo: rgba(0, 0, 20, 0.55);
+  --cr-glow: rgba(150, 180, 255, 0.07);
+  --cr-edge-a: rgba(255, 255, 255, 0.7);
+  --cr-edge-b: rgba(150, 180, 255, 0.5);
+  --cr-edge-c: rgba(180, 140, 255, 0.4);
+  --scrim: 40%;
+}
+:root:not(.dark) {
+  --petal-0: #050b24;
+  --petal-1: #1a38b5;
+  --petal-2: #5f7ff2;
+  --petal-3: #bcccff;
+  --petal-vein: rgba(205, 220, 255, 0.3);
+  --petal-edge: rgba(190, 210, 255, 0.38);
+
+  --cr-streak: rgba(255, 255, 255, 0.75);
+  --cr-streak-soft: rgba(255, 255, 255, 0.4);
+  --cr-sheen: rgba(255, 255, 255, 0.85);
+  --cr-p1: rgba(120, 150, 255, 0.22);
+  --cr-p2: rgba(180, 150, 255, 0.18);
+  --cr-p3: rgba(150, 190, 255, 0.14);
+  --cr-hi: #ffffff;
+  --cr-lo: rgba(30, 50, 140, 0.2);
+  --cr-glow: rgba(255, 255, 255, 0.5);
+  --cr-edge-a: #ffffff;
+  --cr-edge-b: rgba(110, 140, 255, 0.45);
+  --cr-edge-c: rgba(170, 130, 255, 0.4);
+  --scrim: 30%;
+  --glass-tint: rgba(255, 255, 255, 0.6);
+  --glass-tint-strong: rgba(255, 255, 255, 0.82);
+}
+
+.scrim::before {
+  background: color-mix(in srgb, var(--page) var(--scrim), transparent);
+}
+/* On narrow screens the petal clusters span the whole text column, so the patch behind each
+   text block is denser there. The petals around the text are untouched. */
+@media (max-width: 1023px) {
+  :root:not(.dark),
+  :root.dark {
+    --scrim: 74%;
+  }
+}
+
+/* Crystal: sharper radius, a refractive backdrop, hard-edged light streaks, a prismatic
+   cast, bevelled edges (light top-left, shade bottom-right) and a prismatic hairline. */
+.glass,
+.glass-clear,
+.glass-dark {
+  border-radius: 0.875rem;
+  -webkit-backdrop-filter: blur(16px) saturate(175%) brightness(1.05);
+  backdrop-filter: blur(16px) saturate(175%) brightness(1.05);
+}
+.glass {
+  background:
+    linear-gradient(
+      118deg,
+      transparent 0 33%,
+      var(--cr-streak) 33% 36%,
+      transparent 36% 57%,
+      var(--cr-streak-soft) 57% 58.5%,
+      transparent 58.5% 100%
+    ),
+    linear-gradient(135deg, var(--cr-sheen), transparent 36%),
+    conic-gradient(from 205deg at 90% 8%, var(--cr-p1), var(--cr-p2), var(--cr-p3), var(--cr-p1)),
+    var(--glass-tint);
+  box-shadow:
+    inset 1px 1px 0 var(--cr-hi),
+    inset -1px -1px 0 var(--cr-lo),
+    inset 0 0 30px var(--cr-glow),
+    0 30px 60px -28px var(--glass-shadow);
+}
+.glass-clear {
+  background:
+    linear-gradient(118deg, transparent 0 40%, var(--cr-streak-soft) 40% 43%, transparent 43% 100%),
+    linear-gradient(135deg, var(--cr-sheen), transparent 40%),
+    conic-gradient(from 205deg at 90% 8%, var(--cr-p1), var(--cr-p2), var(--cr-p3), var(--cr-p1)),
+    color-mix(in srgb, var(--glass-tint) 50%, transparent);
+  box-shadow:
+    inset 1px 1px 0 var(--cr-hi),
+    inset -1px -1px 0 var(--cr-lo),
+    0 20px 40px -24px var(--glass-shadow);
+}
+.glass-dark {
+  background:
+    linear-gradient(118deg, transparent 0 34%, var(--cr-streak-soft) 34% 36%, transparent 36% 100%),
+    linear-gradient(135deg, var(--cr-sheen), transparent 34%),
+    conic-gradient(from 205deg at 90% 8%, var(--cr-p1), var(--cr-p2), var(--cr-p3), var(--cr-p1)),
+    var(--glass-tint-strong);
+  box-shadow:
+    inset 1px 1px 0 var(--cr-hi),
+    inset -1px -1px 0 var(--cr-lo),
+    0 40px 80px -30px var(--glass-shadow);
+}
+.glass::before,
+.glass-clear::before,
+.glass-dark::before {
+  background: linear-gradient(
+    135deg,
+    var(--cr-edge-a),
+    var(--cr-edge-b) 22%,
+    rgba(255, 255, 255, 0.04) 46%,
+    var(--cr-edge-c) 72%,
+    var(--cr-edge-a)
+  );
+}
+:root:not(.dark) .glass,
+:root:not(.dark) .glass-clear,
+:root:not(.dark) .glass-dark {
+  /* keep the hairline outline the earlier light pass added, on top of the bevel */
+  box-shadow:
+    inset 1px 1px 0 var(--cr-hi),
+    inset -1px -1px 0 var(--cr-lo),
+    0 0 0 1px rgba(11, 18, 48, 0.07),
+    0 24px 50px -24px var(--glass-shadow);
+}
+
+/* Crystal that really is translucent: the petals behind it show through as a soft prismatic
+   wash, and the frost is just strong enough to keep text legible. */
+.glass,
+.glass-clear,
+.glass-dark {
+  -webkit-backdrop-filter: blur(26px) saturate(185%) brightness(1.08);
+  backdrop-filter: blur(26px) saturate(185%) brightness(1.08);
+}
+.dark {
+  --glass-tint: rgba(8, 14, 40, 0.36);
+  --glass-tint-strong: rgba(6, 10, 28, 0.6);
+}
+/* On navy the petals behind a card are the brightest thing on the page; dimming what the glass
+   refracts (not the petals themselves) keeps their colour showing while light text stays legible. */
+.dark .glass,
+.dark .glass-clear,
+.dark .glass-dark {
+  -webkit-backdrop-filter: blur(26px) saturate(170%) brightness(0.78);
+  backdrop-filter: blur(26px) saturate(170%) brightness(0.78);
+}
+
+/* The hero word crosses a pale page, the cobalt slash and pale petals in one line, so a single
+   stroke colour cannot stay legible. A solid stroke plus a contrasting halo does. */
+.hero-outline {
+  color: transparent;
+  -webkit-text-stroke: 2px var(--ho-stroke);
+  filter: drop-shadow(0 0 1.5px var(--ho-halo)) drop-shadow(0 0 1px var(--ho-halo));
+  user-select: none;
+}
+:root:not(.dark) {
+  --ho-stroke: rgba(11, 18, 48, 0.78);
+  --ho-halo: rgba(255, 255, 255, 0.95);
+}
+.dark {
+  --ho-stroke: rgba(242, 238, 229, 0.8);
+  --ho-halo: rgba(4, 6, 15, 0.9);
+}
+
+/* Keyboard focus: a clear ring in the theme's accent. */
+.landing-root a:focus-visible,
+.landing-root button:focus-visible,
+.landing-root [tabindex]:focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 3px;
+}
+
+/* Figures: pictogram ink in the theme's strong colour, a hairline halo in the page colour so
+   they stay legible where they cross the cobalt slash or a petal, the baton in the accent. */
+.fig-g {
+  --fig-ink: var(--strong);
+  filter: drop-shadow(0 0 1.25px color-mix(in srgb, var(--page) 80%, transparent));
+}
+.fig {
+  fill: none;
+  stroke: var(--fig-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fig-far {
+  opacity: 0.92;
+}
+.fig-head {
+  fill: var(--fig-ink);
+  stroke: none;
+}
+.fig-shadow {
+  fill: var(--strong);
+  opacity: 0.16;
+}
+.fig-baton {
+  stroke: var(--ac);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--ac));
+}
+.fig-box {
+  fill: color-mix(in srgb, var(--ac) 16%, transparent);
+  stroke: var(--ac);
+}
+.fig-box-load {
+  fill: color-mix(in srgb, var(--strong) 6%, transparent);
+  stroke: color-mix(in srgb, var(--strong) 45%, transparent);
+}
+.fig-doc {
+  fill: var(--page);
+  stroke: var(--strong);
+}
+.fig-rope {
+  fill: none;
+  stroke: color-mix(in srgb, var(--strong) 70%, transparent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 3 2;
+}
+.fig-arrow {
+  stroke: var(--ac);
+}
+
+.fx-spark {
+  stroke: var(--ac);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--ac));
+}
+.fx-dust {
+  fill: var(--strong);
+}
+
+/* Reduced transparency: solid surfaces. Last in the file so no later crystal rule overrides it. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-clear,
+  .glass-dark,
+  .dark .glass,
+  .dark .glass-clear,
+  .dark .glass-dark {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--page) 92%, var(--ac) 8%);
   }
 }

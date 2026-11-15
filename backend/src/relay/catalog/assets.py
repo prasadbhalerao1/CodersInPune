@@ -29,6 +29,7 @@ from relay.policy.permissions import Permission, authorize, visible
 from relay.shared import pagination
 from relay.shared.api_types import LongText, Name, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
+from relay.shared.text import like_pattern
 
 AssetType = Literal[
     "repository",
@@ -149,10 +150,6 @@ class AssetDetail(AssetSummary):
     dependents: list[AssetResponsibilityView] = []
 
 
-def _pattern(q: str) -> str:
-    return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-
-
 async def _get(access: WorkspaceAccess, asset_id: uuid.UUID, *, lock: bool = False) -> Asset:
     stmt = select(Asset).where(
         Asset.id == asset_id, visible(access, Permission.RESPONSIBILITY_READ, Asset.tenant_id)
@@ -242,7 +239,9 @@ async def list_assets(
     if criticality:
         stmt = stmt.where(Asset.criticality == criticality)
     if q:
-        stmt = stmt.where(or_(Asset.name.ilike(_pattern(q)), Asset.description.ilike(_pattern(q))))
+        stmt = stmt.where(
+            or_(Asset.name.ilike(like_pattern(q)), Asset.description.ilike(like_pattern(q)))
+        )
     assets, next_cursor = pagination.split(
         list(await access.session.scalars(stmt.order_by(Asset.name, Asset.id).limit(limit + 1))),
         limit,

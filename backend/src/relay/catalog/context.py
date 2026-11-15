@@ -160,23 +160,41 @@ async def responsibility_context(
                 detail=" · ".join(b for b in bits if b),
             )
         )
-    for project in await session.scalars(
-        select(LinearProject)
-        .where(
-            visible(access, readable, LinearProject.tenant_id),
-            LinearProject.responsibility_id == rid,
-            LinearProject.removed.is_(False),
-            shared(access, LinearProject.audience),
-        )
-        .order_by(LinearProject.name)
-    ):
-        open_issues = await session.scalar(
-            select(func.count()).where(
-                visible(access, readable, LinearIssue.tenant_id),
-                LinearIssue.project_linear_id == project.linear_id,
-                LinearIssue.state_type.notin_(("completed", "canceled")),
+    projects = list(
+        await session.scalars(
+            select(LinearProject)
+            .where(
+                visible(access, readable, LinearProject.tenant_id),
+                LinearProject.responsibility_id == rid,
+                LinearProject.removed.is_(False),
+                shared(access, LinearProject.audience),
             )
+            .order_by(LinearProject.name)
         )
+    )
+    # Review fix (N+1). Before: one COUNT query per Linear project inside the loop, so a
+    # responsibility with P projects cost P extra round-trips (and case impact repeats this
+    # for every responsibility in a case). Now: one grouped COUNT for all projects, the same
+    # pattern the GitHub block above uses. Why: constant query count per responsibility.
+    open_by_project: dict[str | None, int] = (
+        dict(
+            (
+                await session.execute(
+                    select(LinearIssue.project_linear_id, func.count())
+                    .where(
+                        visible(access, readable, LinearIssue.tenant_id),
+                        LinearIssue.project_linear_id.in_([p.linear_id for p in projects]),
+                        LinearIssue.state_type.notin_(("completed", "canceled")),
+                    )
+                    .group_by(LinearIssue.project_linear_id)
+                )
+            ).tuples()
+        )
+        if projects
+        else {}
+    )
+    for project in projects:
+        open_issues = open_by_project.get(project.linear_id, 0)
         evidence.append(
             Evidence(
                 source="Linear",
@@ -185,22 +203,38 @@ async def responsibility_context(
                 detail=" · ".join(filter(None, [project.state, f"{open_issues or 0} open issues"])),
             )
         )
-    for source in await session.scalars(
-        select(NotionSource)
-        .where(
-            visible(access, readable, NotionSource.tenant_id),
-            NotionSource.responsibility_id == rid,
-            shared(access, NotionSource.visibility),
-        )
-        .order_by(NotionSource.title)
-    ):
-        pages = await session.scalar(
-            select(func.count()).where(
-                visible(access, readable, NotionPage.tenant_id),
-                NotionPage.source_ref == source.id,
-                NotionPage.status == "active",
+    sources = list(
+        await session.scalars(
+            select(NotionSource)
+            .where(
+                visible(access, readable, NotionSource.tenant_id),
+                NotionSource.responsibility_id == rid,
+                shared(access, NotionSource.visibility),
             )
+            .order_by(NotionSource.title)
         )
+    )
+    # Review fix (N+1). Before: one COUNT of active pages per Notion source inside the loop.
+    # Now: one grouped COUNT for every source. Why: same as the Linear block above.
+    pages_by_source: dict[uuid.UUID, int] = (
+        dict(
+            (
+                await session.execute(
+                    select(NotionPage.source_ref, func.count())
+                    .where(
+                        visible(access, readable, NotionPage.tenant_id),
+                        NotionPage.source_ref.in_([s.id for s in sources]),
+                        NotionPage.status == "active",
+                    )
+                    .group_by(NotionPage.source_ref)
+                )
+            ).tuples()
+        )
+        if sources
+        else {}
+    )
+    for source in sources:
+        pages = pages_by_source.get(source.id, 0)
         evidence.append(
             Evidence(
                 source="Notion",

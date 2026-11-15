@@ -89,7 +89,20 @@ def normalise(event: str, payload: dict[str, Any]) -> dict[str, Any] | None:
     }
     kind = WORK_ITEM_EVENTS.get(event)
     if kind:
-        item = work_item(payload[event if kind == "pull_request" else "issue"], kind)
+        # Review fix (robustness). Before: `payload[...]` and the parser assumed every field
+        # was present, so a signed but unusual delivery (a missing object or timestamp)
+        # raised KeyError/TypeError and answered 500; GitHub then redelivers it, failing
+        # again each time. Now: a work item that can't be read is ignored like any other
+        # irrelevant event. Why: a bad payload is dropped once instead of looping as 500s.
+        raw = payload.get(event if kind == "pull_request" else "issue")
+        if not isinstance(raw, dict):
+            return None
+        try:
+            item = work_item(raw, kind)
+        except KeyError, TypeError, ValueError:
+            return None
+        if item.created_at is None or item.updated_at is None:
+            return None
         out["item"] = {
             "kind": item.kind,
             "number": item.number,

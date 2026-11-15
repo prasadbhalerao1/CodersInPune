@@ -16,6 +16,7 @@ from relay.policy.permissions import Permission, authorize, visible
 from relay.shared import pagination
 from relay.shared.api_types import Email, LongText, Name, ShortText, StrictInput, blank_to_none
 from relay.shared.errors import ApiError
+from relay.shared.text import like_pattern
 
 Status = Literal["active", "archived"]
 
@@ -180,10 +181,6 @@ def _team_view(t: Team, departments: dict[uuid.UUID, str]) -> TeamView:
     )
 
 
-def _pattern(q: str) -> str:
-    return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-
-
 async def department_names(access: WorkspaceAccess) -> dict[uuid.UUID, str]:
     rows = await access.session.execute(
         select(Department.id, Department.name).where(
@@ -230,7 +227,7 @@ async def list_people(
         stmt = stmt.where(Person.status == "active")
     if q:
         stmt = stmt.where(
-            or_(Person.display_name.ilike(_pattern(q)), Person.email.ilike(_pattern(q)))
+            or_(Person.display_name.ilike(like_pattern(q)), Person.email.ilike(like_pattern(q)))
         )
     rows, next_cursor = pagination.split(
         list(
@@ -325,7 +322,7 @@ async def list_teams(
     if not include_archived:
         stmt = stmt.where(Team.status == "active")
     if q:
-        stmt = stmt.where(Team.name.ilike(_pattern(q)))
+        stmt = stmt.where(Team.name.ilike(like_pattern(q)))
     departments = await department_names(access)
     teams = [
         _team_view(t, departments)

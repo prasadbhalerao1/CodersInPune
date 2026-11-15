@@ -134,6 +134,7 @@ class OwnershipAssignment(Base):
         CheckConstraint("valid_to IS NULL OR valid_to > valid_from", name="valid_range"),
         CheckConstraint("role <> 'temporary' OR valid_to IS NOT NULL", name="temporary_bounded"),
         Index(None, "tenant_id", "responsibility_id"),
+        Index(None, "tenant_id", "person_id"),
         {"schema": SCHEMA},
     )
 

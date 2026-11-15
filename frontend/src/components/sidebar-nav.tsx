@@ -107,7 +107,7 @@ export function SidebarNav() {
         return (
           <div key={group.label ?? "main"}>
             {group.label ? (
-              <p className="text-muted-foreground/80 mb-1 px-2 text-[11px] font-medium tracking-wide uppercase">
+              <p className="text-muted-foreground mb-1 px-2 font-mono text-[10px] font-semibold tracking-[0.16em] uppercase">
                 {group.label}
               </p>
             ) : null}

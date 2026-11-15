@@ -17,12 +17,13 @@ test("the GitHub callback rejects requests without a session", async ({ page }) 
   expect(page.url()).not.toContain("connected=1");
 });
 
-test("the landing page leads to sign-in and explains the loop", async ({ page }) => {
+test("the landing page leads to the sandbox and explains the loop", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Get started →" }).first()).toHaveAttribute(
+  // Signed-out visitors are sent to /workspaces, which the proxy redirects to sign-in.
+  await expect(page.getByRole("link", { name: /launch sandbox/i }).first()).toHaveAttribute(
     "href",
-    "/sign-in",
+    "/workspaces",
   );
   await expect(page.getByRole("list", { name: "Workflow steps" })).toBeVisible();
 });

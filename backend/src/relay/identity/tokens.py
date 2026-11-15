@@ -113,10 +113,15 @@ class WorkOSTokenVerifier:
         )
 
     def _may_refresh(self) -> bool:
+        # Review fix (outage amplification). Before: `or not self._is_fresh()` skipped the
+        # cooldown whenever the cache was stale, so during a WorkOS outage every request
+        # queued behind the lock and made its own JWKS call (each up to the HTTP timeout)
+        # before falling back to the cached keys. Now: the cooldown always applies once a
+        # fetch has been attempted; stale keys keep verifying in between. Why: at most one
+        # JWKS call per cooldown window, outage or not, and no per-request latency spike.
         return (
             self._attempted_at is None
             or time.monotonic() - self._attempted_at >= self._cooldown_seconds
-            or not self._is_fresh()
         )
 
     async def _refresh(self) -> None:

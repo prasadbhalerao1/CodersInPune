@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from statistics import median, quantiles
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from relay.catalog.models import KnowledgeItem
 from relay.continuity.models import CaseKnowledge, CaseReadinessCriterion, ContinuityCase
@@ -111,53 +111,86 @@ async def compute(
     )
     met = sum(1 for c in criteria if c.status == "met")
 
-    missing = list(
-        await session.scalars(
-            select(CaseKnowledge).where(
+    # Only the number of gaps is used, so count them instead of loading each row.
+    missing = (
+        await session.scalar(
+            select(func.count())
+            .select_from(CaseKnowledge)
+            .where(
                 visible(access, Permission.CASE_READ, CaseKnowledge.tenant_id),
                 CaseKnowledge.outcome == "missing",
                 CaseKnowledge.recorded_at >= start,
                 CaseKnowledge.recorded_at < end,
             )
         )
+        or 0
     )
-    resolved = 0
-    for gap in missing:
-        written = await session.scalar(
-            select(KnowledgeItem.id)
+    # Review fix (N+1). Before: one query per knowledge gap in the period, each asking
+    # whether active knowledge was written for that responsibility afterwards, so a busy
+    # quarter cost hundreds of round-trips. Now: one COUNT with a correlated EXISTS over the
+    # same gaps. Why: a constant two queries for this metric, whatever the period holds.
+    later = (
+        select(KnowledgeItem.id)
+        .where(
+            KnowledgeItem.responsibility_id == CaseKnowledge.responsibility_id,
+            KnowledgeItem.created_at > CaseKnowledge.recorded_at,
+            KnowledgeItem.status == "active",
+        )
+        .exists()
+    )
+    resolved = (
+        await session.scalar(
+            select(func.count())
+            .select_from(CaseKnowledge)
             .where(
-                KnowledgeItem.responsibility_id == gap.responsibility_id,
-                KnowledgeItem.created_at > gap.recorded_at,
-                KnowledgeItem.status == "active",
-            )
-            .limit(1)
-        )
-        resolved += written is not None
-
-    runs = list(
-        await session.scalars(
-            select(ConnectorRun).where(
-                visible(access, Permission.INSIGHTS_READ, ConnectorRun.tenant_id),
-                ConnectorRun.status != "skipped",
-                ConnectorRun.finished_at >= start,
-                ConnectorRun.finished_at < end,
+                visible(access, Permission.CASE_READ, CaseKnowledge.tenant_id),
+                CaseKnowledge.outcome == "missing",
+                CaseKnowledge.recorded_at >= start,
+                CaseKnowledge.recorded_at < end,
+                later,
             )
         )
+        or 0
     )
-    failed = sum(1 for r in runs if r.status == "error")
 
-    reviewed = list(
-        await session.scalars(
-            select(Proposal).where(
-                visible(access, Permission.INSIGHTS_READ, Proposal.tenant_id),
-                Proposal.status != "pending",
-                Proposal.reviewed_at >= start,
-                Proposal.reviewed_at < end,
+    # Review fix (over-fetching). Before: every connector run and every reviewed proposal
+    # in the period was loaded as a full ORM object only to be counted in Python; runs
+    # accumulate with every sync. Now: COUNT ... GROUP BY status in the database. Why: the
+    # result is a handful of rows instead of one object per run or proposal.
+    run_counts = dict(
+        (
+            await session.execute(
+                select(ConnectorRun.status, func.count())
+                .where(
+                    visible(access, Permission.INSIGHTS_READ, ConnectorRun.tenant_id),
+                    ConnectorRun.status != "skipped",
+                    ConnectorRun.finished_at >= start,
+                    ConnectorRun.finished_at < end,
+                )
+                .group_by(ConnectorRun.status)
             )
-        )
+        ).tuples()
     )
-    accepted = sum(1 for p in reviewed if p.status in ("accepted", "edited"))
-    edited = sum(1 for p in reviewed if p.status == "edited")
+    runs_total = sum(run_counts.values())
+    failed = run_counts.get("error", 0)
+
+    review_counts = dict(
+        (
+            await session.execute(
+                select(Proposal.status, func.count())
+                .where(
+                    visible(access, Permission.INSIGHTS_READ, Proposal.tenant_id),
+                    Proposal.status != "pending",
+                    Proposal.reviewed_at >= start,
+                    Proposal.reviewed_at < end,
+                )
+                .group_by(Proposal.status)
+            )
+        ).tuples()
+    )
+    reviewed_total = sum(review_counts.values())
+    accepted = review_counts.get("accepted", 0) + review_counts.get("edited", 0)
+    edited = review_counts.get("edited", 0)
 
     return MetricsView(
         period_start=start,
@@ -196,10 +229,10 @@ async def compute(
                 definition="Knowledge recorded as missing during a handover in the period that "
                 "was later written for the same responsibility.",
                 numerator=resolved,
-                denominator=len(missing),
-                value=_ratio(resolved, len(missing)),
+                denominator=missing,
+                value=_ratio(resolved, missing),
                 unit="share",
-                sample_size=len(missing),
+                sample_size=missing,
                 coverage="Gaps recorded through case handovers only.",
                 limitations="Counts any later knowledge for the responsibility as a resolution, "
                 "even if it covers a different topic.",
@@ -210,10 +243,10 @@ async def compute(
                 definition="Sync runs that failed, out of all sync runs in the period "
                 "(paused runs excluded).",
                 numerator=failed,
-                denominator=len(runs),
-                value=_ratio(failed, len(runs)),
+                denominator=runs_total,
+                value=_ratio(failed, runs_total),
                 unit="share",
-                sample_size=len(runs),
+                sample_size=runs_total,
                 coverage="Runs recorded since sync history was introduced.",
                 limitations="Retried transient failures that later succeeded are not counted "
                 "as failures.",
@@ -224,10 +257,10 @@ async def compute(
                 definition="AI proposals accepted (as is or after an edit), out of all "
                 "proposals reviewed in the period.",
                 numerator=accepted,
-                denominator=len(reviewed),
-                value=_ratio(accepted, len(reviewed)),
+                denominator=reviewed_total,
+                value=_ratio(accepted, reviewed_total),
                 unit="share",
-                sample_size=len(reviewed),
+                sample_size=reviewed_total,
                 coverage="Reviewed proposals; pending ones are excluded.",
                 limitations=f"{edited} of the accepted proposals needed a correction before "
                 "acceptance (the correction rate).",

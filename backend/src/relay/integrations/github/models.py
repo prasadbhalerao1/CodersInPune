@@ -106,6 +106,7 @@ class GitHubRepository(Base):
             ["catalog.responsibility.tenant_id", "catalog.responsibility.id"],
             name="fk_github_repository_responsibility",
         ),
+        Index(None, "tenant_id", "responsibility_id"),
         {"schema": SCHEMA},
     )
 
