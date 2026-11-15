@@ -51,7 +51,7 @@ function FooterSitterScene() {
 
   useEffect(() => {
     const el = svg.current;
-    const mark = el?.parentElement?.querySelector<HTMLElement>(".wordmark");
+    const mark = el?.parentElement?.querySelector<HTMLElement>('[data-letter="E"]');
     const text = mark?.firstChild;
     if (!el || !mark || !text || text.nodeType !== Node.TEXT_NODE) return;
 
@@ -63,8 +63,8 @@ function FooterSitterScene() {
       ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       const m = ctx.measureText("E");
       const range = document.createRange();
-      range.setStart(text, 1);
-      range.setEnd(text, 2);
+      range.setStart(text, 0);
+      range.setEnd(text, 1);
       const r = range.getBoundingClientRect();
       const box = el.getBoundingClientRect();
       const baseline = r.top + m.fontBoundingBoxAscent;
@@ -100,11 +100,19 @@ function FooterSitterScene() {
         Math.hypot(e.clientX - (box.left + l.x), e.clientY - (box.top + l.y)) < 220;
     };
     window.addEventListener("pointermove", onMove, { passive: true });
+    // he steps out of view while an idle film plays (the logo film uses the wordmark)
+    const onFilm = (e: Event) => {
+      const active = (e as CustomEvent<{ active: boolean }>).detail.active;
+      el.style.transition = "opacity 300ms";
+      el.style.opacity = active ? "0" : "1";
+    };
+    window.addEventListener("relay:interlude", onFilm);
     return () => {
       alive = false;
       ro.disconnect();
       io.disconnect();
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("relay:interlude", onFilm);
     };
   }, [kick]);
 

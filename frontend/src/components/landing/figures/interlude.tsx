@@ -24,6 +24,7 @@ import {
   type Reach,
   type Vec,
 } from "./rig";
+import { finished, register } from "./director";
 import { FIGURES_ON } from "./stage";
 import { EASE } from "./track";
 
@@ -46,8 +47,6 @@ import { EASE } from "./track";
  * at once and puts the page back exactly as it was.
  */
 
-const IDLE_AFTER = 9; // seconds of stillness before the film starts
-const COOLDOWN = 45; // seconds between films
 const G = 2600;
 const PREFERRED = "oaepdbgqOAPDBQ";
 
@@ -351,34 +350,9 @@ function InterludeLayer() {
     fit();
 
     let film: Film | null = null;
-    let lastActive = performance.now() / 1000;
-    let lastFilm = -1e9;
     let raf = 0;
     let last = 0;
-
-    const activity = () => {
-      lastActive = performance.now() / 1000;
-    };
-    let px = 0;
-    let py = 0;
-    const onMove = (e: PointerEvent) => {
-      if (Math.hypot(e.clientX - px, e.clientY - py) > 3) activity();
-      px = e.clientX;
-      py = e.clientY;
-    };
-    const onScroll = () => {
-      activity();
-      if (film && Math.abs(window.scrollY - film.sy0) > 140) end();
-    };
-    const onResize = () => {
-      fit();
-      if (film) end();
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("keydown", activity);
-    window.addEventListener("wheel", activity, { passive: true });
-    window.addEventListener("touchstart", activity, { passive: true });
+    const onResize = () => fit();
     window.addEventListener("resize", onResize);
 
     const end = () => {
@@ -390,8 +364,7 @@ function InterludeLayer() {
       ctx.clearRect(0, 0, cv.width, cv.height);
       cancelAnimationFrame(raf);
       raf = 0;
-      lastFilm = performance.now() / 1000;
-      window.dispatchEvent(new CustomEvent("relay:interlude", { detail: { active: false } }));
+      finished("lasso");
     };
 
     const start = () => {
@@ -467,18 +440,23 @@ function InterludeLayer() {
         fx: [],
         seed: 9001,
       };
-      window.dispatchEvent(new CustomEvent("relay:interlude", { detail: { active: true } }));
       last = 0;
       raf = requestAnimationFrame(frame);
       return true;
     };
 
-    const timer = window.setInterval(() => {
-      const now = performance.now() / 1000;
-      if (film || document.visibilityState !== "visible") return;
-      if (now - lastActive < IDLE_AFTER || now - lastFilm < COOLDOWN) return;
-      if (!start()) lastFilm = now - COOLDOWN + 6; // nothing suitable on screen: look again soon
-    }, 500);
+    const unregister = register({
+      name: "lasso",
+      idleAfter: 9,
+      ready: () => {
+        const H = window.innerWidth < 640 ? 70 : 96;
+        return !!pickLetter(H, window.scrollY + window.innerHeight - 10);
+      },
+      start: () => {
+        start();
+      },
+      abort: () => end(),
+    });
 
     const frame = (now: number) => {
       const dt = last ? Math.min(0.033, (now - last) / 1000) : 0;
@@ -1553,14 +1531,9 @@ function InterludeLayer() {
     };
 
     return () => {
-      window.clearInterval(timer);
       if (film) end();
       cancelAnimationFrame(raf);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("keydown", activity);
-      window.removeEventListener("wheel", activity);
-      window.removeEventListener("touchstart", activity);
+      unregister();
       window.removeEventListener("resize", onResize);
     };
   }, []);

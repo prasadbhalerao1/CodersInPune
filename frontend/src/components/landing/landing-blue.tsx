@@ -867,8 +867,17 @@ export function LandingFooter() {
       {/* Giant wordmark: complete glyphs, edge-lit, with a lime glow underneath */}
       <div aria-hidden className="pointer-events-none relative mt-10 select-none">
         <div className="wordmark-glow absolute inset-x-[10%] bottom-0 h-1/2 blur-3xl" />
-        <span className="wordmark font-bebas relative block pb-[0.08em] text-center text-[clamp(8rem,27vw,25rem)] leading-[0.86] tracking-[0.05em]">
-          RELAY
+        {/* one span per letter, each carrying the wordmark style, so a letter can squash and
+            stretch on its own in the logo film */}
+        <span
+          data-wordmark
+          className="font-bebas relative block pb-[0.08em] text-center text-[clamp(8rem,27vw,25rem)] leading-[0.86] tracking-[0.05em]"
+        >
+          {"RELAY".split("").map((c, i) => (
+            <span key={i} data-letter={c} className="wordmark inline-block">
+              {c}
+            </span>
+          ))}
         </span>
         <FooterSitter />
       </div>
