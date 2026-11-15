@@ -9,6 +9,7 @@ from relay.continuity import (
     external,
     follow_through,
     impact,
+    plan,
     privacy,
     simulation,
     tasks,
@@ -419,3 +420,8 @@ async def check_external_action(
     access: CurrentWorkspace, action_id: uuid.UUID, request: Request
 ) -> external.ExternalActionView:
     return await external.check_status(access, action_id, _ctx(request))
+
+
+@router.get("/cases/{case_id}/plan")
+async def continuation_plan(access: CurrentWorkspace, case_id: uuid.UUID) -> plan.ContinuationPlan:
+    return await plan.continuation_plan(access, case_id)

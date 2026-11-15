@@ -199,18 +199,24 @@ def _valid(points: list[_Point], lines: list[str]) -> list[tuple[_Point, list[in
     return out[:MAX_ITEMS]
 
 
-async def _extract(access: WorkspaceAccess, meeting: Meeting, settings: Settings) -> str | None:
+async def _extract(
+    access: WorkspaceAccess, meeting: Meeting, settings: Settings, use_ai: bool = True
+) -> str | None:
     """(Re)extract a meeting's proposed items; returns a note when rules stood in for AI."""
     lines = _lines(meeting.transcript)
     pool = _pool(meeting, lines)
-    outcome = await instant.call(
-        access,
-        settings,
-        name=NAME,
-        pool=pool,
-        extra=f"Meeting: {meeting.title}, held {meeting.held_at:%d %b %Y}.",
-        output_type=MeetingOutput,
-        case_id=meeting.case_id,
+    outcome: instant.Outcome[MeetingOutput] = (
+        await instant.call(
+            access,
+            settings,
+            name=NAME,
+            pool=pool,
+            extra=f"Meeting: {meeting.title}, held {meeting.held_at:%d %b %Y}.",
+            output_type=MeetingOutput,
+            case_id=meeting.case_id,
+        )
+        if use_ai
+        else instant.Outcome(None, None, None)
     )
     points = outcome.output.items if outcome.output else []
     mode = "ai" if outcome.output and points else "rules"
@@ -251,7 +257,7 @@ async def _extract(access: WorkspaceAccess, meeting: Meeting, settings: Settings
 
 
 async def create_meeting(
-    access: WorkspaceAccess, data: MeetingIn, settings: Settings
+    access: WorkspaceAccess, data: MeetingIn, settings: Settings, *, use_ai: bool = True
 ) -> MeetingDetail:
     authorize(access, Permission.KNOWLEDGE_WRITE)
     if data.case_id:
@@ -268,7 +274,7 @@ async def create_meeting(
     )
     access.session.add(meeting)
     await access.session.flush()
-    note = await _extract(access, meeting, settings)
+    note = await _extract(access, meeting, settings, use_ai)
     audit.record(
         access.session,
         tenant_id=access.tenant_id,

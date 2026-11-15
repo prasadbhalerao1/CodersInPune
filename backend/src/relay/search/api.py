@@ -21,3 +21,8 @@ async def search(
 @router.get("/experts")
 async def experts(access: CurrentWorkspace, q: str = "") -> list[svc.ExpertView]:
     return await svc.experts(access, q)
+
+
+@router.get("/expertise")
+async def expertise(access: CurrentWorkspace) -> svc.ExpertiseMap:
+    return await svc.expertise_map(access)

@@ -5,6 +5,7 @@ import { connection } from "next/server";
 
 import type {
   DecisionEntry,
+  ExpertiseMap,
   MeetingDetail,
   MeetingSummary,
   AiAdminView,
@@ -421,6 +422,7 @@ export const api = {
   meetings: (id: string) => relayFetch<MeetingSummary[]>(`${ws(id)}/meetings`),
   meeting: (id: string, meetingId: string) =>
     relayFetch<MeetingDetail>(`${ws(id)}/meetings/${meetingId}`),
+  expertise: (id: string) => relayFetch<ExpertiseMap>(`${ws(id)}/search/expertise`),
   decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

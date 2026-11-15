@@ -390,3 +390,109 @@ async def experts(access: WorkspaceAccess, q: str) -> list[ExpertView]:
         )
     # Most evidence first; ties alphabetical. Order is for reading, not a judgement.
     return sorted(found.values(), key=lambda e: (-len(e.reasons), e.name))
+
+
+class ExpertiseRow(BaseModel):
+    responsibility_id: uuid.UUID
+    name: str
+    criticality: str
+    # Distinct people who hold it or wrote its knowledge: who could carry on tomorrow.
+    bus_factor: int
+    named_backup: bool  # someone other than the primary is assigned to it
+    capable_backup: bool  # someone other than the primary has written its knowledge
+    team_covered: bool
+    cells: dict[str, list[Literal["primary", "backup", "knowledge"]]]
+
+
+class ExpertiseMap(BaseModel):
+    people: list[dict[str, str]]
+    rows: list[ExpertiseRow]
+
+
+_CRITICALITY_ORDER = {"critical": 0, "high": 1, "standard": 2, "low": 3}
+
+
+async def expertise_map(access: WorkspaceAccess) -> ExpertiseMap:
+    """Responsibilities by people: who holds each one and who has written down how it works.
+    Rows run from the most fragile (fewest people, most critical) to the safest."""
+    authorize(access, Permission.RESPONSIBILITY_READ)
+    session = access.session
+    now = datetime.now(UTC)
+    people = {
+        p.id: p
+        for p in await session.scalars(
+            select(Person).where(
+                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+                Person.status == "active",
+            )
+        )
+    }
+    responsibilities = list(
+        await session.scalars(
+            select(Responsibility).where(
+                visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id),
+                Responsibility.status == "active",
+            )
+        )
+    )
+    cells: dict[uuid.UUID, dict[uuid.UUID, set[str]]] = {r.id: {} for r in responsibilities}
+    primary: dict[uuid.UUID, set[uuid.UUID]] = {r.id: set() for r in responsibilities}
+    teams: set[uuid.UUID] = set()
+    for rid, role, person_id, team_id in await session.execute(
+        select(
+            OwnershipAssignment.responsibility_id,
+            OwnershipAssignment.role,
+            OwnershipAssignment.person_id,
+            OwnershipAssignment.team_id,
+        ).where(
+            visible(access, Permission.RESPONSIBILITY_READ, OwnershipAssignment.tenant_id),
+            OwnershipAssignment.valid_from <= now,
+            or_(OwnershipAssignment.valid_to.is_(None), OwnershipAssignment.valid_to > now),
+        )
+    ):
+        if rid not in cells:
+            continue
+        if team_id is not None:
+            teams.add(rid)
+        elif person_id in people:
+            cells[rid].setdefault(person_id, set()).add(
+                "primary" if role == "primary" else "backup"
+            )
+            if role == "primary":
+                primary[rid].add(person_id)
+    by_email = {p.email.lower(): p.id for p in people.values() if p.email}
+    for rid, email in await session.execute(
+        select(KnowledgeItem.responsibility_id, Membership.email)
+        .join(Membership, Membership.user_id == KnowledgeItem.author_user_id)
+        .where(knowledge_readable(access), KnowledgeItem.status == "active")
+    ):
+        person_id = by_email.get((email or "").lower())
+        if rid in cells and person_id is not None:
+            cells[rid].setdefault(person_id, set()).add("knowledge")
+    rows = []
+    for r in responsibilities:
+        holders = cells[r.id]
+        others = {p: kinds for p, kinds in holders.items() if p not in primary[r.id]}
+        rows.append(
+            ExpertiseRow(
+                responsibility_id=r.id,
+                name=r.name,
+                criticality=r.criticality,
+                bus_factor=len(holders),
+                named_backup=any("backup" in k for k in others.values()),
+                capable_backup=any("knowledge" in k for k in others.values()),
+                team_covered=r.id in teams,
+                cells={
+                    str(p): sorted(k, key=["primary", "backup", "knowledge"].index)
+                    for p, k in holders.items()
+                },
+            )
+        )
+    rows.sort(key=lambda x: (x.bus_factor, _CRITICALITY_ORDER.get(x.criticality, 9), x.name))
+    involved = {p for row in rows for p in row.cells}
+    shown = sorted(
+        (p for p in people.values() if str(p.id) in involved), key=lambda p: p.display_name
+    )
+    return ExpertiseMap(
+        people=[{"id": str(p.id), "name": p.display_name} for p in shown], rows=rows
+    )

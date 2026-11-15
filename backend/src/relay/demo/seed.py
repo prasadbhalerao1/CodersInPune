@@ -45,7 +45,7 @@ from relay.integrations.linear.models import (
     LinearProject,
 )
 from relay.integrations.notion.models import NotionConnection, NotionPage, NotionSource
-from relay.intelligence import capsules, interviews, runs
+from relay.intelligence import capsules, interviews, meetings, runs
 from relay.jobs.app import create_job_app
 from relay.platform import workspaces
 from relay.platform.workspaces import WorkspaceView
@@ -135,6 +135,8 @@ async def seed_workspace(  # type: ignore[no-untyped-def]
         await _connectors(access, ids)
     async with open_workspace_access(factory, _identity(owner), tenant) as access:
         departure = await _cases(access, ids, users, settings, jobs)
+    async with open_workspace_access(factory, _identity(owner), tenant) as access:
+        await _meetings(access, ids, departure, settings, jobs)
     # A second manager approves the handover so the owner (the recipient) can acknowledge.
     async with open_workspace_access(factory, _identity("demo_maya"), tenant) as maya:
         capsule = await capsules.generate(
@@ -672,3 +674,81 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+MEETINGS = (
+    (
+        "Arjun handover kickoff",
+        "deploys",
+        True,
+        5,
+        """Maya: Thanks for joining. Arjun's last day is on the 28th, so let's plan the handover.
+Arjun: The deploy pipeline is mostly documented, but the rollback for billing-db is not.
+Maya: We decided Dev takes over production deployments, with Sara as backup.
+Arjun: I'll record a walkthrough of the canary release by Thursday.
+Dev: Can you share the access list for the deploy-pipelines repo?
+Arjun: Yes. Dev will pair with me on the next two Friday deploys.
+Sara: Only Arjun knows the manual steps for the legacy SFTP bridge, that's a risk.
+Maya: Who approves an emergency rollback if both Dev and Sara are out?
+Arjun: Agreed that we freeze non-urgent deploys during the last week of the quarter.
+Maya: Tom will update the on-call rota by Monday.
+Dev: Is the Terraform state for staging still in the old bucket?
+Maya: Great, thanks everyone.""",
+    ),
+    (
+        "Refund double-charge incident review",
+        "payments",
+        False,
+        12,
+        """Priya: This review covers the duplicate refunds on the 3rd.
+Leo: Root cause was a retry on the Stripe webhook without an idempotency key.
+Priya: We decided to require idempotency keys on every refund call from now on.
+Leo: I'll add the idempotency check to payments-api by Friday.
+Ines: Please document the refund reconciliation steps in the runbook.
+Priya: The reconciliation job alerts go to Arjun's personal email, that's a blocker once he leaves.
+Leo: Final call: refunds above 50k need a second approver.
+Ines: Who owns the Stripe account after Arjun leaves?
+Priya: Ines will draft the customer comms template by next week.""",
+    ),
+    (
+        "Platform weekly sync",
+        "oncall",
+        False,
+        19,
+        """Maya: Quick sync. On-call load is up 30 percent this month.
+Sara: Most pages are the billing-db disk alerts.
+Maya: We agreed to raise the disk alert threshold to 85 percent.
+Sara: I'll write the disk cleanup procedure by Wednesday.
+Dev: Are we still paying for the old PagerDuty seats?
+Maya: Concern: we have no second person who can restore billing-db from backup.
+Tom: Leo will shadow Sara on two restore drills next week.""",
+    ),
+)
+
+
+async def _meetings(
+    access: WorkspaceAccess,
+    ids: dict[str, uuid.UUID],
+    departure: uuid.UUID,
+    settings: Settings,
+    jobs: procrastinate.App,
+) -> None:
+    """Three recent meetings, read by rules; a few items already accepted so the decision
+    log and the case's tasks show the result, and the rest wait for review."""
+    for title, resp, on_case, days, transcript in MEETINGS:
+        made = await meetings.create_meeting(
+            access,
+            meetings.MeetingIn(
+                title=title,
+                held_at=NOW - timedelta(days=days),
+                transcript=transcript,
+                responsibility_id=ids[f"r_{resp}"],
+                case_id=departure if on_case else None,
+            ),
+            settings,
+            use_ai=False,
+        )
+        decisions = [i for i in made.items if i.kind == "decision"]
+        actions = [i for i in made.items if i.kind == "action"]
+        for item in [*decisions[:1], *actions[:1]]:
+            await meetings.review_item(access, item.id, True, jobs)

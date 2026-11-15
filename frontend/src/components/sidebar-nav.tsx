@@ -10,6 +10,7 @@ import {
   ChartColumn,
   FileClock,
   FlaskConical,
+  Grid3x3,
   HelpCircle,
   Inbox,
   LayoutDashboard,
@@ -66,6 +67,7 @@ const GROUPS: readonly { label: string | null; items: readonly Item[] }[] = [
       { label: "Knowledge", path: "/knowledge", icon: BookOpen },
       { label: "Meetings", path: "/meetings", icon: MessagesSquare },
       { label: "Decision log", path: "/decisions", icon: Scale },
+      { label: "Expertise map", path: "/expertise", icon: Grid3x3 },
       { label: "Assets", path: "/assets", icon: Boxes },
       {
         label: "Insights",

@@ -189,6 +189,20 @@ export const EXPLAIN = {
     ],
     source: "backend/src/relay/intelligence/meetings.py",
   },
+  expertise: {
+    title: "Expertise map",
+    summary:
+      "Who holds each responsibility and who has written down how it works, so you can see where one absence would stop the work.",
+    formula:
+      "People per responsibility = distinct people who hold it (primary, backup or other role) or wrote its active knowledge. A named backup is assigned but may never have done the work; a capable backup has also written its knowledge. Rows run from fewest people and most critical down.",
+    inputs: [
+      "Current ownership assignments (teams count as shared cover, shown separately)",
+      "Active knowledge items and who wrote them",
+    ],
+    reading:
+      "A red 1 on critical work is a single point of failure: name a backup, then ask them to document one procedure so they become capable.",
+    source: "backend/src/relay/search/service.py",
+  },
   ask_relay: {
     title: "Ask Relay",
     summary:

@@ -1963,3 +1963,17 @@ export type DecisionEntry = {
   knowledge_id: string | null;
   lines: number[];
 };
+
+export type ExpertiseMap = {
+  people: { id: string; name: string }[];
+  rows: {
+    responsibility_id: string;
+    name: string;
+    criticality: string;
+    bus_factor: number;
+    named_backup: boolean;
+    capable_backup: boolean;
+    team_covered: boolean;
+    cells: Record<string, ("primary" | "backup" | "knowledge")[]>;
+  }[];
+};
