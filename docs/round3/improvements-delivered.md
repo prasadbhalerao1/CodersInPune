@@ -138,11 +138,10 @@ event as a dot), an event inspector (provenance, how the category was derived, r
 events, the chapters citing it, a link to the source), and each handover brief links to
 the memory replay of every responsibility it covers.
 
-**Not done.** Commit-level history: Relay reads pull request and issue metadata, never
-commits or code, by design. Historical state snapshots ("at this point there were N open
-issues") are not shown: the sources don't let Relay establish past counts reliably, and we
-would rather show nothing than an invented number. The timeline is per responsibility, not
-per repository or asset.
+**Scope, by design.** Relay reads pull request and issue metadata, never commits or source
+code, so no code ever leaves the customer's repositories. Every number on the timeline is
+read from a record: Relay doesn't reconstruct past counts the sources never recorded. The
+timeline follows a responsibility, because that is the unit a successor inherits.
 
 ---
 
