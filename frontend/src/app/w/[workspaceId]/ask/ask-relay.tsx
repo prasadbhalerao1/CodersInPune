@@ -72,7 +72,7 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
     setTurns((all) => [...all, { question: q, sources: [], draft: "", final: null }]);
     abort.current = new AbortController();
     try {
-      const response = await fetch(`/w/${workspaceId}/ask`, {
+      const response = await fetch(`/w/${workspaceId}/ask/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q }),

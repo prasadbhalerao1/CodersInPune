@@ -79,7 +79,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="bg-background text-foreground h-full">
+      <body className="bg-background text-foreground h-full" suppressHydrationWarning>
         <AuthKitProvider>{children}</AuthKitProvider>
         <WarmApi />
       </body>

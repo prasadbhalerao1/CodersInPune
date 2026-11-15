@@ -30,6 +30,7 @@ from pydantic_ai.exceptions import (
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
+from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import UsageLimits
 
 from relay.config import Settings
@@ -63,6 +64,10 @@ class LLMError(Exception):
         super().__init__(code)
         self.code = code
         self.transient = transient
+
+
+# One answer never needs more; it stops a small model looping until the timeout.
+OUTPUT_CAP = ModelSettings(max_tokens=4000)
 
 
 @dataclass(frozen=True)
@@ -300,6 +305,7 @@ class Gateway:
                         prompt,
                         deps=deps,
                         usage_limits=UsageLimits(total_tokens_limit=token_budget),
+                        model_settings=OUTPUT_CAP,
                     )
             except Exception as error:  # classified; unknown errors re-raise
                 last = self._failed(slot, error)
@@ -337,6 +343,7 @@ class Gateway:
                         prompt,
                         deps=deps,
                         usage_limits=UsageLimits(total_tokens_limit=token_budget),
+                        model_settings=OUTPUT_CAP,
                     ) as result:
                         async for delta in result.stream_text(delta=True, debounce_by=None):
                             if delta:

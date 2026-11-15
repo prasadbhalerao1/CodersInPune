@@ -99,7 +99,7 @@ _DECISION = re.compile(
 _ACTION = re.compile(
     r"(\baction(?: item)?s?:|\btodo\b|\bi'?ll\b|\bi will\b|\bcan you\b|\bplease\b|"
     r"\b\w+ (?:will|to) (?:send|update|write|fix|follow up|own|take|draft|review|set up|"
-    r"schedule|share|check|prepare|migrate|rotate|document)\b)",
+    r"schedule|share|check|prepare|migrate|rotate|document|pair|shadow|record|raise|move|test|run|book|ask|call|email|handle|cover|update)\b)",
     re.I,
 )
 _RISK = re.compile(

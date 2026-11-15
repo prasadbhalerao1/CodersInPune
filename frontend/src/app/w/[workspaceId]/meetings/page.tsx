@@ -12,7 +12,7 @@ import { api } from "@/lib/relay-api";
 import { cn } from "@/lib/utils";
 
 import { createMeetingAction } from "./actions";
-import { KIND_LABEL } from "./kinds";
+import { KIND_LABEL, SINGULAR } from "./kinds";
 import { TranscriptField } from "./transcript-field";
 
 export const metadata: Metadata = { title: "Meetings" };
@@ -59,7 +59,7 @@ export default async function MeetingsPage({ params }: PageProps<"/w/[workspaceI
                     {(["decision", "action", "question", "risk"] as const).map((k) =>
                       m.counts[k] ? (
                         <span key={k} className="text-muted-foreground text-xs tabular-nums">
-                          {m.counts[k]} {KIND_LABEL[k].toLowerCase()}
+                          {m.counts[k]} {m.counts[k] === 1 ? SINGULAR[k] : KIND_LABEL[k].toLowerCase()}
                         </span>
                       ) : null,
                     )}
