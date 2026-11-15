@@ -1977,3 +1977,20 @@ export type ExpertiseMap = {
     cells: Record<string, ("primary" | "backup" | "knowledge")[]>;
   }[];
 };
+
+export type PlanStep = {
+  phase: 30 | 60 | 90;
+  title: string;
+  why: string;
+  source_kind: "scope" | "task" | "criterion" | "case";
+  source_label: string;
+  responsibility_id: string | null;
+  due_at: string;
+  already_task: boolean;
+};
+
+export type ContinuationPlan = {
+  case_id: string;
+  starts_at: string;
+  phases: { days: 30 | 60 | 90; title: string; goal: string; steps: PlanStep[] }[];
+};

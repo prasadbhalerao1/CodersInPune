@@ -53,7 +53,7 @@ export function CaseTabs({
 }: {
   workspaceId: string;
   caseId: string;
-  current: CaseTab | "analysis" | "interview" | "capsules";
+  current: CaseTab | "analysis" | "interview" | "capsules" | "plan";
   counts?: Partial<Record<CaseTab, number>>;
 }) {
   const base = `/w/${workspaceId}/cases/${caseId}`;
@@ -83,6 +83,7 @@ export function CaseTabs({
       {link("analysis", `${base}/analysis`, "Analysis")}
       {link("interview", `${base}/interview`, "Interview")}
       {link("capsules", `${base}/capsules`, "Capsules")}
+      {link("plan", `${base}/plan`, "30/60/90 plan")}
     </TabNav>
   );
 }

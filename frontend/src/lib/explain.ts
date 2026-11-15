@@ -203,6 +203,19 @@ export const EXPLAIN = {
       "A red 1 on critical work is a single point of failure: name a backup, then ask them to document one procedure so they become capable.",
     source: "backend/src/relay/search/service.py",
   },
+  continuation_plan: {
+    title: "30/60/90 continuation plan",
+    summary:
+      "A first-90-days plan for whoever takes over the case's work, built from the case itself.",
+    formula:
+      "For each responsibility in scope: no recipient → “name who takes over” (day 30). Critical or high → the recipient shadows the previous owner (30), and a backup is trained (90). Every item: the recipient leads it (60) and reviews its knowledge (90); with no written knowledge, “document how it works” (60). Unmet mandatory readiness checks go in the first 30 days; open tasks land in the phase their due date falls in.",
+    inputs: [
+      "The case's scope, recipients, readiness checks and open tasks",
+      "Which responsibilities have active knowledge",
+    ],
+    reading: "Add the steps you agree with to the case's tasks; they get the phase's due date.",
+    source: "backend/src/relay/continuity/plan.py",
+  },
   ask_relay: {
     title: "Ask Relay",
     summary:

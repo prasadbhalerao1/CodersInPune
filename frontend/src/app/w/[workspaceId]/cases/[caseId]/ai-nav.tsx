@@ -8,6 +8,7 @@ const TABS = [
   { key: "analysis", label: "Analysis", path: "/analysis" },
   { key: "interview", label: "Interview", path: "/interview" },
   { key: "capsules", label: "Handover capsules", path: "/capsules" },
+  { key: "plan", label: "30/60/90 plan", path: "/plan" },
 ] as const;
 
 /** Header for a case's intelligence pages: breadcrumb back to the case, then tabs. */

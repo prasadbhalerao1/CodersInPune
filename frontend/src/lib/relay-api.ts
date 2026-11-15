@@ -4,6 +4,7 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { connection } from "next/server";
 
 import type {
+  ContinuationPlan,
   DecisionEntry,
   ExpertiseMap,
   MeetingDetail,
@@ -423,6 +424,8 @@ export const api = {
   meeting: (id: string, meetingId: string) =>
     relayFetch<MeetingDetail>(`${ws(id)}/meetings/${meetingId}`),
   expertise: (id: string) => relayFetch<ExpertiseMap>(`${ws(id)}/search/expertise`),
+  plan: (id: string, caseId: string) =>
+    relayFetch<ContinuationPlan>(`${ws(id)}/cases/${caseId}/plan`),
   decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

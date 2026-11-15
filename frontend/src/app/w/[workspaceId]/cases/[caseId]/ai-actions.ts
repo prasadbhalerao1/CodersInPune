@@ -174,3 +174,17 @@ export async function askCapsuleAction(
     throw error;
   }
 }
+
+export async function addPlanStepAction(
+  workspaceId: string,
+  caseId: string,
+  step: { title: string; why: string; due_at: string },
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", `/cases/${caseId}/tasks`, {
+      title: step.title,
+      description: `From the 30/60/90 plan: ${step.why}`,
+      due_at: step.due_at,
+    }),
+  );
+}
