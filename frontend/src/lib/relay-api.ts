@@ -127,7 +127,17 @@ async function relayResponse(path: string, init: RequestInit, accept: string): P
   headers.set("Accept", accept);
   if (init.body) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers, cache: "no-store" });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers, cache: "no-store" });
+  } catch (error) {
+    if (error instanceof RelayApiError) throw error;
+    throw new RelayApiError(
+      503,
+      "service_unavailable",
+      "The Relay API is currently unreachable. Please ensure the backend server is active.",
+    );
+  }
   if (!response.ok) {
     const problem = (await response.json().catch(() => ({}))) as {
       code?: string;

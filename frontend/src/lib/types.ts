@@ -884,6 +884,7 @@ export type KnowledgeView = {
   disputed_by_name: string | null;
   disputed_at: string | null;
   can_verify: boolean;
+  classification: string;
 };
 
 export type KnowledgeRelatedView = {
