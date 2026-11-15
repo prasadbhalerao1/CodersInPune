@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
+import { Explain } from "@/components/explain";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { formatDateTime, PageHeader, Section } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
@@ -58,7 +59,7 @@ export default async function InsightsPage({
           </Link>
         }
       />
-      <div className="flex max-w-6xl flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-6">
         <form className="flex flex-wrap items-center gap-2" aria-label="Filters">
           <select
             name="department_id"
@@ -103,7 +104,11 @@ export default async function InsightsPage({
         </form>
 
         <Section
-          title="Continuity Debt"
+          title={
+            <>
+              Continuity Debt <Explain what="continuity_debt" align="start" />
+            </>
+          }
           description="The sum of the gaps below, each with its rule. Lower is better; fixing an item lowers the debt by its points."
         >
           <div className="grid gap-4 md:grid-cols-[12rem_1fr]">
@@ -171,7 +176,11 @@ export default async function InsightsPage({
         </Section>
 
         <Section
-          title="Key-person exposure"
+          title={
+            <>
+              Key-person exposure <Explain what="key_person" align="start" />
+            </>
+          }
           description="People who are the only active holder of some work: if they were away tomorrow, it would have nobody. Teams count as shared cover."
         >
           {insights.data.key_people.length ? (
@@ -215,7 +224,14 @@ export default async function InsightsPage({
           )}
         </Section>
 
-        <Section title="Coverage" description="Who is accountable, and who steps in.">
+        <Section
+          title={
+            <>
+              Coverage <Explain what="coverage" align="start" />
+            </>
+          }
+          description="Who is accountable, and who steps in."
+        >
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Stat label="Active responsibilities" value={c.responsibilities} />
             <Stat
@@ -246,7 +262,11 @@ export default async function InsightsPage({
         </Section>
 
         <Section
-          title="Knowledge health"
+          title={
+            <>
+              Knowledge health <Explain what="freshness" align="start" />
+            </>
+          }
           description={`Knowledge counts as current when reviewed in the last ${k.review_interval_days} days.`}
           aside={
             <Link

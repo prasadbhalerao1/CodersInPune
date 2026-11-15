@@ -101,7 +101,7 @@ export default async function TrendsPage({
           </Link>
         }
       />
-      <div className="flex max-w-6xl flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-6">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="text-muted-foreground">Period</span>
           {PERIODS.map((d) => (

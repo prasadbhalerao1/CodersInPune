@@ -4,6 +4,7 @@ import { MessageSquareText, SendHorizontal, Square } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { inputClass } from "@/components/action-form";
+import { Explain } from "@/components/explain";
 import { EvidenceList } from "@/components/ai";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -181,7 +182,7 @@ export function Copilot({
         </span>
         <div>
           <h2 id="copilot-heading" className="text-sm font-semibold">
-            Ask about this handover
+            Ask about this handover <Explain what="copilot" align="end" />
           </h2>
           <p className="text-muted-foreground text-xs">
             Answers use only the sources behind this brief that you can see, and cite them. If the

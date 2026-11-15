@@ -94,7 +94,7 @@ export default async function InboxPage({
           ) : null
         }
       />
-      <div className="flex max-w-3xl flex-col gap-4 p-6">
+      <div className="flex w-full flex-col gap-4 p-6">
         <FilterTabs
           filters={[
             { key: "all", label: "All" },

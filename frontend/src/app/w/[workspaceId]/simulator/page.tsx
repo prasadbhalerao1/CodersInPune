@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
+import { Explain } from "@/components/explain";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, PageHeader, Panel, Section, Stat } from "@/components/page";
 import { Badge, CriticalityBadge, RoleBadge, SeverityBadge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import type {
   CandidatesView,
   ExposedRisk,
   SimulatedResponsibility,
+  ScoreParts,
   SimulationView,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -62,10 +64,14 @@ export default async function SimulatorPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        title="What-if simulator"
+        title={
+          <span className="flex items-center gap-1.5">
+            What-if simulator <Explain what="simulation" align="start" />
+          </span>
+        }
         description="See what breaks if someone becomes unavailable, before it happens. Nothing is changed."
       />
-      <div className="flex w-full max-w-6xl flex-col gap-6 p-6">
+      <div className="flex w-full flex-col gap-6 p-6">
         <Panel className="p-4">
           <form
             method="get"
@@ -312,7 +318,18 @@ function ReadinessStat({
   const delta = view.readiness_score - view.baseline_score;
   return (
     <div className="bg-card flex flex-col gap-2 rounded-lg border px-4 py-3 shadow-xs">
-      <span className="text-muted-foreground text-xs font-medium">Continuity readiness</span>
+      <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
+        Continuity readiness
+        <Explain
+          what="readiness"
+          align="start"
+          working={
+            view.score_parts ? (
+              <ReadinessWorking parts={view.score_parts} score={view.readiness_score} />
+            ) : null
+          }
+        />
+      </span>
       <span className="flex items-baseline gap-2">
         <span className="tabular text-2xl leading-none font-semibold">{view.readiness_score}</span>
         <span className="text-muted-foreground text-xs">/ 100</span>
@@ -343,7 +360,82 @@ function ReadinessStat({
           />
         ) : null}
       </div>
+      {view.score_parts ? <ScoreWorking parts={view.score_parts} /> : null}
     </div>
+  );
+}
+
+const PARTS = [
+  { key: "cover_weight", label: "Someone covers it", share: 60 },
+  { key: "knowledge_weight", label: "Usable knowledge", share: 25 },
+  { key: "second_holder_weight", label: "Second holder", share: 15 },
+] as const;
+
+/** The score's working, always visible: each part, how much of it is met, and its points. */
+/** Row by row: which affected responsibilities earn which part, then the arithmetic. */
+function ReadinessWorking({ parts, score }: { parts: ScoreParts; score: number }) {
+  const yes = (v: boolean) => (v ? "✓" : "–");
+  return (
+    <>
+      <table className="w-full text-[11px]">
+        <thead className="text-muted-foreground">
+          <tr>
+            <th className="py-0.5 text-left font-medium">Responsibility</th>
+            <th className="font-medium">Weight</th>
+            <th className="font-medium">Cover</th>
+            <th className="font-medium">Knowledge</th>
+            <th className="font-medium">2nd holder</th>
+          </tr>
+        </thead>
+        <tbody className="tabular text-center">
+          {parts.rows.map((r) => (
+            <tr key={r.responsibility_id}>
+              <td className="max-w-28 truncate py-0.5 text-left">{r.name}</td>
+              <td>
+                {r.weight} <span className="text-muted-foreground">({r.criticality})</span>
+              </td>
+              <td>{yes(r.covered)}</td>
+              <td>{yes(r.knowledge)}</td>
+              <td>{yes(r.second_holder)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <span className="tabular">
+        Cover {parts.cover_weight}/{parts.possible} × 60 + knowledge {parts.knowledge_weight}/
+        {parts.possible} × 25 + 2nd holder {parts.second_holder_weight}/{parts.possible} × 15 ={" "}
+        <strong className="text-foreground">{score}</strong>
+      </span>
+    </>
+  );
+}
+
+function ScoreWorking({ parts }: { parts: ScoreParts }) {
+  return (
+    <dl className="mt-1 flex flex-col gap-1.5 border-t pt-2 text-[11px]">
+      {PARTS.map((p, i) => {
+        const met = parts[p.key] / parts.possible;
+        return (
+          <div key={p.key} className="grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-0.5">
+            <dt className="text-muted-foreground">
+              {p.label} <span className="opacity-70">· {p.share}%</span>
+            </dt>
+            <dd className="tabular font-medium">
+              {Math.round(met * p.share)} / {p.share}
+            </dd>
+            <div className="bg-muted col-span-2 h-1 overflow-hidden rounded-full" aria-hidden>
+              <div
+                className="bar-grow bg-foreground/60 h-full rounded-full"
+                style={{ width: `${met * 100}%`, animationDelay: `${i * 70}ms` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+      <p className="text-muted-foreground">
+        Weighted by criticality across {parts.possible} weight points of affected work.
+      </p>
+    </dl>
   );
 }
 
@@ -493,6 +585,7 @@ function Candidates({
                           Would be overloaded
                         </span>
                       ) : null}
+                      {c.overloaded ? <Explain what="overload" className="ml-1" /> : null}
                       {c.person && !selected ? (
                         <Link
                           href={link(c.person.id)}

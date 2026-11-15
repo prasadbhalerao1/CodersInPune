@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { formatDateTime, Section } from "@/components/page";
+import { Explain } from "@/components/explain";
 import { Badge, CriticalityBadge } from "@/components/ui/badge";
 import type { FollowState, FollowThroughItem, FollowThroughView } from "@/lib/types";
 
@@ -41,7 +42,11 @@ export function FollowThrough({
   if (!view.applies || view.items.length === 0) return null;
   return (
     <Section
-      title="Follow-through"
+      title={
+        <>
+          Follow-through <Explain what="follow_through" align="start" />
+        </>
+      }
       description={`${view.settled} of ${view.items.length} handed-over responsibilities have settled. ${view.rule}`}
     >
       <ul className="divide-y rounded-lg border text-sm">

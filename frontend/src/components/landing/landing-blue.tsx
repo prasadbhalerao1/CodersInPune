@@ -850,6 +850,9 @@ export function LandingFooter() {
           <a href="#try" className="hover:text-strong transition-colors">
             Ten-minute tour
           </a>
+          <Link href="/docs" className="hover:text-strong transition-colors">
+            Product guide
+          </Link>
           <a href={REPO_URL} className="hover:text-strong transition-colors">
             Source on GitHub
           </a>

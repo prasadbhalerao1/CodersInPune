@@ -27,7 +27,7 @@ export default async function GitHubTeamsPage({
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="github" />
       <GitHubTabs workspaceId={workspaceId} current="teams" />
-      <div className="flex max-w-5xl flex-col gap-4 p-6">
+      <div className="flex w-full flex-col gap-4 p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Teams from connected GitHub organisations. Link one to a Relay team so CODEOWNERS entries
           like <code className="text-xs">@org/team</code> match it. Linking adds the team&apos;s

@@ -21,7 +21,7 @@ export default async function SignalsPage({
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="github" />
       <GitHubTabs workspaceId={workspaceId} current="signals" />
-      <div className="flex max-w-5xl flex-col gap-4 p-6">
+      <div className="flex w-full flex-col gap-4 p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Where declared ownership and recent GitHub activity disagree. Each signal links to its
           evidence. Signals never change ownership; act on them through the responsibility or a

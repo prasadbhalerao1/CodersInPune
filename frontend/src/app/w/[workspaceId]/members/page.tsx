@@ -45,7 +45,7 @@ export default async function MembersPage({ params }: PageProps<"/w/[workspaceId
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="Members" />
-      <div className="flex max-w-4xl flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-6">
         {manage ? (
           <Section
             title="Invite someone"

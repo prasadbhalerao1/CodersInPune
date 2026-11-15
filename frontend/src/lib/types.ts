@@ -1736,6 +1736,23 @@ export type SimulationRiskRef = {
   status: string;
   subject: string | null;
 };
+/** The readiness score's working: criticality-weighted parts (see the simulator docs). */
+export type ScoreParts = {
+  possible: number;
+  cover_weight: number;
+  knowledge_weight: number;
+  second_holder_weight: number;
+  rows: {
+    responsibility_id: string;
+    name: string;
+    criticality: string;
+    weight: number;
+    covered: boolean;
+    knowledge: boolean;
+    second_holder: boolean;
+  }[];
+};
+
 export type SimulationView = {
   person: SimulationPersonRef;
   backup: SimulationPersonRef | null;
@@ -1749,6 +1766,7 @@ export type SimulationView = {
   exposed_risks: ExposedRisk[];
   baseline_score: number;
   readiness_score: number;
+  score_parts: ScoreParts | null;
   score_basis: string;
   backup_load: { current_responsibilities: number; would_take_over: number } | null;
   simulated_at: string;

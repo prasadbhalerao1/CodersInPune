@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { TabLink, TabNav } from "@/components/tab-nav";
+import { Explain } from "@/components/explain";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader } from "@/components/page";
 import { RiskStatusBadge, SeverityBadge } from "@/components/ui/badge";
@@ -30,7 +31,8 @@ export default async function RisksPage({
       <div className="flex flex-col gap-4 p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Rule-based checks on the current catalogue. A risk resolves on its own as soon as the gap
-          is fixed; until then it can be acknowledged or accepted for a limited time.
+          is fixed; until then it can be acknowledged or accepted for a limited time.{" "}
+          <Explain what="risk" align="start" />
         </p>
         <TabNav current={tab} aria-label="Risk status" className="flex gap-1 text-sm">
           {TABS.map((t) => (

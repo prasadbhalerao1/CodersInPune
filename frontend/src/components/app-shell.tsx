@@ -33,7 +33,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <>
       <div className="flex min-h-full">
         {sidebar}
-        <main className="flex min-h-dvh min-w-0 flex-1 flex-col">{children}</main>
+        <main className="flex min-h-dvh min-w-0 flex-1 flex-col">
+          {/* Very wide screens: the page stays one comfortable, centred column. */}
+          <div className="mx-auto flex w-full max-w-[105rem] flex-1 flex-col">{children}</div>
+        </main>
       </div>
       <Suspense fallback={null}>
         <CommandMenu />

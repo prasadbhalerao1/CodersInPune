@@ -60,7 +60,7 @@ export default async function AgentsPage({
           ) : undefined
         }
       />
-      <div className="flex max-w-5xl flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-6">
         <p className="text-muted-foreground max-w-2xl text-sm">
           Relay&apos;s AI capabilities only read the evidence a run was allowed to see and only
           produce proposals: none of them can change anything. People review every suggestion.

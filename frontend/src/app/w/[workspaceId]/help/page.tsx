@@ -76,6 +76,11 @@ export default async function HelpPage({ params }: PageProps<"/w/[workspaceId]/h
       <PageHeader
         title="Learn Relay"
         description="Short guided tours, your setup checklist and help. Tours unlock as your workspace has the data they show."
+        actions={
+          <Link href="/docs" className="btn btn-quiet btn-sm">
+            Product guide: every number explained
+          </Link>
+        }
       />
       <div className="flex max-w-4xl flex-col gap-8 p-6">
         {guidance.ok ? (

@@ -65,7 +65,7 @@ export default async function AssetPage({
           ) : null
         }
       />
-      <div className="flex max-w-4xl flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-6">
         <AssetFacts asset={a} />
         <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
           <div>

@@ -1764,3 +1764,63 @@ nav[data-tab-pending] ~ * {
     background: color-mix(in srgb, var(--page) 92%, var(--ac) 8%);
   }
 }
+
+/* ⓘ explanations open in place, quickly and without movement for reduced-motion users. */
+.explain-pop {
+  animation: explain-in 140ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes explain-in {
+  from {
+    opacity: 0;
+    translate: 0 -2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explain-pop {
+    animation: none;
+  }
+}
+
+/*
+ * Large displays: everything is sized in rem, so raising the root size scales the whole
+ * interface (type, spacing, sidebar, content width) instead of leaving empty space.
+ * 16px up to 1680px wide, then growing smoothly to 20px on 2560px+ screens.
+ */
+@media (min-width: 1680px) {
+  html {
+    font-size: clamp(16px, calc(16px + (100vw - 1680px) * 0.0045), 20px);
+  }
+}
+
+/* Bars that carry a number grow to it once, so the eye reads the value. */
+.bar-grow {
+  transform-origin: left;
+  animation: bar-grow 520ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-grow {
+    animation: none;
+  }
+}
+
+/* ⓘ is easy to spot: tinted with the accent, filled on hover and while open. */
+.explain-dot {
+  color: color-mix(in oklab, var(--primary) 78%, var(--muted-foreground));
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+.explain-dot:hover,
+.explain-dot[aria-expanded="true"] {
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+.explain-dot:active {
+  transform: scale(0.92);
+}

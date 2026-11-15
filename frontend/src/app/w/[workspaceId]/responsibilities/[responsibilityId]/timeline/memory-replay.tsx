@@ -11,12 +11,14 @@ import {
   MessageSquareText,
   PanelRight,
   RotateCcw,
+  Search,
   SendHorizontal,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { Explain } from "@/components/explain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/action-form";
@@ -68,6 +70,10 @@ export function MemoryReplay({
   latestHref?: string | null;
 }) {
   const [filter, setFilter] = useState<TimelineCategory | null>(null);
+  const [query, setQuery] = useState("");
+  const [source, setSource] = useState("");
+  const [person, setPerson] = useState("");
+  const [majorOnly, setMajorOnly] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null); // replay position, oldest = 0
   const [playing, setPlaying] = useState(false);
   const [focus, setFocus] = useState<Set<string>>(new Set());
@@ -79,6 +85,19 @@ export function MemoryReplay({
 
   const chronological = useMemo(() => [...timeline.events].reverse(), [timeline.events]);
   const byId = useMemo(() => new Map(timeline.events.map((e) => [e.id, e])), [timeline.events]);
+  const sources = useMemo(
+    () => [...new Set(timeline.events.map((e) => e.source_system))].sort(),
+    [timeline.events],
+  );
+  const people = useMemo(
+    () =>
+      [...new Set(timeline.events.flatMap((e) => (e.actor ? [e.actor] : [])))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [timeline.events],
+  );
+  const needle = query.trim().toLowerCase();
+  const narrowed = Boolean(needle || source || person || majorOnly);
 
   useEffect(() => {
     if (!playing) return;
@@ -95,6 +114,11 @@ export function MemoryReplay({
   const current = cursor === null ? null : chronological[cursor];
   const shown = timeline.events.filter((e) => {
     if (filter && e.category !== filter) return false;
+    if (source && e.source_system !== source) return false;
+    if (person && e.actor !== person) return false;
+    if (majorOnly && e.significance !== "high") return false;
+    if (needle && !`${e.title} ${e.summary} ${e.actor ?? ""}`.toLowerCase().includes(needle))
+      return false;
     if (current && e.occurred_at > current.occurred_at) return false;
     if (current && e.occurred_at === current.occurred_at && e.id > current.id) return false;
     return true;
@@ -105,11 +129,19 @@ export function MemoryReplay({
     setFocus(new Set(ids));
     if (ids.length === 1) setSelected(ids[0]);
     setFilter(null);
+    clearNarrowing();
     setCursor(null);
     setPlaying(false);
     requestAnimationFrame(() =>
       rows.current.get(ids[0])?.scrollIntoView({ behavior: "smooth", block: "center" }),
     );
+  }
+
+  function clearNarrowing() {
+    setQuery("");
+    setSource("");
+    setPerson("");
+    setMajorOnly(false);
   }
 
   function explain() {
@@ -151,6 +183,61 @@ export function MemoryReplay({
                 <span className="tabular text-muted-foreground">{timeline.counts[c]}</span>
               </Chip>
             ))}
+          </div>
+          <div
+            className="flex flex-wrap items-center gap-2 border-t pt-3"
+            role="group"
+            aria-label="Narrow the timeline"
+          >
+            <label className="relative min-w-44 flex-1">
+              <span className="sr-only">Search events</span>
+              <Search
+                aria-hidden
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search titles, summaries, people"
+                className={cn(inputClass, "h-8 pl-8")}
+              />
+            </label>
+            {sources.length > 1 ? (
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                aria-label="Source"
+                className={cn(inputClass, "h-8 w-auto")}
+              >
+                <option value="">All sources</option>
+                {sources.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            ) : null}
+            {people.length > 1 ? (
+              <select
+                value={person}
+                onChange={(e) => setPerson(e.target.value)}
+                aria-label="Person"
+                className={cn(inputClass, "h-8 w-auto max-w-48")}
+              >
+                <option value="">Everyone</option>
+                {people.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            ) : null}
+            <Chip active={majorOnly} onClick={() => setMajorOnly(!majorOnly)}>
+              Major events
+            </Chip>
+            {narrowed ? (
+              <Button size="sm" variant="ghost" onClick={clearNarrowing}>
+                <X aria-hidden />
+                Clear
+              </Button>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t pt-3">
             <Button
@@ -233,7 +320,21 @@ export function MemoryReplay({
         />
 
         {groups.length === 0 ? (
-          <p className="text-muted-foreground px-1 text-sm">No events in this view.</p>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 px-1 text-sm">
+            No events match this view.
+            {narrowed || filter ? (
+              <button
+                type="button"
+                onClick={() => {
+                  clearNarrowing();
+                  setFilter(null);
+                }}
+                className="text-foreground underline underline-offset-2"
+              >
+                Show everything
+              </button>
+            ) : null}
+          </div>
         ) : (
           <div role="region" aria-label="Events" className="flex flex-col gap-4">
             {groups.map(([label, events]) => (
@@ -309,7 +410,9 @@ export function MemoryReplay({
 
         <div className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-xs">
           <div>
-            <h2 className="text-sm font-semibold">What this history means</h2>
+            <h2 className="flex items-center gap-1 text-sm font-semibold">
+              What this history means <Explain what="memory_replay" align="start" />
+            </h2>
             <p className="text-muted-foreground mt-0.5 text-xs">
               An AI reading of the events above. Every chapter cites the events it rests on;
               anything it couldn&apos;t cite is dropped.

@@ -36,7 +36,7 @@ export default async function AutomationsPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" />
       <SettingsNav workspaceId={workspaceId} current="automations" admin />
-      <div className="flex max-w-5xl flex-col gap-4 p-6">
+      <div className="flex w-full flex-col gap-4 p-6">
         <p className="text-muted-foreground max-w-2xl text-sm">
           Automations watch for continuity gaps once a day and nudge people. They never change
           owners, approvals or cases. Alerts without an assignee go to workspace owners and admins;
