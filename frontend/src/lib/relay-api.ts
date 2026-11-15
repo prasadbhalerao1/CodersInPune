@@ -170,6 +170,32 @@ export async function relayText(path: string): Promise<string> {
   return (await relayResponse(path, {}, "text/plain")).text();
 }
 
+/**
+ * A streamed (server-sent events) POST, returned as the API sent it so a route handler can pass
+ * the body straight through. Failures come back as JSON problems, never as thrown errors.
+ */
+export async function relayStream(path: string, body: string, signal: AbortSignal) {
+  const { accessToken } = await withAuth();
+  if (!accessToken) {
+    return Response.json({ detail: "Your session has ended. Sign in again." }, { status: 401 });
+  }
+  try {
+    return await fetch(`${apiBaseUrl()}${path}`, {
+      method: "POST",
+      body,
+      signal,
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+      },
+    });
+  } catch {
+    return Response.json({ detail: "The Relay API is unreachable right now." }, { status: 503 });
+  }
+}
+
 const ws = (workspaceId: string) => `/workspaces/${encodeURIComponent(workspaceId)}`;
 
 export const api = {

@@ -289,7 +289,12 @@ export default async function CapsulePage({
 
         <aside className="flex flex-col gap-6 xl:sticky xl:top-20 xl:self-start">
           {questions.ok ? (
-            <Copilot workspaceId={workspaceId} capsuleId={c.id} initial={questions.data} />
+            <Copilot
+              workspaceId={workspaceId}
+              caseId={caseId}
+              capsuleId={c.id}
+              initial={questions.data}
+            />
           ) : (
             <ApiErrorNotice error={questions.error} />
           )}
