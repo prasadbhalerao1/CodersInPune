@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {
+    // Revisiting a page within 30 s (back, sidebar hops) renders from the client cache with
+    // no server round trip. Every server action revalidates or refreshes, so a change you
+    // make is never hidden behind a cached page.
+    staleTimes: { dynamic: 30 },
     // Workspace pages are per-user (authenticated API data), so they render at request
     // time behind loading.tsx skeletons by design. Validate instant navigation only for
     // segments that opt in with `export const instant`, instead of warning on every page.

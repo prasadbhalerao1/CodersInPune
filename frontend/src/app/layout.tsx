@@ -2,6 +2,7 @@ import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
 import { Bebas_Neue, Geist, Geist_Mono, Instrument_Serif, Syne } from "next/font/google";
 
+import { WarmApi } from "@/components/warm-api";
 import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 import "./globals.css";
@@ -80,6 +81,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="bg-background text-foreground h-full">
         <AuthKitProvider>{children}</AuthKitProvider>
+        <WarmApi />
       </body>
     </html>
   );

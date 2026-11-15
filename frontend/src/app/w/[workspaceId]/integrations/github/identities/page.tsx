@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { ActionForm, inputClass, SubmitButton } from "@/components/action-form";
+import { TabLink, TabNav } from "@/components/tab-nav";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, PageHeader } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
@@ -126,23 +125,20 @@ export default async function IdentitiesPage({
           and suggestions name real people. Matches are only suggested; nothing is linked or merged
           until you confirm.
         </p>
-        <nav aria-label="Filter" className="flex gap-1 text-sm">
+        <TabNav current={filter} aria-label="Filter" className="flex gap-1 text-sm">
           {FILTERS.map((f) => (
-            <Link
+            <TabLink
               key={f.key}
+              tab={f.key}
               href={f.key === "review" ? base : `${base}?status=${f.key}`}
-              aria-current={filter === f.key ? "page" : undefined}
-              className={cn(
-                "rounded-md px-2.5 py-1",
-                filter === f.key
-                  ? "bg-foreground/[0.06] font-medium"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
+              className="rounded-md px-2.5 py-1 transition-colors duration-150"
+              activeClassName="bg-foreground/[0.06] font-medium"
+              inactiveClassName="text-muted-foreground hover:bg-muted"
             >
               {f.label}
-            </Link>
+            </TabLink>
           ))}
-        </nav>
+        </TabNav>
         {identities.data.length === 0 ? (
           <EmptyState
             title={filter === "review" ? "Nothing to review" : `No ${filter} identities`}

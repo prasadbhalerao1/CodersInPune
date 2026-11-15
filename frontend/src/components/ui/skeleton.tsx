@@ -1,3 +1,4 @@
+import { SlowHint } from "@/components/slow-hint";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {
@@ -11,6 +12,7 @@ export function PageSkeleton({ rows = 6 }: { rows?: number }) {
       <div className="flex h-14 items-center border-b px-6">
         <Skeleton className="h-5 w-40" />
       </div>
+      <SlowHint />
       <div className="flex flex-col gap-4 p-6">
         <Skeleton className="h-9 w-full max-w-xl" />
         <div className="divide-y rounded-lg border">
@@ -33,6 +35,7 @@ export function CardsSkeleton() {
       <div className="flex h-14 items-center border-b px-6">
         <Skeleton className="h-5 w-32" />
       </div>
+      <SlowHint />
       <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} className="rounded-lg border p-4">

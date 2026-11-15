@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { TabLink, TabNav } from "@/components/tab-nav";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader } from "@/components/page";
 import { RiskStatusBadge, SeverityBadge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Risks" };
 
@@ -32,23 +32,20 @@ export default async function RisksPage({
           Rule-based checks on the current catalogue. A risk resolves on its own as soon as the gap
           is fixed; until then it can be acknowledged or accepted for a limited time.
         </p>
-        <nav aria-label="Risk status" className="flex gap-1 text-sm">
+        <TabNav current={tab} aria-label="Risk status" className="flex gap-1 text-sm">
           {TABS.map((t) => (
-            <Link
+            <TabLink
               key={t.value}
+              tab={t.value}
               href={t.value === "active" ? `${base}/risks` : `${base}/risks?status=${t.value}`}
-              aria-current={tab === t.value ? "page" : undefined}
-              className={cn(
-                "rounded-md px-2.5 py-1",
-                tab === t.value
-                  ? "bg-foreground/[0.06] font-medium"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
+              className="rounded-md px-2.5 py-1 transition-colors duration-150"
+              activeClassName="bg-foreground/[0.06] font-medium"
+              inactiveClassName="text-muted-foreground hover:bg-muted"
             >
               {t.label}
-            </Link>
+            </TabLink>
           ))}
-        </nav>
+        </TabNav>
         {tab === "resolved" ? (
           <ResolvedList workspaceId={workspaceId} />
         ) : (

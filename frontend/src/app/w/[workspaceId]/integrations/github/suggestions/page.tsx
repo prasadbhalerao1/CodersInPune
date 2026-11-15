@@ -1,12 +1,10 @@
-import Link from "next/link";
-
 import { ActionForm, inputClass } from "@/components/action-form";
+import { TabLink, TabNav } from "@/components/tab-nav";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, PageHeader } from "@/components/page";
 import { Badge, ROLE_LABEL } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
-import { cn } from "@/lib/utils";
 
 import { decideSuggestionAction } from "../../actions";
 import { GitHubTabs } from "../tabs";
@@ -48,23 +46,20 @@ export default async function SuggestionsPage({
           Proposed from GitHub evidence. Approving records the owner through the normal ownership
           history; an existing primary owner is never replaced.
         </p>
-        <nav aria-label="Status" className="flex gap-1 text-sm">
+        <TabNav current={tab} aria-label="Status" className="flex gap-1 text-sm">
           {TABS.map((t) => (
-            <Link
+            <TabLink
               key={t}
+              tab={t}
               href={t === "open" ? base : `${base}?status=${t}`}
-              aria-current={tab === t ? "page" : undefined}
-              className={cn(
-                "rounded-md px-2.5 py-1 capitalize",
-                tab === t
-                  ? "bg-foreground/[0.06] font-medium"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
+              className="rounded-md px-2.5 py-1 capitalize transition-colors duration-150"
+              activeClassName="bg-foreground/[0.06] font-medium"
+              inactiveClassName="text-muted-foreground hover:bg-muted"
             >
               {t}
-            </Link>
+            </TabLink>
           ))}
-        </nav>
+        </TabNav>
         {suggestions.data.length === 0 ? (
           <EmptyState
             title={`No ${tab} suggestions`}

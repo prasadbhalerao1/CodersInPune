@@ -8,6 +8,7 @@ import {
   SubmitButton,
 } from "@/components/action-form";
 import { formatDateTime, Section } from "@/components/page";
+import { TabLink, TabNav } from "@/components/tab-nav";
 import { Badge, CaseStatusBadge } from "@/components/ui/badge";
 import type {
   CaseDetail,
@@ -56,37 +57,33 @@ export function CaseTabs({
   counts?: Partial<Record<CaseTab, number>>;
 }) {
   const base = `/w/${workspaceId}/cases/${caseId}`;
-  const link = (href: string, label: string, active: boolean, count?: number) => (
-    <Link
+  const link = (tab: string, href: string, label: string, count?: number) => (
+    <TabLink
       key={href}
+      tab={tab}
       href={href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "-mb-px flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm whitespace-nowrap",
-        active
-          ? "border-foreground font-medium"
-          : "text-muted-foreground hover:text-foreground border-transparent",
-      )}
+      className="-mb-px flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm whitespace-nowrap transition-colors duration-150"
+      activeClassName="border-foreground font-medium"
+      inactiveClassName="text-muted-foreground hover:text-foreground border-transparent"
     >
       {label}
       {count ? <span className="text-muted-foreground text-xs tabular-nums">{count}</span> : null}
-    </Link>
+    </TabLink>
   );
   return (
-    <nav aria-label="Case sections" className="flex gap-4 overflow-x-auto border-b px-6 pt-3">
+    <TabNav
+      current={current}
+      aria-label="Case sections"
+      className="flex gap-4 overflow-x-auto border-b px-6 pt-3"
+    >
       {CASE_TABS.map(([tab, label]) =>
-        link(
-          tab === "overview" ? base : `${base}?tab=${tab}`,
-          label,
-          current === tab,
-          counts?.[tab],
-        ),
+        link(tab, tab === "overview" ? base : `${base}?tab=${tab}`, label, counts?.[tab]),
       )}
       <span aria-hidden className="bg-border mx-1 mb-2 w-px" />
-      {link(`${base}/analysis`, "Analysis", current === "analysis")}
-      {link(`${base}/interview`, "Interview", current === "interview")}
-      {link(`${base}/capsules`, "Capsules", current === "capsules")}
-    </nav>
+      {link("analysis", `${base}/analysis`, "Analysis")}
+      {link("interview", `${base}/interview`, "Interview")}
+      {link("capsules", `${base}/capsules`, "Capsules")}
+    </TabNav>
   );
 }
 

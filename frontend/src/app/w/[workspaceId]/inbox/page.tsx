@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { Filtered, FilterTabs } from "@/components/filter-tabs";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, formatDateTime, PageHeader } from "@/components/page";
@@ -72,12 +72,13 @@ export default async function InboxPage({
   searchParams,
 }: PageProps<"/w/[workspaceId]/inbox">) {
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
-  const unreadOnly = query.show === "unread";
-  const inbox = await attempt(
-    api.inbox(workspaceId, unreadOnly ? { unread_only: "true" } : undefined),
-  );
+  // Both lists load together, so switching between them never waits on the server.
+  const [inbox, unread] = await Promise.all([
+    attempt(api.inbox(workspaceId)),
+    attempt(api.inbox(workspaceId, { unread_only: "true" })),
+  ]);
   if (!inbox.ok) return <ApiErrorNotice error={inbox.error} />;
-  const base = `/w/${workspaceId}/inbox`;
+  const unreadItems = unread.ok ? unread.data.items : inbox.data.items.filter((n) => !n.read_at);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -94,81 +95,90 @@ export default async function InboxPage({
         }
       />
       <div className="flex max-w-3xl flex-col gap-4 p-6">
-        <nav aria-label="Filter" className="flex gap-1 text-sm">
-          {[
-            { href: base, label: "All", current: !unreadOnly },
-            {
-              href: `${base}?show=unread`,
-              label: `Unread${inbox.data.unread ? ` (${inbox.data.unread})` : ""}`,
-              current: unreadOnly,
-            },
-          ].map((f) => (
-            <Link
-              key={f.href}
-              href={f.href}
-              aria-current={f.current ? "page" : undefined}
-              className={cn(
-                "rounded-md px-2.5 py-1",
-                f.current
-                  ? "bg-foreground/[0.06] font-medium"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </nav>
-        {inbox.data.items.length === 0 ? (
-          <EmptyState
-            title={unreadOnly ? "Nothing unread" : "No notifications yet"}
-            description="Assignments, approval requests, mentions, reminders, case updates and automation alerts appear here."
-          />
-        ) : (
-          <ul className="divide-y rounded-lg border">
-            {inbox.data.items.map((n) => (
-              <li key={n.id}>
-                <ActionForm
-                  action={openNotificationAction.bind(
-                    null,
-                    workspaceId,
-                    n.id,
-                    n.case_id ? `cases/${n.case_id}` : `responsibilities/${n.responsibility_id}`,
-                  )}
-                >
-                  <button
-                    type="submit"
-                    className="hover:bg-muted/40 flex w-full items-start gap-3 px-4 py-3 text-left text-sm"
-                  >
-                    <span
-                      aria-label={n.read_at ? undefined : "Unread"}
-                      className={cn(
-                        "mt-1.5 size-2 shrink-0 rounded-full",
-                        n.read_at ? "bg-transparent" : "bg-sky-600",
-                      )}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className={cn("block", !n.read_at && "font-medium")}>{message(n)}</span>
-                      <span className="text-muted-foreground flex items-center gap-2 text-xs">
-                        <span className="truncate">
-                          {n.case_title ?? n.responsibility_name}
-                          {n.kind === "automation" ? " · Automation" : ""}
-                        </span>
-                        {n.case_emergency ? <EmergencyBadge /> : null}
-                      </span>
-                    </span>
-                    <time
-                      className="text-muted-foreground shrink-0 text-xs"
-                      dateTime={n.created_at}
-                    >
-                      {formatDateTime(n.created_at)}
-                    </time>
-                  </button>
-                </ActionForm>
-              </li>
-            ))}
-          </ul>
-        )}
+        <FilterTabs
+          filters={[
+            { key: "all", label: "All" },
+            { key: "unread", label: "Unread", count: inbox.data.unread },
+          ]}
+          initial={query.show === "unread" ? "unread" : "all"}
+        >
+          <Filtered when={["all"]}>
+            <NotificationList
+              workspaceId={workspaceId}
+              items={inbox.data.items}
+              empty="No notifications yet"
+            />
+          </Filtered>
+          <Filtered when={["unread"]}>
+            <NotificationList
+              workspaceId={workspaceId}
+              items={unreadItems}
+              empty="Nothing unread"
+            />
+          </Filtered>
+        </FilterTabs>
       </div>
     </div>
+  );
+}
+
+function NotificationList({
+  workspaceId,
+  items,
+  empty,
+}: {
+  workspaceId: string;
+  items: NotificationView[];
+  empty: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        title={empty}
+        description="Assignments, approval requests, mentions, reminders, case updates and automation alerts appear here."
+      />
+    );
+  }
+  return (
+    <ul className="divide-y rounded-lg border">
+      {items.map((n) => (
+        <li key={n.id}>
+          <ActionForm
+            action={openNotificationAction.bind(
+              null,
+              workspaceId,
+              n.id,
+              n.case_id ? `cases/${n.case_id}` : `responsibilities/${n.responsibility_id}`,
+            )}
+          >
+            <button
+              type="submit"
+              className="hover:bg-muted/40 flex w-full items-start gap-3 px-4 py-3 text-left text-sm"
+            >
+              <span
+                aria-label={n.read_at ? undefined : "Unread"}
+                className={cn(
+                  "mt-1.5 size-2 shrink-0 rounded-full",
+                  n.read_at ? "bg-transparent" : "bg-sky-600",
+                )}
+              />
+              <span className="min-w-0 flex-1">
+                <span className={cn("block", !n.read_at && "font-medium")}>{message(n)}</span>
+                <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                  <span className="truncate">
+                    {n.case_title ?? n.responsibility_name}
+                    {n.kind === "automation" ? " · Automation" : ""}
+                  </span>
+                  {n.case_emergency ? <EmergencyBadge /> : null}
+                </span>
+              </span>
+              <time className="text-muted-foreground shrink-0 text-xs" dateTime={n.created_at}>
+                {formatDateTime(n.created_at)}
+              </time>
+            </button>
+          </ActionForm>
+        </li>
+      ))}
+    </ul>
   );
 }

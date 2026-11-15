@@ -10,6 +10,7 @@ export default authkitProxy({
       "/",
       "/sign-in",
       "/callback",
+      "/warm",
       "/integrations/github/webhook",
       "/robots.txt",
       "/sitemap.xml",
