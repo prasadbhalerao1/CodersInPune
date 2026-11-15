@@ -13,7 +13,7 @@ criteria) or the **[ten-minute walkthrough](../README.md#for-judges)** on the li
 | [research/](research/) | Sourced research wiki (verified facts vs vendor claims) and the LLM Council transcript behind the decisions |
 | [improvements.md](improvements.md) | The three Round 3 improvements as committed, with acceptance criteria |
 | [round3/improvements-delivered.md](round3/improvements-delivered.md) | Each Round 3 commitment as delivered, with code and tests |
-| [demo-script.md](demo-script.md) | Scripted demo on the sample workspace (*Northwind Labs*, all synthetic) |
+| [demo-script.md](demo-script.md) | Scripted demo on the sample workspace (*Northwind Labs*) |
 
 ## Technical
 

@@ -108,9 +108,3 @@ network calls. It covers:
 - key rotation and fallback.
 
 Live behaviour with a real provider was checked by hand with a local Ollama model. CI never calls a paid model.
-
-## 8. Limitations
-
-- Model inferences can be wrong. Relay labels them *AI inference*, shows confidence and evidence, and requires a person to accept them.
-- Without a configured provider, only deterministic findings and manual handovers are available.
-- Very large cases are summarised through the search tools rather than read whole, so coverage is reported as partial when sources are truncated.

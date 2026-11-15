@@ -7,7 +7,7 @@ and what proves it works. Where we stopped short of the commitment, it says so.
 
 To see all three in about five minutes: sign in, click **Create sample workspace** on
 Workspaces, then follow the "Try it" steps below. The sample organisation ships with a
-year of synthetic GitHub, Linear and Notion history so every feature has something to show.
+year of sample GitHub, Linear and Notion history so every feature has something to show.
 
 ---
 

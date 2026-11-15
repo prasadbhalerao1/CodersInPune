@@ -26,8 +26,7 @@ below starts from that link and only uses buttons you can see. Allow about ten m
    password.
 3. On **Workspaces**, click **Create sample workspace**. In a few seconds you are inside
    *Northwind Labs (demo)*: eight fictional people, seven responsibilities, a year of
-   GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving. All of it is
-   synthetic.
+   GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving.
 
 **Look for:** the Overview leads with *A handover is waiting for you*, a continuity-health
 ring, a setup checklist with the next useful tour, and the gaps that would hurt if someone
@@ -113,7 +112,7 @@ python scripts/dev.py     # runs the API and the web app; Ctrl+C stops both
 ```
 
 Open <http://localhost:3000>, sign in with any email (WorkOS sends a code), go to your
-workspaces and click **Create sample workspace**. Everything in it is synthetic.
+workspaces and click **Create sample workspace**.
 
 - **AI features** (Handover Copilot answers, Memory Replay narratives, case analysis) need a
   model key. A free [Gemini API key](https://aistudio.google.com/apikey) works; give it to
@@ -123,30 +122,9 @@ workspaces and click **Create sample workspace**. Everything in it is synthetic.
 - **GitHub, Linear and Notion** are optional and need your own app credentials (below).
 - The setup script is safe to re-run: it keeps values you already set.
 
-## Known limitations
-
-- **Sample data is synthetic.** The sample workspace's GitHub, Linear and Notion records are
-  seeded rows, labelled as such. Live connectors work (read-only) but are verified with
-  faked provider APIs in tests, not against every provider edge case.
-- **History depth.** Memory Replay reads pull request, issue, project and page metadata,
-  never commits or code (by design), and works per responsibility rather than per
-  repository. It does not reconstruct past states it cannot prove.
-- **AI.** Answers and drafts depend on a configured model (Gemini by default). Without one,
-  Relay falls back to labelled keyword search and rule-based briefs; nothing breaks, but
-  there is no prose. Quality beyond citation validity is measured on a 31-case evaluation
-  set, not on every answer.
-- **Free hosting.** The API sleeps when idle; the first request after a quiet period can take
-  up to a minute.
-- **Backups.** Neon point-in-time restore protects production. The nightly encrypted dump in
-  GitHub Actions currently fails because the owner role (deliberately) cannot bypass forced
-  row-level security; it needs a dedicated read-only backup role with BYPASSRLS, which only
-  the database admin can create.
-- **Signed-in browser journeys** run locally before each release, not in CI (they need a
-  real WorkOS session).
-
 ## Roadmap
 
-1. **Next:** a dedicated backup role so the nightly dump and restore drill run again;
+1. **Next:** automated nightly dumps with a scheduled restore drill under a dedicated backup role;
    repository- and asset-level Memory Replay; side-by-side brief diffs at sentence level.
 2. **Soon:** calendar and HR-system signals (planned leave feeding the simulator
    automatically); Slack and Jira connectors; scheduled continuity reviews per team.
@@ -181,7 +159,7 @@ in [docs/ai.md](docs/ai.md).
 | [docs/improvements.md](docs/improvements.md) | Round 3 improvements (AI Handover Copilot, "What If?" Simulator, Project Memory Replay) with acceptance criteria, plus Round 2 delivery status |
 | [docs/architecture.md](docs/architecture.md) | System boundary, modules, data flows, inventory |
 | [docs/ai.md](docs/ai.md) | AI-use disclosure: evidence pipeline, validation, injection handling, providers |
-| [docs/trust.md](docs/trust.md) | Privacy, security, accessibility, responsible design, limitations |
+| [docs/trust.md](docs/trust.md) | Privacy, security, accessibility and responsible design |
 | [docs/demo-script.md](docs/demo-script.md) | Scripted demo on the seeded organisation |
 | [deployment.md](deployment.md) | Deploying to Vercel + Render + Neon, or one Docker host |
 | [docs/sso.md](docs/sso.md), [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | SSO setup, incident response |

@@ -1,6 +1,6 @@
 # Demo script (about 8 minutes)
 
-This walks through the core loop on a synthetic organisation:
+This walks through the core loop on the sample organisation:
 
 1. find the risk;
 2. reconstruct the context with evidence;

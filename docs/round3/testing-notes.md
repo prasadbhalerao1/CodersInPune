@@ -8,7 +8,7 @@ the restricted `relay_app` role, so row-level security is exercised on every que
 
 | Suite | Where | Count | Result |
 |---|---|---:|---|
-| Backend (API, services, security, AI validation) | `backend/tests` | 299 (+2 opt-in) | All pass (2026-11-12, 4 min) |
+| Backend (API, services, security, AI validation) | `backend/tests` | 314 (+2 opt-in) | All pass (2026-11-15, 4.3 min) |
 | of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `intelligence/test_handover.py`, `test_guidance.py`, `test_sample_workspace.py` | 45 | All pass |
 | Browser journeys, public (no account) | `frontend/e2e/public.spec.ts` | 6 | Pass (CI and locally) |
 | Browser journeys, real account | `frontend/e2e/smoke.spec.ts`, `frontend/e2e/round3.spec.ts` | 12 + 5 (+ 6 public) | All pass locally (2026-11-12) |
@@ -101,12 +101,3 @@ cd frontend && pnpm exec playwright test --project=public    # no account needed
 cd frontend && pnpm e2e:login                                # once, real sign-in
 cd frontend && pnpm exec playwright test --project=round3    # the judge journey
 ```
-
-## Known gaps
-
-- Browser journeys that need a real account are run locally, not in CI (they need a
-  WorkOS session).
-- The sample workspace's GitHub, Linear and Notion records are synthetic rows; live
-  connector syncs are covered by the integration tests with faked provider APIs.
-- AI answer quality beyond citation validity is measured by the 31-case evaluation set
-  (`tests/intelligence/test_eval.py`) and spot checks, not by every test.

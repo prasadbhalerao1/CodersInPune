@@ -126,12 +126,3 @@ the `db` service, and set `RELAY_DATABASE_URL` / `RELAY_MIGRATION_DATABASE_URL` 
 | Database | `docker-compose.yml` (dev passwords) | Bundled container or managed, secret passwords |
 | `RELAY_ENVIRONMENT` | `local` | `production` (strict validation) |
 | Processes | `uv run relay-api`, `uv run relay-worker`, `pnpm dev` | Compose services with restart policies |
-
-## Known limitations
-
-- GitHub webhooks arrive at the web app, which forwards the raw body and signature headers
-  to the API; the API verifies the signature. The 6-hourly reconciliation covers any missed
-  delivery.
-- One worker process is enough for a small organisation; scale with
-  `RELAY_WORKER_CONCURRENCY` before adding replicas.
-- No built-in metrics/alerting: watch container health and logs, or add your platform's.

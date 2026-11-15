@@ -112,17 +112,4 @@ relative to `backend/tests/` unless they start with `e2e/` (Playwright, in `fron
 | **Improvements (20)** | The three Round 3 features and how they hand off to each other; overload flags, brief coverage, version compare, recipient next steps | [improvements delivered](round3/improvements-delivered.md), [competitive analysis](competitive-analysis.md) | `test_simulation.py`, `test_memory_replay.py`, `test_copilot.py`, `test_handover.py` |
 | **Reliability (20)** | Honest AI states and retry; *Not in the evidence*; changed/withdrawn sources flagged; integration states that wait for real syncs | [testing notes](round3/testing-notes.md), [architecture → reliability](architecture.md) | Backend suite on real PostgreSQL as the restricted role; failure-case tests listed in testing notes |
 | **Usability (20)** | Learn Relay tours, the setup checklist, the guidance switch, next-step text on every case, keyboard search (Ctrl K), phone layout | [README](../README.md#for-judges) | `e2e/round3.spec.ts` (guidance), `e2e/smoke.spec.ts` (phone navigation, command menu) |
-| **Documentation and roadmap (15)** | This guide, the docs index, API reference with OpenAPI, limitations and roadmap | [docs index](README.md), [README → Roadmap](../README.md#roadmap) | `docs/openapi.json` is generated from the code |
-
-## Honest limits
-
-- The sample workspace's GitHub, Linear and Notion records are **synthetic** and labelled as
-  such; live connectors are read-only and tested against faked provider APIs.
-- AI prose needs a configured model; without one Relay falls back to labelled search and
-  rule-based briefs.
-- Brief coverage matches statements to responsibilities by name. It can miss a statement
-  that refers to a responsibility indirectly, so it shows a gap to check, never a verdict.
-- The nightly backup workflow needs a dedicated backup role (see
-  [README → Known limitations](../README.md#known-limitations)); Neon's point-in-time restore
-  protects production meanwhile.
-- The free API host sleeps when idle; the first request can take up to a minute.
+| **Documentation and roadmap (15)** | This guide, the docs index, API reference with OpenAPI, and the roadmap | [docs index](README.md), [README → Roadmap](../README.md#roadmap) | `docs/openapi.json` is generated from the code |

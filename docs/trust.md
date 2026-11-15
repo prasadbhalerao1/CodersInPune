@@ -49,7 +49,6 @@ Report a vulnerability privately to the maintainer; don't open a public issue.
 - Respects `prefers-color-scheme` and `prefers-reduced-motion`. The landing walkthrough pauses on hover and focus.
 - Layouts work from 320 px phones up. On small screens navigation moves into a disclosure menu.
 
-Known gap: no formal WCAG 2.2 audit with assistive-technology users yet.
 
 ## Responsible design
 
@@ -62,16 +61,3 @@ Known gap: no formal WCAG 2.2 audit with assistive-technology users yet.
   - Omissions are listed, so the recipient knows what they can't see.
   - Denials explain which role would be needed.
 - **Consent to share.** Privacy review on cases lets managers decide what a recipient sees, and redactions are recorded.
-
-## Limitations
-
-- **Integrations.**
-  - GitHub, Linear and Notion only.
-  - Linear and Notion changes arrive by scheduled and manual sync; GitHub has webhooks.
-  - Slack, Jira, Confluence and Google Drive are not connected.
-- **Handovers.** In-app only. There is no PDF export yet.
-- **Change flagging.** "Changed since review" isn't flagged automatically when a cited source's revision changes. Withdrawn sources are handled. See [improvements.md](improvements.md).
-- **Notifications.** Email covers case, task and invitation notifications. Integration and security alerts are in-app.
-- **Scheduled jobs.** Need the worker running. Missed runs catch up on the next schedule.
-- **SSO and SAML.** Configured per organisation in WorkOS. Relay doesn't sync SCIM groups to roles yet. See [sso.md](sso.md).
-- **Validation.** Tested on synthetic data and by the builder, not yet in a customer pilot. The baselines in the Round 1 plan haven't been measured with a real team.

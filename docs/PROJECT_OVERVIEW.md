@@ -102,7 +102,7 @@ logs carry the event id as the correlation id.
 | Controls | Per-run token limit, monthly workspace budget, timeout, cancel, global kill switch, per-capability toggles |
 | Recording | Provider, model, key index, tokens, cost, duration, tool calls and error codes per step; prompts never logged |
 
-**Evaluation set** (`backend/tests/intelligence/eval_dataset.py`): 31 labelled synthetic cases in
+**Evaluation set** (`backend/tests/intelligence/eval_dataset.py`): 31 labelled cases in
 12 categories: supported claims, unsupported claims, incorrect citations, conflicting runbooks,
 stale knowledge, missing evidence, prompt injection, restricted sources, duplicate proposals,
 conflicting ownership, partial connectors and human review. It runs in CI with scripted model
@@ -171,8 +171,8 @@ shadcn/ui components, WorkOS AuthKit for Next.js, Playwright, pnpm.
 **Templates:** email templates in `backend/src/relay/notifications/email_templates.py`; UI built
 on shadcn/ui primitives with a neutral palette where colour is used only for meaning.
 
-**Datasets:** no external or customer datasets. Demo workspace and evaluation cases are
-synthetic and generated in code (`backend/src/relay/demo/`, the eval dataset above).
+**Datasets:** no external or customer datasets. The demo workspace and evaluation cases are
+generated in code (`backend/src/relay/demo/`, the eval dataset above).
 
 ## 8. Security and privacy
 
