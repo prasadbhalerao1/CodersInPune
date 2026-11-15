@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 type Source = {
   ref: string;
-  kind: SearchHit["kind"];
+  kind: SearchHit["kind"] | "meeting";
   id: string;
   title: string;
   detail: string | null;
@@ -41,7 +41,8 @@ const SUGGESTIONS = [
   "How do we rotate the webhook secret?",
 ];
 
-const KIND_LABEL: Partial<Record<SearchHit["kind"], string>> = {
+const KIND_LABEL: Partial<Record<Source["kind"], string>> = {
+  meeting: "Meeting",
   responsibility: "Responsibility",
   knowledge: "Knowledge",
   case: "Case",
@@ -99,7 +100,11 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
     }
   }
 
-  const sourceHref = (s: Source) => s.url ?? `/w/${workspaceId}${hitPath({ ...s, status: null, updated_at: null })}`;
+  const sourceHref = (s: Source) =>
+    s.url ??
+    (s.kind === "meeting"
+      ? `/w/${workspaceId}/meetings/${s.id}`
+      : `/w/${workspaceId}${hitPath({ ...s, kind: s.kind, status: null, updated_at: null })}`);
 
   return (
     <div className="flex flex-col gap-6">

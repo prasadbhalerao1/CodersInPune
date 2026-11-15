@@ -15,7 +15,7 @@ from contextlib import AbstractAsyncContextManager
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from relay.audit import service as audit
 from relay.catalog.knowledge import readable as knowledge_readable
@@ -25,10 +25,12 @@ from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import instant
 from relay.intelligence.evidence import Pool, PoolItem
 from relay.intelligence.llm import LLMError, LLMResult
-from relay.policy.permissions import Permission, authorize
+from relay.intelligence.models import Meeting, MeetingItem
+from relay.policy.permissions import Permission, authorize, visible
 from relay.search import service as search
 from relay.shared.api_types import StrictInput
 from relay.shared.errors import ApiError
+from relay.shared.text import like_pattern
 
 NAME = "workspace_answer"
 MAX_SOURCES = 12
@@ -81,16 +83,27 @@ def keywords(question: str) -> list[str]:
 
 async def retrieve(access: WorkspaceAccess, question: str) -> list[Source]:
     """The records that best match the question's keywords, best first."""
-    scores: dict[tuple[str, str, str], int] = {}
+    scores: dict[tuple[str, str, str], int] = {}  # (kind, id, title)
     hits: dict[tuple[str, str, str], search.SearchHit] = {}
     terms = keywords(question)
     # The whole question first (exact phrases rank highest), then each keyword.
     for i, term in enumerate([" ".join(terms), *terms] if len(terms) > 1 else terms):
         view = await search.search(access, term, full=True)
         for h in view.hits:
-            key = (h.kind, h.id, h.title)  # knowledge hits carry their responsibility's id
+            # Knowledge hits carry their responsibility's id, so the title tells them apart.
+            key: tuple[str, str, str] = (h.kind, h.id, h.title)
             hits.setdefault(key, h)
             scores[key] = scores.get(key, 0) + (3 if i == 0 and len(terms) > 1 else 1)
+    for item, meeting in await _meeting_items(access, terms):
+        key = ("meeting", str(meeting.id), item.text)
+        hits[key] = search.SearchHit(
+            kind="knowledge",  # placeholder kind for typing; replaced below
+            id=str(meeting.id),
+            title=item.text[:200],
+            detail=f"{item.kind.capitalize()} in the meeting “{meeting.title}” "
+            f"({meeting.held_at:%d %b %Y}), {item.status}",
+        )
+        scores[key] = sum(t in item.text.lower() for t in terms)
     ranked = sorted(hits, key=lambda k: -scores[k])[:MAX_SOURCES]
     bodies = await _knowledge_bodies(
         access, [uuid.UUID(hits[k].id) for k in ranked if hits[k].kind == "knowledge"]
@@ -98,7 +111,7 @@ async def retrieve(access: WorkspaceAccess, question: str) -> list[Source]:
     return [
         Source(
             ref=f"E{n}",
-            kind=hits[k].kind,
+            kind=k[0],
             id=hits[k].id,
             title=hits[k].title,
             detail=bodies.get((hits[k].id, hits[k].title)) or hits[k].detail,
@@ -106,6 +119,26 @@ async def retrieve(access: WorkspaceAccess, question: str) -> list[Source]:
         )
         for n, k in enumerate(ranked, start=1)
     ]
+
+
+async def _meeting_items(
+    access: WorkspaceAccess, terms: list[str]
+) -> list[tuple[MeetingItem, Meeting]]:
+    """Decisions, actions, questions and risks from meetings that mention a keyword."""
+    if not terms:
+        return []
+    rows = await access.session.execute(
+        select(MeetingItem, Meeting)
+        .join(Meeting, Meeting.id == MeetingItem.meeting_id)
+        .where(
+            visible(access, Permission.AI_READ, MeetingItem.tenant_id),
+            MeetingItem.status != "dismissed",
+            or_(*(MeetingItem.text.ilike(like_pattern(t), escape="\\") for t in terms)),
+        )
+        .order_by(Meeting.held_at.desc())
+        .limit(8)
+    )
+    return [(i, m) for i, m in rows.all()]
 
 
 async def _knowledge_bodies(

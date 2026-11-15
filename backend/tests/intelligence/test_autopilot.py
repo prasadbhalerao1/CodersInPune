@@ -43,7 +43,11 @@ async def test_autopilot_streams_each_tool_and_ends_with_pending_proposals(
         rotate = ref_of(refs, "Rotate the webhook secret")
         return {
             "claims": [
-                {"kind": "finding", "text": "Webhook rotation is documented.", "evidence": [rotate]},
+                {
+                    "kind": "finding",
+                    "text": "Webhook rotation is documented.",
+                    "evidence": [rotate],
+                },
                 {"kind": "finding", "text": "Invented.", "evidence": ["E999"]},
             ],
             "proposals": [

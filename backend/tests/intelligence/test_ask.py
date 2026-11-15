@@ -73,3 +73,20 @@ async def test_without_ai_the_best_records_are_the_answer(api: Api) -> None:
     assert final["mode"] == "search" and final["cited"] and final["note"]
     nothing = await ask(ws, "zebra quokka marmalade")
     assert nothing[-1][1]["mode"] == "not_found"
+
+
+async def test_meeting_items_are_searchable_evidence(api: Api, script: list[Script]) -> None:
+    ws, _member, _cid = await case_with_knowledge(api)
+    await ws.call("PATCH", "/ai", 204, json={"enabled": False})
+    await ws.call(
+        "POST",
+        "/meetings",
+        201,
+        json={
+            "title": "Sync",
+            "transcript": "Ravi: We decided to keep webhooks on v1 until March.",
+        },
+    )
+    final = await ask(ws, "What did we decide about webhooks?")
+    sources = final[0][1]["sources"]
+    assert any(s["kind"] == "meeting" and "keep webhooks" in s["title"] for s in sources)
