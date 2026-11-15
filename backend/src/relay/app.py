@@ -31,6 +31,7 @@ from relay.integrations.linear import api as linear_api
 from relay.integrations.linear.client import LinearClient
 from relay.integrations.notion import api as notion_api
 from relay.integrations.notion.client import NotionClient
+from relay.integrations.slack import api as slack_api
 from relay.intelligence import api as intelligence_api
 from relay.jobs import outbox
 from relay.jobs.app import create_job_app
@@ -158,6 +159,7 @@ def create_app(
     app.include_router(linear_api.callback)
     app.include_router(notion_api.router)
     app.include_router(notion_api.callback)
+    app.include_router(slack_api.router)
     app.include_router(insights_api.router)
     app.include_router(automation_api.router)
     app.include_router(intelligence_api.router)

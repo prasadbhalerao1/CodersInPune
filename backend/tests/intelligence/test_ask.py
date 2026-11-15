@@ -47,7 +47,7 @@ def test_only_given_evidence_counts_as_a_citation() -> None:
 async def test_answer_streams_and_cites_only_what_the_member_may_see(
     api: Api, script: list[Script]
 ) -> None:
-    ws, member, _cid = await case_with_knowledge(api)
+    _ws, member, _cid = await case_with_knowledge(api)
     seen: list[str] = []
 
     def answer(refs: dict[str, str]) -> str:
@@ -57,12 +57,16 @@ async def test_answer_streams_and_cites_only_what_the_member_may_see(
     script.append(answer)
     events = await ask(member, "How do we rotate the webhook secret?")
     names = [n for n, _ in events]
-    assert names[0] == "sources" and names[-1] == "final" and "delta" in names
+    assert names[0] == "sources"
+    assert names[-1] == "final"
+    assert "delta" in names
     titles = [s["title"] for s in events[0][1]["sources"]]
     assert "Rotate the webhook secret" in titles
-    assert "Vault recovery" not in titles and "Vault recovery" not in seen
+    assert "Vault recovery" not in titles
+    assert "Vault recovery" not in seen
     final = events[-1][1]
-    assert final["mode"] == "ai" and final["cited"] == ["E1"]
+    assert final["mode"] == "ai"
+    assert final["cited"] == ["E1"]
 
 
 async def test_without_ai_the_best_records_are_the_answer(api: Api) -> None:
@@ -70,7 +74,9 @@ async def test_without_ai_the_best_records_are_the_answer(api: Api) -> None:
     await ws.call("PATCH", "/ai", 204, json={"enabled": False})
     events = await ask(ws, "webhook secret rotation")
     final = events[-1][1]
-    assert final["mode"] == "search" and final["cited"] and final["note"]
+    assert final["mode"] == "search"
+    assert final["cited"]
+    assert final["note"]
     nothing = await ask(ws, "zebra quokka marmalade")
     assert nothing[-1][1]["mode"] == "not_found"
 

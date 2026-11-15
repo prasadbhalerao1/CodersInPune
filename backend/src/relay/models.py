@@ -14,6 +14,7 @@ import relay.identity.models
 import relay.integrations.github.models
 import relay.integrations.linear.models
 import relay.integrations.notion.models
+import relay.integrations.slack.models
 import relay.intelligence.models
 import relay.jobs.models
 import relay.notifications.models

@@ -60,7 +60,8 @@ async def test_autopilot_streams_each_tool_and_ends_with_pending_proposals(
     steps = [d for name, d in events if name == "step"]
     keys = [s["key"] for s in steps if s["status"] != "running"]
     assert keys[:3] == ["case", "evidence", "rules"]
-    assert "discovery" in keys and keys[-2:] == ["interview", "brief"]
+    assert "discovery" in keys
+    assert keys[-2:] == ["interview", "brief"]
     # Each AI step is announced before it runs, then settled with what it produced.
     assert [s["status"] for s in steps if s["key"] == "discovery"] == ["running", "done"]
     discovery_done = next(s for s in steps if s["key"] == "discovery" and s["status"] == "done")

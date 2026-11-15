@@ -40,7 +40,8 @@ async def test_sample_is_seeded_and_owned_by_the_caller(api: Api) -> None:
     meetings = (
         await api.client.get(f"/workspaces/{workspace}/meetings", headers=api.as_user(OWNER))
     ).json()
-    assert len(meetings) == 3 and all(m["pending"] for m in meetings)
+    assert len(meetings) == 3
+    assert all(m["pending"] for m in meetings)
     decisions = (
         await api.client.get(f"/workspaces/{workspace}/decisions", headers=api.as_user(OWNER))
     ).json()
