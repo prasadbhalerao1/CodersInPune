@@ -17,7 +17,7 @@ pytestmark = pytest.mark.anyio
 
 # Public by design: health probes, and the GitHub webhook (HMAC-signed instead).
 # /health/ops answers 404 unless the operator token matches (tests/test_health.py).
-PUBLIC = {"/health/live", "/health/ready", "/health/ops", "/integrations/github/webhook"}
+PUBLIC = {"/health", "/health/live", "/health/ready", "/health/ops", "/integrations/github/webhook"}
 
 
 @pytest.fixture

@@ -20,6 +20,20 @@ class HealthResponse(BaseModel):
     checks: dict[str, CheckStatus] = {}
 
 
+class HealthOverview(HealthResponse):
+    routes: dict[str, str] = {
+        "live": "/health/live",
+        "ready": "/health/ready",
+    }
+
+
+@router.get("", responses={503: {"model": HealthOverview}})
+async def overview(request: Request, response: Response) -> HealthOverview:
+    """The address people try first: overall health, plus where the specific probes live."""
+    checked = await ready(request, response)
+    return HealthOverview(status=checked.status, checks=checked.checks)
+
+
 @router.get("/live")
 async def live() -> HealthResponse:
     """Process is up. Never touches dependencies."""

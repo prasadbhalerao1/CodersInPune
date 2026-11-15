@@ -39,6 +39,18 @@ async def test_readiness_reports_database_ok(client: httpx.AsyncClient) -> None:
     assert response.json() == {"status": "ok", "checks": {"database": "ok"}}
 
 
+async def test_health_gives_overall_status_and_points_to_the_probes(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "checks": {"database": "ok"},
+        "routes": {"live": "/health/live", "ready": "/health/ready"},
+    }
+
+
 async def test_readiness_returns_503_without_leaking_details() -> None:
     unreachable = make_settings(
         database_url="postgresql+psycopg://relay_app:wrong@127.0.0.1:1/relay_test",
@@ -48,6 +60,9 @@ async def test_readiness_returns_503_without_leaking_details() -> None:
         response = await client.get("/health/ready")
         assert response.status_code == 503
         assert response.json() == {"status": "unavailable", "checks": {"database": "unavailable"}}
+        overall = await client.get("/health")
+        assert overall.status_code == 503
+        assert overall.json()["status"] == "unavailable"
 
 
 async def test_correlation_id_and_versioned_prefix() -> None:
