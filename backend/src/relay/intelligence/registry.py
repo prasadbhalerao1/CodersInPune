@@ -108,6 +108,27 @@ CAPABILITIES: Final = {
             timeout_seconds=60.0,
             token_budget=40_000,
         ),
+        Capability(
+            "meeting_analyst",
+            1,
+            "Meeting Analyst",
+            "Turns a meeting transcript into decisions, actions, questions and risks, each "
+            "citing the lines it came from.",
+            ("decision", "action", "question", "risk"),
+            tools=(),
+            timeout_seconds=60.0,
+            token_budget=30_000,
+        ),
+        Capability(
+            "workspace_answer",
+            1,
+            "Ask Relay",
+            "Answers questions about the whole workspace from the records the asker can see.",
+            ("answer",),
+            tools=(),
+            timeout_seconds=45.0,
+            token_budget=30_000,
+        ),
     )
 }
 # One "Analyse case" run: the deterministic step, then these capabilities in order.

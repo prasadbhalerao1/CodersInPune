@@ -1916,3 +1916,50 @@ export type GuidanceUpdate = {
   progress?: [TourId, number];
   reset?: boolean;
 };
+
+export type MeetingItemView = {
+  id: string;
+  meeting_id: string;
+  kind: "decision" | "action" | "question" | "risk";
+  text: string;
+  owner_name: string | null;
+  due_text: string | null;
+  lines: number[];
+  source: "ai" | "rules";
+  status: "proposed" | "accepted" | "dismissed";
+  result_ref: string | null;
+};
+
+export type MeetingSummary = {
+  id: string;
+  title: string;
+  held_at: string;
+  responsibility_id: string | null;
+  case_id: string | null;
+  extract_mode: "ai" | "rules" | null;
+  counts: Partial<Record<MeetingItemView["kind"], number>>;
+  pending: number;
+};
+
+export type MeetingDetail = MeetingSummary & {
+  lines: string[];
+  items: MeetingItemView[];
+  note: string | null;
+  can_review: boolean;
+};
+
+export type DecisionEntry = {
+  id: string;
+  text: string;
+  origin: "meeting" | "knowledge" | "analysis";
+  status: string;
+  decided_at: string | null;
+  rationale: string | null;
+  responsibility_id: string | null;
+  responsibility_name: string | null;
+  meeting_id: string | null;
+  meeting_title: string | null;
+  case_id: string | null;
+  knowledge_id: string | null;
+  lines: number[];
+};

@@ -153,6 +153,52 @@ export const EXPLAIN = {
     inputs: ["GitHub, Linear, Notion and Relay records linked to the responsibility"],
     source: "backend/src/relay/intelligence/memory.py",
   },
+  autopilot: {
+    title: "Handover Autopilot",
+    summary:
+      "Runs a case's whole analysis in one go and shows each tool it uses as it works: reading the case, gathering evidence, checking continuity rules, four AI reviewers, then the exit interview and handover brief.",
+    formula:
+      "Each reviewer may only search and read the evidence you can see. A point or proposal citing nothing, or citing evidence that doesn't exist, is dropped and counted as “uncited dropped”. Proposals wait for a person; Autopilot never applies anything.",
+    inputs: [
+      "The case and the responsibilities it covers",
+      "Relay, GitHub, Linear and Notion records you are allowed to see",
+    ],
+    reading:
+      "Review the proposals under the run, accept what is right, and reject the rest with a reason so it isn't suggested again.",
+    source: "backend/src/relay/intelligence/autopilot.py",
+  },
+  meetings: {
+    title: "Meeting intelligence",
+    summary:
+      "Turns meeting notes or a transcript into decisions, actions, open questions and risks, each linked to the transcript lines it came from.",
+    formula:
+      "With AI on, the model lists items citing line refs (L1, L2…); an item citing no line or a line that doesn't exist is dropped. With AI off, rules find decisions (“decided”, “agreed”), actions (“I'll”, “will send”, “by Friday”), risks (“blocker”, “only she knows”) and unanswered questions.",
+    inputs: ["The transcript you paste, and nothing else"],
+    reading:
+      "Accepting a decision records it as decision knowledge on the linked responsibility; accepting an action adds a task to the linked case, assigned to the person named if they are a member.",
+    source: "backend/src/relay/intelligence/meetings.py",
+  },
+  decision_log: {
+    title: "Decision log",
+    summary:
+      "Every decision in the workspace in one timeline, so a successor can see what is settled, when, and where it was decided.",
+    formula:
+      "Merges decision knowledge (ADRs), decisions from meetings (until accepted ones become knowledge), and decisions reconstructed by case analyses that weren't dismissed. Duplicates with the same wording are shown once.",
+    inputs: [
+      "Only records you are allowed to see; managers-only decisions stay hidden from members",
+    ],
+    source: "backend/src/relay/intelligence/meetings.py",
+  },
+  ask_relay: {
+    title: "Ask Relay",
+    summary:
+      "Ask anything about the workspace in plain language. Relay searches the records you can see, then writes an answer that cites each one.",
+    formula:
+      "Search ranks responsibilities, knowledge, cases, people and synced items by text relevance; the top matches become the evidence. Each sentence of the answer must cite them; a reply citing nothing is shown as “not in the evidence”.",
+    inputs: ["Records you can open yourself; restricted knowledge only for managers"],
+    reading: "Click a source chip to open the record behind it.",
+    source: "backend/src/relay/intelligence/ask.py",
+  },
 } satisfies Record<string, Explanation>;
 
 export type ExplainKey = keyof typeof EXPLAIN;

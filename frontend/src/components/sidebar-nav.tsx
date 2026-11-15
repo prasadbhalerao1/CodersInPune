@@ -13,9 +13,12 @@ import {
   HelpCircle,
   Inbox,
   LayoutDashboard,
+  MessagesSquare,
   ListChecks,
   Plug,
+  Scale,
   Settings,
+  Sparkles,
   ShieldAlert,
   Upload,
   Users,
@@ -44,6 +47,7 @@ const GROUPS: readonly { label: string | null; items: readonly Item[] }[] = [
       { label: "Overview", path: "", icon: LayoutDashboard },
       { label: "My Work", path: "/my-work", icon: ListChecks },
       { label: "Inbox", path: "/inbox", icon: Inbox },
+      { label: "Ask Relay", path: "/ask", icon: Sparkles },
     ],
   },
   {
@@ -60,6 +64,8 @@ const GROUPS: readonly { label: string | null; items: readonly Item[] }[] = [
     items: [
       { label: "People & Teams", path: "/people", icon: UsersRound },
       { label: "Knowledge", path: "/knowledge", icon: BookOpen },
+      { label: "Meetings", path: "/meetings", icon: MessagesSquare },
+      { label: "Decision log", path: "/decisions", icon: Scale },
       { label: "Assets", path: "/assets", icon: Boxes },
       {
         label: "Insights",

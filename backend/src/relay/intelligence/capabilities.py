@@ -131,6 +131,20 @@ FOCUS: dict[str, str] = {
         "it shaped). Cite event refs for every chapter and link. Where you infer a reason "
         "the events do not state, lower the confidence."
     ),
+    "meeting_analyst": (
+        "The evidence is a meeting transcript, one line per ref (L1, L2, ...). List the "
+        "decisions made (kind 'decision'), actions someone agreed to do (kind 'action', with "
+        "the owner's name and any due date as said), open questions nobody answered (kind "
+        "'question') and risks or blockers raised (kind 'risk'). Each item is one short "
+        "sentence and cites the line refs it came from. Skip small talk; never invent owners "
+        "or dates that are not said."
+    ),
+    "workspace_answer": (
+        "Answer the question using only the evidence: records from across the workspace. "
+        "Cite the refs that support each sentence in square brackets, like [E3]. If the "
+        "evidence does not answer it, start with NOT_FOUND: and say what is missing; never "
+        "answer from general knowledge."
+    ),
 }
 
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { inputClass } from "@/components/action-form";
+import { Explain } from "@/components/explain";
 import { Button } from "@/components/ui/button";
 import { readEvents } from "@/lib/sse";
 import { cn } from "@/lib/utils";
@@ -99,7 +100,7 @@ export function Autopilot({
         </span>
         <div className="min-w-0 flex-1">
           <h2 id="autopilot" className="font-semibold">
-            Handover Autopilot
+            Handover Autopilot <Explain what="autopilot" align="start" />
           </h2>
           <p className="text-muted-foreground text-sm">
             Reads the case, gathers the evidence, runs every reviewer and drafts the interview and

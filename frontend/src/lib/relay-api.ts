@@ -4,6 +4,9 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { connection } from "next/server";
 
 import type {
+  DecisionEntry,
+  MeetingDetail,
+  MeetingSummary,
   AiAdminView,
   AnswerView,
   HistoryAnswer,
@@ -415,6 +418,10 @@ export const api = {
   aiRuns: (id: string) => relayFetch<RunView[]>(`${ws(id)}/ai/runs`),
   aiRun: (id: string, runId: string) => relayFetch<RunDetail>(`${ws(id)}/ai/runs/${runId}`),
 
+  meetings: (id: string) => relayFetch<MeetingSummary[]>(`${ws(id)}/meetings`),
+  meeting: (id: string, meetingId: string) =>
+    relayFetch<MeetingDetail>(`${ws(id)}/meetings/${meetingId}`),
+  decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {
       method,

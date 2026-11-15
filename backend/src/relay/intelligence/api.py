@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace, open_workspace_access
-from relay.intelligence import autopilot, capsules, copilot, interviews, memory, runs
+from relay.intelligence import ask, autopilot, capsules, copilot, interviews, meetings, memory, runs
 from relay.intelligence import service as svc
 from relay.jobs.outbox import Jobs
 from relay.shared.rate_limit import rate_limit
@@ -275,6 +275,72 @@ async def autopilot_run(
         body,
         request.app.state.settings,
         jobs,
+        reopen=lambda: open_workspace_access(factory, identity, workspace_id),
+    )
+    return StreamingResponse(
+        events,
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/meetings")
+async def list_meetings(access: CurrentWorkspace) -> list[meetings.MeetingSummary]:
+    return await meetings.list_meetings(access)
+
+
+@router.post("/meetings", status_code=201, dependencies=[rate_limit("ai_run", 20, 600)])
+async def create_meeting(
+    access: CurrentWorkspace, body: meetings.MeetingIn, request: Request
+) -> meetings.MeetingDetail:
+    return await meetings.create_meeting(access, body, request.app.state.settings)
+
+
+@router.get("/meetings/{meeting_id}")
+async def get_meeting(access: CurrentWorkspace, meeting_id: uuid.UUID) -> meetings.MeetingDetail:
+    return await meetings.get_meeting(access, meeting_id)
+
+
+@router.post("/meetings/{meeting_id}/extract", dependencies=[rate_limit("ai_run", 20, 600)])
+async def reextract_meeting(
+    access: CurrentWorkspace, meeting_id: uuid.UUID, request: Request
+) -> meetings.MeetingDetail:
+    return await meetings.reextract(access, meeting_id, request.app.state.settings)
+
+
+@router.post("/meeting-items/{item_id}/accept")
+async def accept_meeting_item(
+    access: CurrentWorkspace, item_id: uuid.UUID, jobs: Jobs
+) -> meetings.MeetingItemView:
+    return await meetings.review_item(access, item_id, True, jobs)
+
+
+@router.post("/meeting-items/{item_id}/dismiss")
+async def dismiss_meeting_item(
+    access: CurrentWorkspace, item_id: uuid.UUID, jobs: Jobs
+) -> meetings.MeetingItemView:
+    return await meetings.review_item(access, item_id, False, jobs)
+
+
+@router.get("/decisions")
+async def decision_log(access: CurrentWorkspace) -> list[meetings.DecisionEntry]:
+    return await meetings.decision_log(access)
+
+
+@router.post("/ask", dependencies=[rate_limit("ai_ask", 30, 600)], response_class=StreamingResponse)
+async def ask_workspace(
+    access: CurrentWorkspace,
+    identity: Identity,
+    workspace_id: uuid.UUID,
+    body: ask.AskWorkspaceIn,
+    request: Request,
+) -> StreamingResponse:
+    """Ask Relay: a workspace-wide question, answered as server-sent events."""
+    factory = request.app.state.session_factory
+    events = await ask.ask_stream(
+        access,
+        body,
+        request.app.state.settings,
         reopen=lambda: open_workspace_access(factory, identity, workspace_id),
     )
     return StreamingResponse(

@@ -426,3 +426,67 @@ class CapsuleQuestion(Base):
     evidence_ids: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'"))
     run_id: Mapped[uuid.UUID | None]
     created_at: Mapped[datetime] = _now()
+
+
+MEETING_ITEM_KINDS: Final = ("decision", "action", "question", "risk")
+
+
+class Meeting(Base):
+    """A meeting's notes or transcript, kept as the evidence its extracted items cite."""
+
+    __tablename__ = "meeting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _fk(["responsibility_id"], "catalog.responsibility", "fk_meeting_responsibility"),
+        _fk(["case_id"], _CASE, "fk_meeting_case"),
+        CheckConstraint("char_length(title) BETWEEN 1 AND 200", name="title_length"),
+        CheckConstraint("char_length(transcript) BETWEEN 1 AND 60000", name="transcript_length"),
+        CheckConstraint("extract_mode IS NULL OR extract_mode IN ('ai', 'rules')", name="mode"),
+        Index(None, "tenant_id", "held_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    title: Mapped[str] = mapped_column(Text)
+    held_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    transcript: Mapped[str] = mapped_column(Text)
+    responsibility_id: Mapped[uuid.UUID | None]
+    case_id: Mapped[uuid.UUID | None]
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    extract_mode: Mapped[str | None] = mapped_column(Text)
+    run_id: Mapped[uuid.UUID | None]
+    created_at: Mapped[datetime] = _now()
+
+
+class MeetingItem(Base):
+    """One decision, action, question or risk found in a meeting, citing transcript lines.
+    It is a proposal until a person accepts it (which may create knowledge or a task)."""
+
+    __tablename__ = "meeting_item"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        _fk(["meeting_id"], "intelligence.meeting", "fk_meeting_item_meeting"),
+        CheckConstraint(_in("kind", MEETING_ITEM_KINDS), name="kind"),
+        CheckConstraint("status IN ('proposed', 'accepted', 'dismissed')", name="status"),
+        CheckConstraint("source IN ('ai', 'rules')", name="source"),
+        CheckConstraint("char_length(text) BETWEEN 1 AND 500", name="text_length"),
+        Index(None, "tenant_id", "meeting_id"),
+        Index(None, "tenant_id", "kind", "status"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    meeting_id: Mapped[uuid.UUID]
+    kind: Mapped[str] = mapped_column(Text)
+    text: Mapped[str] = mapped_column(Text)
+    owner_name: Mapped[str | None] = mapped_column(Text)
+    due_text: Mapped[str | None] = mapped_column(Text)
+    lines: Mapped[list[int]] = mapped_column(JSONB, server_default=sql("'[]'"))
+    source: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, server_default="proposed")
+    result_ref: Mapped[str | None] = mapped_column(Text)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _now()
