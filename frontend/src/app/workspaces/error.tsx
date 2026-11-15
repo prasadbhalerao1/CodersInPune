@@ -13,7 +13,7 @@ export default function WorkspacesError({
 }) {
   return (
     <div className="bg-page text-strong flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-      <div className="size-12 rounded-2xl border border-bad/30 bg-bad/10 grid place-items-center font-mono text-lg font-bold text-bad">
+      <div className="border-bad/30 bg-bad/10 text-bad grid size-12 place-items-center rounded-2xl border font-mono text-lg font-bold">
         !
       </div>
       <h2 className="font-syne text-xl font-bold tracking-tight">Could not load workspaces</h2>
@@ -21,7 +21,7 @@ export default function WorkspacesError({
         The workspace service may be starting up or the API connection timed out.
       </p>
       {error.digest ? (
-        <p className="font-mono text-xs text-fg-mute">Digest: {error.digest}</p>
+        <p className="text-fg-mute font-mono text-xs">Digest: {error.digest}</p>
       ) : null}
       <div className="mt-2 flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={reset} className="gap-2">
@@ -30,7 +30,7 @@ export default function WorkspacesError({
         </Button>
         <Link
           href="/"
-          className="rounded-lg border border-line/15 px-3 py-1.5 text-xs font-medium text-fg-soft hover:text-strong transition-colors"
+          className="border-line/15 text-fg-soft hover:text-strong rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
         >
           Back to home
         </Link>
@@ -38,4 +38,3 @@ export default function WorkspacesError({
     </div>
   );
 }
-

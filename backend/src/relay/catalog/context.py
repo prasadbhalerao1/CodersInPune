@@ -188,7 +188,7 @@ async def responsibility_context(
                     )
                     .group_by(LinearIssue.project_linear_id)
                 )
-            ).tuples()
+            ).all()
         )
         if projects
         else {}
@@ -228,7 +228,7 @@ async def responsibility_context(
                     )
                     .group_by(NotionPage.source_ref)
                 )
-            ).tuples()
+            ).all()
         )
         if sources
         else {}
