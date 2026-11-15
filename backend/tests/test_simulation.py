@@ -216,3 +216,21 @@ async def test_candidates_already_carrying_a_lot_are_flagged_as_overloaded(api: 
     row = next(r for r in view["candidates"] if r["person"] and r["person"]["name"] == "Leo")
     assert row["load_after"] >= 2 * view["typical_load"]
     assert row["overloaded"]
+
+
+async def test_score_working_adds_up_to_the_score(api: Api) -> None:
+    """The working shown under the score is the score: recomputing it from the rows matches."""
+    ws, ids = await org(api)
+    for backup in (None, ids["Dev"]):
+        view = await simulate(ws, ids["Arjun"], backup)
+        parts = view["score_parts"]
+        rows = parts["rows"]
+        assert {r["name"] for r in rows} == set(by_name(view))
+        assert parts["possible"] == sum(r["weight"] for r in rows)
+        assert parts["cover_weight"] == sum(r["weight"] for r in rows if r["covered"])
+        earned = (
+            0.60 * parts["cover_weight"]
+            + 0.25 * parts["knowledge_weight"]
+            + 0.15 * parts["second_holder_weight"]
+        )
+        assert round(100 * earned / parts["possible"]) == view["readiness_score"]

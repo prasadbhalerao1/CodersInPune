@@ -98,6 +98,33 @@ class BackupLoad(BaseModel):
     would_take_over: int
 
 
+class ScoreRow(BaseModel):
+    """One affected responsibility's contribution to the readiness score."""
+
+    responsibility_id: uuid.UUID
+    name: str
+    criticality: str
+    weight: int  # critical 4, high 3, standard 2, low 1
+    covered: bool  # someone still holds it (the named backup counts)
+    knowledge: bool  # at least one knowledge item that isn't stale
+    second_holder: bool  # still held by more than one owner afterwards
+
+
+class ScoreParts(BaseModel):
+    """The readiness score's inputs, so the page can show its working.
+
+    Each `*_weight` is the criticality weight (critical 4 ... low 1) of the affected
+    responsibilities that meet that part; `possible` is the weight of all of them.
+    readiness = round(100 * (0.60 * cover + 0.25 * knowledge + 0.15 * second_holder) / possible)
+    """
+
+    possible: int
+    cover_weight: int
+    knowledge_weight: int
+    second_holder_weight: int
+    rows: list[ScoreRow] = []
+
+
 class SimulationView(BaseModel):
     person: PersonRef
     backup: PersonRef | None
@@ -111,6 +138,7 @@ class SimulationView(BaseModel):
     exposed_risks: list[ExposedRisk]
     baseline_score: int  # without the backup (equal to readiness_score when none is named)
     readiness_score: int
+    score_parts: ScoreParts | None = None  # None when nothing is affected (score is 100)
     score_basis: str
     backup_load: BackupLoad | None
     simulated_at: datetime
@@ -304,6 +332,7 @@ async def simulate(
         exposed_risks=exposed,
         baseline_score=_score(affected, with_backup=False),
         readiness_score=_score(affected, with_backup=True),
+        score_parts=_parts(affected, with_backup=True),
         score_basis=SCORE_BASIS,
         backup_load=backup_load,
         simulated_at=now,
@@ -393,19 +422,43 @@ def _exposed(affected: list[SimulatedResponsibility]) -> list[ExposedRisk]:
     return sorted(out, key=lambda e: (order[e.severity], e.responsibility_name))
 
 
-def _score(affected: list[SimulatedResponsibility], *, with_backup: bool) -> int:
-    if not affected:
-        return 100
-    total = earned = 0.0
-    for s in affected:
-        w = WEIGHT.get(s.criticality, 1)
-        covered = s.cover == "covered" or (with_backup and s.cover == "covered_by_backup")
-        documented = s.knowledge_total > s.knowledge_stale
+def _row(s: SimulatedResponsibility, *, with_backup: bool) -> ScoreRow:
+    return ScoreRow(
+        responsibility_id=s.responsibility_id,
+        name=s.name,
+        criticality=s.criticality,
+        weight=WEIGHT.get(s.criticality, 1),
+        covered=s.cover == "covered" or (with_backup and s.cover == "covered_by_backup"),
+        knowledge=s.knowledge_total > s.knowledge_stale,
         # Without the backup, a responsibility the backup would cover has no holder at all.
-        resilient = not s.single_holder_after and (with_backup or s.cover == "covered")
-        total += w
-        earned += w * (0.60 * covered + 0.25 * documented + 0.15 * resilient)
-    return round(100 * earned / total)
+        second_holder=not s.single_holder_after and (with_backup or s.cover == "covered"),
+    )
+
+
+def _parts(affected: list[SimulatedResponsibility], *, with_backup: bool) -> ScoreParts | None:
+    """The score's working, row by row; `_score` is computed from exactly these rows."""
+    if not affected:
+        return None
+    rows = [_row(s, with_backup=with_backup) for s in affected]
+    return ScoreParts(
+        possible=sum(r.weight for r in rows),
+        cover_weight=sum(r.weight for r in rows if r.covered),
+        knowledge_weight=sum(r.weight for r in rows if r.knowledge),
+        second_holder_weight=sum(r.weight for r in rows if r.second_holder),
+        rows=rows,
+    )
+
+
+def _score(affected: list[SimulatedResponsibility], *, with_backup: bool) -> int:
+    parts = _parts(affected, with_backup=with_backup)
+    if parts is None:
+        return 100
+    earned = (
+        0.60 * parts.cover_weight
+        + 0.25 * parts.knowledge_weight
+        + 0.15 * parts.second_holder_weight
+    )
+    return round(100 * earned / parts.possible)
 
 
 async def _orphaned_knowledge(access: WorkspaceAccess, person: Person) -> int:
