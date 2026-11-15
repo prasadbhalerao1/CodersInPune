@@ -1,152 +1,632 @@
 [
-  {
-    "id": "intro",
-    "chapter": "Relay",
-    "text": "Hello judges. Picture this. It's Friday afternoon, and Arjun, the engineer who runs your production deployments, hands in his notice. Who else knows how to roll back a bad release? Where is the runbook, and is it still right? Which decisions did he make that nobody wrote down? In most companies the honest answer is: nobody is sure. That is the problem Relay solves. Relay is an organisational continuity platform from team Midnight Ciphers. It knows who is accountable for what, rebuilds the context behind that work from GitHub, Linear and Notion with cited evidence, forecasts what an absence would break before it happens, and moves ownership through a reviewed, audited handover, and then checks that the handover actually took hold. Over the next half hour I will show you every feature, live, exactly as a new user would use it, with no cuts."
-  },
-  {
-    "id": "landing",
-    "chapter": "Landing page",
-    "text": "This is where a team first meets Relay. It states the problem in three cards: single owners, scattered context and unclear handovers. Below, an interactive walkthrough plays the whole loop: a change happens, Relay gathers evidence instead of guesses, people decide, the handover fits the recipient, and ownership moves. Then the product areas: the responsibility catalogue, continuity cases, evidence-backed analysis, handover capsules, governed knowledge and read-only connections. And the trust section: AI only drafts proposals and holds no write tools, every tenant is isolated with Postgres row-level security, and gaps in the sources are shown, never filled in by a model. The public site also publishes a robots file, a sitemap, an llms dot t x t file and structured data, so search engines and AI agents can read what Relay is."
-  },
-  {
-    "id": "workspaces",
-    "chapter": "Sign in and the sample workspace",
-    "text": "Let's go to the workspaces. Sign-in is handled by WorkOS with a one-time email code, so Relay never sees a password, and signing in grants access to nothing until you are a member of a workspace. Here I can create an empty workspace for my own data, or a sample workspace. I'll create the sample: Northwind Labs, a fictional company with eight people, seven responsibilities and a year of synthetic GitHub, Linear and Notion history. One engineer, Arjun Rao, is leaving. Everything in it is labelled as sample data."
-  },
-  {
-    "id": "overview",
-    "chapter": "Overview",
-    "text": "This is the Overview. Because product guidance is on, Relay suggests a short tour and shows a setup checklist with essential and optional steps. Each item is computed from real records, and a connected tool only counts as ready after its first sync has finished. Next is continuity health: the share of critical work that has an owner, a backup and current knowledge, broken down by severity, together with the continuity debt score. Below are the counts: active responsibilities, work without a primary owner, critical work without a backup, and open continuity risks. Needs attention lists each gap with the rule that raised it. On the right are the handovers in motion, and further down the top risks and recent ownership changes. Nothing here is estimated; every number links to the records behind it. In ten seconds, a manager knows where the organisation is fragile."
-  },
-  {
-    "id": "learn",
-    "chapter": "Learn Relay: guidance and tours",
-    "text": "New users can open Learn Relay from the sidebar. The product guidance switch is per person: when it is off, Relay stops showing automatic tips and the checklist, but every tutorial still works. There are eight tours, and each one only unlocks when the workspace has the data it shows, so nobody is sent into an empty screen. Let me start the first tour. It highlights the real element on the page and explains it. I can go forward, go back, skip, resume exactly where I stopped, or replay it after finishing. Restart tutorial progress clears only the tours, never workspace data."
-  },
-  {
-    "id": "mywork",
-    "chapter": "My Work and Inbox",
-    "text": "My Work is each person's single list: handovers addressed to me, knowledge I am asked to review, tasks assigned to me, and the cases I coordinate with their open tasks and status. The Inbox collects notifications: assignments, approvals, mentions, reminders and automation alerts. Email is optional; every notification also lives here."
-  },
-  {
-    "id": "people",
-    "chapter": "People, teams and departments",
-    "text": "People and Teams is the organisation directory. Departments, people with their title, department, manager and GitHub login, and teams. People can be added here or imported from a spreadsheet. Let me open Arjun. His page shows every ownership role he holds, the open risks that depend on him, and the continuity cases that affect him, plus a button to simulate his absence. Team and department pages show the same view for a whole group, including the department's own continuity debt."
-  },
-  {
-    "id": "responsibilities",
-    "chapter": "Responsibilities and ownership",
-    "text": "The heart of Relay is the responsibility catalogue. A responsibility is anything that must keep working, software or not. Each row shows its criticality, its primary owner and its backups. Let me open Production deployments. Stewardship shows when the record was last reviewed and by whom; owners mark it reviewed on a cadence, so stale ownership becomes visible. Then the current owners and backups, where I can end or correct an assignment with a reason. Continuity shows its risks and cases. Dependencies link it to other work and assets, such as depends on, feeds, escalates to or shares access with. Then its knowledge, the assets it stewards, and the full ownership history, which is never overwritten. This is the single source of truth that Jira, Confluence and a service catalogue each only hold a piece of."
-  },
-  {
-    "id": "knowledge",
-    "chapter": "Governed knowledge",
-    "text": "Knowledge holds procedures, decisions, contacts and links, each tied to a responsibility. Items have stewards and review dates; anyone can confirm an item is still accurate, and stewards verify or archive it. Pages imported from Notion stay unverified until a person checks them. Let me open Deploy payments API. Relay flags a possible conflict with the old runbook, which still describes a deploy without a canary. Every edit is a version I can compare, and disputes keep their history."
-  },
-  {
-    "id": "assets",
-    "chapter": "Assets",
-    "text": "Assets are the things work depends on: repositories, services, vendors, infrastructure and documents. They can be filtered by type, lifecycle, criticality, and whether anyone looks after them. The Legacy SFTP bridge, for example, has no stewarding responsibility, which Relay raises as a risk. Opening billing database shows its details, the work and knowledge linked to it, who looks after it, and the risks that reach it through its stewards."
-  },
-  {
-    "id": "replay",
-    "chapter": "Round 3 feature 1: Project Memory Replay",
-    "text": "Now the first of our three Round 3 improvements, Project Memory Replay. A successor's first week is usually spent digging through old tickets. Memory Replay turns that into minutes. It answers the question every successor has: how did this work get here? Relay merges pull requests, issues, pages, decisions and ownership changes into one timeline for the responsibility. Every event is a fact with its source. I can filter by category; let me pick Incident: here is the checkout outage after a payments API release. Back to all events. Press replay and the history plays forward, event by event. I can pause and inspect any event: where it came from, how its category was derived, and which events it links to. Large histories load two hundred events at a time."
-  },
-  {
-    "id": "replay_ai",
-    "chapter": "Memory Replay: AI chapters and questions",
-    "text": "Now Explain this history. The AI groups the events into chapters on the time axis. Every chapter is labelled Inferred, because it is an interpretation, and it cites the exact events it rests on; a citation that does not exist is dropped. I can also ask the history a question: why does every payments API deploy need a canary? The answer cites the outage and the decision that introduced the canary. If the history does not record the answer, Relay says so instead of guessing."
-  },
-  {
-    "id": "risks",
-    "chapter": "Continuity risks",
-    "text": "Continuity risks are raised by explainable rules, never by a model: no backup, a backup who is the same person as the owner, a critical responsibility with a single owner, team ownership without an accountable contact, or an asset nobody stewards. Let me open one. Each risk explains why it is a risk, the recommended action, and the affected responsibility. A manager can assign it, accept it with a reason, or open a case, and every decision is audited."
-  },
-  {
-    "id": "insights",
-    "chapter": "Insights, trends and key-person exposure",
-    "text": "Insights is for managers and auditors, filterable by department and criticality. Continuity debt is the sum of explained components, each with its rule and points, so fixing an item lowers the debt by exactly its points. New in this round is key-person exposure: the people who are the only holder of some work, ranked by criticality. If Arjun were away tomorrow, production deployments would have nobody. Coverage, knowledge health and continuity operations follow, such as overdue tasks and the median days to close a case. Trends saves snapshots so you can see whether continuity is improving over thirty, ninety or one hundred eighty days, with every metric's definition shown. Members cannot open Insights; the server refuses it."
-  },
-  {
-    "id": "whatif",
-    "chapter": "Round 3 feature 2: What If? simulator",
-    "text": "From key-person exposure, one click opens our second improvement, the What If simulator. This is the moment that changes a manager's week: instead of discovering the gap after someone leaves, they see it today, while there is still time to act. It answers: if this person is unavailable, what breaks, and who should cover? I'll set Arjun as unavailable for two weeks and run it. Relay forecasts, deterministically and read-only, what changes: production deployments are left with nobody, readiness drops to fifty-five out of one hundred, and open work that falls due while he is away is listed. Every result explains why it is affected, for example, Arjun Rao is primary owner."
-  },
-  {
-    "id": "candidates",
-    "chapter": "What If?: cover candidates",
-    "text": "Below is Who could cover. Candidates come from recorded links: the planned recipient, an existing role, the same team or department. Each candidate is simulated with the same rules and compared with nobody stepping in. Anyone who would carry far more than the team's typical load is flagged as would be overloaded, so a manager does not pick someone already stretched. Let me simulate with Dev, the planned recipient. The gap closes and readiness rises, and a banner confirms nothing in the workspace changed. Plan a real handover opens the case form with the person already selected; starting a real case is a separate, audited step."
-  },
-  {
-    "id": "case",
-    "chapter": "Continuity cases",
-    "text": "Here is the departure case for Arjun. Relay supports onboarding, transfer, temporary coverage, departure and project handover cases. A case moves through an explicit state model: scope, plan and approve, hand over, and complete. The progress bar and the next step always tell the manager what to do now. Blockers are listed with who must resolve them. The ownership plan shows, for each responsibility, who holds it now, who receives it, and when it moves."
-  },
-  {
-    "id": "case_tabs",
-    "chapter": "Inside a case",
-    "text": "Impact shows what the case touches: assets, connected sources, open risks and knowledge, and it labels a missing source as unavailable rather than empty. Knowledge lists everything to hand over; each item can be marked handed over or noted as missing, and the whole pack downloads as Markdown. Tasks and readiness holds the work and the checks that must pass before the case can complete. People lists participants and a privacy notice, so the people involved know what Relay reads about them. Approvals records each decision against a specific plan version, and Activity keeps the status history and comments."
-  },
-  {
-    "id": "case_ai",
-    "chapter": "Analysis and handover interview",
-    "text": "The analysis groups findings into conflicts, missing evidence, work in flight, dependencies and findings. Each one is labelled Fact, Rule, AI inference, Conflict or Missing evidence, with its sources, and a manager can confirm or dismiss it. Uncited claims are dropped, and evidence only managers may see never reaches a member. The handover interview turns gaps in the evidence into questions for the person leaving. They can answer, or say they don't know, it is not applicable, or they cannot share it. Reviewed answers can be promoted into knowledge, so tacit knowledge is captured before the person goes."
-  },
-  {
-    "id": "brief",
-    "chapter": "Round 3 feature 3: AI Handover Copilot",
-    "text": "Now our third improvement, the AI Handover Copilot. Most handover documents are written in a hurry and trusted blindly. This one shows its evidence for every line, and tells you what it does not know. It writes a handover brief for one specific recipient. Brief coverage at the top shows, for every responsibility in the case, whether the brief says something about it backed by a cited source, mentions it without a source, or does not cover it, critical items first, with a link to the interview to close the gaps. The brief has fixed sections: what you now own, in-flight work, knowledge gaps and open questions, risks and conflicts, recommended first steps, and where this work came from. Every statement is labelled Fact, Rule or AI inference, and I can expand its sources."
-  },
-  {
-    "id": "copilot",
-    "chapter": "Copilot questions",
-    "text": "The recipient can ask questions about the handover. Let me ask: how should I deploy payments API? The answer uses only the evidence behind this brief that I may see, cites it, and points out the conflicting old runbook. Now something the evidence cannot answer: what is the AWS root password recovery process? Relay answers: not in the evidence. It never invents an answer. If the AI draft is slow or fails, the page says so honestly and offers a retry, and the rule-based brief is always usable. For a recipient, that honesty is the difference between trusting a brief and double-checking everything."
-  },
-  {
-    "id": "versions",
-    "chapter": "Versions, approval and acknowledgement",
-    "text": "Every edit creates a new version that needs approval again, so a reviewer always approves exactly what the recipient will read. Compare shows the statements added and removed between versions. The recipient acknowledges a specific approved version. After acknowledging, the brief shows the recipient's next steps: their open tasks, the responsibilities they are taking over with a link to each history, the case status, and where to ask questions."
-  },
-  {
-    "id": "coverage",
-    "chapter": "Temporary coverage",
-    "text": "Not every change is permanent. Priya on leave is a temporary coverage case. The ownership plan shows Sara covering payments API operations and refund approvals from the start date, and Priya back in charge on her return date. Coverage can be extended or ended early, and before Priya returns Relay prepares a return briefing of everything that happened while she was away."
-  },
-  {
-    "id": "transfer",
-    "chapter": "A complete transfer, end to end",
-    "text": "Now a complete transfer, live. I create a new responsibility transfer case, add access reviews, and choose Leo Martins as the recipient. I submit it for approval and approve it. Then I execute the handover. Execution ends the old assignment and starts the new one in a single audited transaction, and the ownership history is preserved, never overwritten. Critical responsibilities also require separation of duties: the person who verifies completion must be someone who neither started nor approved the case."
-  },
-  {
-    "id": "follow",
-    "chapter": "Follow-through: did the handover take hold?",
-    "text": "And this is new: follow-through. Approval and execution prove the plan was applied, but not that the handover worked. For each transferred responsibility Relay now checks: is the new holder recorded, has the work been reviewed or shown recorded activity since the handover, and are the handover tasks closed. It shows settled, settling in, check in after fourteen quiet days, or new holder not recorded. It measures the work, not the person, so it never becomes employee surveillance. As far as we could find, none of the catalogue, knowledge or offboarding tools we researched closes this loop. Relay does."
-  },
-  {
-    "id": "integrations",
-    "chapter": "Integrations",
-    "text": "Integrations connects GitHub, Linear and Notion, all read-only. The GitHub App reads repository metadata, code owners files and maintainers, never source code, and turns them into ownership suggestions that change nothing until a manager accepts them. Linear brings projects and issues and asks a person to link Linear users to directory people. Notion imports only the pages you share, into knowledge, unverified. Sync health shows each connector's last sync, failures and retries, and you can sync now or pause."
-  },
-  {
-    "id": "agents",
-    "chapter": "Automations and AI agents",
-    "text": "Automations turn rules into notifications or follow-up tasks, run on a schedule or on demand, and every run is recorded. The AI agents page lists each AI capability, such as the case analyst, knowledge interviewer, handover generator, handover copilot and memory narrator, with recent runs, tokens and cost against a monthly budget. One switch turns AI off for the whole workspace; everything else keeps working."
-  },
-  {
-    "id": "admin",
-    "chapter": "Audit, import, members and settings",
-    "text": "The audit log is append-only, filterable by area, person, record and date, and exportable as CSV. Import brings people, responsibilities and ownership from a CSV file with a preview before anything is written. Members invites people with a role: owner, admin, continuity manager, knowledge steward, team manager, member, auditor or guest, and permissions are enforced by the server inside every service. Settings holds the continuity policies, criticality tiers and responsibility types, the roles reference, email preferences, and data controls: what Relay reads and why, full export, retention, ownership transfer and workspace deletion, which needs the exact name typed to confirm."
-  },
-  {
-    "id": "search",
-    "chapter": "Search anywhere",
-    "text": "From anywhere, Control K opens search: jump to a person or responsibility, or start a case without leaving the page. The full search page finds responsibilities, assets, knowledge, risks and connected evidence in one list."
-  },
-  {
-    "id": "close",
-    "chapter": "Why Relay",
-    "text": "So, why Relay? Because today continuity lives in five tools and in people's heads, and it fails silently, on the day someone leaves. Relay brings it into one place and one lifecycle. Memory Replay explains the past. The What If simulator shows the future and finds the right successor before anyone has left. The Handover Copilot delivers a brief that proves every claim and admits what it does not know. And follow-through confirms the handover actually took hold. Under the hood, the database is the source of truth, AI only proposes cited drafts and never changes a record, and every workspace is isolated by Postgres row-level security, backed by nearly three hundred tests on a real database and twenty-three browser journeys. Everything I showed you is live, and the judge guide in our repository maps every claim to its code and its tests. When people move on, the work shouldn't stall. That is Relay. Thank you."
-  }
+ {
+  "id": "01-01",
+  "chapter": "Relay",
+  "text": "Good evening, judges. We are team Midnight Ciphers, and this is Relay. Picture this. It's Friday afternoon, and Arjun, the engineer who runs your production deployments, hands in his notice. Who else knows how to roll back a bad release? Where is the runbook, and is it still right? Which decisions did he make that nobody wrote down? In most companies the honest answer is: nobody is sure."
+ },
+ {
+  "id": "01-02",
+  "chapter": "Relay",
+  "text": "That is the problem statement we were given: knowledge handover. Work and knowledge are spread across documents, tickets, repositories, runbooks and people's heads, and no system holds them in one current, permission-aware place. Our landing page names the three ways it fails: a single owner, scattered context, and unclear handovers."
+ },
+ {
+  "id": "01-03",
+  "chapter": "Relay",
+  "text": "In practice that means: a new owner does not know what they inherited. A departing person's knowledge is never captured. A short absence leaves tasks and escalations hanging. Critical work has no backup. Projects move without their decisions and risks. Documentation is stale, contradictory or unowned. A manager cannot tell whether a handover is really complete. Single-person dependencies are found only after something breaks. And a generic AI assistant writes a confident summary without proving that any of it is current, or something the reader may see."
+ },
+ {
+  "id": "01-04",
+  "chapter": "Relay",
+  "text": "So we built Relay, an organisational continuity platform. It knows who is accountable for what, rebuilds the context behind that work from GitHub, Linear and Notion with cited evidence, forecasts what an absence would break before it happens, moves ownership through a reviewed, audited handover, and then checks that the handover actually took hold."
+ },
+ {
+  "id": "01-05",
+  "chapter": "Relay",
+  "text": "Over the next twenty minutes, I'll use every feature live, exactly as a new user would, with no cuts and no slides, and you'll see each of those failures handled. As I go, I'll name where each feature lives, so you can retrace every step yourselves."
+ },
+ {
+  "id": "02-01",
+  "chapter": "Landing page",
+  "text": "As I scroll down, the landing page plays the whole loop as an interactive walkthrough. It starts when something changes: a person leaves, goes on leave, or changes team."
+ },
+ {
+  "id": "02-02",
+  "chapter": "Landing page",
+  "text": "Step two, ^evidence, not guesses: Relay gathers evidence instead of guesses, from the tools the team already uses."
+ },
+ {
+  "id": "02-03",
+  "chapter": "Landing page",
+  "text": "Step three, ^people decide. A manager reviews and approves the plan; nothing moves on its own."
+ },
+ {
+  "id": "02-04",
+  "chapter": "Landing page",
+  "text": "Step four, ^a handover that fits: it's written for the person receiving it."
+ },
+ {
+  "id": "02-05",
+  "chapter": "Landing page",
+  "text": "And step five, ^ownership moves, with a full record of who held what, and when."
+ },
+ {
+  "id": "02-06",
+  "chapter": "Landing page",
+  "text": "Further down are the product areas: the responsibility catalogue, continuity cases, evidence-backed analysis, handover capsules, governed knowledge, and read-only connections."
+ },
+ {
+  "id": "02-07",
+  "chapter": "Landing page",
+  "text": "And the trust section. AI only drafts proposals and never holds a tool that can change data. Every workspace is isolated by Postgres row-level security. And gaps in the sources are shown as gaps, never filled in by a model."
+ },
+ {
+  "id": "02-08",
+  "chapter": "Landing page",
+  "text": "The public pages also publish a robots file, a sitemap, an llms dot t x t file and structured data, so search engines and AI agents can understand what Relay is. Now, let's go in."
+ },
+ {
+  "id": "03-01",
+  "chapter": "Sign in and the sample workspace",
+  "text": "I'll click ^Go to your workspaces. Sign-in uses WorkOS with a one-time email code, so Relay never stores a password, and signing in grants access to nothing until you are a member of a workspace."
+ },
+ {
+  "id": "03-02",
+  "chapter": "Sign in and the sample workspace",
+  "text": "Here I can create an empty workspace for my own data, or a sample one. I'll click ^Create sample workspace: Northwind Labs, a fictional company with eight people, seven responsibilities and a year of synthetic GitHub, Linear and Notion history, where one engineer, Arjun Rao, is leaving."
+ },
+ {
+  "id": "03-03",
+  "chapter": "Sign in and the sample workspace",
+  "text": "While it builds, one architectural decision we made on day one. The server never trusts the browser to say which workspace it is in; the workspace comes only from your membership. Then Postgres itself enforces the boundary with forced row-level security, and the app connects as a restricted role that cannot bypass it. So even a buggy query cannot read another company's data, and our test suite attacks exactly that."
+ },
+ {
+  "id": "04-01",
+  "chapter": "Overview",
+  "text": "We land on the Overview, the first item in the left sidebar. Because product guidance is on, Relay offers a short tour and a setup checklist. Each item is computed from real records; a connected tool only counts once its first sync has finished."
+ },
+ {
+  "id": "04-02",
+  "chapter": "Overview",
+  "text": "Continuity health is the share of critical work that has an owner, a backup and current knowledge, next to the continuity debt score."
+ },
+ {
+  "id": "04-03",
+  "chapter": "Overview",
+  "text": "Below are the counts: active responsibilities, work with no primary owner, critical work with no backup, and open risks. Needs attention lists every gap with the rule that raised it."
+ },
+ {
+  "id": "04-04",
+  "chapter": "Overview",
+  "text": "Then the handovers in motion, the top risks, and recent ownership changes. Every number links to the records behind it, so in ten seconds a manager knows where the organisation is fragile."
+ },
+ {
+  "id": "05-01",
+  "chapter": "Learn Relay: guidance and tours",
+  "text": "For new users, there's ^Learn Relay in the sidebar. The product guidance switch is personal: turning it off hides automatic tips and the checklist, but every tutorial keeps working."
+ },
+ {
+  "id": "05-02",
+  "chapter": "Learn Relay: guidance and tours",
+  "text": "There are eight tours, and each unlocks only when the workspace has the data it shows, so nobody is sent into an empty screen. ^Restart tutorial progress clears only the tours, never workspace data."
+ },
+ {
+  "id": "05-03",
+  "chapter": "Learn Relay: guidance and tours",
+  "text": "Let me ^start the first tour. It highlights the real element on the page and explains it."
+ },
+ {
+  "id": "05-04",
+  "chapter": "Learn Relay: guidance and tours",
+  "text": "I can go ^forward step by step,"
+ },
+ {
+  "id": "05-05",
+  "chapter": "Learn Relay: guidance and tours",
+  "text": "go ^back,"
+ },
+ {
+  "id": "05-06",
+  "chapter": "Learn Relay: guidance and tours",
+  "text": "and finish. If I leave a tour halfway, it resumes exactly where I stopped, and I can replay it later."
+ },
+ {
+  "id": "06-01",
+  "chapter": "My Work and Inbox",
+  "text": "^My Work, in the sidebar, is each person's single list: handovers addressed to me, knowledge I'm asked to review, tasks assigned to me,"
+ },
+ {
+  "id": "06-02",
+  "chapter": "My Work and Inbox",
+  "text": "and the cases I coordinate, with their open tasks and status."
+ },
+ {
+  "id": "06-03",
+  "chapter": "My Work and Inbox",
+  "text": "The ^Inbox collects notifications: assignments, approvals, mentions, reminders and automation alerts. It's empty for me right now; email is optional, and everything also lands here."
+ },
+ {
+  "id": "07-01",
+  "chapter": "People, teams and departments",
+  "text": "^People and Teams is the directory: departments, people with their title, department, manager and GitHub login, and teams. People can be added here or imported from a spreadsheet."
+ },
+ {
+  "id": "07-02",
+  "chapter": "People, teams and departments",
+  "text": "Let me open ^Arjun. His page shows every ownership role he holds,"
+ },
+ {
+  "id": "07-03",
+  "chapter": "People, teams and departments",
+  "text": "the open risks that depend on him, and the continuity cases that affect him. There is also a button to simulate his absence, which we'll use later."
+ },
+ {
+  "id": "07-04",
+  "chapter": "People, teams and departments",
+  "text": "And the ^Platform team page shows the same view for a whole team: its members, roles, risks and cases."
+ },
+ {
+  "id": "08-01",
+  "chapter": "Responsibilities and ownership",
+  "text": "Now the heart of Relay: ^Responsibilities, in the sidebar. A responsibility is anything that must keep working, software or not. Each row shows its criticality, its primary owner and its backups."
+ },
+ {
+  "id": "08-02",
+  "chapter": "Responsibilities and ownership",
+  "text": "Let me open ^Production deployments. Stewardship shows when the record was last reviewed and by whom; owners confirm it on a cadence, so stale ownership becomes visible."
+ },
+ {
+  "id": "08-03",
+  "chapter": "Responsibilities and ownership",
+  "text": "Current owners and backups, where an assignment can be ended or corrected with a reason."
+ },
+ {
+  "id": "08-04",
+  "chapter": "Responsibilities and ownership",
+  "text": "Continuity shows its risks and cases. Dependencies link it to other work and assets: depends on, feeds, escalates to, or shares access with."
+ },
+ {
+  "id": "08-05",
+  "chapter": "Responsibilities and ownership",
+  "text": "Then its knowledge, the assets it looks after, and the full ownership history, which is never overwritten. This one record holds what Jira, Confluence and a service catalogue each only hold a piece of."
+ },
+ {
+  "id": "09-01",
+  "chapter": "Governed knowledge",
+  "text": "Sidebar, ^Knowledge. It holds procedures, decisions, contacts and links, each tied to a responsibility, with a steward and a review date. Anyone can confirm an item is still accurate; stewards verify or archive it. Pages imported from Notion stay unverified until a person checks them."
+ },
+ {
+  "id": "09-02",
+  "chapter": "Governed knowledge",
+  "text": "Let me open ^Deploy payments API. Relay flags a possible conflict with the old runbook, which still describes a deploy without a canary."
+ },
+ {
+  "id": "09-03",
+  "chapter": "Governed knowledge",
+  "text": "Every edit is a version I can compare, and disputes keep their history."
+ },
+ {
+  "id": "10-01",
+  "chapter": "Assets",
+  "text": "Sidebar, ^Assets: the things work depends on, such as repositories, services, vendors, infrastructure and documents, filterable by type, lifecycle, criticality and stewardship. The Legacy SFTP bridge has nobody looking after it, which Relay raises as a risk."
+ },
+ {
+  "id": "10-02",
+  "chapter": "Assets",
+  "text": "Opening ^billing database shows its details, the work and knowledge linked to it, who looks after it, and the risks that reach it through those people."
+ },
+ {
+  "id": "11-01",
+  "chapter": "Round 3 feature 1: Project Memory Replay",
+  "text": "Now, the first of our three Round 3 improvements: Project Memory Replay. A successor's first week is usually spent digging through old tickets. To find it, open a ^responsibility, here Production deployments, and click Memory replay."
+ },
+ {
+  "id": "11-02",
+  "chapter": "Round 3 feature 1: Project Memory Replay",
+  "text": "Relay merges pull requests, issues, pages, decisions and ownership changes into one timeline. Every event is a fact with its source, and categories come from simple rules over the source data, not from a model."
+ },
+ {
+  "id": "11-03",
+  "chapter": "Round 3 feature 1: Project Memory Replay",
+  "text": "I can filter by category. ^Incident shows the checkout outage after a payments API release."
+ },
+ {
+  "id": "11-04",
+  "chapter": "Round 3 feature 1: Project Memory Replay",
+  "text": "Back to ^all events, and press Replay history: the history plays forward, event by event."
+ },
+ {
+  "id": "11-05",
+  "chapter": "Round 3 feature 1: Project Memory Replay",
+  "text": "I ^pause, and inspect an event: where it came from, how its category was derived, and which events it links to. Large histories load two hundred events at a time."
+ },
+ {
+  "id": "12-01",
+  "chapter": "Memory Replay: AI chapters and questions",
+  "text": "Now, ^Explain this history. The AI groups the events into chapters on the time axis."
+ },
+ {
+  "id": "12-02",
+  "chapter": "Memory Replay: AI chapters and questions",
+  "text": "While the model works, here is how we keep it honest. It receives the events numbered, and must cite them by number. The server then checks every citation against the events this reader is allowed to see, and anything uncited or invented is removed before it reaches the screen."
+ },
+ {
+  "id": "12-03",
+  "chapter": "Memory Replay: AI chapters and questions",
+  "text": "And here are the chapters. Every one is labelled Inferred, because it is an interpretation, and it cites the exact events it rests on."
+ },
+ {
+  "id": "12-04",
+  "chapter": "Memory Replay: AI chapters and questions",
+  "text": "I can also ^ask the history a question: why does every payments API deploy need a canary?"
+ },
+ {
+  "id": "12-05",
+  "chapter": "Memory Replay: AI chapters and questions",
+  "text": "While that runs: the question is answered from this timeline only. A member who may not see some evidence gets an answer built without it, so asking a question can never leak what a page would hide."
+ },
+ {
+  "id": "12-06",
+  "chapter": "Memory Replay: AI chapters and questions",
+  "text": "The answer cites the outage and the decision that introduced the canary. If the history does not record the answer, Relay says so instead of guessing."
+ },
+ {
+  "id": "13-01",
+  "chapter": "Continuity risks",
+  "text": "Sidebar, ^Risks. Risks are raised by explainable rules, never by a model: no backup, a backup who is the same person as the owner, a critical responsibility with a single owner, team ownership without an accountable contact, or an asset nobody looks after."
+ },
+ {
+  "id": "13-02",
+  "chapter": "Continuity risks",
+  "text": "^Opening one shows why it is a risk, the recommended action, and the affected work. A manager can assign it, accept it with a reason, or open a case from it, and every decision is audited."
+ },
+ {
+  "id": "14-01",
+  "chapter": "Insights, trends and key-person exposure",
+  "text": "Sidebar, ^Insights, for managers and auditors; members are refused by the server. Continuity debt is a sum of explained components, each with its rule and points, so fixing an item lowers the debt by exactly its points."
+ },
+ {
+  "id": "14-02",
+  "chapter": "Insights, trends and key-person exposure",
+  "text": "New this round: key-person exposure. These are the people who are the only holder of some work, ranked by criticality. If Arjun were away tomorrow, production deployments would have nobody."
+ },
+ {
+  "id": "14-03",
+  "chapter": "Insights, trends and key-person exposure",
+  "text": "Then coverage, knowledge health, and continuity operations, such as overdue tasks and the median days to close a case."
+ },
+ {
+  "id": "14-04",
+  "chapter": "Insights, trends and key-person exposure",
+  "text": "^Trends saves snapshots, so you can see whether continuity is improving over thirty, ninety or one hundred eighty days, with every metric's definition shown."
+ },
+ {
+  "id": "15-01",
+  "chapter": "Round 3 feature 2: What If? simulator",
+  "text": "Back on ^Insights, one click on What if Arjun is away opens our second improvement, the What If simulator. Instead of discovering the gap after someone leaves, a manager sees it today, while there is still time to act."
+ },
+ {
+  "id": "15-02",
+  "chapter": "Round 3 feature 2: What If? simulator",
+  "text": "I set Arjun as unavailable for ^two weeks, and run the simulation."
+ },
+ {
+  "id": "15-03",
+  "chapter": "Round 3 feature 2: What If? simulator",
+  "text": "Production deployments is left with nobody, readiness drops, and open work that falls due while he is away is listed."
+ },
+ {
+  "id": "15-04",
+  "chapter": "Round 3 feature 2: What If? simulator",
+  "text": "Every result explains ^why it is affected; here, Arjun Rao is primary owner."
+ },
+ {
+  "id": "15-05",
+  "chapter": "Round 3 feature 2: What If? simulator",
+  "text": "This is a deliberate design choice: there is no AI model in this forecast. It replays the same ownership rules that raise real risks, on an in-memory copy, and writes nothing. So the same question always gives the same, explainable answer."
+ },
+ {
+  "id": "16-01",
+  "chapter": "What If?: who could cover",
+  "text": "Below is Who could cover. Candidates come from recorded links: the planned recipient, an existing role, the same team or department. Each one is simulated with the same rules and compared with nobody stepping in."
+ },
+ {
+  "id": "16-02",
+  "chapter": "What If?: who could cover",
+  "text": "Anyone who would carry far more than the team's typical load is flagged as would be overloaded. The rule is explicit, not learned: their load after cover is at least double the typical load, and at least three items more. Here, nobody crosses that line."
+ },
+ {
+  "id": "16-03",
+  "chapter": "What If?: who could cover",
+  "text": "Let me ^simulate with Dev, the planned recipient. The gap closes and readiness rises, and the banner confirms nothing in the workspace changed."
+ },
+ {
+  "id": "16-04",
+  "chapter": "What If?: who could cover",
+  "text": "And ^Plan a real handover turns this scenario into a real case form: a temporary coverage case, with Arjun already filled in. Creating it is a separate, audited step."
+ },
+ {
+  "id": "17-01",
+  "chapter": "Continuity cases",
+  "text": "In the sidebar, ^Cases lists every handover. Relay supports onboarding, transfer, temporary coverage, departure and project handover cases. I'll open Arjun's departure."
+ },
+ {
+  "id": "17-02",
+  "chapter": "Continuity cases",
+  "text": "A case moves through an explicit state model: scope, plan and approve, hand over, and complete. The progress bar and next step always say what to do now, and blockers show who must resolve them."
+ },
+ {
+  "id": "17-03",
+  "chapter": "Continuity cases",
+  "text": "The ownership plan shows, for each responsibility, who holds it now, who receives it, and when it moves."
+ },
+ {
+  "id": "18-01",
+  "chapter": "Inside a case",
+  "text": "The tabs across the top hold the rest. ^Impact shows what the case touches: assets, connected sources, open risks and knowledge. Notice the warning at the top: GitHub could only be read partially, and Relay says so, instead of pretending the data is complete."
+ },
+ {
+  "id": "18-02",
+  "chapter": "Inside a case",
+  "text": "^Knowledge lists everything to hand over. Each item can be marked handed over or noted as missing, and the whole pack downloads as Markdown."
+ },
+ {
+  "id": "18-03",
+  "chapter": "Inside a case",
+  "text": "^Tasks and readiness holds the work and the checks that must pass before the case can complete."
+ },
+ {
+  "id": "18-04",
+  "chapter": "Inside a case",
+  "text": "^People lists participants and a privacy notice, so the people involved know what Relay reads about them."
+ },
+ {
+  "id": "18-05",
+  "chapter": "Inside a case",
+  "text": "^Approvals records each decision against a specific plan version, and Activity keeps the status history and comments."
+ },
+ {
+  "id": "19-01",
+  "chapter": "Analysis and handover interview",
+  "text": "The ^Analysis tab groups findings into conflicts, missing evidence, work in flight and dependencies. It's marked Partial, because GitHub didn't sync cleanly, so gaps are treated as unknown, not absent."
+ },
+ {
+  "id": "19-02",
+  "chapter": "Analysis and handover interview",
+  "text": "Each finding is labelled, with its sources, and a manager can confirm or dismiss it. Suggested actions wait in the proposal tray on the right; nothing changes until a manager accepts one. Uncited claims are dropped, and evidence only managers may see never reaches a member."
+ },
+ {
+  "id": "19-03",
+  "chapter": "Analysis and handover interview",
+  "text": "The ^Interview tab turns those gaps into questions for the person leaving. They can answer, or say they don't know, it is not applicable, or they cannot share it. Reviewed answers can be promoted into knowledge, so tacit knowledge is captured before the person goes."
+ },
+ {
+  "id": "20-01",
+  "chapter": "Round 3 feature 3: AI Handover Copilot",
+  "text": "And now our third improvement, the AI Handover Copilot. Most handover documents are written in a hurry and trusted blindly; this one shows its evidence for every line. It lives in the ^Capsules tab: one brief for each recipient."
+ },
+ {
+  "id": "20-02",
+  "chapter": "Round 3 feature 3: AI Handover Copilot",
+  "text": "Brief coverage at the top shows, for every responsibility in the case, whether the brief covers it with a cited source, mentions it without one, or misses it, critical items first, with a link to the interview to close the gaps."
+ },
+ {
+  "id": "20-03",
+  "chapter": "Round 3 feature 3: AI Handover Copilot",
+  "text": "The rule is deliberately simple: a statement covers a responsibility when it names it, and counts as cited only when it rests on evidence that is still active."
+ },
+ {
+  "id": "20-04",
+  "chapter": "Round 3 feature 3: AI Handover Copilot",
+  "text": "The brief has fixed sections: what you now own, work in flight, knowledge gaps, risks and conflicts, recommended first steps, and where the work came from. Every statement is labelled, and I can expand its sources."
+ },
+ {
+  "id": "21-01",
+  "chapter": "Copilot questions",
+  "text": "The recipient can ^ask questions. How should I deploy payments API?"
+ },
+ {
+  "id": "21-02",
+  "chapter": "Copilot questions",
+  "text": "While the copilot reads the evidence, a word on how we run AI in production. It holds no tools that can write anything. Every run is recorded on the AI agents page with its tokens and cost against the workspace's monthly budget, and if the model is unavailable, the rule-based brief still works."
+ },
+ {
+  "id": "21-03",
+  "chapter": "Copilot questions",
+  "text": "And here is the answer: the steps come from the verified deploy procedure and the canary decision, with the sources listed right under it. It uses only the evidence behind this brief that I may see. Technically, every citation is validated by the server before it is shown."
+ },
+ {
+  "id": "21-04",
+  "chapter": "Copilot questions",
+  "text": "Now something the evidence ^cannot answer: what is the AWS root password recovery process?"
+ },
+ {
+  "id": "21-05",
+  "chapter": "Copilot questions",
+  "text": "Now, the test that matters. A generic chatbot would happily write a plausible recovery procedure. For a handover, a confident wrong answer is worse than no answer at all."
+ },
+ {
+  "id": "21-06",
+  "chapter": "Copilot questions",
+  "text": "And Relay answers: not in the evidence. It never invents an answer. If the AI is slow or fails, the page says so and offers a retry, and the rule-based brief is always usable."
+ },
+ {
+  "id": "22-01",
+  "chapter": "Versions, approval and acknowledgement",
+  "text": "Every edit creates a new version that needs approval again, so a reviewer approves exactly what the recipient will read. Compare shows the statements added and removed."
+ },
+ {
+  "id": "22-02",
+  "chapter": "Versions, approval and acknowledgement",
+  "text": "The recipient acknowledges a specific approved version. After that, the brief shows their next steps: open tasks, the responsibilities they take over with a link to each history, and where to ask questions."
+ },
+ {
+  "id": "23-01",
+  "chapter": "Temporary coverage",
+  "text": "Not every change is permanent. Back in Cases, Priya on leave is a temporary coverage case."
+ },
+ {
+  "id": "23-02",
+  "chapter": "Temporary coverage",
+  "text": "The plan shows Sara covering payments API operations and refund approvals from the start date, and Priya back in charge on her return. Coverage can be extended or ended early, and before Priya returns, Relay prepares a return briefing of what happened while she was away."
+ },
+ {
+  "id": "24-01",
+  "chapter": "A complete transfer, end to end",
+  "text": "Now, a complete transfer, end to end, live. In ^Cases, I click New case and choose a responsibility transfer."
+ },
+ {
+  "id": "24-02",
+  "chapter": "A complete transfer, end to end",
+  "text": "I give it a ^title, and create it."
+ },
+ {
+  "id": "24-03",
+  "chapter": "A complete transfer, end to end",
+  "text": "I add ^access reviews to the scope,"
+ },
+ {
+  "id": "24-04",
+  "chapter": "A complete transfer, end to end",
+  "text": "choose ^Leo Martins as the recipient, and save the plan."
+ },
+ {
+  "id": "24-05",
+  "chapter": "A complete transfer, end to end",
+  "text": "I ^submit it for approval, and on the Approvals tab I approve this exact plan version."
+ },
+ {
+  "id": "24-06",
+  "chapter": "A complete transfer, end to end",
+  "text": "Then, ^execute the handover. This ends the old assignment and starts the new one in a single audited transaction, and the ownership history is preserved, never overwritten."
+ },
+ {
+  "id": "24-07",
+  "chapter": "A complete transfer, end to end",
+  "text": "Notifications and follow-up jobs go through a transactional outbox, written in the same database transaction as the change, so a crash can never lose a job or send it twice. And for critical work, the person who verifies completion must be someone who neither started nor approved the case."
+ },
+ {
+  "id": "25-01",
+  "chapter": "Follow-through: did the handover take hold?",
+  "text": "And this is where Relay goes beyond every tool we benchmarked: follow-through, on the case Overview tab. Approval and execution prove the plan was applied, but not that the handover worked."
+ },
+ {
+  "id": "25-02",
+  "chapter": "Follow-through: did the handover take hold?",
+  "text": "For each transferred responsibility Relay checks: is the new holder recorded, has the work been reviewed or shown activity since the handover, and are the handover tasks closed. Access reviews has just moved, so it shows Settling in."
+ },
+ {
+  "id": "25-03",
+  "chapter": "Follow-through: did the handover take hold?",
+  "text": "The other states are Settled, Check in after fourteen quiet days, and New holder not recorded. It measures the work, not the person, so it never becomes employee surveillance. When we researched the catalogue, knowledge and offboarding tools out there, none of them closes this loop."
+ },
+ {
+  "id": "26-01",
+  "chapter": "Integrations",
+  "text": "Sidebar, ^Integrations: GitHub, Linear and Notion, all read-only. The GitHub App reads repository metadata, code owners and maintainers, never source code. And look: this sample's GitHub sync has failed with a 403, the app lost access to some repositories, and Relay shows exactly that."
+ },
+ {
+  "id": "26-02",
+  "chapter": "Integrations",
+  "text": "^Review suggestions is where code owners become ownership suggestions, which change nothing until a manager accepts them. None are open right now."
+ },
+ {
+  "id": "26-03",
+  "chapter": "Integrations",
+  "text": "^Linear brings projects and issues, and asks a person to link Linear users to directory people: here, A. Rao matches several people, so a human chooses."
+ },
+ {
+  "id": "26-04",
+  "chapter": "Integrations",
+  "text": "^Notion imports only the pages you share, into Knowledge, unverified."
+ },
+ {
+  "id": "26-05",
+  "chapter": "Integrations",
+  "text": "^Health shows each connector's state: GitHub's permission changed, Linear is stale, Notion is healthy. I can sync now or pause."
+ },
+ {
+  "id": "27-01",
+  "chapter": "Automations and AI agents",
+  "text": "^Automations, in the sidebar, turn rules into notifications or follow-up tasks, on a schedule or on demand, and every run is recorded."
+ },
+ {
+  "id": "27-02",
+  "chapter": "Automations and AI agents",
+  "text": "^AI agents lists every agent: impact analyst, knowledge interviewer, handover planner, readiness verifier, handover generator, handover copilot and memory narrator. Each shows its read-only tools and token budget, and recent runs show the model, tokens and time."
+ },
+ {
+  "id": "27-03",
+  "chapter": "Automations and AI agents",
+  "text": "One switch turns AI off for the whole workspace, and everything else keeps working. Every AI run has an honest state, like a timed-out run in that list, so nothing spins forever, and AI never holds a tool that can write to your data."
+ },
+ {
+  "id": "28-01",
+  "chapter": "Audit, import, members and settings",
+  "text": "The admin pages are at the bottom of the sidebar. The ^audit log is append-only, written in the same transaction as each change. You can see the transfer I just made, and the outbox events behind it being processed."
+ },
+ {
+  "id": "28-02",
+  "chapter": "Audit, import, members and settings",
+  "text": "^Import brings people, responsibilities and ownership from a CSV file, with a preview before anything is written."
+ },
+ {
+  "id": "28-03",
+  "chapter": "Audit, import, members and settings",
+  "text": "^Members invites people with a role: owner, admin, continuity manager, knowledge steward, team manager, member, auditor or guest. Permissions are enforced by the server, inside every service."
+ },
+ {
+  "id": "28-04",
+  "chapter": "Audit, import, members and settings",
+  "text": "^Settings holds the continuity policies,"
+ },
+ {
+  "id": "28-05",
+  "chapter": "Audit, import, members and settings",
+  "text": "criticality ^tiers and responsibility types,"
+ },
+ {
+  "id": "28-06",
+  "chapter": "Audit, import, members and settings",
+  "text": "the full ^permissions matrix for every role,"
+ },
+ {
+  "id": "28-07",
+  "chapter": "Audit, import, members and settings",
+  "text": "email ^preferences,"
+ },
+ {
+  "id": "28-08",
+  "chapter": "Audit, import, members and settings",
+  "text": "and ^data controls: what Relay reads and why, full export, retention, ownership transfer, and workspace deletion, which needs the exact name typed to confirm."
+ },
+ {
+  "id": "29-01",
+  "chapter": "Search anywhere",
+  "text": "From anywhere, Control K opens search: jump to a person or responsibility, or start a case without leaving the page."
+ },
+ {
+  "id": "29-02",
+  "chapter": "Search anywhere",
+  "text": "Results are grouped: responsibilities, assets, knowledge, risks and GitHub evidence. ^Enter jumps straight to the top one."
+ },
+ {
+  "id": "30-01",
+  "chapter": "Why Relay",
+  "text": "So, why Relay? Today continuity lives in five tools and in people's heads, and it fails silently, on the day someone leaves. Relay brings it into one place and one lifecycle."
+ },
+ {
+  "id": "30-02",
+  "chapter": "Why Relay",
+  "text": "Memory Replay explains the past. The What If simulator shows the future and finds the right successor before anyone has left. The Handover Copilot writes a brief that proves every claim and admits what it does not know. And follow-through confirms the handover actually took hold."
+ },
+ {
+  "id": "30-03",
+  "chapter": "Why Relay",
+  "text": "Under the hood, the database is the source of truth, AI only proposes cited drafts, and every workspace is isolated by Postgres row-level security, backed by nearly three hundred tests on a real database and twenty-three browser journeys. The judge guide in our repository maps every claim to its code and its tests."
+ },
+ {
+  "id": "30-04",
+  "chapter": "Why Relay",
+  "text": "When people move on, the work shouldn't stall. That's Relay. Thank you."
+ }
 ]
