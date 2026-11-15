@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-syne), var(--font-sans);
+  /* Product headings: Geist, tightly tracked. The landing keeps its serif and Bebas display faces. */
+  --font-heading: var(--font-sans);
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
   --font-syne: var(--font-syne);
   --font-bebas: var(--font-bebas-neue), var(--font-syne), sans-serif;
@@ -154,6 +155,9 @@
   }
   .font-display {
     letter-spacing: -0.01em;
+  }
+  .font-heading {
+    letter-spacing: -0.025em;
   }
   .tabular {
     font-variant-numeric: tabular-nums;
@@ -1246,11 +1250,512 @@ html {
   fill: var(--strong);
 }
 
+/* ==========================================================================
+   Refinement pass: quieter controls, one glass recipe for chrome, a calmer
+   theme switch, and the hero and footer type finished properly.
+   ========================================================================== */
+
+:root:not(.dark) {
+  --hair: rgba(11, 18, 48, 0.1);
+  --hair-strong: rgba(11, 18, 48, 0.16);
+  --chrome: rgba(255, 255, 255, 0.62);
+  --chrome-hi: rgba(255, 255, 255, 0.95);
+  --chrome-shadow: 0 1px 2px rgba(11, 18, 48, 0.06), 0 8px 24px -12px rgba(40, 60, 140, 0.28);
+  --mark-a: #2540c8;
+  --mark-b: #0b1230;
+  --mark-leg: #5b78ff;
+  --cr-streak: rgba(255, 255, 255, 0.14);
+  --cr-streak-soft: rgba(255, 255, 255, 0.07);
+}
+.dark {
+  --hair: rgba(255, 255, 255, 0.09);
+  --hair-strong: rgba(255, 255, 255, 0.16);
+  --chrome: rgba(10, 14, 32, 0.55);
+  --chrome-hi: rgba(255, 255, 255, 0.16);
+  --chrome-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 12, 0.8);
+  --mark-a: #e8edff;
+  --mark-b: #8fa8ff;
+  --mark-leg: #b8ff3c;
+  --cr-streak: rgba(255, 255, 255, 0.025);
+  --cr-streak-soft: rgba(255, 255, 255, 0.012);
+}
+
+/* Theme switch: the whole page crossfades at once instead of each element easing on its own
+   clock (which showed half-light, half-dark frames). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Chrome glass: the header pill and small controls. Frost and a hairline, no streaks. */
+.glass-chrome {
+  background: var(--chrome);
+  border: 1px solid var(--hair);
+  box-shadow:
+    inset 0 1px 0 var(--chrome-hi),
+    var(--chrome-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-chrome {
+    background: color-mix(in srgb, var(--page) 94%, transparent);
+  }
+}
+
+/* Header links: a soft pill under the pointer, the current colour one step stronger. */
+.nav-link {
+  border-radius: 9999px;
+  padding: 0.375rem 0.75rem;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+.nav-link:hover {
+  color: var(--strong);
+  background: color-mix(in srgb, var(--strong) 6%, transparent);
+}
+
+/* Buttons: sentence case, medium weight, a lit top edge, a press that you can feel. */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+}
+.btn:active {
+  transform: translateY(0) scale(0.97);
+}
+.btn-primary {
+  color: var(--cta-fg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%), var(--cta-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(11, 18, 48, 0.2),
+    0 8px 20px -8px color-mix(in srgb, var(--cta-bg) 70%, transparent);
+}
+.btn-primary:hover {
+  background-color: var(--cta-hover);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 2px 4px rgba(11, 18, 48, 0.18),
+    0 14px 28px -10px color-mix(in srgb, var(--cta-bg) 75%, transparent);
+}
+.btn-quiet {
+  color: var(--strong);
+  background: var(--chrome);
+  border: 1px solid var(--hair-strong);
+  box-shadow: inset 0 1px 0 var(--chrome-hi);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.btn-quiet:hover {
+  border-color: color-mix(in srgb, var(--strong) 28%, transparent);
+  background: color-mix(in srgb, var(--chrome) 70%, var(--strong) 4%);
+  transform: translateY(-1px);
+}
+.btn-sm {
+  height: 2.5rem;
+  padding: 0 1rem;
+  font-size: 0.8125rem;
+}
+.btn .btn-arrow {
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.btn:hover .btn-arrow {
+  transform: translateX(3px);
+}
+.btn-icon {
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--strong) 8%, transparent);
+  transition: background-color 160ms ease;
+}
+.btn:hover .btn-icon {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+/* CONTINUITY: etched glass. A frosted fill and a fine edge, with a halo only as wide as it
+   needs to be to read across the page, the cobalt slash and the petals. Sweeps in once. */
+.hero-outline {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ho-fill) 46%, transparent),
+    color-mix(in srgb, var(--ho-fill) 4%, transparent) 78%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 1.25px var(--ho-stroke);
+  letter-spacing: 0.01em;
+  filter: drop-shadow(0 0 1px var(--ho-halo)) drop-shadow(0 6px 18px var(--ho-shadow));
+  animation: outline-sweep 1400ms cubic-bezier(0.65, 0, 0.35, 1) 250ms both;
+}
+/* The word sits on the cobalt slash in both themes, so its edge is light; the soft dark halo
+   keeps it readable wherever it runs onto the pale page at narrower widths. */
+:root:not(.dark) {
+  --ho-stroke: rgba(255, 255, 255, 0.78);
+  --ho-fill: #ffffff;
+  --ho-halo: rgba(11, 18, 48, 0.28);
+  --ho-shadow: rgba(8, 14, 60, 0.35);
+}
+.dark {
+  --ho-stroke: rgba(242, 238, 229, 0.62);
+  --ho-fill: #c8d4ff;
+  --ho-shadow: rgba(0, 0, 0, 0.5);
+}
+@keyframes outline-sweep {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.2;
+  }
+  to {
+    clip-path: inset(-20% -5% -20% 0);
+    opacity: 1;
+  }
+}
+
+/* Footer wordmark: a deep cobalt body lit from above, no outline, a fine highlight on the top
+   edge and a sheen that crosses once as it rises into view. */
+:root:not(.dark) {
+  --wm-a: #6a84ff;
+  --wm-b: #2540c8;
+  --wm-c: #142182;
+  --wm-shadow: rgba(37, 64, 200, 0.22);
+}
+.dark {
+  --wm-a: #e6ecff;
+  --wm-b: #8fa8ff;
+  --wm-c: #2a3f9e;
+  --wm-shadow: rgba(143, 168, 255, 0.18);
+}
+.wordmark {
+  background-image:
+    linear-gradient(100deg, transparent 0 40%, rgba(255, 255, 255, 0.55) 48%, transparent 56% 100%),
+    linear-gradient(180deg, var(--wm-a) 0%, var(--wm-b) 46%, var(--wm-c) 100%);
+  background-size:
+    300% 100%,
+    100% 100%;
+  background-position:
+    100% 0,
+    0 0;
+  background-repeat: no-repeat;
+  -webkit-text-stroke: 0;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35)) drop-shadow(0 24px 40px var(--wm-shadow));
+}
+@keyframes wordmark-sheen {
+  from {
+    background-position:
+      100% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -50% 0,
+      0 0;
+  }
+}
+/* The reveal clips each letter, so its box must leave room for the shadow on every side
+   (a 0 inset cut the shadow into visible rectangles), and it has to finish by the time the
+   letters are fully on screen: the footer is the end of the page, so "cover" ranges never
+   completed and left the tops of the letters cut off. */
+@keyframes wordmark-reveal {
+  from {
+    clip-path: inset(100% -40% -40% -40%);
+    opacity: 0.4;
+  }
+  to {
+    clip-path: inset(-40% -40% -40% -40%);
+    opacity: 1;
+  }
+}
+@supports (animation-timeline: view()) {
+  .wordmark {
+    animation:
+      wordmark-reveal linear both,
+      wordmark-sheen linear both;
+    animation-timeline: view(), view();
+    animation-range:
+      entry 0% entry 90%,
+      entry 35% entry 100%;
+  }
+}
+
+/* The mark: the leg of the R is handed over, arriving a beat after the rest. */
+.mark-leg {
+  transform-box: fill-box;
+  /* backwards, not both: a held end state would block the hover nudge below */
+  animation: mark-handover 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms backwards;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes mark-handover {
+  from {
+    opacity: 0;
+    transform: translate(-30%, -30%);
+  }
+}
+.mark-link:hover .mark-leg {
+  transform: translate(8%, 8%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-outline,
+  .mark-leg {
+    animation: none;
+  }
+  .btn,
+  .btn .btn-arrow {
+    transition: none;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Product shell: a calmer dark palette, quiet scrollbars, the collapsible
+   sidebar, and feedback the moment anything is clicked.
+   ========================================================================== */
+
+/* Dark inside the product: one cool graphite family instead of black canvas against navy
+   panels, so surfaces separate by small lightness steps and hairlines, not by hue. */
+.dark {
+  --background: #0b0d13;
+  --card: #11141c;
+  --popover: #141824;
+  --secondary: #171b26;
+  --muted: #151924;
+  --muted-foreground: #9aa3b5;
+  --accent: #1b2030;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.11);
+  --sidebar: #0e1118;
+  --sidebar-accent: #1a1f2c;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+}
+
+/* Scrollbars: thin, no arrows, a thumb that only reads when you look for it. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 16%, transparent) transparent;
+}
+*:hover {
+  scrollbar-color: color-mix(in srgb, var(--foreground) 28%, transparent) transparent;
+}
+
+/* Collapsible sidebar: labels fade while the rail narrows. */
+.sidebar-frame {
+  width: 16rem;
+  transition: width 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sidebar-frame[data-collapsed="true"] {
+  width: 3.75rem;
+}
+
+/* Navigation progress: grows quickly, then creeps, until the next page lands. */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  height: 2px;
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+  background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 40%, #fff));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 60%, transparent);
+  pointer-events: none;
+  transition:
+    transform 200ms ease,
+    opacity 300ms ease 100ms;
+}
+.nav-progress[data-active="true"] {
+  opacity: 1;
+  animation: nav-progress 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+  transition: none;
+}
+@keyframes nav-progress {
+  from {
+    transform: scaleX(0);
+  }
+  12% {
+    transform: scaleX(0.45);
+  }
+  to {
+    transform: scaleX(0.92);
+  }
+}
+
+/* A clicked link that is still loading shimmers. */
+.link-pending {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+.link-pending[data-pending="true"] {
+  opacity: 1;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--foreground) 9%, transparent) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: link-shimmer 900ms linear infinite;
+}
+@keyframes link-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* While a server-loaded tab is on its way, the old panel steps back instead of looking current. */
+nav[data-tab-pending] ~ * {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 160ms ease 80ms;
+}
+
+/* Content swapped in by a filter or tab settles in, never pops. */
+.panel-in > * {
+  animation: panel-in 200ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+/* Copilot: a new turn settles in, sources arrive one by one, the draft shows a soft caret. */
+.copilot-turn {
+  animation: panel-in 220ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.slow-hint {
+  animation: panel-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.copilot-source {
+  animation: panel-in 180ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.copilot-pulse {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--ac, currentColor);
+  animation: copilot-pulse 1.1s ease-in-out infinite;
+}
+@keyframes copilot-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+.copilot-caret {
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: -0.12em;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--foreground) 55%, transparent);
+  animation: copilot-caret 1s steps(2, jump-none) infinite;
+}
+@keyframes copilot-caret {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-frame {
+    transition: none;
+  }
+  .panel-in > *,
+  .copilot-turn,
+  .copilot-source,
+  .slow-hint,
+  .copilot-pulse,
+  .copilot-caret {
+    animation: none;
+  }
+  .nav-progress[data-active="true"] {
+    animation: none;
+    transform: scaleX(0.6);
+  }
+  .link-pending[data-pending="true"] {
+    animation: none;
+  }
+}
+
+/* Error and not-found pages: a soft accent bloom behind the status, which settles in. */
+.error-screen-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(42rem, 90vw);
+  aspect-ratio: 2;
+  translate: -50% -85%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--ac) 16%, transparent),
+    transparent
+  );
+  filter: blur(20px);
+  pointer-events: none;
+}
+.error-screen > :not(.error-screen-glow, .error-brand) {
+  position: relative;
+  animation: hero-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.error-screen > :nth-child(4) {
+  animation-delay: 80ms;
+}
+.error-screen > :nth-child(5),
+.error-screen > :nth-child(6) {
+  animation-delay: 160ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .error-screen > :not(.error-screen-glow, .error-brand) {
+    animation: none;
+  }
+}
+
 /* Reduced transparency: solid surfaces. Last in the file so no later crystal rule overrides it. */
 @media (prefers-reduced-transparency: reduce) {
   .glass,
   .glass-clear,
   .glass-dark,
+  .glass-chrome,
+  .btn-quiet,
   .dark .glass,
   .dark .glass-clear,
   .dark .glass-dark {

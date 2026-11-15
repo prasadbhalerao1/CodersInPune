@@ -247,15 +247,9 @@ export function HeroSandbox() {
             })}
           </ul>
 
-          <Link
-            href="/workspaces"
-            className="group bg-strong text-page hover:bg-strong/90 mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors"
-          >
+          <Link href="/workspaces" className="btn btn-primary mt-5 w-full">
             Plan a real handover
-            <ArrowRight
-              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-              aria-hidden
-            />
+            <ArrowRight className="btn-arrow h-4 w-4" aria-hidden />
           </Link>
           <p className="text-fg-mute mt-3 text-center text-xs">
             Sample data. In Relay a simulation is read-only and never changes ownership.

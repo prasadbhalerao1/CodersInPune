@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -449,11 +450,17 @@ export function CommandTrigger() {
         type="button"
         onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_MENU))}
         data-tour="search"
-        className="text-muted-foreground hover:text-foreground hover:bg-muted flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm"
+        aria-label="Search or create"
+        title="Search or create (Ctrl K)"
+        className="text-muted-foreground hover:text-foreground hover:bg-muted flex w-full items-center gap-2 overflow-hidden rounded-md border px-2.5 py-1.5 text-sm whitespace-nowrap transition-colors duration-150"
       >
-        <span aria-hidden>⌕</span>
-        <span className="flex-1 text-left">Search or create…</span>
-        <kbd className="rounded border px-1 text-[10px]">Ctrl K</kbd>
+        <Search aria-hidden className="size-3.5 shrink-0" />
+        <span className="flex-1 text-left transition-opacity duration-150 group-data-[collapsed=true]/sb:opacity-0">
+          Search or create…
+        </span>
+        <kbd className="rounded border px-1 text-[10px] transition-opacity duration-150 group-data-[collapsed=true]/sb:opacity-0">
+          Ctrl K
+        </kbd>
       </button>
     </div>
   );

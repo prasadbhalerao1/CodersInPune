@@ -14,7 +14,7 @@ export async function UserMenu() {
         <a href="/sign-in" className="text-sm font-medium hover:underline">
           Sign in
         </a>
-        <ThemeToggle className="ml-auto" />
+        <ThemeToggle className="ml-auto size-8" />
       </div>
     );
   }
@@ -46,7 +46,7 @@ export async function UserMenu() {
           </form>
         </span>
       </div>
-      <ThemeToggle className="ml-auto" />
+      <ThemeToggle className="ml-auto size-8" />
     </div>
   );
 }

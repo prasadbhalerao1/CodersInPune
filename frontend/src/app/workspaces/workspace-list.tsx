@@ -27,10 +27,8 @@ export function WorkspaceRows({ workspaces }: { workspaces: WorkspaceView[] }) {
   if (workspaces.length === 0) {
     return (
       <div className="glass-clear flex flex-col justify-center self-start p-8">
-        <span className="text-ac font-mono text-[11px] font-semibold tracking-[0.18em] uppercase">
-          Start here
-        </span>
-        <h2 className="font-syne text-strong mt-2 text-2xl font-bold">No workspaces yet</h2>
+        <span className="text-ac text-[13px] font-medium">Start here</span>
+        <h2 className="font-heading text-strong mt-2 text-2xl font-bold">No workspaces yet</h2>
         <p className="text-fg-soft mt-2 max-w-md text-sm leading-relaxed">
           The quickest way to see Relay is the sample workspace: a team in the middle of a handover,
           with ownership risks to review and an absence simulator to try.
@@ -51,9 +49,7 @@ export function WorkspaceRows({ workspaces }: { workspaces: WorkspaceView[] }) {
               <span className="text-strong group-hover:text-ac block truncate font-semibold transition-colors">
                 {workspace.name}
               </span>
-              <span className="text-fg-mute font-mono text-[11px] tracking-wider uppercase">
-                {workspace.role.replace("_", " ")}
-              </span>
+              <span className="text-fg-mute text-xs">{workspace.role.replace("_", " ")}</span>
             </span>
             <span className="border-line/15 text-fg-mute group-hover:border-ac/50 group-hover:text-ac flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors">
               <ArrowRight

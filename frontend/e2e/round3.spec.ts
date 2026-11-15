@@ -24,7 +24,7 @@ test("from the landing page into a fresh sample workspace", async ({ page }) => 
   test.setTimeout(120_000);
   await page.goto("/");
   // Signed in, the landing header's call to action leads to the workspace switcher.
-  await page.getByRole("link", { name: "WORKSPACES", exact: true }).first().click();
+  await page.getByRole("link", { name: "Workspaces", exact: true }).first().click();
   await page.waitForURL(/\/workspaces$/);
   await settle(page);
   await page.getByRole("button", { name: "Create sample workspace" }).click();

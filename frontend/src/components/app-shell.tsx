@@ -2,17 +2,16 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 
 import { CommandMenu, CommandTrigger } from "@/components/command-menu";
+import { NavProgress } from "@/components/nav-progress";
+import { SidebarFrame } from "@/components/sidebar-frame";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { WorkspaceHeading } from "@/components/workspace-heading";
 import { UserMenu } from "@/components/user-menu";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const sidebar = (
-    <aside
-      aria-label="Primary"
-      className="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r md:flex"
-    >
-      <div className="flex h-14 items-center px-4">
+    <SidebarFrame>
+      <div className="flex h-14 items-center overflow-hidden px-4">
         <Suspense fallback={<span className="text-sm font-semibold">Relay</span>}>
           <WorkspaceHeading />
         </Suspense>
@@ -23,12 +22,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Suspense fallback={<div className="flex-1" />}>
         <SidebarNav />
       </Suspense>
-      <div className="border-sidebar-border border-t p-3">
+      <div className="border-sidebar-border overflow-hidden border-t p-3">
         <Suspense fallback={<span className="text-muted-foreground text-sm">…</span>}>
           <UserMenu />
         </Suspense>
       </div>
-    </aside>
+    </SidebarFrame>
   );
   return (
     <>
@@ -38,6 +37,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <Suspense fallback={null}>
         <CommandMenu />
+      </Suspense>
+      <Suspense fallback={null}>
+        <NavProgress />
       </Suspense>
     </>
   );

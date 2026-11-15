@@ -15,16 +15,13 @@ export function CreateWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
     <form action={formAction} className="glass-clear flex flex-col gap-4 p-5">
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <div>
-        <h2 className="font-syne text-strong text-lg leading-tight font-bold">
+        <h2 className="font-heading text-strong text-lg leading-tight font-bold">
           Start a new workspace
         </h2>
         <p className="text-fg-soft mt-1 text-[13px]">You will be its owner.</p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="workspace-name"
-          className="text-fg-mute font-mono text-[11px] font-semibold tracking-[0.14em] uppercase"
-        >
+        <label htmlFor="workspace-name" className="text-fg-soft text-[13px] font-medium">
           Workspace name
         </label>
         <input
@@ -41,7 +38,7 @@ export function CreateWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
         type="submit"
         disabled={pending}
         aria-busy={pending}
-        className="border-line/20 text-strong hover:border-ac hover:text-ac focus-visible:outline-ac inline-flex h-10 w-full items-center justify-center rounded-full border px-5 text-xs font-bold tracking-wider uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-60"
+        className="btn btn-quiet focus-visible:outline-ac w-full focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-60"
       >
         {pending ? "Creating…" : "Create workspace"}
       </button>

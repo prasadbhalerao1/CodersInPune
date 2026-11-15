@@ -26,6 +26,7 @@ import {
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
+import { LinkPending } from "@/components/link-pending";
 import { useWorkspaceContext } from "@/components/workspace-context";
 import type { WorkspaceRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -100,14 +101,17 @@ export function SidebarNav() {
   }
   const base = `/w/${workspaceId}`;
   return (
-    <nav aria-label="Workspace" className="flex flex-1 flex-col gap-5 overflow-y-auto p-3 text-sm">
+    <nav
+      aria-label="Workspace"
+      className="flex flex-1 flex-col gap-5 overflow-x-hidden overflow-y-auto p-3 text-sm"
+    >
       {GROUPS.map((group) => {
         const items = group.items.filter((item) => allowed(item.roles));
         if (items.length === 0) return null;
         return (
           <div key={group.label ?? "main"}>
             {group.label ? (
-              <p className="text-muted-foreground mb-1 px-2 font-mono text-[10px] font-semibold tracking-[0.16em] uppercase">
+              <p className="text-muted-foreground mb-1 px-2 text-[11px] font-medium whitespace-nowrap transition-opacity duration-150 group-data-[collapsed=true]/sb:opacity-0">
                 {group.label}
               </p>
             ) : null}
@@ -144,8 +148,9 @@ function NavLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      title={label}
       className={cn(
-        "relative flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors",
+        "relative flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors duration-150",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
           : "text-sidebar-foreground/85 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
@@ -158,7 +163,10 @@ function NavLink({
         aria-hidden
         className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")}
       />
-      <span className="truncate">{label}</span>
+      <span className="truncate transition-opacity duration-150 group-data-[collapsed=true]/sb:opacity-0">
+        {label}
+      </span>
+      <LinkPending />
     </Link>
   );
 }

@@ -28,10 +28,8 @@ export default function WorkspacesPage() {
     <div className="bg-page text-strong relative flex flex-1 flex-col overflow-hidden">
       <WorkspacesBackdrop />
       <section className="relative mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 pt-14 pb-8">
-        <p className="text-ac font-mono text-[11px] font-semibold tracking-[0.18em] uppercase">
-          Workspaces
-        </p>
-        <h1 className="font-syne text-strong text-3xl font-extrabold tracking-tight uppercase sm:text-5xl">
+        <p className="text-ac text-[13px] font-medium">Workspaces</p>
+        <h1 className="font-display text-strong text-[2.75rem] leading-[0.95] tracking-[-0.01em] sm:text-7xl">
           Where does your work live?
         </h1>
         <p className="text-fg-soft max-w-xl text-sm leading-relaxed">

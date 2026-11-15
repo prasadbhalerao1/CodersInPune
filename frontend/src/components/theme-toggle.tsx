@@ -40,8 +40,15 @@ export function ThemeToggle({ className, hint = false }: { className?: string; h
 
   const toggle = () => {
     const next = !dark;
-    document.documentElement.classList.toggle("dark", next);
-    document.documentElement.style.colorScheme = next ? "dark" : "light";
+    const apply = () => {
+      document.documentElement.classList.toggle("dark", next);
+      document.documentElement.style.colorScheme = next ? "dark" : "light";
+    };
+    // One crossfade for the whole page (styled in globals.css); an instant switch where the
+    // browser has no view transitions or the visitor asks for less motion.
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (document.startViewTransition && !reduced) document.startViewTransition(apply);
+    else apply();
     dismiss();
   };
 
@@ -51,10 +58,7 @@ export function ThemeToggle({ className, hint = false }: { className?: string; h
         type="button"
         onClick={toggle}
         aria-label={dark ? "Switch to white mode" : "Switch to dark mode"}
-        className={cn(
-          "glass-clear text-strong grid size-11 shrink-0 place-items-center !rounded-full transition-transform hover:scale-105",
-          className,
-        )}
+        className={cn("btn btn-quiet size-10 shrink-0 px-0!", className)}
       >
         {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
       </button>

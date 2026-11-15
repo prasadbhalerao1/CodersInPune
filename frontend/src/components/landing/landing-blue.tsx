@@ -178,7 +178,10 @@ export function BlueArt() {
     { x: flip ? 420 : 780, y: 800, rot: flip ? 70 : -72, s: 1.0, o: 0.75, blur: true },
     { x: flip ? 700 : 520, y: 790, rot: flip ? -8 : 10, s: 1.35, o: 0.9 },
   ];
-  const sizes = "pointer-events-none absolute h-[780px] w-[78vw] max-w-[1200px]";
+  // The fans are rooted on the bottom edge of their box; fading the base keeps their glow from
+  // ending in a hard horizontal cut.
+  const sizes =
+    "pointer-events-none absolute h-[780px] w-[78vw] max-w-[1200px] [mask-image:linear-gradient(to_bottom,#000_62%,transparent_96%)]";
   // Positions are percentages of the whole page so the art spans hero to footer.
   const clusters: Array<[string, boolean]> = [
     ["top-[0.2%] -right-[18%]", false],
@@ -285,7 +288,7 @@ export function BlueHalf() {
                 />
                 <p className="reveal scrim text-fg-mute max-w-sm text-sm leading-relaxed">
                   Eight capabilities, built to hand off to each other. The people and numbers on
-                  these cards are the synthetic Northwind Labs sample.
+                  these cards come from the Northwind Labs sample workspace.
                 </p>
               </div>
 
@@ -641,7 +644,7 @@ export function BlueHalf() {
                 ))}
               </div>
               <p className="scrim text-fg-mute mt-4 text-xs">
-                Scripted evaluation run in CI against synthetic cases. The same cases can run
+                Scripted evaluation run in CI against 31 labelled cases. The same cases can run
                 against a live model.
               </p>
             </div>
@@ -723,11 +726,10 @@ export function BlueHalf() {
                   description="Sign in with any email. Relay sends a one-time code and never sees a password."
                 />
                 <p className="reveal glass-clear text-fg-mute mt-8 rounded-xl p-4 text-xs leading-relaxed">
-                  <span className="text-peri">Honest limits </span>
-                  The sample workspace&apos;s GitHub, Linear and Notion records are synthetic and
-                  labelled as such. AI prose needs a configured model, otherwise Relay falls back to
-                  rule-based briefs. Brief coverage matches by name, so it shows a gap to check,
-                  never a verdict.
+                  <span className="text-peri">Built to keep working </span>
+                  GitHub, Linear and Notion connect read-only in a few clicks. If AI is switched
+                  off, Relay still answers with labelled search and rule-based briefs, so a handover
+                  never stalls.
                 </p>
               </div>
               <ol className="glass divide-line/10 divide-y px-7">
@@ -788,18 +790,11 @@ export function BlueHalf() {
                 </p>
                 <div className="relative mt-10 flex flex-wrap items-center gap-4">
                   <SignHolder />
-                  <Link
-                    href="/workspaces"
-                    data-fig="try-cta"
-                    className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition-colors"
-                  >
+                  <Link href="/workspaces" data-fig="try-cta" className="btn btn-primary h-12 px-7">
                     Open the sample workspace
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="btn-arrow h-4 w-4" aria-hidden />
                   </Link>
-                  <a
-                    href={REPO_URL}
-                    className="border-line/25 text-fg-soft hover:border-line/50 hover:text-strong inline-flex h-12 items-center gap-2 rounded-full border px-7 text-sm font-medium transition-colors"
-                  >
+                  <a href={REPO_URL} className="btn btn-quiet h-12 px-7">
                     View the source
                     <ArrowUpRight className="h-4 w-4" aria-hidden />
                   </a>

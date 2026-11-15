@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
 import { Petals } from "@/components/landing/petals";
@@ -57,40 +57,40 @@ export default function HomePage() {
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
       <StickyHeader>
         <div className="mx-auto grid h-16 max-w-7xl grid-cols-2 items-center px-6 sm:px-8 lg:grid-cols-[1fr_auto_1fr] lg:px-12">
-          <Link href="/" className="group flex items-center gap-2.5 justify-self-start">
-            <RelayMark className="h-8 w-8 drop-shadow-[0_0_10px_rgba(90,120,255,0.5)]" />
-            <span className="text-strong font-sans text-[22px] font-medium tracking-tight">
+          <Link href="/" className="mark-link group flex items-center gap-2.5 justify-self-start">
+            <RelayMark className="h-7 w-7" />
+            <span className="text-strong font-sans text-[21px] font-semibold tracking-[-0.03em]">
               Relay
             </span>
           </Link>
 
           <nav
             aria-label="Sections"
-            className="text-fg-soft glass hidden items-center gap-5 !rounded-full px-5 py-2.5 text-[13px] lg:flex xl:gap-8 xl:px-7"
+            className="text-fg-soft glass-chrome hidden items-center gap-0.5 rounded-full p-1 text-[13px] font-medium lg:flex"
           >
-            <a href="#overview" className="hover:text-strong hidden transition-colors xl:inline">
+            <a href="#overview" className="nav-link hidden xl:inline">
               Overview
             </a>
-            <a href="#exposure" className="hover:text-strong transition-colors">
+            <a href="#exposure" className="nav-link">
               Problem
             </a>
-            <a href="#product" className="hover:text-strong transition-colors">
+            <a href="#product" className="nav-link">
               Product
             </a>
-            <a href="#how" className="hover:text-strong transition-colors">
+            <a href="#how" className="nav-link">
               How it works
             </a>
-            <a href="#trust" className="hover:text-strong transition-colors">
+            <a href="#trust" className="nav-link">
               Trust
             </a>
-            <a href="#try" className="hover:text-strong transition-colors">
+            <a href="#try" className="nav-link">
               Try it
             </a>
           </nav>
 
           <div className="flex items-center gap-3 justify-self-end">
             <ThemeToggle hint />
-            <Suspense fallback={<NavActionLink label="LAUNCH SANDBOX" short="SANDBOX" />}>
+            <Suspense fallback={<NavActionLink label="Launch sandbox" short="Sandbox" />}>
               <PrimaryNavAction />
             </Suspense>
           </div>
@@ -162,20 +162,15 @@ export default function HomePage() {
               </p>
 
               <div className="hero-in hero-in-3 mt-9 flex flex-col items-center gap-4 lg:items-start">
-                <Link
-                  href="#simulator"
-                  data-fig="cta"
-                  className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold transition-colors"
-                >
-                  <span className="bg-page/70 h-2 w-2 rounded-full" />
-                  <span>INITIALIZE SIMULATOR</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <Link href="#simulator" data-fig="cta" className="btn btn-primary w-[15.5rem]">
+                  <span>Initialize simulator</span>
+                  <ArrowRight className="btn-arrow h-4 w-4" aria-hidden />
                 </Link>
-                <a
-                  href="#how"
-                  className="glass-clear text-fg-soft hover:text-strong inline-flex h-11 w-[15.5rem] items-center justify-center gap-2.5 !rounded-full px-6 text-sm font-medium transition-colors"
-                >
-                  <span>(▷) SYSTEM FILM</span>
+                <a href="#how" className="btn btn-quiet w-[15.5rem]">
+                  <span className="btn-icon">
+                    <Play className="h-2.5 w-2.5 translate-x-px fill-current" aria-hidden />
+                  </span>
+                  <span>System film</span>
                 </a>
               </div>
             </div>
@@ -223,15 +218,11 @@ export default function HomePage() {
 
 function NavActionLink({ label, short }: { label: string; short: string }) {
   return (
-    <Link
-      href="/workspaces"
-      aria-label={label}
-      className="group bg-cta text-cta-fg hover:bg-cta-hover inline-flex h-11 items-center gap-2 rounded-full px-5 text-xs font-bold tracking-wider whitespace-nowrap transition-colors"
-    >
+    <Link href="/workspaces" aria-label={label} className="btn btn-primary btn-sm">
       {/* the full label from 640px; a phone header has room for one word */}
       <span className="sm:hidden">{short}</span>
       <span className="hidden sm:inline">{label}</span>
-      <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+      <ArrowRight className="btn-arrow h-3.5 w-3.5" aria-hidden />
     </Link>
   );
 }
@@ -240,8 +231,8 @@ async function PrimaryNavAction() {
   await connection();
   const { user } = await withAuth();
   return user ? (
-    <NavActionLink label="WORKSPACES" short="WORKSPACES" />
+    <NavActionLink label="Workspaces" short="Workspaces" />
   ) : (
-    <NavActionLink label="LAUNCH SANDBOX" short="SANDBOX" />
+    <NavActionLink label="Launch sandbox" short="Sandbox" />
   );
 }

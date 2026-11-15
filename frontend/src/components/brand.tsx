@@ -54,8 +54,9 @@ export function RelayLines({
 }
 
 /**
- * The Relay mark: a monogram R whose leg hands off to a baton. Crimson lane, lime baton.
- * Decorative; pair it with the "Relay" wordmark or an accessible label.
+ * The Relay mark: a solid R whose leg has been handed over, a step apart from the body and in
+ * the baton colour. The leg arrives a beat late (`.mark-leg` in globals.css) and leans in on
+ * hover of a `.mark-link`. Decorative; pair it with the "Relay" wordmark or an accessible label.
  */
 export function RelayMark({ className }: { className?: string }) {
   const id = useId();
@@ -63,37 +64,25 @@ export function RelayMark({ className }: { className?: string }) {
     <svg aria-hidden viewBox="0 0 32 32" className={cn("shrink-0", className)}>
       <defs>
         <linearGradient
-          id={`${id}-lane`}
+          id={`${id}-body`}
           x1="6"
           y1="4"
-          x2="26"
+          x2="22"
           y2="28"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" stopColor="#A9BDFF" />
-          <stop offset="1" stopColor="#3B5BFF" />
+          <stop offset="0" style={{ stopColor: "var(--mark-a)" }} />
+          <stop offset="1" style={{ stopColor: "var(--mark-b)" }} />
         </linearGradient>
       </defs>
-      {/* Stem and bowl: one continuous lane */}
+      {/* Stem and bowl, with the counter cut out */}
       <path
-        d="M9.5 27V5.5h7.6a6.3 6.3 0 0 1 0 12.6H9.5"
-        fill="none"
-        stroke={`url(#${id}-lane)`}
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M6 4h11a7 7 0 0 1 0 14h-5v10H6zM12 9v4h4.6a2 2 0 0 0 0-4z"
+        fillRule="evenodd"
+        fill={`url(#${id}-body)`}
       />
-      {/* Leg: the handover */}
-      <path
-        d="M16.8 18.1l5.4 6.4"
-        fill="none"
-        stroke={`url(#${id}-lane)`}
-        strokeWidth="3.4"
-        strokeLinecap="round"
-      />
-      {/* Baton */}
-      <circle cx="26" cy="27.6" r="2.3" style={{ fill: "var(--lime)" }} />
-      <circle cx="26" cy="27.6" r="4" opacity="0.22" style={{ fill: "var(--lime)" }} />
+      {/* The leg: the piece that was handed over */}
+      <path className="mark-leg" d="M15.4 20h6l5.6 8h-6z" style={{ fill: "var(--mark-leg)" }} />
     </svg>
   );
 }

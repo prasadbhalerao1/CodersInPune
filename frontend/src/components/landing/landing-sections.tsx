@@ -5,7 +5,7 @@ import { SectionHeading } from "@/components/landing/section";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Content. Every claim below is taken from the project docs (JUDGE_GUIDE,
-   PROJECT_OVERVIEW, competitive-analysis, ai, trust); sample names are synthetic.
+   PROJECT_OVERVIEW, competitive-analysis, ai, trust); sample names are fictional.
    ────────────────────────────────────────────────────────────────────────── */
 
 const MANIFESTO =
