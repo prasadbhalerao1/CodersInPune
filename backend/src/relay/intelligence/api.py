@@ -1,8 +1,10 @@
 import uuid
 
 from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 
-from relay.identity.workspace_access import CurrentWorkspace
+from relay.identity.auth import Identity
+from relay.identity.workspace_access import CurrentWorkspace, open_workspace_access
 from relay.intelligence import capsules, copilot, interviews, memory, runs
 from relay.intelligence import service as svc
 from relay.jobs.outbox import Jobs
@@ -220,3 +222,32 @@ async def copilot_ask(
     access: CurrentWorkspace, capsule_id: uuid.UUID, body: copilot.AskIn, request: Request
 ) -> copilot.AnswerView:
     return await copilot.ask(access, capsule_id, body, request.app.state.settings)
+
+
+@router.post(
+    "/ai/capsules/{capsule_id}/questions/stream",
+    dependencies=[rate_limit("ai_ask", 30, 600)],
+    response_class=StreamingResponse,
+)
+async def copilot_ask_stream(
+    access: CurrentWorkspace,
+    identity: Identity,
+    workspace_id: uuid.UUID,
+    capsule_id: uuid.UUID,
+    body: copilot.AskIn,
+    request: Request,
+) -> StreamingResponse:
+    """The copilot answer as server-sent events (see `copilot.ask_stream`)."""
+    factory = request.app.state.session_factory
+    events = await copilot.ask_stream(
+        access,
+        capsule_id,
+        body,
+        request.app.state.settings,
+        reopen=lambda: open_workspace_access(factory, identity, workspace_id),
+    )
+    return StreamingResponse(
+        events,
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )

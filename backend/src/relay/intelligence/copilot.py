@@ -11,8 +11,12 @@ to check. With AI unavailable, a keyword search over the same pool is returned i
 labelled as search results, never dressed up as an answer.
 """
 
+import json
 import re
 import uuid
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Literal
 
@@ -26,9 +30,11 @@ from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import capsules, instant, runs
 from relay.intelligence import service as svc
 from relay.intelligence.evidence import Pool, PoolItem
+from relay.intelligence.llm import LLMError, LLMResult
 from relay.intelligence.models import AgentRun, CapsuleQuestion, CapsuleVersion, Evidence
-from relay.intelligence.validate import split_refs, valid_refs
+from relay.intelligence.validate import INLINE_REFS, valid_refs
 from relay.shared.api_types import StrictInput
+from relay.shared.errors import ApiError
 
 NAME = "handover_copilot"
 MAX_SOURCES = 3
@@ -183,62 +189,69 @@ def search(pool: Pool, question: str) -> list[str]:
     return [ref for _, ref in sorted(scored, key=lambda s: (-s[0], int(s[1][1:])))][:MAX_SOURCES]
 
 
-async def ask(
-    access: WorkspaceAccess, capsule_id: uuid.UUID, data: AskIn, settings: Settings
-) -> AnswerView:
+@dataclass(frozen=True)
+class _Asked:
+    """A question with the evidence its asker may see, ready to answer."""
+
+    capsule_id: uuid.UUID
+    case_id: uuid.UUID
+    question: str
+    pool: Pool
+    ids: dict[str, uuid.UUID]
+
+
+async def _prepare(access: WorkspaceAccess, capsule_id: uuid.UUID, question: str) -> _Asked:
     capsule = await capsules._load(access, capsule_id)  # recipient or editor, else 404
-    session = access.session
     case_title = (await continuity._load(access, capsule.case_id)).title
     pool, ids = _pool(
         capsule.case_id, case_title, await _evidence(access, capsule.id, capsule.case_id)
     )
+    return _Asked(capsule.id, capsule.case_id, question, pool, ids)
+
+
+def _extra(asked: _Asked) -> str:
+    return f"Question from the incoming owner: {asked.question}"
+
+
+async def _record(
+    access: WorkspaceAccess,
+    asked: _Asked,
+    out: CopilotOutput | None,
+    note: str | None,
+    run_id: uuid.UUID | None,
+) -> AnswerView:
+    """Validate the model's citations, then store and audit the answer the asker sees."""
+    session = access.session
+    capsule = await capsules._load(access, asked.capsule_id)  # still allowed to ask?
+    pool = asked.pool
     mode: Literal["ai", "search", "not_found"] = "not_found"
-    answer, refs, confidence, run_id, note = (
-        NOT_FOUND,
-        search(pool, data.question),
-        None,
-        None,
-        None,
-    )
-    if pool.items:
-        outcome = await instant.call(
-            access,
-            settings,
-            name=NAME,
-            pool=pool,
-            extra=f"Question from the incoming owner: {data.question}",
-            output_type=CopilotOutput,
-            case_id=capsule.case_id,
-        )
-        run_id = outcome.run_id
-        out = outcome.output
-        if out is None:
-            note = outcome.message
-            if refs:
-                mode = "search"
-                answer = "These sources in the handover mention what you asked about."
-        else:
-            text, inline = split_refs(out.answer)
-            cited = valid_refs(pool, [*out.evidence, *inline])
-            if out.found and cited and text:
-                mode, answer, refs, confidence = "ai", text, cited, out.confidence
-            elif cited is None and run_id is not None:
-                # Cited evidence that isn't in the pool: an invented source. Flag the run.
-                run = await session.get(AgentRun, run_id)
-                if run is not None:
-                    run.checkpoint = {**run.checkpoint, "suspicious": True}
-                    run.state = runs.settled_state(run)
+    answer, refs, confidence = NOT_FOUND, search(pool, asked.question), None
+    if out is None:
+        if refs and note:
+            mode = "search"
+            answer = "These sources in the handover mention what you asked about."
+    else:
+        text, inline = _split_keep_lines(out.answer)
+        cited = valid_refs(pool, [*out.evidence, *inline])
+        if out.found and cited and text:
+            mode, answer, refs, confidence = "ai", text, cited, out.confidence
+        elif cited is None and run_id is not None:
+            # Cited evidence that isn't in the pool: an invented source. Flag the run.
+            run = await session.get(AgentRun, run_id)
+            if run is not None:
+                run.checkpoint = {**run.checkpoint, "suspicious": True}
+                run.state = runs.settled_state(run)
     question = CapsuleQuestion(
         id=uuid.uuid7(),
         tenant_id=access.tenant_id,
         capsule_id=capsule.id,
         version=capsule.current_version,
         asked_by=access.user_id,
-        question=data.question,
+        question=asked.question,
         answer=answer,
         mode=mode,
         confidence=confidence,
-        evidence_ids=[str(ids[r]) for r in refs],
+        evidence_ids=[str(asked.ids[r]) for r in refs],
         run_id=run_id,
     )
     session.add(question)
@@ -256,6 +269,140 @@ async def ask(
     views = await _views(access, [question])
     views[0].note = note
     return views[0]
+
+
+def _split_keep_lines(text: str) -> tuple[str, list[str]]:
+    """Inline refs out of the prose (like `split_refs`), keeping paragraphs and bullets."""
+    refs = [r.strip().upper() for m in INLINE_REFS.findall(text) for r in m.split(",")]
+    lines = (" ".join(line.split()) for line in INLINE_REFS.sub("", text).splitlines())
+    return "\n".join(line for line in lines if line), refs
+
+
+async def ask(
+    access: WorkspaceAccess, capsule_id: uuid.UUID, data: AskIn, settings: Settings
+) -> AnswerView:
+    asked = await _prepare(access, capsule_id, data.question)
+    if not asked.pool.items:
+        return await _record(access, asked, None, None, None)
+    outcome = await instant.call(
+        access,
+        settings,
+        name=NAME,
+        pool=asked.pool,
+        extra=_extra(asked),
+        output_type=CopilotOutput,
+        case_id=asked.case_id,
+    )
+    return await _record(access, asked, outcome.output, outcome.message, outcome.run_id)
+
+
+# --- streaming ------------------------------------------------------------------------
+
+# The streamed answer is plain prose (structured output arrives whole on some providers, so
+# it can't be shown as it is written); `parse_streamed` turns it back into a CopilotOutput
+# and the same citation checks decide what is stored and shown.
+STREAM_FORMAT = (
+    "Write the answer as plain prose for the incoming owner: short paragraphs, or lines "
+    "starting with '- ' for lists. Put the refs that support a sentence right after it in "
+    "square brackets, like [E3] or [E2, E5]. If the evidence does not answer the question, "
+    "start with 'NOT_FOUND:' and say what is missing. End with one line: 'Confidence: high', "
+    "'Confidence: medium' or 'Confidence: low'."
+)
+_CONFIDENCE = re.compile(r"\s*confidence:\s*(high|medium|low)\W*$", re.IGNORECASE)
+_NOT_FOUND = re.compile(r"^\s*NOT_FOUND\s*:?\s*", re.IGNORECASE)
+_BARE_REF = re.compile(r"\bE\d+\b")
+
+Reopen = Callable[[], AbstractAsyncContextManager[WorkspaceAccess]]
+
+
+def parse_streamed(text: str) -> CopilotOutput:
+    match = _CONFIDENCE.search(text)
+    confidence = match.group(1).lower() if match else "medium"
+    body = (text[: match.start()] if match else text).replace("**", "")
+    found = not _NOT_FOUND.match(body)
+    # Smaller models sometimes name refs ("Evidence E2") instead of bracketing them. Count
+    # those as citations only when nothing is bracketed; `valid_refs` still rejects any ref
+    # that isn't evidence this viewer may see.
+    bare = [] if INLINE_REFS.search(body) else _BARE_REF.findall(body)
+    return CopilotOutput(
+        found=found,
+        answer=_NOT_FOUND.sub("", body).strip()[:2000],
+        evidence=[r.upper() for r in bare],
+        confidence=confidence,  # the regex only matches the three literals
+    )
+
+
+def _sse(event: str, data: object) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
+
+
+async def ask_stream(
+    access: WorkspaceAccess,
+    capsule_id: uuid.UUID,
+    data: AskIn,
+    settings: Settings,
+    reopen: Reopen,
+) -> AsyncIterator[str]:
+    """Server-sent events: `evidence` (what the answer may draw on), `delta`s, `final`.
+
+    Everything that needs the database before the model runs happens here, inside the
+    request's transaction. The stream itself records the outcome in a fresh unit of work
+    (`reopen`), which re-checks the membership; the stored answer is the validated one, so
+    a streamed draft citing an invented source ends as "not in the evidence".
+    """
+    asked = await _prepare(access, capsule_id, data.question)
+    reason = await instant.unavailable(access, settings, NAME) if asked.pool.items else None
+    if reason or not asked.pool.items:
+        view = await _record(access, asked, None, instant.reason_text(reason), None)
+        return _replay(asked, view)
+    return _live(asked, settings, reopen)
+
+
+def _evidence_event(asked: _Asked) -> str:
+    sources = [
+        {
+            "ref": i.ref,
+            "title": i.title,
+            "source_system": i.source_system,
+            "source_type": i.source_type,
+            "url": i.url,
+        }
+        for i in asked.pool.items
+    ]
+    return _sse("evidence", {"sources": sources})
+
+
+async def _replay(asked: _Asked, view: AnswerView) -> AsyncIterator[str]:
+    yield _evidence_event(asked)
+    yield _sse("final", view.model_dump(mode="json"))
+
+
+async def _live(asked: _Asked, settings: Settings, reopen: Reopen) -> AsyncIterator[str]:
+    yield _evidence_event(asked)
+    result: LLMResult[str] | None = None
+    error: str | None = None
+    try:
+        async for item in instant.stream(
+            settings, name=NAME, pool=asked.pool, extra=_extra(asked), answer_format=STREAM_FORMAT
+        ):
+            if isinstance(item, LLMResult):
+                result = item
+            else:
+                yield _sse("delta", {"text": item})
+    except LLMError as failure:
+        error = failure.code
+    try:
+        async with reopen() as access:
+            run = instant.start_run(access, name=NAME, pool=asked.pool, case_id=asked.case_id)
+            await access.session.flush()  # column defaults (token counters) apply on flush
+            instant.settle(run, result, error)
+            await access.session.flush()
+            out = parse_streamed(result.output) if result else None
+            view = await _record(access, asked, out, instant.reason_text(error), run.id)
+    except ApiError as denied:  # e.g. access removed while the answer was being written
+        yield _sse("error", {"message": denied.detail})
+        return
+    yield _sse("final", view.model_dump(mode="json"))
 
 
 async def thread(access: WorkspaceAccess, capsule_id: uuid.UUID) -> list[AnswerView]:

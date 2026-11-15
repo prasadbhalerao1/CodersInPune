@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     notion_client_secret: SecretStr | None = None
     notion_api_url: str = "https://api.notion.com/v1"
     notion_page_limit: int = Field(default=500, ge=1, le=5000)
-    # AI model providers, tried in order (e.g. "gemini,groq,ollama"); empty = AI off.
+    # AI model providers, tried in order (e.g. "gemini,groq,nvidia,ollama"); empty = AI off.
     # "fake" is a deterministic test model (local/test only).
     llm_providers: str | None = None
     gemini_key_1: SecretStr | None = None
@@ -105,6 +105,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
     groq_api_key: SecretStr | None = None
     groq_model: str = "llama-3.3-70b-versatile"
+    # NVIDIA API catalog (OpenAI-compatible); any chat model it hosts.
+    nvidia_api_key: SecretStr | None = None
+    nvidia_model: str = "meta/llama-3.3-70b-instruct"
+    nvidia_url: str = "https://integrate.api.nvidia.com/v1"
     ollama_url: str = "http://127.0.0.1:11434/v1"
     ollama_model: str | None = None
     llm_timeout_seconds: float = Field(default=90.0, ge=5, le=900)
@@ -172,9 +176,11 @@ class Settings(BaseSettings):
             problems.append("AI: set RELAY_GEMINI_KEY_1 (to _4) when gemini is a provider")
         if "groq" in providers and self.groq_api_key is None:
             problems.append("AI: set RELAY_GROQ_API_KEY when groq is a provider")
+        if "nvidia" in providers and self.nvidia_api_key is None:
+            problems.append("AI: set RELAY_NVIDIA_API_KEY when nvidia is a provider")
         if "ollama" in providers and not self.ollama_model:
             problems.append("AI: set RELAY_OLLAMA_MODEL when ollama is a provider")
-        unknown = set(providers) - {"gemini", "groq", "ollama", "fake"}
+        unknown = set(providers) - {"gemini", "groq", "nvidia", "ollama", "fake"}
         if unknown:
             problems.append(f"AI: unknown provider(s) {', '.join(sorted(unknown))}")
         if "fake" in providers and self.environment in ("staging", "production"):

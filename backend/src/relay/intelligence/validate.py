@@ -66,6 +66,7 @@ def _split_refs(text: str) -> tuple[str, list[str]]:
 
 
 split_refs = _split_refs  # shared with the copilot and the memory narrator
+INLINE_REFS = _INLINE_REFS
 
 
 def normalise(text: str) -> str:

@@ -1,5 +1,6 @@
 """Handover Copilot: answers grounded only in the handover's evidence, or an honest no."""
 
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -165,3 +166,116 @@ async def test_brief_uses_the_committed_sections(api: Api) -> None:
     assert headings
     assert set(headings) <= known
     assert "changed_sources" in view
+
+
+# --- streaming ------------------------------------------------------------------------
+
+
+async def ask_stream(who: Ws, capsule: str, question: str) -> list[tuple[str, Any]]:
+    """The server-sent events of one streamed answer, parsed."""
+    response = await who.api.client.post(
+        f"/workspaces/{who.id}/ai/capsules/{capsule}/questions/stream",
+        headers=who.api.as_user(who.sub),
+        json={"question": question},
+    )
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/event-stream")
+    events = []
+    for block in response.text.strip().split("\n\n"):
+        name, data = block.split("\n", 1)
+        events.append((name.removeprefix("event: "), json.loads(data.removeprefix("data: "))))
+    return events
+
+
+async def test_streamed_answer_sends_evidence_then_text_then_the_stored_answer(
+    api: Api, script: list[Script]
+) -> None:
+    ws, member, capsule = await handover(api)
+
+    def answer(refs: dict[str, str]) -> str:
+        ref = ref_of(refs, "Rotate the webhook secret")
+        return (
+            f"Open the dashboard first [{ref}].\n- Then rotate the key [{ref}].\nConfidence: high"
+        )
+
+    script.append(answer)
+    events = await ask_stream(member, capsule, "How do I rotate the webhook secret?")
+    names = [name for name, _ in events]
+    assert names[0] == "evidence"
+    assert names[-1] == "final"
+    assert set(names[1:-1]) == {"delta"}
+    assert len(names) > 3  # written as it arrives, not in one piece
+    titles = [s["title"] for s in events[0][1]["sources"]]
+    assert "Rotate the webhook secret" in titles
+    assert "Vault recovery" not in titles  # managers-only evidence never reaches a member
+    streamed = "".join(data["text"] for name, data in events if name == "delta")
+    assert "Confidence: high" in streamed
+    final = events[-1][1]
+    assert final["mode"] == "ai"
+    assert final["answer"] == "Open the dashboard first.\n- Then rotate the key."
+    assert final["confidence"] == "high"
+    assert [e["title"] for e in final["evidence"]] == ["Rotate the webhook secret"]
+    # Stored and audited like a non-streamed answer.
+    thread = await member.call("GET", f"/ai/capsules/{capsule}/questions")
+    assert [q["id"] for q in thread] == [final["id"]]
+    runs = await ws.call("GET", "/ai/runs")
+    assert [r["state"] for r in runs if r["capability"] == "handover_copilot"] == ["completed"]
+
+
+async def test_streamed_invented_citation_ends_as_not_found(api: Api, script: list[Script]) -> None:
+    _ws, member, capsule = await handover(api)
+    script.append(lambda refs: "It rotates every Monday [E99].\nConfidence: high")
+    events = await ask_stream(member, capsule, "When does the webhook secret rotate?")
+    final = events[-1][1]
+    assert final["mode"] == "not_found"
+    assert "isn't answered by the evidence" in final["answer"]
+
+
+async def test_streamed_not_found_is_an_honest_no(api: Api, script: list[Script]) -> None:
+    _ws, member, capsule = await handover(api)
+    script.append(lambda refs: "NOT_FOUND: no source covers the calendar.\nConfidence: low")
+    final = (await ask_stream(member, capsule, "Where is the rotation calendar?"))[-1][1]
+    assert final["mode"] == "not_found"
+
+
+async def test_streaming_without_ai_replays_a_labelled_search(api: Api) -> None:
+    ws, member, capsule = await handover(api)
+    await ws.call("PATCH", "/ai/capabilities/handover_copilot", 204, json={"enabled": False})
+    events = await ask_stream(member, capsule, "How do I rotate the webhook secret?")
+    assert [name for name, _ in events] == ["evidence", "final"]
+    final = events[-1][1]
+    assert final["mode"] == "search"
+    assert final["note"]
+
+
+async def test_only_the_recipient_and_editors_can_stream(api: Api) -> None:
+    ws, _member, capsule = await handover(api)
+    from tests.api import add_member
+
+    await add_member(api, ws.id, "user_bystander", "member")
+    bystander = Ws(api, ws.id, "user_bystander")
+    response = await api.client.post(
+        f"/workspaces/{ws.id}/ai/capsules/{capsule}/questions/stream",
+        headers=api.as_user("user_bystander"),
+        json={"question": "Can I see this?"},
+    )
+    assert response.status_code == 404
+    await bystander.call("GET", f"/ai/capsules/{capsule}/questions", 404)
+
+
+async def test_streamed_bare_refs_count_only_when_they_are_real(
+    api: Api, script: list[Script]
+) -> None:
+    _ws, member, capsule = await handover(api)
+
+    def answer(refs: dict[str, str]) -> str:
+        ref = ref_of(refs, "Rotate the webhook secret")
+        return f"**Evidence {ref}** says to open the dashboard first.\nConfidence: medium"
+
+    script.append(answer)
+    final = (await ask_stream(member, capsule, "How do I rotate the webhook secret?"))[-1][1]
+    assert final["mode"] == "ai"
+    assert "**" not in final["answer"]
+    script.append(lambda refs: "Evidence E99 says it rotates on Mondays.\nConfidence: high")
+    final = (await ask_stream(member, capsule, "When does it rotate?"))[-1][1]
+    assert final["mode"] == "not_found"

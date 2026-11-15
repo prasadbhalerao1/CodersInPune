@@ -12,7 +12,7 @@ can never change anything: its output is validated and becomes claims or proposa
 import asyncio
 import os
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Protocol
@@ -27,9 +27,9 @@ from pydantic_ai.exceptions import (
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models import Model
-from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 from pydantic_ai.usage import UsageLimits
 
 from relay.config import Settings
@@ -49,6 +49,11 @@ AUTH_COOLDOWN_SECONDS = 3600.0
 
 FakeHandler = Callable[[list[ModelMessage], AgentInfo], ModelResponse]
 ModelFactory = Callable[[str, int], Model]
+
+
+def _loop_time(deadline: float) -> float:
+    """A `time.monotonic()` deadline on the event loop's clock."""
+    return asyncio.get_running_loop().time() + (deadline - time.monotonic())
 
 
 class LLMError(Exception):
@@ -123,6 +128,19 @@ def _fake(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     return fake_handler(messages, info)
 
 
+async def _fake_stream(
+    messages: list[ModelMessage], info: AgentInfo
+) -> AsyncIterator[str | DeltaToolCalls]:
+    """The fake provider streams too, so tests run the real streaming path."""
+    response = _fake(messages, info)
+    for index, part in enumerate(response.parts):
+        if isinstance(part, TextPart):
+            for word in part.content.split(" "):
+                yield word + " "
+        elif isinstance(part, ToolCallPart):
+            yield {index: DeltaToolCall(name=part.tool_name, json_args=part.args_as_json_str())}
+
+
 def default_model_factory(settings: Settings) -> ModelFactory:
     def build(provider: str, key_index: int) -> Model:
         if provider == "gemini":
@@ -138,6 +156,18 @@ def default_model_factory(settings: Settings) -> ModelFactory:
             assert settings.groq_api_key is not None
             key = settings.groq_api_key.get_secret_value()
             return GroqModel(settings.groq_model, provider=GroqProvider(api_key=key))
+        if provider == "nvidia":
+            from pydantic_ai.models.openai import OpenAIChatModel
+            from pydantic_ai.providers.openai import OpenAIProvider
+
+            assert settings.nvidia_api_key is not None
+            return OpenAIChatModel(
+                settings.nvidia_model,
+                provider=OpenAIProvider(
+                    base_url=settings.nvidia_url,
+                    api_key=settings.nvidia_api_key.get_secret_value(),
+                ),
+            )
         if provider == "ollama":
             from pydantic_ai.models.openai import OpenAIChatModel
             from pydantic_ai.providers.ollama import OllamaProvider
@@ -147,7 +177,7 @@ def default_model_factory(settings: Settings) -> ModelFactory:
                 settings.ollama_model, provider=OllamaProvider(base_url=settings.ollama_url)
             )
         if provider == "fake":
-            return FunctionModel(_fake, model_name="fake")
+            return FunctionModel(_fake, stream_function=_fake_stream, model_name="fake")
         raise LLMError("unknown_provider")
 
     return build
@@ -173,8 +203,70 @@ class Gateway:
 
     def _model_name(self, provider: str) -> str:
         s = self._settings
-        names = {"gemini": s.gemini_model, "groq": s.groq_model, "ollama": s.ollama_model}
+        names = {
+            "gemini": s.gemini_model,
+            "groq": s.groq_model,
+            "nvidia": s.nvidia_model,
+            "ollama": s.ollama_model,
+        }
         return names.get(provider) or provider
+
+    def _failed(self, slot: tuple[str, int], error: BaseException) -> str:
+        """Classify a provider failure: return a code to try the next provider, or raise."""
+        match error:
+            case TimeoutError():
+                raise LLMError("timeout", transient=True) from None
+            case UsageLimitExceeded():
+                raise LLMError("token_budget_exceeded") from None
+            case ModelQuotaExceededError() | ModelRateLimitError():
+                self._cooldown[slot] = time.monotonic() + QUOTA_COOLDOWN_SECONDS
+                return "quota_exhausted"
+            case ModelAuthenticationError():
+                self._cooldown[slot] = time.monotonic() + AUTH_COOLDOWN_SECONDS
+                return "provider_auth_failed"
+            case ModelHTTPError(status_code=429):
+                self._cooldown[slot] = time.monotonic() + QUOTA_COOLDOWN_SECONDS
+                return "quota_exhausted"
+            case ModelHTTPError(status_code=401 | 403):
+                self._cooldown[slot] = time.monotonic() + AUTH_COOLDOWN_SECONDS
+                return "provider_auth_failed"
+            case ModelHTTPError(status_code=code) if code >= 500:
+                return "provider_unavailable"
+            case ModelHTTPError(status_code=code):
+                raise LLMError(f"provider_rejected_{code}") from None
+            case ModelAPIError():
+                return "provider_unavailable"
+            case UnexpectedModelBehavior():
+                raise LLMError("invalid_model_output") from None
+        raise error
+
+    def _result[T](
+        self, output: T, slot: tuple[str, int], started: float, usage: Any, messages: Any
+    ) -> LLMResult[T]:
+        provider, key_index = slot
+        model = self._model_name(provider)
+        return LLMResult(
+            output=output,
+            provider=provider,
+            model=model,
+            key_index=key_index,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            duration_ms=int((time.monotonic() - started) * 1000),
+            cost_usd=cost_of(
+                model,
+                usage.input_tokens,
+                usage.output_tokens,
+                (self._settings.llm_price_input, self._settings.llm_price_output),
+            ),
+            tool_calls=_tool_calls(messages),
+        )
+
+    def _available(self) -> list[tuple[str, int]]:
+        if not self._slots:
+            raise LLMError("ai_not_configured")
+        now = time.monotonic()
+        return [slot for slot in self._slots if self._cooldown.get(slot, 0.0) <= now]
 
     async def run[T](
         self,
@@ -187,17 +279,12 @@ class Gateway:
         token_budget: int,
         time_limit: float | None = None,
     ) -> LLMResult[T]:
-        if not self._slots:
-            raise LLMError("ai_not_configured")
+        slots = self._available()
         deadline = time.monotonic() + (time_limit or self._settings.llm_timeout_seconds)
-        last = "providers_unavailable"
-        for slot in self._slots:
-            if self._cooldown.get(slot, 0.0) > time.monotonic():
-                last = "quota_exhausted"
-                continue
-            provider, key_index = slot
+        last = "providers_unavailable" if slots else "quota_exhausted"
+        for slot in slots:
             agent: Agent[Any, T] = Agent(
-                self._factory(provider, key_index),
+                self._factory(*slot),
                 output_type=output_type,
                 instructions=instructions,
                 tools=list(tools),
@@ -214,52 +301,54 @@ class Gateway:
                         deps=deps,
                         usage_limits=UsageLimits(total_tokens_limit=token_budget),
                     )
-            except TimeoutError:
-                raise LLMError("timeout", transient=True) from None
-            except UsageLimitExceeded:
-                raise LLMError("token_budget_exceeded") from None
-            except ModelQuotaExceededError, ModelRateLimitError:
-                self._cooldown[slot] = time.monotonic() + QUOTA_COOLDOWN_SECONDS
-                last = "quota_exhausted"
+            except Exception as error:  # classified; unknown errors re-raise
+                last = self._failed(slot, error)
                 continue
-            except ModelAuthenticationError:
-                self._cooldown[slot] = time.monotonic() + AUTH_COOLDOWN_SECONDS
-                last = "provider_auth_failed"
-                continue
-            except ModelHTTPError as error:
-                if error.status_code == 429:
-                    self._cooldown[slot] = time.monotonic() + QUOTA_COOLDOWN_SECONDS
-                    last = "quota_exhausted"
-                    continue
-                if error.status_code in (401, 403):
-                    self._cooldown[slot] = time.monotonic() + AUTH_COOLDOWN_SECONDS
-                    last = "provider_auth_failed"
-                    continue
-                if error.status_code >= 500:
-                    last = "provider_unavailable"
-                    continue
-                raise LLMError(f"provider_rejected_{error.status_code}") from None
-            except ModelAPIError:
-                last = "provider_unavailable"
-                continue
-            except UnexpectedModelBehavior:
-                raise LLMError("invalid_model_output") from None
-            usage = result.usage
-            model = self._model_name(provider)
-            return LLMResult(
-                output=result.output,
-                provider=provider,
-                model=model,
-                key_index=key_index,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                duration_ms=int((time.monotonic() - started) * 1000),
-                cost_usd=cost_of(
-                    model,
-                    usage.input_tokens,
-                    usage.output_tokens,
-                    (self._settings.llm_price_input, self._settings.llm_price_output),
-                ),
-                tool_calls=_tool_calls(result.all_messages()),
+            return self._result(result.output, slot, started, result.usage, result.all_messages())
+        raise LLMError(last, transient=True)
+
+    async def stream(
+        self,
+        *,
+        instructions: str,
+        prompt: str,
+        tools: Sequence[Tool[Any]] = (),
+        deps: Any = None,
+        token_budget: int,
+        time_limit: float | None = None,
+    ) -> AsyncIterator[str | LLMResult[str]]:
+        """A plain-text answer as it is written: text deltas, then the `LLMResult`.
+
+        Falls through to the next provider only while nothing has been sent; a failure after
+        the first delta raises, and the caller discards the partial text.
+        """
+        slots = self._available()
+        deadline = time.monotonic() + (time_limit or self._settings.llm_timeout_seconds)
+        last = "providers_unavailable" if slots else "quota_exhausted"
+        for slot in slots:
+            agent: Agent[Any, str] = Agent(
+                self._factory(*slot), instructions=instructions, tools=list(tools), retries=2
             )
+            started = time.monotonic()
+            sent = False
+            try:
+                async with asyncio.timeout_at(_loop_time(deadline)):
+                    async with agent.run_stream(
+                        prompt,
+                        deps=deps,
+                        usage_limits=UsageLimits(total_tokens_limit=token_budget),
+                    ) as result:
+                        async for delta in result.stream_text(delta=True, debounce_by=None):
+                            if delta:
+                                sent = True
+                                yield delta
+                        output = await result.get_output()
+            except Exception as error:
+                if sent:
+                    code = "timeout" if isinstance(error, TimeoutError) else "stream_interrupted"
+                    raise LLMError(code, transient=True) from None
+                last = self._failed(slot, error)
+                continue
+            yield self._result(output, slot, started, result.usage, result.all_messages())
+            return
         raise LLMError(last, transient=True)
