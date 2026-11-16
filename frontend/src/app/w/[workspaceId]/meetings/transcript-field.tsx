@@ -26,7 +26,14 @@ export function TranscriptField() {
         </label>
         <button
           type="button"
-          onClick={() => setValue(EXAMPLE)}
+          onClick={(e) => {
+            setValue(EXAMPLE);
+            // The title is required too: fill it if empty, so the example works in one click.
+            const title = e.currentTarget.form?.elements.namedItem("title");
+            if (title instanceof HTMLInputElement && !title.value) {
+              title.value = "Payments migration sync";
+            }
+          }}
           className="text-primary text-xs font-medium hover:underline"
         >
           Use an example
