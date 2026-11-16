@@ -72,7 +72,7 @@ export function NextSteps({
             </ul>
           )}
           <Link
-            href={`${caseHref}/tasks`}
+            href={`${caseHref}?tab=tasks`}
             className="text-primary text-xs font-medium hover:underline"
           >
             All case tasks <ArrowRight aria-hidden className="inline size-3" />
