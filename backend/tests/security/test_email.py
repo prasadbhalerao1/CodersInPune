@@ -303,3 +303,37 @@ def test_every_email_names_the_team() -> None:
     )
     assert "Team Midnight Ciphers" in mail.html
     assert mail.text.endswith("Relay, built by Team Midnight Ciphers")
+
+
+def make_sample(workspace: uuid.UUID, *, age: timedelta) -> None:
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(workspace),))
+        conn.execute(
+            "UPDATE platform.tenant SET sample_owner_id = (SELECT user_id FROM identity.membership"
+            " WHERE tenant_id = %s AND role = 'owner' LIMIT 1), created_at = now() - %s"
+            " WHERE id = %s",
+            (workspace, age, workspace),
+        )
+
+
+@pytest.mark.parametrize(
+    ("age", "redirected"), [(timedelta(hours=2), True), (timedelta(seconds=5), False)]
+)
+async def test_sample_people_mail_goes_to_whoever_caused_it(
+    api: Api, ws: Ws, ext: FakeExternal, age: timedelta, redirected: bool
+) -> None:
+    ids = await user_ids(ws)
+    set_email(ws.id, ids["member"], "priya@northwind.example", "Priya Nair")
+    make_sample(ws.id, age=age)
+
+    await case_with_task(ws, ids["member"])  # the owner (a real address) assigns Priya
+    await run(api, ws.id, "notification.requested")
+    await run(api, ws.id, "email.send")
+
+    sent = [e for e in ext.emails if "New task" in e["subject"]]
+    if not redirected:  # still seeding: nobody's action, nothing mailed
+        assert sent == []
+        return
+    [mail] = sent
+    assert mail["to"] == ["owner@acme.test"]
+    assert "this is for Priya Nair" in mail["text"]

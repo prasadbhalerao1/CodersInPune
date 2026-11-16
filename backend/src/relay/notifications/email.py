@@ -153,11 +153,37 @@ async def _queue(
         )
 
 
+# Sample people have addresses on this reserved domain, which no mailbox receives.
+SAMPLE_DOMAIN = "@northwind.example"
+# Events emitted while a sample is being seeded are not someone's action: never mail them.
+SEEDING = timedelta(seconds=90)
+
+
+def _is_sample_address(address: str | None) -> bool:
+    return bool(address) and str(address).lower().endswith(SAMPLE_DOMAIN)
+
+
 async def queue_for_notifications(
-    session: AsyncSession, ctx: outbox.JobContext, notifications: list[Notification]
+    session: AsyncSession,
+    ctx: outbox.JobContext,
+    notifications: list[Notification],
+    emitted_at: datetime | None = None,
 ) -> None:
+    """Queue email for new notifications.
+
+    In a sample workspace, mail for a sample person (who has no real mailbox) goes to the
+    real person whose action caused it, usually the signed-in evaluator, so they see Relay's
+    email working; the email says who it was meant for. Real workspaces are unaffected.
+    """
     if not notifications or ctx.jobs is None or not email_configured(ctx.settings):
         return
+    tenant = await session.get(Tenant, notifications[0].tenant_id)
+    redirect = (
+        tenant is not None
+        and tenant.sample_owner_id is not None
+        and emitted_at is not None
+        and emitted_at - tenant.created_at > SEEDING
+    )
     by_kind: dict[str, list[Notification]] = defaultdict(list)
     for n in notifications:
         if n.kind in CATEGORY_OF:  # automation alerts are in-app only in this release
@@ -166,7 +192,10 @@ async def queue_for_notifications(
         (
             await session.execute(
                 select(Membership.user_id, Membership.email).where(
-                    Membership.user_id.in_({n.recipient_user_id for n in notifications}),
+                    Membership.user_id.in_(
+                        {n.recipient_user_id for n in notifications}
+                        | {n.actor_user_id for n in notifications if n.actor_user_id}
+                    ),
                     Membership.status == "active",
                     Membership.email.is_not(None),
                 )
@@ -176,17 +205,24 @@ async def queue_for_notifications(
     for category, items in by_kind.items():
         allowed = await _enabled_for(session, {n.recipient_user_id for n in items}, category)
         for n in items:
-            if n.recipient_user_id in allowed and emails.get(n.recipient_user_id):
-                await _queue(
-                    session,
-                    ctx.jobs,
-                    n.tenant_id,
-                    key=f"notification:{n.id}",
-                    kind=n.kind,
-                    to=str(emails[n.recipient_user_id]),
-                    notification_id=n.id,
-                    user_id=n.recipient_user_id,
-                )
+            to = emails.get(n.recipient_user_id)
+            if n.recipient_user_id not in allowed or not to:
+                continue
+            if _is_sample_address(to):
+                actor_email = emails.get(n.actor_user_id) if n.actor_user_id else None
+                if not redirect or not actor_email or _is_sample_address(actor_email):
+                    continue
+                to = actor_email
+            await _queue(
+                session,
+                ctx.jobs,
+                n.tenant_id,
+                key=f"notification:{n.id}",
+                kind=n.kind,
+                to=str(to),
+                notification_id=n.id,
+                user_id=n.recipient_user_id,
+            )
 
 
 async def queue_invitation(
@@ -243,6 +279,19 @@ async def _render(
     if active is None or case is None:
         return None  # access removed since: never email what they can no longer see
     task = await session.get(CaseTask, notification.task_id) if notification.task_id else None
+    # Redirected from a sample person (see queue_for_notifications): say who it was for.
+    meant_for = None
+    if not _is_sample_address(delivery.recipient_email):
+        recipient = (
+            await session.execute(
+                select(Membership.email, Membership.display_name).where(
+                    Membership.user_id == notification.recipient_user_id,
+                    Membership.tenant_id == delivery.tenant_id,
+                )
+            )
+        ).first()
+        if recipient is not None and _is_sample_address(recipient.email):
+            meant_for = recipient.display_name or "a sample person"
     actor = (
         await session.scalar(
             select(func.coalesce(Membership.display_name, Membership.email)).where(
@@ -261,6 +310,7 @@ async def _render(
         case_title=case.title,
         task_title=task.title if task else None,
         detail=notification.detail,
+        meant_for=meant_for,
     )
 
 

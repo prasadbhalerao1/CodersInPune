@@ -295,7 +295,7 @@ async def _deliver(session: AsyncSession, event: OutboxEvent, ctx: outbox.JobCon
             )
         )
         # Email is an extra channel for the notifications created just now (never twice).
-        await email.queue_for_notifications(session, ctx, created)
+        await email.queue_for_notifications(session, ctx, created, event.created_at)
 
 
 outbox.register(EVENT, _deliver)

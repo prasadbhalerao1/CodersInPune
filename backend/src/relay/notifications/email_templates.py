@@ -63,6 +63,7 @@ def render(
     case_title: str | None = None,
     task_title: str | None = None,
     detail: str | None = None,
+    meant_for: str | None = None,
 ) -> Rendered:
     who = actor or "Someone"
     case_line = f"Case: {case_title}" if case_title else ""
@@ -117,6 +118,12 @@ def render(
             cta = "Accept invitation"
         case _:
             raise ValueError(f"unknown email kind {kind!r}")
+    if meant_for:
+        lines = [
+            f"In the sample organisation this is for {meant_for}; it comes to you because "
+            "your action caused it. In a real workspace it goes to the person named.",
+            *lines,
+        ]
     lines = [line for line in lines if line]
     footer = (
         "You received this because someone invited this address to Relay."
