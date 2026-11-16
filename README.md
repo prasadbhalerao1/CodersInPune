@@ -11,6 +11,13 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 - **Live Deployment**: [https://relay-continuity-nine.vercel.app](https://relay-continuity-nine.vercel.app)
 - **Project Dossier (PDF)**: [`artifacts/Relay_Project_Overview_Round2.pdf`](artifacts/Relay_Project_Overview_Round2.pdf) (Round 2 publication build)
 
+> **Relay is a production SaaS, not a mock-up.** It signs real users in (WorkOS), connects to
+> real GitHub, Linear, Notion and Slack accounts, and runs on a real Postgres database with
+> row-level security. The pre-seeded Northwind sample exists only so judges don't have to
+> connect their own tools, and so every edge case (a leaver, a stale runbook, a conflict, a
+> blocked handover) is there to see on day one. Everything you do in it works the same way in a
+> workspace you create yourself.
+
 ## For judges
 
 **Live product:** <https://relay-continuity-nine.vercel.app> · **No setup needed.** Every step
@@ -28,11 +35,24 @@ below starts from that link and only uses buttons you can see. Allow about ten m
    *Northwind Labs (demo)*: eight fictional people, seven responsibilities, a year of
    GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving.
 
-**Demo access:** there is no shared demo password, by design. Sign-in is a one-time code sent
-to the email you type, so every judge gets a private, pre-seeded copy that behaves exactly
-as production does. The sample exists so you don't need to connect your own GitHub, Linear,
-Notion or Slack. A workspace you create yourself works the same way, with your tools
-connected in **Integrations**.
+**Demo accounts (one per role):** on the home page, open **Judging? Sign in as any role** and
+pick one; the sign-in opens with the email filled in. All eight are real accounts and members
+of the same *Northwind Labs (judges)* sample. Password for all: `relay-password@987`.
+
+| Role | Email | Best for |
+|---|---|---|
+| **Owner** (start here) | `demo-owner@example.com` | Everything, plus *Try Relay as…* to switch roles |
+| Continuity manager | `demo-continuity@example.com` | Running the handover: cases, Autopilot, approvals, What If? |
+| Member | `demo-member@example.com` | Receiving the brief, the exit interview, Ask Relay |
+| Auditor | `demo-auditor@example.com` | Reading everything incl. the audit log, changing nothing |
+| Admin | `demo-admin@example.com` | Members, integrations, policies, AI settings |
+| Knowledge steward | `demo-steward@example.com` | Verifying knowledge, settling disputes |
+| Team manager | `demo-teamlead@example.com` | Managing only their team's responsibilities |
+| Guest | `demo-guest@example.com` | An outside contractor's read-only view |
+
+Prefer your own? Sign in with any email (WorkOS sends a one-time code), click **Create sample
+workspace** for a private copy, or create an empty workspace and connect your real GitHub,
+Linear, Notion and Slack in **Integrations**. Same product, same code paths.
 
 **Try every role:** the sample has a person in each of the eight roles: Maya (admin), Tom
 (continuity manager), Ines (knowledge steward), Dev (team manager), Priya (member), Riya

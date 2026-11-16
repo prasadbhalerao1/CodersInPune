@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { RelayMark } from "@/components/brand";
+import { DemoAccounts } from "@/components/demo-accounts";
 import { FooterSitter } from "@/components/landing/figures/footer-sitter";
 import { Hauled } from "@/components/landing/figures/hauled";
 import { SignHolder } from "@/components/landing/figures/sign-holder";
@@ -807,6 +808,7 @@ export function BlueHalf() {
                     <ArrowUpRight className="h-4 w-4" aria-hidden />
                   </a>
                 </div>
+                <DemoAccounts className="mt-6" />
                 <p className="text-fg-mute mt-8 text-sm">
                   Read-only integrations. Forced row-level security. A complete audit trail.
                 </p>

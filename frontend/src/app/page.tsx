@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+
+import { DemoAccounts } from "@/components/demo-accounts";
 import { ArrowRight, Play } from "lucide-react";
 
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
@@ -178,6 +180,7 @@ export default function HomePage() {
                   </span>
                   <span>System film</span>
                 </a>
+                <DemoAccounts />
               </div>
             </div>
 

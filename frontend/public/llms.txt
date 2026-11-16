@@ -2,7 +2,7 @@
 
 > Relay is an organisational continuity platform. It records who is accountable for what (people and teams, primary owners and backups, any kind of work), rebuilds the context behind that work from GitHub, Linear and Notion with cited evidence, forecasts what an absence would break, and moves ownership through reviewed, audited handovers. The database is the source of truth; AI only proposes evidence-backed drafts and answers, and never changes ownership, approvals or source records.
 
-The live product is at https://relay-continuity-nine.vercel.app (sign-in required past the landing page; a synthetic sample workspace is one click away). Source code and documentation: https://github.com/prasadbhalerao1/CodersInPune
+The live product is at https://relay-continuity-nine.vercel.app. It is a working multi-tenant SaaS: real WorkOS sign-in, real GitHub, Linear, Notion and Slack connections, and Postgres with row-level security. A pre-seeded sample organisation (and one shared account per role for judges) exists only so evaluators can see every feature and edge case without connecting their own tools; a workspace connected to real tools uses exactly the same code paths. Source code and documentation: https://github.com/prasadbhalerao1/CodersInPune
 
 ## Product
 

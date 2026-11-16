@@ -14,6 +14,10 @@ export function GET() {
     "behind it from GitHub, Linear and Notion, what an absence would break, and reviewed,",
     "audited handovers. AI drafts with citations it cannot invent; people decide.",
     "",
+    "Relay is a working multi-tenant SaaS: real WorkOS sign-in, real GitHub, Linear, Notion and",
+    "Slack connections, Postgres with row-level security. The pre-seeded sample organisation only",
+    "spares evaluators from connecting their own tools; real workspaces use the same code paths.",
+    "",
     `Live product: ${SITE_URL} · Guide: ${SITE_URL}/docs · Source: ${REPO_URL}`,
     "",
   ];

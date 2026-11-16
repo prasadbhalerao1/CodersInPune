@@ -78,8 +78,9 @@ export function SampleBanner({ workspaceId, view }: { workspaceId: string; view:
             <FlaskConical aria-hidden className="text-primary size-4 shrink-0" />
             <span>
               <strong>Sample organisation.</strong> A year of GitHub, Linear and Notion history is
-              already here, so you can try everything without connecting your tools. Your own
-              workspace works the same way.{" "}
+              already here, so you can try everything without connecting your tools. Relay itself
+              runs on your real tools: create a workspace and connect GitHub, Linear, Notion and
+              Slack in Integrations.{" "}
               <Link href="/docs" className="underline underline-offset-2">
                 How it works
               </Link>
