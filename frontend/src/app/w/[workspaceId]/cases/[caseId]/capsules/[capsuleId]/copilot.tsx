@@ -99,11 +99,14 @@ export function Copilot({
   capsuleId,
   caseId,
   initial,
+  suggestions = [],
 }: {
   workspaceId: string;
   capsuleId: string;
   caseId: string;
   initial: AnswerView[];
+  // Follow-up questions derived from the brief's gaps (no AI): shown until asked.
+  suggestions?: string[];
 }) {
   const [draft, setDraft] = useState("");
   const [thread, setThread] = useState(initial);
@@ -305,6 +308,24 @@ export function Copilot({
         ) : null}
       </div>
 
+      {!live && suggestions.some((q) => !thread.some((t) => t.question === q)) ? (
+        <div className="flex flex-wrap gap-1.5 border-t px-3 pt-3">
+          <span className="text-muted-foreground w-full text-[11px]">Worth asking next</span>
+          {suggestions
+            .filter((q) => !thread.some((t) => t.question === q))
+            .slice(0, 3)
+            .map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => void ask(q)}
+                className="hover:bg-muted rounded-full border px-2.5 py-1 text-left text-xs"
+              >
+                {q}
+              </button>
+            ))}
+        </div>
+      ) : null}
       <form onSubmit={submit} className="flex flex-col gap-2 border-t p-3">
         <div className="flex gap-2">
           <label htmlFor="copilot-question" className="sr-only">

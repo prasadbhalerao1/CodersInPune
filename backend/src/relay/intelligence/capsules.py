@@ -19,10 +19,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.audit import service as audit
-from relay.catalog.models import Responsibility
+from relay.catalog.models import OwnershipAssignment, Responsibility
 from relay.config import Settings
 from relay.continuity import service as continuity
 from relay.continuity.models import CaseScopeItem, CaseTask
+from relay.directory.models import Person
 from relay.identity.models import Membership
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import capabilities as caps
@@ -40,7 +41,7 @@ from relay.intelligence.models import (
     InterviewQuestion,
 )
 from relay.intelligence.validate import validate_claims
-from relay.policy.permissions import Permission, authorize, role_allows
+from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import StrictInput
 from relay.shared.errors import ApiError
 
@@ -137,6 +138,111 @@ class CapsuleView(BaseModel):
     changed_sources: list[str] = []  # titles of cited sources edited since
     # Each responsibility in scope and whether the brief says anything cited about it.
     coverage: list[CoverageItem] = []
+    strength: StrengthView | None = None
+    contacts: list[ContactView] = []
+
+
+class ContactView(BaseModel):
+    """Someone the incoming owner can ask, and why: from ownership records, not from the AI."""
+
+    name: str
+    why: str
+
+
+class StrengthView(BaseModel):
+    """How far the brief can be relied on, from its evidence rather than the model's own
+    confidence: a label (no false precision) plus the counts it rests on."""
+
+    level: Literal["strong", "partial", "weak"]
+    points: int  # statements shown
+    cited: int  # backed by at least one active source
+    fresh: int  # cited, and no cited source is stale or changed since
+    conflicts: int  # statements that report conflicting sources
+    covered: int  # responsibilities in scope with at least one cited statement
+    scope: int  # responsibilities in scope
+
+
+CapsuleView.model_rebuild()
+
+FRESH_FOR = timedelta(days=180)
+
+
+def strength(sections: list[CapsuleSection], coverage: list[CoverageItem]) -> StrengthView:
+    """Strong: most statements rest on fresh sources, every responsibility is covered and
+    nothing conflicts. Weak: little is cited or half the scope is uncovered. Else partial."""
+    now = datetime.now().astimezone()
+    pts = [p for s in sections for p in s.points]
+    cited = [p for p in pts if any(e.status == "active" for e in p.evidence)]
+    fresh = [
+        p
+        for p in cited
+        if not p.changed
+        and all(e.source_ts is None or now - e.source_ts <= FRESH_FOR for e in p.evidence)
+    ]
+    conflicts = sum(p.kind == "conflict" for p in pts)
+    covered = sum(c.cited > 0 for c in coverage)
+    scope = len(coverage)
+    n = len(pts)
+    level: Literal["strong", "partial", "weak"]
+    if not n or len(cited) / n < 0.4 or (scope and covered / scope < 0.5):
+        level = "weak"
+    elif len(fresh) / n >= 0.7 and covered == scope and not conflicts:
+        level = "strong"
+    else:
+        level = "partial"
+    return StrengthView(
+        level=level,
+        points=n,
+        cited=len(cited),
+        fresh=len(fresh),
+        conflicts=conflicts,
+        covered=covered,
+        scope=scope,
+    )
+
+
+ROLE_WORDS = {
+    "primary": "Owns",
+    "co_owner": "Co-owns",
+    "backup": "Backup for",
+    "temporary": "Covering",
+}
+
+
+async def contacts(access: WorkspaceAccess, case_id: uuid.UUID) -> list[ContactView]:
+    """Who to ask about the handed-over work: current holders, backups, and recent previous
+    owners of each responsibility in scope (people the viewer may see)."""
+    since = datetime.now().astimezone() - timedelta(days=365)
+    rows = (
+        await access.session.execute(
+            select(
+                Person.display_name,
+                OwnershipAssignment.role,
+                OwnershipAssignment.valid_to,
+                Responsibility.name,
+            )
+            .join(Person, Person.id == OwnershipAssignment.person_id)
+            .join(Responsibility, Responsibility.id == OwnershipAssignment.responsibility_id)
+            .join(CaseScopeItem, CaseScopeItem.responsibility_id == Responsibility.id)
+            .where(
+                CaseScopeItem.case_id == case_id,
+                visible(access, Permission.DIRECTORY_READ, Person.tenant_id),
+                (OwnershipAssignment.valid_to.is_(None)) | (OwnershipAssignment.valid_to > since),
+            )
+            .order_by(OwnershipAssignment.valid_to.desc().nulls_first())
+        )
+    ).all()
+    now = datetime.now().astimezone()
+    seen: dict[str, list[str]] = {}
+    for name, role, valid_to, responsibility in rows:
+        if valid_to is not None and valid_to <= now:
+            why = f"Previously owned {responsibility} (until {valid_to:%d %b %Y})"
+        else:
+            why = f"{ROLE_WORDS.get(role, 'Holds')} {responsibility}"
+        reasons = seen.setdefault(name, [])
+        if why not in reasons:
+            reasons.append(why)
+    return [ContactView(name=n, why="; ".join(r[:3])) for n, r in list(seen.items())[:8]]
 
 
 class CapsuleSummary(BaseModel):
@@ -625,6 +731,8 @@ async def view(
         changed_points=changed,
         changed_sources=sorted(changed_titles),
         coverage=coverage,
+        strength=strength(sections, coverage),
+        contacts=await contacts(access, capsule.case_id),
     )
 
 

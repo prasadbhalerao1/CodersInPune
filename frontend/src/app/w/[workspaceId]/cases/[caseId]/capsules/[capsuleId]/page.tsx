@@ -11,7 +11,7 @@ import { formatDateTime, PageHeader, Section } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
-import type { CapsuleView } from "@/lib/types";
+import type { CapsuleView, StrengthView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import {
@@ -240,6 +240,7 @@ export default async function CapsulePage({
               </div>
             ) : null}
             {c.summary ? <p className="mt-1 text-base">{c.summary}</p> : null}
+            {c.strength ? <Strength s={c.strength} /> : null}
           </div>
 
           <BriefCoverage
@@ -306,6 +307,22 @@ export default async function CapsulePage({
             </Section>
           ) : null}
 
+          {c.contacts.length ? (
+            <Section
+              title="Who to ask"
+              description="From ownership records: current holders, backups and recent previous owners of this work."
+            >
+              <ul className="divide-y rounded-lg border text-sm">
+                {c.contacts.map((p) => (
+                  <li key={p.name} className="px-4 py-2.5">
+                    <span className="font-medium">{p.name}</span>
+                    <span className="text-muted-foreground block text-xs">{p.why}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+
           <Section
             title="Omissions"
             description="What this handover deliberately leaves out, so gaps are visible rather than silent."
@@ -335,6 +352,7 @@ export default async function CapsulePage({
               caseId={caseId}
               capsuleId={c.id}
               initial={questions.data}
+              suggestions={followUps(c)}
             />
           ) : (
             <ApiErrorNotice error={questions.error} />
@@ -380,4 +398,37 @@ export default async function CapsulePage({
       </div>
     </div>
   );
+}
+
+const STRENGTH = {
+  strong: ["Strong evidence", "border-emerald-600/30 text-emerald-800 dark:text-emerald-300"],
+  partial: ["Partial evidence", "border-amber-600/30 text-amber-900 dark:text-amber-200"],
+  weak: ["Weak evidence", "border-red-600/30 text-red-800 dark:text-red-300"],
+} as const;
+
+// How far the brief can be relied on, from its sources and coverage (computed by the API).
+function Strength({ s }: { s: StrengthView }) {
+  const [label, tone] = STRENGTH[s.level];
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <span className={`rounded-full border px-2 py-0.5 font-medium ${tone}`}>{label}</span>
+      <span className="text-muted-foreground">
+        {s.cited}/{s.points} statements cited · {s.fresh} on recent, unchanged sources · {s.covered}
+        /{s.scope} responsibilities covered
+        {s.conflicts ? ` · ${s.conflicts} conflicting` : ""}
+      </span>
+    </p>
+  );
+}
+
+// Rule-based follow-ups: uncovered responsibilities first, then open questions in the brief.
+function followUps(c: CapsuleView): string[] {
+  const uncovered = c.coverage
+    .filter((x) => x.cited === 0)
+    .map((x) => `What should I know about ${x.name}?`);
+  const open = c.sections
+    .flatMap((s) => s.points)
+    .filter((p) => p.kind === "missing" || p.kind === "question")
+    .map((p) => (p.text.length > 120 ? `${p.text.slice(0, 117)}…` : p.text));
+  return [...uncovered, ...open, "What should I do first this week?"];
 }

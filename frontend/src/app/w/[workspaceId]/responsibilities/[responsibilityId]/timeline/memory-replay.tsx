@@ -74,6 +74,9 @@ export function MemoryReplay({
   const [source, setSource] = useState("");
   const [person, setPerson] = useState("");
   const [majorOnly, setMajorOnly] = useState(false);
+  // Date range, inclusive, as YYYY-MM-DD from the date inputs (compared on the event's day).
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [cursor, setCursor] = useState<number | null>(null); // replay position, oldest = 0
   const [playing, setPlaying] = useState(false);
   const [focus, setFocus] = useState<Set<string>>(new Set());
@@ -97,7 +100,7 @@ export function MemoryReplay({
     [timeline.events],
   );
   const needle = query.trim().toLowerCase();
-  const narrowed = Boolean(needle || source || person || majorOnly);
+  const narrowed = Boolean(needle || source || person || majorOnly || from || to);
 
   useEffect(() => {
     if (!playing) return;
@@ -117,6 +120,8 @@ export function MemoryReplay({
     if (source && e.source_system !== source) return false;
     if (person && e.actor !== person) return false;
     if (majorOnly && e.significance !== "high") return false;
+    if (from && e.occurred_at.slice(0, 10) < from) return false;
+    if (to && e.occurred_at.slice(0, 10) > to) return false;
     if (needle && !`${e.title} ${e.summary} ${e.actor ?? ""}`.toLowerCase().includes(needle))
       return false;
     if (current && e.occurred_at > current.occurred_at) return false;
@@ -142,6 +147,8 @@ export function MemoryReplay({
     setSource("");
     setPerson("");
     setMajorOnly(false);
+    setFrom("");
+    setTo("");
   }
 
   function explain() {
@@ -232,6 +239,26 @@ export function MemoryReplay({
             <Chip active={majorOnly} onClick={() => setMajorOnly(!majorOnly)}>
               Major events
             </Chip>
+            <label className="text-muted-foreground flex items-center gap-1 text-xs">
+              From
+              <input
+                type="date"
+                value={from}
+                max={to || undefined}
+                onChange={(e) => setFrom(e.target.value)}
+                className={cn(inputClass, "h-8 w-auto")}
+              />
+            </label>
+            <label className="text-muted-foreground flex items-center gap-1 text-xs">
+              To
+              <input
+                type="date"
+                value={to}
+                min={from || undefined}
+                onChange={(e) => setTo(e.target.value)}
+                className={cn(inputClass, "h-8 w-auto")}
+              />
+            </label>
             {narrowed ? (
               <Button size="sm" variant="ghost" onClick={clearNarrowing}>
                 <X aria-hidden />
