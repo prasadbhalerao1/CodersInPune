@@ -35,7 +35,7 @@ async def test_tours_unlock_with_the_workspace(api: Api, ws: Ws) -> None:
     assert essentials["workspace"]
     assert not essentials["ownership"]
     assert {c["key"] for c in view["checklist"] if not c["essential"]} == {
-        "github", "linear", "notion",
+        "github", "linear", "notion", "meeting", "slack",
     }  # fmt: skip
 
     person = await ws.person("Arjun")
