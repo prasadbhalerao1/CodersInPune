@@ -89,6 +89,11 @@ async def start(
         raise ApiError(
             409, "analysis_running", "An analysis is already running for this case; open it below."
         )
+    if active is not None and runs._now() - (active.started_at or active.created_at) > (
+        runs.RUN_TIME_LIMIT
+    ):
+        runs.finish(active, "timed_out", "run_time_limit")  # too old to resume: start afresh
+        active = None
     run = active or await runs.start_analysis(access, case_id, settings, None, driver="autopilot")
     pool, _ = await runs.load_pool(access.session, run)
     sources = Counter(i.source_system for i in pool.items)
@@ -142,6 +147,7 @@ async def _drive(
 ) -> AsyncIterator[str]:
     for step in plan.opening:
         yield _sse("step", step.model_dump())
+    settled: set[str] = set()
     try:
         for name in plan.steps:
             spec = capability(name)
@@ -165,8 +171,22 @@ async def _drive(
                     .limit(1)
                 )
                 yield _sse("step", _settled(step, event).model_dump())
+                settled.add(name)
                 if not went_on:
                     break
+        for name in plan.steps:
+            if name not in settled:  # stopped early: say so instead of leaving it spinning
+                spec = capability(name)
+                yield _sse(
+                    "step",
+                    Step(
+                        key=name,
+                        tool=name,
+                        label=spec.title,
+                        status="skipped",
+                        summary="Not run: the analysis stopped before this step.",
+                    ).model_dump(),
+                )
         async with reopen() as access:
             run = await access.session.get(AgentRun, plan.run_id, with_for_update=True)
             if run is not None and run.state in runs.ACTIVE:
