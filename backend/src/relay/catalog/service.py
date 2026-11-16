@@ -1,7 +1,7 @@
 """Responsibility catalogue and ownership assignments.
 
 Time semantics: an assignment is active at instant t when
-`valid_from <= t AND (valid_to IS NULL OR valid_to > t)` — the half-open range
+`valid_from <= t AND (valid_to IS NULL OR valid_to > t)`: the half-open range
 `[valid_from, valid_to)`. Ending an assignment sets `valid_to`; nothing is deleted, and
 every change also writes an append-only `ownership_assignment_change` row and an audit
 event in the same transaction.
@@ -897,7 +897,7 @@ async def start_cover(
     reason: str | None,
 ) -> OwnershipAssignment:
     """Temporary coverage `[starts_at, ends_at)`. Original owners stay untouched, so normal
-    ownership resumes automatically when the range ends — no job or manual restore needed."""
+    ownership resumes automatically when the range ends: no job or manual restore needed."""
     authorize(access, Permission.RESPONSIBILITY_MANAGE)
     await require_active_responsibility(access, responsibility_id)
     await require_assignee(access, recipient)

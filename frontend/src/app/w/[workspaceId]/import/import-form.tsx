@@ -193,7 +193,7 @@ export function ImportForm({ workspaceId }: { workspaceId: string }) {
                     className={r.action === "error" ? "bg-red-50/40 dark:bg-red-950/10" : undefined}
                   >
                     <td className="text-muted-foreground px-3 py-2 tabular-nums">{r.line}</td>
-                    <td className="px-3 py-2 font-medium">{r.label || "—"}</td>
+                    <td className="px-3 py-2 font-medium">{r.label || "-"}</td>
                     <td className="px-3 py-2">
                       <Badge tone={ACTION[r.action].tone}>
                         {result.committed && r.action === "create"

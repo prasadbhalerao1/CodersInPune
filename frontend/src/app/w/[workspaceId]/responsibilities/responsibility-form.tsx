@@ -159,7 +159,7 @@ export function ResponsibilityForm({
         <span>
           Restricted
           <span className="text-muted-foreground block text-xs">
-            Only owners and admins, current holders and people you grant access can see it — it is
+            Only owners and admins, current holders and people you grant access can see it. It is
             also left out of counts and search for everyone else.
           </span>
         </span>

@@ -313,7 +313,7 @@ async def export_case_markdown(access: WorkspaceAccess, case_id: uuid.UUID) -> s
         f"# Handover: {detail.title}",
         "",
         f"- Case type: {detail.case_type.replace('_', ' ')} · status: {detail.status}",
-        f"- Person: {detail.affected_person_name or '—'} · priority: {detail.priority}",
+        f"- Person: {detail.affected_person_name or '-'} · priority: {detail.priority}",
         f"- Ownership changes: {detail.starts_at.isoformat()}",
         "",
     ]

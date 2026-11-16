@@ -133,10 +133,10 @@ export default async function KnowledgePage({
             >
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
                 <dt className="text-muted-foreground">Rationale</dt>
-                <dd className="whitespace-pre-line">{k.decision_rationale ?? "—"}</dd>
+                <dd className="whitespace-pre-line">{k.decision_rationale ?? "-"}</dd>
                 <dt className="text-muted-foreground">Approved by</dt>
                 <dd>
-                  {k.decision_approver ?? "—"}
+                  {k.decision_approver ?? "-"}
                   {k.decided_at ? ` · ${formatDateTime(k.decided_at)}` : ""}
                 </dd>
                 <dt className="text-muted-foreground">Still current</dt>
@@ -239,10 +239,10 @@ export default async function KnowledgePage({
             <dt className="text-muted-foreground">Steward</dt>
             <dd>{k.steward_name ?? "Not assigned"}</dd>
             <dt className="text-muted-foreground">Applies to</dt>
-            <dd>{k.applies_to ?? "—"}</dd>
+            <dd>{k.applies_to ?? "-"}</dd>
             <dt className="text-muted-foreground">Valid</dt>
             <dd>
-              {k.valid_from ? formatDateTime(k.valid_from) : "—"} →{" "}
+              {k.valid_from ? formatDateTime(k.valid_from) : "-"} →{" "}
               {k.valid_until ? formatDateTime(k.valid_until) : "open"}
             </dd>
           </dl>

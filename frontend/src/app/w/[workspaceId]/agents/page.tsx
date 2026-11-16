@@ -224,7 +224,7 @@ export default async function AgentsPage({
                         {r.provider
                           ? `${r.provider}${r.key_index !== null ? ` #${r.key_index + 1}` : ""}`
                           : r.ai === "on"
-                            ? "—"
+                            ? "-"
                             : "rules only"}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">

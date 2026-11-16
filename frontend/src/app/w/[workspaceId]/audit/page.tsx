@@ -43,7 +43,7 @@ function humanize(action: string): string {
 }
 
 function Target({ event, workspaceId }: { event: AuditEventView; workspaceId: string }) {
-  if (!event.target_type) return <span className="text-muted-foreground">—</span>;
+  if (!event.target_type) return <span className="text-muted-foreground">-</span>;
   const label = event.target_label ?? event.target_type.replaceAll("_", " ");
   const path = TARGET_PATH[event.target_type];
   return path && event.target_id ? (

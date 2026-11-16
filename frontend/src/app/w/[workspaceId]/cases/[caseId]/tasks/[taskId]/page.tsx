@@ -287,7 +287,7 @@ export default async function TaskPage({
             <dt className="text-muted-foreground">Priority</dt>
             <dd>{PRIORITY_LABEL[t.priority]}</dd>
             <dt className="text-muted-foreground">Due</dt>
-            <dd>{t.due_at ? formatDateTime(t.due_at) : "—"}</dd>
+            <dd>{t.due_at ? formatDateTime(t.due_at) : "-"}</dd>
             <dt className="text-muted-foreground">Waits for</dt>
             <dd>
               {t.depends_on.length
@@ -304,7 +304,7 @@ export default async function TaskPage({
                       </Link>
                     ) : null;
                   })
-                : "—"}
+                : "-"}
             </dd>
             <dt className="text-muted-foreground">External</dt>
             <dd>

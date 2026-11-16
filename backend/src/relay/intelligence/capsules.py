@@ -357,7 +357,7 @@ async def _rules_version(
         buckets["interview"].append(
             {
                 "key": f"q:{q.id}",
-                "text": f"{q.question} — {q.answer}",
+                "text": f"{q.question}: {q.answer}",
                 "kind": "decision",
                 "claim_type": "human_decision",
                 "confidence": "high",

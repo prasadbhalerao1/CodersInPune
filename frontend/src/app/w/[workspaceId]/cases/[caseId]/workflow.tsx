@@ -247,7 +247,7 @@ export function BlockersPanel({
               </div>
               <p className="text-muted-foreground text-xs">
                 {b.owner_name ? `Owner: ${b.owner_name} · ` : "No owner · "}
-                Raised by {b.created_by_name ?? "—"} {formatDateTime(b.created_at)} ·{" "}
+                Raised by {b.created_by_name ?? "-"} {formatDateTime(b.created_at)} ·{" "}
                 {b.escalation_due ? "escalated" : "escalates"} {formatDateTime(b.escalate_at)}
               </p>
               {c.allowed_actions.includes("update") ? (
@@ -325,8 +325,8 @@ export function BlockersPanel({
           <ul className="mt-2 flex flex-col gap-1 text-xs">
             {resolved.map((b) => (
               <li key={b.id}>
-                <span className="line-through">{b.description}</span> — {b.resolution} (
-                {b.resolved_by_name ?? "—"}, {formatDateTime(b.resolved_at!)})
+                <span className="line-through">{b.description}</span>: {b.resolution} (
+                {b.resolved_by_name ?? "-"}, {formatDateTime(b.resolved_at!)})
               </li>
             ))}
           </ul>
@@ -441,12 +441,12 @@ export function CaseFacts({ detail: c, workspaceId }: { detail: CaseDetail; work
             {c.overdue ? " · overdue" : ""}
           </span>
         ) : (
-          "—"
+          "-"
         ),
       )}
       {row("Time zone", c.time_zone)}
-      {row("Coordinator", c.coordinator_name ?? "—")}
-      {row("Accountable", c.accountable_manager_name ?? "—")}
+      {row("Coordinator", c.coordinator_name ?? "-")}
+      {row("Accountable", c.accountable_manager_name ?? "-")}
       {row("Plan version", <span className="tabular-nums">v{c.plan_version}</span>)}
       {c.reopen_count ? row("Reopened", `${c.reopen_count}×`) : null}
       {c.parent ? row("Split from", caseLink(c.parent.id, c.parent.title)) : null}

@@ -123,7 +123,7 @@ export default async function HealthPage({
                     <div>
                       <dt>Last success</dt>
                       <dd className="text-foreground">
-                        {c.last_success_at ? formatDateTime(c.last_success_at) : "—"}
+                        {c.last_success_at ? formatDateTime(c.last_success_at) : "-"}
                       </dd>
                     </div>
                     <div>

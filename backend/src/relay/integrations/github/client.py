@@ -1,11 +1,11 @@
 """GitHub App client: least-privilege, no persisted tokens.
 
 App permissions (all read-only; GitHub docs, checked 2026-11-08):
-- Repository > Metadata: read      — repositories, collaborators
-- Repository > Contents: read      — CODEOWNERS and catalog-info.yaml only
-- Repository > Pull requests: read — PR metadata (no diffs, no bodies are stored)
-- Repository > Issues: read        — issue metadata (no bodies are stored)
-- Organization > Members: read     — teams and team membership
+- Repository > Metadata: read     : repositories, collaborators
+- Repository > Contents: read     : CODEOWNERS and catalog-info.yaml only
+- Repository > Pull requests: read: PR metadata (no diffs, no bodies are stored)
+- Repository > Issues: read       : issue metadata (no bodies are stored)
+- Organization > Members: read    : teams and team membership
 Missing optional permissions degrade gracefully (403 -> an actionable sync note).
 "Request user authorization (OAuth) during installation" must be enabled so the install
 redirect carries a `code`; it is exchanged once to verify the installation belongs to the

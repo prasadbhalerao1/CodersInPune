@@ -84,7 +84,7 @@ export default async function AssetPage({
                   {a.url}
                 </a>
               ) : (
-                "—"
+                "-"
               )}
             </dd>
           </div>

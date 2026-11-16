@@ -277,7 +277,7 @@ export default async function PeoplePage({
                           p.github_login && `@${p.github_login}`,
                         ]
                           .filter(Boolean)
-                          .join(" · ") || "—"}
+                          .join(" · ") || "-"}
                       </span>
                     </span>
                     {manage && p.status === "active" && departments.data.length > 0 ? (

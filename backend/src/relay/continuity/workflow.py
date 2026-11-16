@@ -323,7 +323,7 @@ async def split(
             tenant_id=access.tenant_id,
             case_type="transfer",
             status="draft",
-            title=f"{names.get(item.responsibility_id, 'Responsibility')} — {case.title}"[:200],
+            title=f"{names.get(item.responsibility_id, 'Responsibility')}: {case.title}"[:200],
             reason=case.reason,
             affected_person_id=case.affected_person_id,
             starts_at=case.starts_at,

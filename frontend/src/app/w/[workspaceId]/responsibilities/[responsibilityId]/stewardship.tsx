@@ -85,7 +85,7 @@ export function StewardshipFacts({
           ) : null}
         </dd>
         <dt className="text-muted-foreground">Accountable contact</dt>
-        <dd>{r.accountable_person_name ?? <span className="text-muted-foreground">—</span>}</dd>
+        <dd>{r.accountable_person_name ?? <span className="text-muted-foreground">-</span>}</dd>
         <dt className="text-muted-foreground">Procedures</dt>
         <dd>
           {r.procedures.length ? (

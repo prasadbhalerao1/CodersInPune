@@ -51,7 +51,7 @@ export function ExternalPanel({
                 ) : null}
               </p>
               <p className="text-muted-foreground text-xs">
-                Approved by {a.approved_by_name ?? "—"} · {formatDateTime(a.approved_at)} ·{" "}
+                Approved by {a.approved_by_name ?? "-"} · {formatDateTime(a.approved_at)} ·{" "}
                 {a.attempts} attempt{a.attempts === 1 ? "" : "s"}
                 {a.receipt.recovered_existing ? " · recovered after a timeout, no duplicate" : ""}
               </p>

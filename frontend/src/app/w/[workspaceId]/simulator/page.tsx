@@ -738,7 +738,7 @@ function Candidates({
       label: "Responsibilities they would hold",
       value: (c) =>
         c.load_after === null
-          ? "—"
+          ? "-"
           : `${c.load_after}${c.overloaded ? ` · overloaded (typical ${view.typical_load})` : ""}`,
     },
   ];

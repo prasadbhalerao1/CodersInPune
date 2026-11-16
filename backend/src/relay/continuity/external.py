@@ -332,7 +332,7 @@ async def handle_execute(session: AsyncSession, event: OutboxEvent, ctx: outbox.
         transient = exc.transient
         if transient and action.attempts < MAX_ATTEMPTS:
             # The provider may have accepted it: look for it on the next attempt.
-            action.state, action.error = "uncertain", f"{exc} — checking again shortly"
+            action.state, action.error = "uncertain", f"{exc}. Checking again shortly"
             assert ctx.jobs is not None
             await outbox.emit(
                 session,
