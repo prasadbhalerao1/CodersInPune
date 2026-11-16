@@ -96,3 +96,11 @@ async def test_meeting_items_are_searchable_evidence(api: Api, script: list[Scri
     final = await ask(ws, "What did we decide about webhooks?")
     sources = final[0][1]["sources"]
     assert any(s["kind"] == "meeting" and "keep webhooks" in s["title"] for s in sources)
+
+
+async def test_responsibility_evidence_names_its_current_holders(api: Api) -> None:
+    ws, _member, _cid = await case_with_knowledge(api)
+    await ws.call("PATCH", "/ai", 204, json={"enabled": False})
+    sources = (await ask(ws, "Who is the backup for payments on-call?"))[0][1]["sources"]
+    duty = next(s for s in sources if s["kind"] == "responsibility")
+    assert "primary Old Owner" in duty["detail"]

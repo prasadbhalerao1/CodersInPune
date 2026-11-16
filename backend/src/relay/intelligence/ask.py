@@ -12,15 +12,17 @@ import re
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from relay.audit import service as audit
 from relay.catalog.knowledge import readable as knowledge_readable
-from relay.catalog.models import KnowledgeItem
+from relay.catalog.models import KnowledgeItem, OwnershipAssignment, Responsibility
 from relay.config import Settings
+from relay.directory.models import Person, Team
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.intelligence import instant
 from relay.intelligence.evidence import Pool, PoolItem
@@ -105,6 +107,9 @@ async def retrieve(access: WorkspaceAccess, question: str) -> list[Source]:
         )
         scores[key] = sum(t in item.text.lower() for t in terms)
     ranked = sorted(hits, key=lambda k: -scores[k])[:MAX_SOURCES]
+    owners = await _owners(
+        access, [uuid.UUID(hits[k].id) for k in ranked if hits[k].kind == "responsibility"]
+    )
     bodies = await _knowledge_bodies(
         access, [uuid.UUID(hits[k].id) for k in ranked if hits[k].kind == "knowledge"]
     )
@@ -114,7 +119,9 @@ async def retrieve(access: WorkspaceAccess, question: str) -> list[Source]:
             kind=k[0],
             id=hits[k].id,
             title=hits[k].title,
-            detail=bodies.get((hits[k].id, hits[k].title)) or hits[k].detail,
+            detail=bodies.get((hits[k].id, hits[k].title))
+            or owners.get(hits[k].id if hits[k].kind == "responsibility" else "")
+            or hits[k].detail,
             url=hits[k].url,
         )
         for n, k in enumerate(ranked, start=1)
@@ -139,6 +146,39 @@ async def _meeting_items(
         .limit(8)
     )
     return [(i, m) for i, m in rows.all()]
+
+
+async def _owners(access: WorkspaceAccess, ids: list[uuid.UUID]) -> dict[str, str]:
+    """Who holds each responsibility today, so "who is the backup for X?" is answerable."""
+    if not ids:
+        return {}
+    now = datetime.now(UTC)
+    rows = await access.session.execute(
+        select(
+            Responsibility.id,
+            Responsibility.criticality,
+            Responsibility.description,
+            OwnershipAssignment.role,
+            func.coalesce(Person.display_name, Team.name),
+        )
+        .join(OwnershipAssignment, OwnershipAssignment.responsibility_id == Responsibility.id)
+        .outerjoin(Person, Person.id == OwnershipAssignment.person_id)
+        .outerjoin(Team, Team.id == OwnershipAssignment.team_id)
+        .where(
+            Responsibility.id.in_(ids),
+            visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id),
+            OwnershipAssignment.valid_from <= now,
+            or_(OwnershipAssignment.valid_to.is_(None), OwnershipAssignment.valid_to > now),
+        )
+    )
+    holders: dict[str, list[str]] = {}
+    about: dict[str, str] = {}
+    for rid, criticality, description, role, name in rows.all():
+        holders.setdefault(str(rid), []).append(f"{role} {name}")
+        about[str(rid)] = f"Criticality {criticality}. {description or ''}".strip()
+    return {
+        rid: f"{about[rid]} Current holders: {', '.join(names)}." for rid, names in holders.items()
+    }
 
 
 async def _knowledge_bodies(
