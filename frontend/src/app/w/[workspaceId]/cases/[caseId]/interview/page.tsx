@@ -11,6 +11,7 @@ import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 import type { QuestionView } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { VoiceTextarea } from "@/components/voice-textarea";
 
 import {
   answerQuestionAction,
@@ -73,7 +74,8 @@ function QuestionCard({
             {q.status === "open" ? "Answer" : "Change answer"}
           </summary>
           <ActionForm action={answerAction} className="mt-2">
-            <textarea
+            <VoiceTextarea
+              speak={q.question}
               name="answer"
               defaultValue={q.answer ?? ""}
               rows={3}

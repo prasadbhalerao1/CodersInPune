@@ -140,7 +140,10 @@ async def disconnect(access: WorkspaceAccess) -> None:
 
 def meeting_message(m: meetings.MeetingDetail, link: str) -> dict[str, Any]:
     """Slack Block Kit message: the meeting's items (not the transcript), with a link back."""
-    shown = [i for i in m.items if i.status != "dismissed"]
+    order = list(KIND_ICON)
+    shown = sorted(
+        (i for i in m.items if i.status != "dismissed"), key=lambda i: order.index(i.kind)
+    )
     lines = []
     for item in shown[:25]:
         extra = ", ".join(
