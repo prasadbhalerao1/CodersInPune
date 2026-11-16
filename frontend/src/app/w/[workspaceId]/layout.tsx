@@ -7,16 +7,31 @@ import { SampleBanner } from "@/components/sample-banner";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { TourRunner } from "@/components/tour";
 import { WorkspaceContextBridge } from "@/components/workspace-context";
-import { api } from "@/lib/relay-api";
+import { api, RelayApiError } from "@/lib/relay-api";
 import type { WorkspaceRole } from "@/lib/types";
+
+/**
+ * API errors leave the chrome out (the page below shows them, with a retry). Server errors are
+ * logged so they are not silent; anything that isn't an API error is a bug and reaches error.tsx.
+ */
+async function optional<T>(request: Promise<T>): Promise<T | null> {
+  try {
+    return await request;
+  } catch (error) {
+    if (!(error instanceof RelayApiError)) throw error;
+    if (error.status >= 500)
+      console.error("workspace chrome unavailable:", error.status, error.code);
+    return null;
+  }
+}
 
 async function WorkspaceChrome({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
   // Not attempt(): its notFound() would escape this segment's not-found page from a
   // layout. Chrome is optional; the page itself explains a missing or forbidden workspace.
   const [workspace, sample] = await Promise.all([
-    api.getWorkspace(workspaceId).catch(() => null),
-    api.demoRole(workspaceId).catch(() => null),
+    optional(api.getWorkspace(workspaceId)),
+    optional(api.demoRole(workspaceId)),
   ]);
   if (!workspace) return null;
   const { name, role, deletion_scheduled_for: deletionAt } = workspace;
