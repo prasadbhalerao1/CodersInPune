@@ -289,3 +289,17 @@ async def test_admins_can_send_a_test_email_to_themselves_only(
     assert (failed["sent"], failed["error"]) == (False, "rejected_422_validation_error")
 
     await Ws(api, ws.id, "user_member").call("POST", "/email/test", 403)
+
+
+def test_every_email_names_the_team() -> None:
+    from relay.notifications import email_templates
+
+    mail = email_templates.render(
+        "invitation",
+        workspace="Acme",
+        url="https://relay.example/invitations",
+        preferences_url="https://relay.example/settings",
+        actor="Maya",
+    )
+    assert "Team Midnight Ciphers" in mail.html
+    assert mail.text.endswith("Relay, built by Team Midnight Ciphers")

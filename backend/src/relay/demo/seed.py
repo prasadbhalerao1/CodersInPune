@@ -32,7 +32,7 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import procrastinate
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from relay.catalog import assets as catalog_assets
@@ -43,6 +43,7 @@ from relay.config import Settings
 from relay.continuity import service as cases
 from relay.continuity import workflow
 from relay.directory import service as directory
+from relay.directory.models import Person
 from relay.identity.models import Membership, UserAccount
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workos_api import WorkOSClient, WorkOSUser
@@ -833,8 +834,9 @@ async def seed_judges(spec: str) -> uuid.UUID:
                 idempotency_key=f"judges-{users['owner'].id}",
                 name=JUDGES_NAME,
             )
-        # Each role account *is* that role's sample person (its membership carries the person's
-        # directory email), so its My Work, handovers and "Accept ownership" are real.
+        # Each role account *is* that role's sample person: the person's directory email becomes
+        # the account's email, so its My Work and "Accept ownership" are real, while the
+        # membership keeps the account's own address, so Relay's emails reach whoever signed in.
         personas: dict[str, str] = {}
         for name_role, name in MEMBERS.values():
             personas.setdefault(name_role, name)
@@ -842,7 +844,8 @@ async def seed_judges(spec: str) -> uuid.UUID:
             if role == "owner":
                 continue
             persona = personas.get(role)
-            email = f"{persona.split()[0].lower()}@{DOMAIN}" if persona else user.email
+            persona_email = f"{persona.split()[0].lower()}@{DOMAIN}" if persona else None
+            email = user.email
             display = f"{persona} (sample account)" if persona else user.email.split("@")[0]
             async with unit_of_work(factory, ws.id, user.id) as session:
                 user_id = (
@@ -871,6 +874,12 @@ async def seed_judges(spec: str) -> uuid.UUID:
                         set_={"role": role, "email": email, "display_name": display},
                     )
                 )
+                if persona_email:
+                    await session.execute(
+                        update(Person)
+                        .where(func.lower(Person.email) == persona_email)
+                        .values(email=email)
+                    )
         return ws.id
     finally:
         await engine.dispose()

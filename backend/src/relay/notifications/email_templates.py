@@ -19,6 +19,11 @@ class Rendered:
     text: str
 
 
+# Every email says who built Relay (header and sign-off).
+TEAM = "Team Midnight Ciphers"
+SIGN_OFF = f"Relay, built by {TEAM}"
+
+
 def _layout(
     *, preview: str, heading: str, lines: list[str], cta: str, url: str, footer: str
 ) -> str:
@@ -34,18 +39,18 @@ def _layout(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e4e4e7;border-radius:10px">
-<tr><td style="padding:20px 28px;border-bottom:1px solid #f4f4f5;font-size:14px;font-weight:600;color:#18181b;letter-spacing:-0.01em">Relay</td></tr>
+<tr><td style="padding:20px 28px;border-bottom:1px solid #f4f4f5;font-size:14px;font-weight:600;color:#18181b;letter-spacing:-0.01em">Relay <span style="font-weight:400;color:#71717a">· by {TEAM}</span></td></tr>
 <tr><td style="padding:24px 28px 8px">
 <h1 style="margin:0 0 14px;font-size:17px;line-height:24px;font-weight:600;color:#18181b">{escape(heading)}</h1>
 {body}
 <p style="margin:20px 0 8px"><a href="{escape(url, quote=True)}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:500;padding:9px 16px;border-radius:7px">{escape(cta)}</a></p>
 </td></tr>
-<tr><td style="padding:16px 28px 22px;font-size:12px;line-height:18px;color:#71717a">{escape(footer)}</td></tr>
+<tr><td style="padding:16px 28px 22px;font-size:12px;line-height:18px;color:#71717a">{escape(footer)}<br>{escape(SIGN_OFF)}</td></tr>
 </table></td></tr></table></body></html>"""
 
 
 def _text(heading: str, lines: list[str], cta: str, url: str, footer: str) -> str:
-    return "\n\n".join([heading, *lines, f"{cta}: {url}", footer])
+    return "\n\n".join([heading, *lines, f"{cta}: {url}", footer, SIGN_OFF])
 
 
 def render(
