@@ -1,6 +1,6 @@
 # Relay: guide for judges
 
-**Live product:** <https://relay-continuity-nine.vercel.app> · **Ten-minute walkthrough:**
+**Live product:** <https://midnight-ciphers.cv> · **Ten-minute walkthrough:**
 [README → For judges](../../README.md#for-judges) · **Everything else:** [docs index](../README.md)
 
 ## Real product, sample accounts for speed

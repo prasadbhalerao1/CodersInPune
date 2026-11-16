@@ -8,7 +8,7 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 
 | | |
 |---|---|
-| **Live product** | <https://relay-continuity-nine.vercel.app> (the home page has one-click sign-in for judges) |
+| **Live product** | <https://midnight-ciphers.cv> (the home page has one-click sign-in for judges) |
 | **Final product document (PDF, 11 pages)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): the three improvements, everything beyond them, architecture, design decisions, testing and roadmap |
 | **Complete reference (PDF)** | [Documentation/Relay_Complete_Documentation.pdf](Documentation/Relay_Complete_Documentation.pdf): the specification, every API endpoint and data model, decision records, the product guide and every screen |
 | **Ten-minute walkthrough** | [For judges](#for-judges), below |
@@ -25,7 +25,7 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 
 ## For judges
 
-**Live product:** <https://relay-continuity-nine.vercel.app> · **No setup needed.** Every step
+**Live product:** <https://midnight-ciphers.cv> · **No setup needed.** Every step
 below starts from that link and only uses buttons you can see. Allow about ten minutes.
 
 > The API runs on a free server that sleeps when idle: the first page after a quiet period
@@ -33,7 +33,7 @@ below starts from that link and only uses buttons you can see. Allow about ten m
 
 ### 1. Get in (1 minute)
 
-1. Open <https://relay-continuity-nine.vercel.app> and click **Go to your workspaces**.
+1. Open <https://midnight-ciphers.cv> and click **Go to your workspaces**.
 2. Sign in with any email address. WorkOS emails you a one-time code; Relay never sees a
    password.
 3. On **Workspaces**, click **Create sample workspace**. In a few seconds you are inside
@@ -86,7 +86,7 @@ switches *your own* role in the sample, so you see exactly what that role can an
 | Delete the workspace | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 Enforced in every backend service and by database row-level security, not just hidden in the
-UI. The same table is on [/docs#roles](https://relay-continuity-nine.vercel.app/docs#roles),
+UI. The same table is on [/docs#roles](https://midnight-ciphers.cv/docs#roles),
 checked against the permission registry by a test.
 
 **Look for:** the Overview leads with *A handover is waiting for you*, a continuity-health

@@ -1,6 +1,6 @@
 # Relay walkthrough: script to read while screen recording
 
-Record your main screen (Windows: Win+Alt+R with Xbox Game Bar, or OBS). Start at https://relay-continuity-nine.vercel.app and click through each chapter in order. Read the text while doing what it describes. About 20-25 minutes.
+Record your main screen (Windows: Win+Alt+R with Xbox Game Bar, or OBS). Start at https://midnight-ciphers.cv and click through each chapter in order. Read the text while doing what it describes. About 20-25 minutes.
 
 ## 1. Relay
 

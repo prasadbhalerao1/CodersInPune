@@ -2,7 +2,7 @@
 
 > Relay is an organisational continuity platform. It records who is accountable for what (people and teams, primary owners and backups, any kind of work), rebuilds the context behind that work from GitHub, Linear and Notion with cited evidence, forecasts what an absence would break, and moves ownership through reviewed, audited handovers. The database is the source of truth; AI only proposes evidence-backed drafts and answers, and never changes ownership, approvals or source records.
 
-The live product is at https://relay-continuity-nine.vercel.app. It is a working multi-tenant SaaS: real WorkOS sign-in, real GitHub, Linear, Notion and Slack connections, and Postgres with row-level security. A pre-seeded sample organisation (and one shared account per role for judges) exists only so evaluators can see every feature and edge case without connecting their own tools; a workspace connected to real tools uses exactly the same code paths. Source code and documentation: https://github.com/prasadbhalerao1/CodersInPune
+The live product is at https://midnight-ciphers.cv. It is a working multi-tenant SaaS: real WorkOS sign-in, real GitHub, Linear, Notion and Slack connections, and Postgres with row-level security. A pre-seeded sample organisation (and one shared account per role for judges) exists only so evaluators can see every feature and edge case without connecting their own tools; a workspace connected to real tools uses exactly the same code paths. Source code and documentation: https://github.com/prasadbhalerao1/CodersInPune
 
 ## Product
 
@@ -10,7 +10,7 @@ The live product is at https://relay-continuity-nine.vercel.app. It is a working
 - [README and ten-minute walkthrough](https://github.com/prasadbhalerao1/CodersInPune/blob/main/README.md): what to click on the live product
 - [Project overview](https://github.com/prasadbhalerao1/CodersInPune/blob/main/Documentation/1-start-here/project-overview.md): capabilities, architecture, AI evaluation, operations
 - [Competitive analysis](https://github.com/prasadbhalerao1/CodersInPune/blob/main/Documentation/1-start-here/competitive-analysis.md): service catalogues, knowledge tools, offboarding and incident tools compared, with sources
-- [Product guide](https://relay-continuity-nine.vercel.app/docs): every feature and every number, with its exact formula and the code that computes it; full text at [/llms-full.txt](https://relay-continuity-nine.vercel.app/llms-full.txt)
+- [Product guide](https://midnight-ciphers.cv/docs): every feature and every number, with its exact formula and the code that computes it; full text at [/llms-full.txt](https://midnight-ciphers.cv/llms-full.txt)
 - [Submission pack](https://github.com/prasadbhalerao1/CodersInPune/blob/main/Documentation/2-round3-improvements/submission-summary.md): workflow traceability, feature inventory, quality scorecard
 - [Round 3 improvements delivered](https://github.com/prasadbhalerao1/CodersInPune/blob/main/Documentation/2-round3-improvements/2-what-we-delivered.md): AI Handover Copilot, What If? simulator and Project Memory Replay, mapped to code and tests
 

@@ -1,6 +1,6 @@
 # Relay documentation
 
-**Short on time?** Read the [final product PDF](Relay_Final_Product.pdf) (11 pages), or open the [live product](https://relay-continuity-nine.vercel.app) and follow the
+**Short on time?** Read the [final product PDF](Relay_Final_Product.pdf) (11 pages), or open the [live product](https://midnight-ciphers.cv) and follow the
 [ten-minute walkthrough](../README.md#for-judges).
 
 Otherwise, the folders are numbered in reading order.
