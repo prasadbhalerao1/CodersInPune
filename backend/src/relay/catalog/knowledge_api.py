@@ -4,6 +4,7 @@ from typing import Literal
 from fastapi import APIRouter, status
 from fastapi.responses import PlainTextResponse
 
+from relay.catalog import drift
 from relay.catalog import knowledge as svc
 from relay.catalog import knowledge_governance as gov
 from relay.identity.workspace_access import CurrentWorkspace
@@ -110,3 +111,11 @@ async def export_case(access: CurrentWorkspace, case_id: uuid.UUID) -> str:
 @router.get("/knowledge/{item_id}")
 async def get_knowledge(access: CurrentWorkspace, item_id: uuid.UUID) -> svc.KnowledgeView:
     return await svc.get_knowledge(access, item_id)
+
+
+@router.get("/knowledge-drift")
+async def code_drift(
+    access: CurrentWorkspace, responsibility_id: uuid.UUID | None = None
+) -> list[drift.DriftItem]:
+    """Knowledge that may be outdated: its code changed after it was last reviewed."""
+    return await drift.code_drift(access, responsibility_id)

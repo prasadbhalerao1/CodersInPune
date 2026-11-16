@@ -2004,3 +2004,14 @@ export type SlackStatus = {
   can_manage: boolean;
   available: boolean;
 };
+
+export type DriftItem = {
+  knowledge_id: string;
+  title: string;
+  kind: string;
+  responsibility_id: string;
+  responsibility_name: string;
+  checked_at: string;
+  merged_since: number;
+  latest: { title: string; number: number; repository: string; url: string; merged_at: string }[];
+};

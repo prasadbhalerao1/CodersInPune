@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { inputClass } from "@/components/action-form";
+import { CodeDrift } from "@/components/code-drift";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { EmptyState, PageHeader, Section } from "@/components/page";
 import { CriticalityBadge } from "@/components/ui/badge";
@@ -23,10 +24,11 @@ export default async function KnowledgePage({
   const freshness = query.freshness === "stale" ? "stale" : undefined;
   const adding = query.add === "1";
   const target = typeof query.responsibility === "string" ? query.responsibility : undefined;
-  const [overview, workspace, responsibilities] = await Promise.all([
+  const [overview, workspace, responsibilities, drift] = await Promise.all([
     attempt(api.knowledge(workspaceId, { q, freshness })),
     attempt(api.getWorkspace(workspaceId)),
     adding ? attempt(api.listResponsibilities(workspaceId)) : null,
+    attempt(api.codeDrift(workspaceId)),
   ]);
   if (!overview.ok) return <ApiErrorNotice error={overview.error} />;
   if (!workspace.ok) return <ApiErrorNotice error={workspace.error} />;
@@ -39,6 +41,7 @@ export default async function KnowledgePage({
       <PageHeader title="Knowledge" />
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-4">
+          {drift.ok ? <CodeDrift items={drift.data} workspaceId={workspaceId} /> : null}
           {adding && canWrite ? (
             <Section
               title="Add knowledge"

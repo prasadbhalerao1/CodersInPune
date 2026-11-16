@@ -216,6 +216,20 @@ export const EXPLAIN = {
     reading: "Add the steps you agree with to the case's tasks; they get the phase's due date.",
     source: "backend/src/relay/continuity/plan.py",
   },
+  code_drift: {
+    title: "Code changed since review",
+    summary:
+      "Knowledge that may be outdated because the code behind it changed after someone last checked it.",
+    formula:
+      "A knowledge item is flagged when a pull request was merged into a GitHub repository linked to the same responsibility after the item's last review (or, if never reviewed, after it was last edited). The count is the number of such merges; the newest three are listed as evidence.",
+    inputs: [
+      "Active knowledge items and when they were last reviewed",
+      "Merged pull requests in repositories linked to the responsibility (only those you may see)",
+    ],
+    reading:
+      "Open the item, check it against the merged changes, then mark it reviewed or edit it.",
+    source: "backend/src/relay/catalog/drift.py",
+  },
   ask_relay: {
     title: "Ask Relay",
     summary:

@@ -131,3 +131,15 @@ async def test_sample_powers_the_round_three_features(api: Api) -> None:
     # Work in a responsibility the backup now covers is no longer stalled.
     assert {w["source"] for w in covered["open_work_without_cover"]} == {"Relay task"}
     assert covered["readiness_score"] > alone["readiness_score"]
+
+
+async def test_sample_shows_code_drift_on_the_old_runbook(api: Api) -> None:
+    created = await api.client.post(
+        "/workspaces/sample", headers={**api.as_user(OWNER), "Idempotency-Key": "drift-sample-01"}
+    )
+    workspace = created.json()["id"]
+    drift = (
+        await api.client.get(f"/workspaces/{workspace}/knowledge-drift", headers=api.as_user(OWNER))
+    ).json()
+    assert [d["title"] for d in drift] == ["Deploy payments-api (old runbook)"]
+    assert drift[0]["merged_since"] > 0

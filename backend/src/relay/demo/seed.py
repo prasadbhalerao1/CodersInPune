@@ -752,3 +752,10 @@ async def _meetings(
         actions = [i for i in made.items if i.kind == "action"]
         for item in [*decisions[:1], *actions[:1]]:
             await meetings.review_item(access, item.id, True, jobs)
+    # The old runbook was last checked months ago; merges since then flag it as code drift.
+    long_ago = NOW - timedelta(days=200)
+    await access.session.execute(
+        update(KnowledgeItem)
+        .where(KnowledgeItem.title == "Deploy payments-api (old runbook)")
+        .values(updated_at=long_ago, last_reviewed_at=long_ago)
+    )
