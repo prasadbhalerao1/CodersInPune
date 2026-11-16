@@ -131,6 +131,7 @@ export default async function MyWorkPage({
       mentions.length +
       reviews.length +
       work.data.handovers.length +
+      work.data.to_accept.length +
       asked.length +
       toReview.length ===
     0;
@@ -143,6 +144,34 @@ export default async function MyWorkPage({
       />
       <div className="flex flex-col gap-6 p-6">
         <HandoverBanner workspaceId={workspaceId} handovers={work.data.handovers} />
+        {work.data.to_accept.length > 0 ? (
+          <section
+            aria-label="Work to accept"
+            className="rounded-lg border border-emerald-600/25 bg-emerald-50/60 dark:bg-emerald-950/20"
+          >
+            <p className="px-4 pt-3 text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+              You are named as the incoming owner: accept to confirm you are taking this on
+            </p>
+            <ul className="divide-y divide-emerald-600/10">
+              {work.data.to_accept.map((a) => (
+                <li key={`${a.case_id}-${a.responsibility_id}`}>
+                  <Link
+                    href={`${base}/cases/${a.case_id}`}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{a.responsibility_name}</span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {a.case_title}
+                      </span>
+                    </span>
+                    <span className="text-primary shrink-0 text-xs font-medium">Review and accept</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {empty ? (
           <EmptyState
             title="You're all caught up"

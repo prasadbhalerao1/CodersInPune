@@ -379,6 +379,15 @@ class HandoverForMe(BaseModel):
     updated_at: datetime
 
 
+class AcceptanceForMe(BaseModel):
+    """Work I am named to take over and have not accepted yet, on a case still open."""
+
+    case_id: uuid.UUID
+    case_title: str
+    responsibility_id: uuid.UUID
+    responsibility_name: str
+
+
 class MyWorkView(BaseModel):
     emergencies: list[CaseSummary]
     tasks: list[TaskView]
@@ -390,3 +399,4 @@ class MyWorkView(BaseModel):
     needs_input: list[TaskView] = []
     completed: list[TaskView] = []
     handovers: list[HandoverForMe] = []
+    to_accept: list[AcceptanceForMe] = []

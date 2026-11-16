@@ -464,6 +464,8 @@ async def test_incoming_owner_accepts_and_completion_waits_for_it(api: Api, ws: 
     assert not seen["scope"][0]["can_record_acceptance"]  # their own: they accept directly
     coordinator = await ws.call("GET", f"/cases/{cid}")
     assert coordinator["scope"][0]["can_record_acceptance"]
+    waiting = (await member.call("GET", "/my-work"))["to_accept"]
+    assert [w["responsibility_name"] for w in waiting] == ["Billing"]
     assert not coordinator["scope"][0]["can_accept"]
     accepted = await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
     first = accepted["scope"][0]["accepted_at"]
@@ -471,6 +473,7 @@ async def test_incoming_owner_accepts_and_completion_waits_for_it(api: Api, ws: 
     assert not accepted["scope"][0]["can_accept"]
     again = await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
     assert again["scope"][0]["accepted_at"] == first
+    assert (await member.call("GET", "/my-work"))["to_accept"] == []
     assert not (await ws.call("GET", f"/cases/{cid}"))["scope"][0]["can_record_acceptance"]
 
     # Completion waits for open tasks.

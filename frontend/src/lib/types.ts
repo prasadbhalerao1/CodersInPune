@@ -574,8 +574,16 @@ export type HandoverForMe = {
   version: number;
   updated_at: string;
 };
+export type AcceptanceForMe = {
+  case_id: string;
+  case_title: string;
+  responsibility_id: string;
+  responsibility_name: string;
+};
+
 export type MyWorkView = {
   handovers: HandoverForMe[];
+  to_accept: AcceptanceForMe[];
   emergencies: CaseSummary[];
   tasks: TaskView[];
   approvals: CaseSummary[];

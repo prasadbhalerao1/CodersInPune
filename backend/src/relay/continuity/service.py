@@ -56,6 +56,9 @@ from relay.continuity.schemas import (
     OPEN as OPEN,
 )
 from relay.continuity.schemas import (
+    AcceptanceForMe as AcceptanceForMe,
+)
+from relay.continuity.schemas import (
     ApprovalView as ApprovalView,
 )
 from relay.continuity.schemas import (
@@ -1827,6 +1830,7 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
     stale += [k for k in await knowledge.stewarded_for_review(access) if k.id not in seen]
     return MyWorkView(
         handovers=await _handovers_for_me(access),
+        to_accept=await _to_accept(access),
         emergencies=await _summaries(access, emergencies),
         tasks=await task_views(access, tasks, names, case_titles=titles),
         needs_input=await task_views(access, [t for t, _ in asked], names, case_titles=titles),
@@ -1854,6 +1858,36 @@ async def my_work(access: WorkspaceAccess) -> MyWorkView:
             for k in stale[:20]
         ],
     )
+
+
+async def _to_accept(access: WorkspaceAccess) -> list[AcceptanceForMe]:
+    """Scope items naming me as the incoming owner that still wait for my acceptance."""
+    people = await my_person_ids(access)
+    if not people:
+        return []
+    rows = await access.session.execute(
+        select(CaseScopeItem, ContinuityCase.title, Responsibility.name)
+        .join(ContinuityCase, ContinuityCase.id == CaseScopeItem.case_id)
+        .join(Responsibility, Responsibility.id == CaseScopeItem.responsibility_id)
+        .where(
+            visible(access, Permission.CASE_READ, ContinuityCase.tenant_id),
+            visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id),
+            CaseScopeItem.recipient_person_id.in_(people),
+            CaseScopeItem.accepted_at.is_(None),
+            ContinuityCase.status.in_(OPEN),
+        )
+        .order_by(ContinuityCase.created_at, Responsibility.name)
+        .limit(20)
+    )
+    return [
+        AcceptanceForMe(
+            case_id=item.case_id,
+            case_title=title,
+            responsibility_id=item.responsibility_id,
+            responsibility_name=name,
+        )
+        for item, title, name in rows
+    ]
 
 
 async def _handovers_for_me(access: WorkspaceAccess) -> list[HandoverForMe]:
