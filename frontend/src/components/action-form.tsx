@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,12 @@ import type { ActionState } from "@/lib/action-state";
 
 export const inputClass =
   "border-input bg-background focus-visible:ring-ring/40 h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-3 disabled:opacity-60";
+
+function newKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export function ActionForm({
   action,
@@ -22,7 +28,17 @@ export function ActionForm({
   /** Lets inputs elsewhere on the page join this form via their `form` attribute. */
   id?: string;
 }) {
-  const [state, formAction] = useActionState(action, {});
+  // One key per submission intent, made at the first submit (not at render, so server and
+  // client markup match): a double click or a retry after an error reuses it, so the API
+  // creates nothing twice. It is dropped once a submission succeeds.
+  const key = useRef<string | null>(null);
+  const [state, formAction] = useActionState(async (prev: ActionState, fd: FormData) => {
+    key.current ??= newKey();
+    fd.set("idempotency_key", key.current);
+    const result = await action(prev, fd);
+    if (!result.error) key.current = null;
+    return result;
+  }, {});
   return (
     <form id={id} action={formAction} className={cn("flex flex-col gap-3", className)}>
       {children}

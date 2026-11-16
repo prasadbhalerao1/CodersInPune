@@ -18,6 +18,7 @@ from relay.intelligence import (
 )
 from relay.intelligence import service as svc
 from relay.jobs.outbox import Jobs
+from relay.shared import idempotency
 from relay.shared.rate_limit import rate_limit
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["intelligence"])
@@ -304,9 +305,17 @@ async def list_meetings(access: CurrentWorkspace) -> list[meetings.MeetingSummar
 
 @router.post("/meetings", status_code=201, dependencies=[rate_limit("ai_run", 20, 600)])
 async def create_meeting(
-    access: CurrentWorkspace, body: meetings.MeetingIn, request: Request
+    access: CurrentWorkspace,
+    body: meetings.MeetingIn,
+    request: Request,
+    key: idempotency.OptionalIdempotencyKey = None,
 ) -> meetings.MeetingDetail:
-    return await meetings.create_meeting(access, body, request.app.state.settings)
+    payload = body.model_dump(mode="json")
+    if done := await idempotency.claim(access, key, "meetings.create", payload):
+        return await meetings.get_meeting(access, done)
+    created = await meetings.create_meeting(access, body, request.app.state.settings)
+    await idempotency.remember(access, key, created.id)
+    return created
 
 
 @router.get("/meetings/{meeting_id}")

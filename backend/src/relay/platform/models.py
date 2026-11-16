@@ -93,3 +93,26 @@ class RateLimitWindow(Base):
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     hits: Mapped[int]
+
+
+class RequestKey(Base):
+    """Idempotency record for creates: one resource per (workspace, Idempotency-Key).
+
+    Written in the same transaction as the resource, so a failed request leaves nothing and
+    can be retried with the same key; a repeated success returns the first result.
+    """
+
+    __tablename__ = "request_key"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "key"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=_UUIDV7)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("platform.tenant.id"))
+    key: Mapped[str] = mapped_column(Text)
+    scope: Mapped[str] = mapped_column(Text)  # which operation, e.g. "cases.create"
+    request_hash: Mapped[str] = mapped_column(Text)
+    resource_id: Mapped[uuid.UUID | None]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

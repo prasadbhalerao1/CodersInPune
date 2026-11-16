@@ -1,9 +1,10 @@
 "use server";
 
+import { idempotencyKey, type ActionState } from "@/lib/action-state";
+
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { ActionState } from "@/lib/action-state";
 import { api, RelayApiError } from "@/lib/relay-api";
 
 // Every action re-validates input server-side and relies on the API for authorization;
@@ -59,13 +60,19 @@ export async function createResponsibilityAction(
 ): Promise<ActionState> {
   let id = "";
   const result = await mutate(workspaceId, async () => {
-    const created = await api.send<{ id: string }>(workspaceId, "POST", "/responsibilities", {
-      name: text(fd, "name"),
-      description: optional(fd, "description"),
-      category: optional(fd, "category"),
-      criticality: text(fd, "criticality") || "standard",
-      ...stewardshipFields(fd),
-    });
+    const created = await api.send<{ id: string }>(
+      workspaceId,
+      "POST",
+      "/responsibilities",
+      {
+        name: text(fd, "name"),
+        description: optional(fd, "description"),
+        category: optional(fd, "category"),
+        criticality: text(fd, "criticality") || "standard",
+        ...stewardshipFields(fd),
+      },
+      idempotencyKey(fd),
+    );
     id = created.id;
   });
   if (result.error) return result;

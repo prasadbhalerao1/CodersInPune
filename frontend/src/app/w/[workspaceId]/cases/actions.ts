@@ -1,9 +1,10 @@
 "use server";
 
+import { idempotencyKey, type ActionState } from "@/lib/action-state";
+
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { ActionState } from "@/lib/action-state";
 import { api, RelayApiError } from "@/lib/relay-api";
 import type { CaseStatus, CaseType, SavedPage } from "@/lib/types";
 
@@ -35,21 +36,27 @@ export async function createCaseAction(
 ): Promise<ActionState> {
   let id = "";
   const result = await mutate(workspaceId, async () => {
-    const created = await api.send<{ id: string }>(workspaceId, "POST", "/cases", {
-      case_type: caseType,
-      title: text(fd, "title"),
-      reason: optional(fd, "reason"),
-      affected_person_id: optional(fd, "affected_person_id"),
-      starts_at: optional(fd, "starts_at") ?? new Date().toISOString(),
-      ends_at: caseType === "coverage" ? optional(fd, "ends_at") : undefined,
-      priority: optional(fd, "priority"),
-      due_at: optional(fd, "due_at"),
-      time_zone: optional(fd, "time_zone"),
-      accountable_manager_user_id: optional(fd, "accountable_manager_user_id"),
-      approval_due_at: optional(fd, "approval_due_at"),
-      project_asset_id: optional(fd, "project_asset_id"),
-      duplicate_override_reason: optional(fd, "duplicate_override_reason"),
-    });
+    const created = await api.send<{ id: string }>(
+      workspaceId,
+      "POST",
+      "/cases",
+      {
+        case_type: caseType,
+        title: text(fd, "title"),
+        reason: optional(fd, "reason"),
+        affected_person_id: optional(fd, "affected_person_id"),
+        starts_at: optional(fd, "starts_at") ?? new Date().toISOString(),
+        ends_at: caseType === "coverage" ? optional(fd, "ends_at") : undefined,
+        priority: optional(fd, "priority"),
+        due_at: optional(fd, "due_at"),
+        time_zone: optional(fd, "time_zone"),
+        accountable_manager_user_id: optional(fd, "accountable_manager_user_id"),
+        approval_due_at: optional(fd, "approval_due_at"),
+        project_asset_id: optional(fd, "project_asset_id"),
+        duplicate_override_reason: optional(fd, "duplicate_override_reason"),
+      },
+      idempotencyKey(fd),
+    );
     id = created.id;
   });
   if (result.error) return result;
@@ -152,6 +159,16 @@ export async function resolveBlockerAction(
     api.send(workspaceId, "POST", casePath(caseId, `/blockers/${blockerId}/resolve`), {
       resolution,
     }),
+  );
+}
+
+export async function acceptScopeAction(
+  workspaceId: string,
+  caseId: string,
+  itemId: string,
+): Promise<ActionState> {
+  return mutate(workspaceId, () =>
+    api.send(workspaceId, "POST", casePath(caseId, `/scope/${itemId}/accept`), {}),
   );
 }
 
@@ -314,14 +331,20 @@ export async function addTaskAction(
   fd: FormData,
 ): Promise<ActionState> {
   return mutate(workspaceId, () =>
-    api.send(workspaceId, "POST", casePath(caseId, "/tasks"), {
-      title: text(fd, "title"),
-      ...assignee(fd),
-      due_at: optional(fd, "due_at"),
-      scope_item_id: optional(fd, "scope_item_id"),
-      priority: optional(fd, "priority"),
-      depends_on: fd.getAll("depends_on").map(String).filter(Boolean),
-    }),
+    api.send(
+      workspaceId,
+      "POST",
+      casePath(caseId, "/tasks"),
+      {
+        title: text(fd, "title"),
+        ...assignee(fd),
+        due_at: optional(fd, "due_at"),
+        scope_item_id: optional(fd, "scope_item_id"),
+        priority: optional(fd, "priority"),
+        depends_on: fd.getAll("depends_on").map(String).filter(Boolean),
+      },
+      idempotencyKey(fd),
+    ),
   );
 }
 
@@ -477,10 +500,16 @@ export async function addCommentAction(
   const body = text(fd, "body");
   if (!body) return { error: "Write something first." };
   return mutate(workspaceId, () =>
-    api.send(workspaceId, "POST", casePath(caseId, "/comments"), {
-      body,
-      mention_user_ids: [...new Set(fd.getAll("mention_user_ids").map(String))],
-    }),
+    api.send(
+      workspaceId,
+      "POST",
+      casePath(caseId, "/comments"),
+      {
+        body,
+        mention_user_ids: [...new Set(fd.getAll("mention_user_ids").map(String))],
+      },
+      idempotencyKey(fd),
+    ),
   );
 }
 

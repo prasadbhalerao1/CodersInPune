@@ -7,7 +7,7 @@ from pydantic import AwareDatetime
 from relay.catalog import context, stewardship, timeline
 from relay.catalog import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
-from relay.shared import pagination
+from relay.shared import idempotency, pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/responsibilities", tags=["catalog"])
 Detail = svc.ResponsibilityDetail
@@ -61,8 +61,17 @@ async def create_type(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create(access: CurrentWorkspace, body: svc.ResponsibilityIn) -> Detail:
-    return await svc.create_responsibility(access, body)
+async def create(
+    access: CurrentWorkspace,
+    body: svc.ResponsibilityIn,
+    key: idempotency.OptionalIdempotencyKey = None,
+) -> Detail:
+    scope, payload = "responsibilities.create", body.model_dump(mode="json")
+    if done := await idempotency.claim(access, key, scope, payload):
+        return await svc.get_responsibility(access, done)
+    created = await svc.create_responsibility(access, body)
+    await idempotency.remember(access, key, created.id)
+    return created
 
 
 @router.get("/{responsibility_id}")

@@ -437,12 +437,20 @@ export const api = {
   codeDrift: (id: string) => relayFetch<DriftItem[]>(`${ws(id)}/knowledge-drift`),
   rehearsal: (id: string, capsuleId: string) =>
     relayFetch<{ drills: RehearsalDrill[] }>(`${ws(id)}/ai/capsules/${capsuleId}/rehearsal`),
-  demoRole: (id: string) => relayFetch<DemoRoleView>(`${ws(id)}/demo-role`),
+  demoRole: (id: string) => relayFetch<DemoRoleView>(`${ws(id)}/role-preview`),
   decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
-  send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
+  send: <T>(
+    id: string,
+    method: "POST" | "PATCH" | "PUT" | "DELETE",
+    path: string,
+    body?: object,
+    // From the form's `idempotency_key` field: a retried submission creates nothing twice.
+    idempotencyKey?: string | null,
+  ) =>
     relayFetch<T>(`${ws(id)}${path}`, {
       method,
       body: body === undefined ? undefined : JSON.stringify(body),
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
     }),
 };
 

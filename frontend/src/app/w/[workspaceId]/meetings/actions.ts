@@ -1,9 +1,10 @@
 "use server";
 
+import { idempotencyKey, type ActionState } from "@/lib/action-state";
+
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { ActionState } from "@/lib/action-state";
 import { api, RelayApiError } from "@/lib/relay-api";
 import type { MeetingDetail } from "@/lib/types";
 
@@ -17,13 +18,19 @@ export async function createMeetingAction(
   const date = text(fd, "held_at");
   let made: MeetingDetail;
   try {
-    made = await api.send<MeetingDetail>(workspaceId, "POST", "/meetings", {
-      title: text(fd, "title"),
-      transcript: text(fd, "transcript"),
-      held_at: date ? new Date(`${date}T10:00:00Z`).toISOString() : undefined,
-      responsibility_id: text(fd, "responsibility_id") || undefined,
-      case_id: text(fd, "case_id") || undefined,
-    });
+    made = await api.send<MeetingDetail>(
+      workspaceId,
+      "POST",
+      "/meetings",
+      {
+        title: text(fd, "title"),
+        transcript: text(fd, "transcript"),
+        held_at: date ? new Date(`${date}T10:00:00Z`).toISOString() : undefined,
+        responsibility_id: text(fd, "responsibility_id") || undefined,
+        case_id: text(fd, "case_id") || undefined,
+      },
+      idempotencyKey(fd),
+    );
   } catch (error) {
     if (error instanceof RelayApiError) return { error: error.message };
     throw error;
