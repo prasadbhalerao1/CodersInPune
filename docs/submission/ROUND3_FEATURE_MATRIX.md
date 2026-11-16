@@ -39,13 +39,13 @@ are under `backend/tests/`.
 | Commitment | What a judge can do | Key code | Tests |
 |---|---|---|---|
 | **AI Handover Copilot** | Open a handover brief: cited sections, evidence strength, "Who to ask", omissions, version history. Ask the Copilot (streamed, stoppable, saved per brief, with follow-up suggestions); it answers "not in the evidence" when it can't cite. Approve, acknowledge, rehearse. | `intelligence/capsules.py`, `copilot.py`, `rehearsal.py` | `intelligence/test_copilot.py`, `test_handover.py`, `test_brief_strength.py`, `test_rehearsal.py` |
-| **What If? Continuity Simulator** | Pick a person and a duration; see affected responsibilities, coverage before and after, single-person dependencies and recommended actions; compare candidate backups side by side; download the report; open a pre-filled case. | `continuity/simulation.py` | `test_simulation.py` (asserts no writes) |
-| **Project Memory Replay** | Replay a responsibility's history from GitHub, Linear, Notion and Relay: grouped events, filters (category, source, person, date range, major only), search, play and pause, evidence per event, gaps flagged, AI narrative kept separate from recorded facts. | `catalog/timeline.py`, `intelligence/memory.py` | `intelligence/test_memory_replay.py` |
+| **What If? Continuity Simulator** | Pick a person and a duration; see affected responsibilities, coverage before and after, single-person dependencies and recommended actions; compare candidate backups side by side; pin up to three scenarios and compare them; download the report; open a pre-filled case. | `continuity/simulation.py` | `test_simulation.py` (asserts no writes) |
+| **Project Memory Replay** | Replay a responsibility's history from GitHub, Linear, Notion and Relay: grouped events, filters (category, source, person, date range, major only) kept in the URL so a view can be shared, search, play and pause, evidence per event, gaps flagged, AI narrative kept separate from recorded facts. | `catalog/timeline.py`, `intelligence/memory.py` | `intelligence/test_memory_replay.py` |
 
 ## Beyond the three (Round 3 additions)
 
 Handover Autopilot · meeting intelligence (decisions and actions become ADRs and tasks) ·
 Ask Relay (workspace Q&A with citations) · decision log · expertise map · 30/60/90 plan ·
 handover rehearsal · code drift on knowledge · Slack sharing · incoming-owner acceptance ·
-evidence strength and "Who to ask" on briefs · idempotent creates · incremental GitHub sync ·
+evidence strength and "Who to ask" on briefs · idempotent creates · incremental GitHub and Linear sync ·
 per-role judge accounts with one-click sign-in.

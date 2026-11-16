@@ -4,7 +4,7 @@ Results from the runs on 16 Nov 2026. Every number below is from an actual run.
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend: API, services, security, AI validation (real PostgreSQL as the restricted `relay_app` role) | `cd backend && uv run pytest` | **363 passed**, 2 skipped (opt-in live-model and load tests), 4 min 48 s |
+| Backend: API, services, security, AI validation (real PostgreSQL as the restricted `relay_app` role) | `cd backend && uv run pytest` | **365 passed**, 2 skipped (opt-in live-model and load tests), 7 min 16 s |
 | Backend static checks | `uv run ruff format --check . && uv run ruff check . && uv run mypy` | Clean (mypy strict, 234 files) |
 | Frontend static checks and build | `pnpm format:check && pnpm lint && pnpm typecheck && pnpm build` | Clean |
 | Accessibility (WCAG 2.2 AA, axe-core) | `pnpm exec playwright test --project=a11y` | `/` and `/docs`: no serious or critical issues |

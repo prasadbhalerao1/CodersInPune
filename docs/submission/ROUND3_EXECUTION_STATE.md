@@ -13,7 +13,13 @@ Last updated: 16 Nov 2026. Status values: **Verified** (tested and checked), **I
 | "Who to ask" from ownership records; Copilot follow-up suggestions | Implemented | Rendered on the brief page; uses existing tested data |
 | Memory Replay date-range filter | Implemented | Client-side filter alongside the existing tested filters |
 | Idempotent creates (cases, tasks, responsibilities, meetings) with one key per submission intent | Verified | `security/test_idempotency.py`; migration 0047 applied |
-| Incremental GitHub sync with checkpoint, overlap and daily reconcile | Verified | `test_sync_checkpoint.py`; migration 0048 applied |
+| Incremental GitHub and Linear sync with checkpoint, overlap and daily reconcile | Verified | `test_sync_checkpoint.py`; migrations 0048 and 0049 applied |
+| Idempotent creates extended to people, assets and knowledge | Verified | `security/test_idempotency.py` |
+| What If? pinned scenarios (up to three, compared side by side) | Implemented | Server-rendered from the existing tested simulation; nothing is written |
+| Memory Replay filters (including the date range) shareable by URL | Implemented | Client filters mirrored into the URL |
+| One shared action helper; case DTOs moved to `continuity/schemas.py` | Verified | Full suite passes unchanged |
+| Judge sign-in card with copyable credentials; one-click sign-in confirmed in production | Verified | `/sign-in?as=owner` redirects to `/workspaces` |
+| Interface polish: pointer cursors, animated dropdowns, landing figures never freeze | Implemented | Checked in the browser |
 | Connector health in one query; reconnect link | Verified | Integration health tests pass |
 | One sign-in route; one-click role accounts; no "demo" in any URL | Verified | Production `/sign-in?as=wizard` falls back to the hosted sign-in; role preview tests pass |
 | Judges' per-role accounts seeded in production | Verified | `Seed judges` workflow run, success |
@@ -23,17 +29,17 @@ Last updated: 16 Nov 2026. Status values: **Verified** (tested and checked), **I
 
 | Check | Result |
 |---|---|
-| `uv run pytest` | 363 passed, 2 skipped |
+| `uv run pytest` | 365 passed, 2 skipped |
 | `ruff`, `mypy` | Clean |
 | `pnpm format:check`, `lint`, `typecheck`, `build` | Clean |
-| `migrate.yml` (0046 to 0048) | Success |
+| `migrate.yml` (0046 to 0049) | Success |
 | Production smoke (100 signed-out GET routes) | No 5xx |
 
 ## Waiting on the owner
 
 | Item | Why |
 |---|---|
-| Click *Owner* in the home page's "Sign in as any role" once on production | Confirms one-click sign-in end to end (and that WorkOS Radar doesn't ask for a code) |
+| Create the read-only `relay_backup` role in Neon (three SQL lines in `.github/workflows/backup.yml`) | Needs the Neon project owner; the nightly backup then dumps through it |
 | Connect Slack in the production workspace | The webhook URL is a secret and is pasted by the owner |
 | Run the signed-in browser journeys (`pnpm e2e:login`, then the `round3` and `beyond` projects) | The saved test login has expired |
 | Rotate secrets after judging | Some passed through development chats |

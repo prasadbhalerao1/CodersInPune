@@ -8,7 +8,7 @@ the restricted `relay_app` role, so row-level security is exercised on every que
 
 | Suite | Where | Count | Result |
 |---|---|---:|---|
-| Backend (API, services, security, AI validation) | `backend/tests` | 363 (+2 opt-in) | All pass (2026-11-16, 4.8 min) |
+| Backend (API, services, security, AI validation) | `backend/tests` | 365 (+2 opt-in) | All pass (2026-11-16, 7.3 min) |
 | of which Round 3 features | `test_simulation.py`, `intelligence/test_memory_replay.py`, `intelligence/test_copilot.py`, `intelligence/test_handover.py`, `test_guidance.py`, `test_sample_workspace.py` | 45 | All pass |
 | New in Round 3 (Autopilot, meetings, decision log, Ask Relay, expertise, 30/60/90, rehearsal, view-as, code drift, Slack, role switching, read-only roles, empty workspace) | `intelligence/test_autopilot.py`, `test_meetings.py`, `test_ask.py`, `test_rehearsal.py`, `test_expertise.py`, `test_continuation_plan.py`, `test_code_drift.py`, `test_slack.py`, `test_sample_workspace.py`, `test_new_features_access.py`, `test_judges_seed.py` | 40 | All pass (2026-11-16) |
 | Handover lifecycle and reliability (acceptance, completion gate, idempotent creates, sync checkpoint, evidence strength) | `security/test_case_lifecycle.py`, `security/test_cases.py`, `security/test_idempotency.py`, `test_sync_checkpoint.py`, `intelligence/test_brief_strength.py` | 11 | All pass (2026-11-16) |
