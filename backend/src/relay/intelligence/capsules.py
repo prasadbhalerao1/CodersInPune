@@ -110,6 +110,8 @@ class CoverageItem(BaseModel):
 
 
 class CapsuleView(BaseModel):
+    # True when an editor is previewing the brief as a member recipient would see it.
+    preview_as_member: bool = False
     id: uuid.UUID
     case_id: uuid.UUID
     case_title: str
@@ -526,13 +528,21 @@ runs.STEP_KINDS[GENERATOR] = runs.StepKind(caps.CapsuleOutput, _store)
 
 
 async def view(
-    access: WorkspaceAccess, capsule_id: uuid.UUID, version: int | None = None
+    access: WorkspaceAccess,
+    capsule_id: uuid.UUID,
+    version: int | None = None,
+    *,
+    as_member: bool = False,
 ) -> CapsuleView:
-    """The capsule as this viewer may see it now."""
+    """The capsule as this viewer may see it now. `as_member` lets an editor preview it as
+    a member would see it: managers-only points and redactions hidden. It only narrows."""
     capsule = await _load(access, capsule_id)
     session = access.session
     v = await _version(session, capsule, version)
     editor = role_allows(access.role, Permission.AI_REVIEW)
+    preview = as_member and editor
+    if preview:
+        editor = False
     ids = {uuid.UUID(e) for s in v.sections for p in s["points"] for e in p["evidence_ids"]}
     evidence = await svc.current_evidence(access, await svc._evidence_rows(access, ids))
     redacted, hidden, withdrawn, changed = set(v.redactions), 0, 0, 0
@@ -545,7 +555,8 @@ async def view(
             if ev and not any(e.status == "active" for e in ev):
                 withdrawn += 1
                 continue
-            if not svc._allowed(access, "workspace", ev):
+            member_visible = all(e.audience == "workspace" for e in ev)
+            if not svc._allowed(access, "workspace", ev) or (preview and not member_visible):
                 hidden += 1
                 continue
             if p["key"] in redacted and not editor:
@@ -590,6 +601,7 @@ async def view(
     recipient = capsule.recipient_user_id == access.user_id
     latest = v.version == capsule.current_version
     return CapsuleView(
+        preview_as_member=preview,
         id=capsule.id,
         case_id=capsule.case_id,
         case_title=case.title,

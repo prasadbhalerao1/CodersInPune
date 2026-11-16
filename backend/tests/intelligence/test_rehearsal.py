@@ -57,3 +57,18 @@ async def test_drills_come_from_visible_evidence_and_grade_against_it(
         404,
         json={"drill_id": "0" * 16, "answer": "anything"},
     )
+
+
+async def test_editors_can_preview_a_brief_as_a_member_sees_it(
+    api: Api, script: list[Script]
+) -> None:
+    ws, member, capsule = await handover(api)
+    full = await ws.call("GET", f"/ai/capsules/{capsule}")
+    preview = await ws.call("GET", f"/ai/capsules/{capsule}?as_member=true")
+    assert (full["preview_as_member"], preview["preview_as_member"]) == (False, True)
+    count = lambda v: sum(len(s["points"]) for s in v["sections"])  # noqa: E731
+    assert count(preview) <= count(full)
+    assert "Vault recovery" not in str(preview)  # managers-only evidence stays out
+    # A member asking for a preview just gets their own view; the flag only narrows.
+    own = await member.call("GET", f"/ai/capsules/{capsule}?as_member=true")
+    assert own["preview_as_member"] is False

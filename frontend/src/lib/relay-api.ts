@@ -374,9 +374,12 @@ export const api = {
     relayFetch<InterviewView>(`${ws(id)}/cases/${caseId}/interview`),
   caseCapsules: (id: string, caseId: string) =>
     relayFetch<CapsuleSummary[]>(`${ws(id)}/cases/${caseId}/capsules`),
-  capsule: (id: string, capsuleId: string, version?: number) =>
+  capsule: (id: string, capsuleId: string, version?: number, asMember?: boolean) =>
     relayFetch<CapsuleView>(
-      withQuery(`${ws(id)}/ai/capsules/${capsuleId}`, { version: version?.toString() }),
+      withQuery(`${ws(id)}/ai/capsules/${capsuleId}`, {
+        version: version?.toString(),
+        as_member: asMember ? "true" : undefined,
+      }),
     ),
   guidance: (id: string) => relayFetch<GuidanceView>(`${ws(id)}/guidance`),
   updateGuidance: (id: string, body: GuidanceUpdate) =>

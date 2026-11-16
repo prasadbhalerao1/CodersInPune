@@ -155,9 +155,12 @@ async def generate_capsule(
 
 @router.get("/ai/capsules/{capsule_id}")
 async def capsule(
-    access: CurrentWorkspace, capsule_id: uuid.UUID, version: int | None = None
+    access: CurrentWorkspace,
+    capsule_id: uuid.UUID,
+    version: int | None = None,
+    as_member: bool = False,
 ) -> capsules.CapsuleView:
-    return await capsules.view(access, capsule_id, version)
+    return await capsules.view(access, capsule_id, version, as_member=as_member)
 
 
 @router.patch("/ai/capsules/{capsule_id}")

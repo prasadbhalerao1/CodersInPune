@@ -14,5 +14,5 @@ def test_accounts_parse_into_roles() -> None:
     "spec", ["", "admin:b@x.com", "wizard:a@x.com,owner:o@x.com", "owner:nope"]
 )
 def test_bad_account_lists_are_rejected(spec: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"role:email|owner"):
         parse_accounts(spec)

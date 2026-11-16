@@ -81,10 +81,11 @@ export default async function CapsulePage({
   const [{ workspaceId, caseId, capsuleId }, query] = await Promise.all([params, searchParams]);
   const requested = typeof query.version === "string" ? Number(query.version) : undefined;
   const version = requested && Number.isInteger(requested) ? requested : undefined;
+  const asMember = query.as === "member";
   const against = typeof query.compare === "string" ? Number(query.compare) : undefined;
   const compare = against && Number.isInteger(against) ? against : undefined;
   const [capsule, versions, questions, detail, rehearsal] = await Promise.all([
-    attempt(api.capsule(workspaceId, capsuleId, version)),
+    attempt(api.capsule(workspaceId, capsuleId, version, asMember)),
     attempt(api.capsuleVersions(workspaceId, capsuleId)),
     attempt(api.capsuleQuestions(workspaceId, capsuleId)),
     attempt(api.getCase(workspaceId, caseId)),
@@ -114,6 +115,32 @@ export default async function CapsulePage({
         }
         actions={
           <>
+            {c.can_edit ? (
+              <nav aria-label="View the brief as" className="flex rounded-md border p-0.5 text-xs">
+                {(
+                  [
+                    ["Editor", false],
+                    ["Member recipient", true],
+                  ] as const
+                ).map(([label, member]) => (
+                  <Link
+                    key={label}
+                    href={`?${new URLSearchParams({
+                      ...(version ? { version: String(version) } : {}),
+                      ...(member ? { as: "member" } : {}),
+                    })}`}
+                    aria-current={asMember === member ? "page" : undefined}
+                    className={
+                      asMember === member
+                        ? "bg-foreground text-background rounded px-2 py-1"
+                        : "text-muted-foreground hover:text-foreground rounded px-2 py-1"
+                    }
+                  >
+                    View as {label.toLowerCase()}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
             {c.can_approve ? (
               <ActionForm action={approveCapsuleAction.bind(null, workspaceId, c.id)}>
                 <SubmitButton
@@ -135,6 +162,15 @@ export default async function CapsulePage({
           </>
         }
       />
+      {c.preview_as_member ? (
+        <p
+          role="status"
+          className="border-b border-amber-600/20 bg-amber-50 px-6 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+        >
+          Previewing what a member recipient sees: managers-only points and redactions are hidden,
+          and counted under &ldquo;Not included&rdquo;.
+        </p>
+      ) : null}
       <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="flex min-w-0 flex-col gap-6">
           <div className="bg-card flex flex-col gap-2 rounded-lg border p-4 text-sm shadow-xs">

@@ -1490,6 +1490,7 @@ export type CapsuleView = {
   can_edit: boolean;
   can_approve: boolean;
   can_acknowledge: boolean;
+  preview_as_member?: boolean;
   generating: boolean;
   generation: "idle" | "running" | "slow" | "stalled" | "failed";
   changed_points: number;
