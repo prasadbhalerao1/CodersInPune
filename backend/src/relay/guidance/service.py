@@ -21,7 +21,8 @@ from relay.directory.models import Person
 from relay.identity.models import GuidanceState
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.integrations import connectors
-from relay.intelligence.models import Capsule, CapsuleAck
+from relay.integrations.slack.models import SlackConnection
+from relay.intelligence.models import Capsule, CapsuleAck, Meeting
 from relay.jobs.models import OutboxEvent
 from relay.policy.permissions import Permission, authorize, role_allows
 from relay.risks.models import RiskRecord
@@ -158,6 +159,8 @@ async def guidance(access: WorkspaceAccess) -> GuidanceView:
     owned = await _count(session, OwnershipAssignment, OwnershipAssignment.valid_to.is_(None))
     knowledge = await _count(session, KnowledgeItem)
     risks = await _count(session, RiskRecord)
+    recorded_meetings = await _count(session, Meeting)
+    connected_slack = await _count(session, SlackConnection)
     integrations = [await _integration(session, p, now) for p in _SYNC]
     ready = [i for i in integrations if i.state == "ready"]
     capsule = await session.scalar(
@@ -196,6 +199,14 @@ async def guidance(access: WorkspaceAccess) -> GuidanceView:
         ChecklistItem(key="assessment", label="Initial continuity assessment", essential=True,
                       done=risks > 0 or (owned > 0 and knowledge > 0),
                       detail="Risks are evaluated from ownership and knowledge.", path="/risks"),
+        ChecklistItem(key="meeting", label="A meeting turned into decisions and actions",
+                      essential=False, done=recorded_meetings > 0,
+                      detail="Paste notes or a transcript; every item cites its line.",
+                      path="/meetings"),
+        ChecklistItem(key="slack", label="Slack connected for sharing", essential=False,
+                      done=connected_slack > 0,
+                      detail="Post meeting summaries to a channel.",
+                      path="/integrations/slack"),
     ]  # fmt: skip
 
     resp_path = f"/responsibilities/{resp}/timeline" if resp else None

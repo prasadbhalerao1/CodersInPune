@@ -62,7 +62,15 @@ export default async function ExpertisePage({ params }: PageProps<"/w/[workspace
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Stat value={single} label="held by one person or nobody" tone="text-red-600" />
+              <Stat
+                value={single}
+                label="held by one person or nobody"
+                tone="text-red-600"
+                working={rows
+                  .filter((r) => r.bus_factor <= 1)
+                  .map((r) => `${r.name} (${r.criticality}): ${r.bus_factor}`)
+                  .join("\n")}
+              />
               <Stat
                 value={namedOnly}
                 label="with a backup on paper who never wrote anything down"
@@ -79,11 +87,30 @@ export default async function ExpertisePage({ params }: PageProps<"/w/[workspace
   );
 }
 
-function Stat({ value, label, tone }: { value: number; label: string; tone?: string }) {
+function Stat({
+  value,
+  label,
+  tone,
+  working,
+}: {
+  value: number;
+  label: string;
+  tone?: string;
+  working?: string;
+}) {
   return (
     <div className="bg-card rounded-lg border p-4">
       <p className={cn("text-3xl font-semibold tabular-nums", tone)}>{value}</p>
-      <p className="text-muted-foreground mt-1 text-sm">{label}</p>
+      <p className="text-muted-foreground mt-1 flex items-center gap-1 text-sm">
+        {label}
+        {working ? (
+          <Explain
+            what="expertise"
+            align="start"
+            working={<span className="whitespace-pre-line">{working}</span>}
+          />
+        ) : null}
+      </p>
     </div>
   );
 }
