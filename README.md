@@ -80,7 +80,20 @@ acknowledge, the brief shows **your next steps**: your open tasks, what you are 
 (each with its history), the case status and where to ask. If the AI draft is slow or
 fails, the page says so and offers a retry; the rule-based brief is always usable.
 
-### 5. Optional
+### 5. Beyond the three (5 minutes)
+
+On the same sample workspace:
+
+- **Handover Autopilot:** open Arjun's case → **Analysis** → **Run Autopilot**. Each tool call
+  streams in, and it ends with proposals for you to accept.
+- **Meetings:** open *Arjun handover kickoff*. Every decision, action, question and risk links
+  to its transcript line. Accepting a decision creates an ADR; accepting an action creates a case task.
+- **Ask Relay:** ask "What did we decide about webhooks?". The answer cites records you can open.
+- **Decision log**, **Expertise map** (named vs capable backups) and the case's **30/60/90 plan**.
+- **Knowledge:** "Code changed since review" flags the old deploy runbook from merged pull requests.
+- **Slack:** Integrations → Slack, then **Post to #channel** on a meeting.
+
+### 6. Optional
 
 - **Your own data:** create an empty workspace and open **Integrations** to connect GitHub,
   Linear or Notion (read-only).
@@ -127,7 +140,9 @@ workspaces and click **Create sample workspace**.
 1. **Next:** automated nightly dumps with a scheduled restore drill under a dedicated backup role;
    repository- and asset-level Memory Replay; side-by-side brief diffs at sentence level.
 2. **Soon:** calendar and HR-system signals (planned leave feeding the simulator
-   automatically); Slack and Jira connectors; scheduled continuity reviews per team.
+   automatically); Slack threads and Jira issues as evidence (Slack posting ships today);
+   semantic retrieval for Ask Relay on the pgvector extension already installed; handover
+   rehearsal drills graded against the evidence; scheduled continuity reviews per team.
 3. **Later:** organisation-wide resilience trends; SCIM provisioning; self-hosted model
    support for regulated customers.
 
