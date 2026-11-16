@@ -147,6 +147,21 @@ workspaces and click **Create sample workspace**.
 - **GitHub, Linear and Notion** are optional and need your own app credentials (below).
 - The setup script is safe to re-run: it keeps values you already set.
 
+## Scope and next steps
+
+**What Relay covers today:** accountability for any kind of work, evidence from GitHub,
+Linear and Notion (read-only), rule-based risks, the What If? simulator, AI-assisted
+analysis, briefs, interviews, meetings and answers that always cite their sources, audited
+handover cases with follow-through, Slack sharing, eight roles, and a full audit trail.
+
+**Deliberate choices:**
+- AI proposes; people decide. No model can change ownership, approve or edit a source.
+- Connectors read only. Relay never writes to GitHub, Linear or Notion.
+- Ask Relay retrieves with permission-aware search; semantic retrieval is planned behind a
+  measured trigger ([ADR 0003](docs/adr/0003-ask-relay-retrieval.md)).
+- Sign-in is passwordless through WorkOS, so there are no shared passwords; judges get a
+  private sample workspace and can try any role.
+
 ## Roadmap
 
 1. **Next:** automated nightly dumps with a scheduled restore drill under a dedicated backup role;
