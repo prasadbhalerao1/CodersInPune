@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page";
 import { attempt } from "@/lib/attempt";
 import { api } from "@/lib/relay-api";
 
-import { MemoryReplay } from "./memory-replay";
+import { MemoryReplay, type ReplayFilters } from "./memory-replay";
 
 export const metadata: Metadata = { title: "Memory replay" };
 
@@ -27,6 +27,18 @@ export default async function TimelinePage({
   if (!timeline.ok) return <ApiErrorNotice error={timeline.error} />;
   const t = timeline.data;
   const base = `/w/${workspaceId}/responsibilities/${responsibilityId}`;
+  const text = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+  const day = (v: string | string[] | undefined) =>
+    typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+  const initial: ReplayFilters = {
+    category: text(query.category),
+    q: text(query.q),
+    source: text(query.source),
+    person: text(query.person),
+    major: query.major === "1",
+    from: day(query.from),
+    to: day(query.to),
+  };
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
@@ -50,6 +62,7 @@ export default async function TimelinePage({
             : null
         }
         latestHref={before ? `${base}/timeline` : null}
+        initial={initial}
         stored={stored.ok && stored.data.state === "ready" ? stored.data : null}
       />
     </div>

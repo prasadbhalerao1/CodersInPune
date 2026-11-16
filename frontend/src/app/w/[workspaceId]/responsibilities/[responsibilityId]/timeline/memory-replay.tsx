@@ -54,12 +54,23 @@ const month = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" 
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 const short = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" });
 
+export type ReplayFilters = {
+  category?: string;
+  q?: string;
+  source?: string;
+  person?: string;
+  major?: boolean;
+  from?: string;
+  to?: string;
+};
+
 export function MemoryReplay({
   workspaceId,
   timeline,
   stored,
   olderHref = null,
   latestHref = null,
+  initial = {},
 }: {
   workspaceId: string;
   timeline: TimelineView;
@@ -68,15 +79,19 @@ export function MemoryReplay({
   /** Paging through large histories (200 events per page). */
   olderHref?: string | null;
   latestHref?: string | null;
+  /** Filters from a shared link (see the URL sync below). */
+  initial?: ReplayFilters;
 }) {
-  const [filter, setFilter] = useState<TimelineCategory | null>(null);
-  const [query, setQuery] = useState("");
-  const [source, setSource] = useState("");
-  const [person, setPerson] = useState("");
-  const [majorOnly, setMajorOnly] = useState(false);
+  const [filter, setFilter] = useState<TimelineCategory | null>(
+    ORDER.find((c) => c === initial.category) ?? null,
+  );
+  const [query, setQuery] = useState(initial.q ?? "");
+  const [source, setSource] = useState(initial.source ?? "");
+  const [person, setPerson] = useState(initial.person ?? "");
+  const [majorOnly, setMajorOnly] = useState(Boolean(initial.major));
   // Date range, inclusive, as YYYY-MM-DD from the date inputs (compared on the event's day).
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(initial.from ?? "");
+  const [to, setTo] = useState(initial.to ?? "");
   const [cursor, setCursor] = useState<number | null>(null); // replay position, oldest = 0
   const [playing, setPlaying] = useState(false);
   const [focus, setFocus] = useState<Set<string>>(new Set());
@@ -99,6 +114,28 @@ export function MemoryReplay({
       ),
     [timeline.events],
   );
+  // Filters live in the URL so a narrowed replay can be shared as a link. The server page reads
+  // them for the first render; changes are mirrored back with replaceState (no navigation).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const entries: [string, string][] = [
+      ["category", filter ?? ""],
+      ["q", query],
+      ["source", source],
+      ["person", person],
+      ["major", majorOnly ? "1" : ""],
+      ["from", from],
+      ["to", to],
+    ];
+    for (const [key, value] of entries) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    if (url.href !== window.location.href) {
+      window.history.replaceState(window.history.state, "", url);
+    }
+  }, [filter, query, source, person, majorOnly, from, to]);
+
   const needle = query.trim().toLowerCase();
   const narrowed = Boolean(needle || source || person || majorOnly || from || to);
 
