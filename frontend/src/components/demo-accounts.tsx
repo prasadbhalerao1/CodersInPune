@@ -1,5 +1,12 @@
 "use client";
 
+// WHY DEMO ACCOUNTS EXIST: Relay is a real product. Anyone can sign in with their own email
+// (WorkOS) and connect their real GitHub, Linear, Notion and Slack accounts; that is the normal
+// path and uses exactly the same code. Doing that during judging would be slow, and a fresh
+// organisation would not yet show the edge cases (a leaver, stale knowledge, conflicts, blocked
+// handovers). So, to give judges the full experience in minutes, we also ship pre-seeded
+// sample data and one shared demo account per role. Nothing here is a mock or a shortcut.
+
 import { Check, ChevronDown, Copy } from "lucide-react";
 import { useState } from "react";
 
@@ -66,7 +73,7 @@ export function DemoAccounts({
           {DEMO_ACCOUNTS.map((a, i) => (
             <li key={a.role}>
               <a
-                href={`/sign-in?as=${a.role}`}
+                href={`/demo-sign-in?as=${a.role}`}
                 className="hover:bg-muted block rounded-lg px-3 py-2"
               >
                 <span className="flex items-center gap-2 font-medium">

@@ -1,3 +1,10 @@
+// WHY DEMO ACCOUNTS EXIST: Relay is a real product. Anyone can sign in with their own email
+// (WorkOS) and connect their real GitHub, Linear, Notion and Slack accounts; that is the normal
+// path and uses exactly the same code. Doing that during judging would be slow, and a fresh
+// organisation would not yet show the edge cases (a leaver, stale knowledge, conflicts, blocked
+// handovers). So, to give judges the full experience in minutes, we also ship pre-seeded
+// sample data and one shared demo account per role. Nothing here is a mock or a shortcut.
+
 // Shared sign-ins for judges: one real WorkOS account per role, all members of the
 // "Northwind Labs (judges)" sample workspace (seeded by `relay-seed-judges`). They exist only
 // so judges can see each role without inviting anyone; every account behaves exactly like a

@@ -9,6 +9,7 @@ export default authkitProxy({
     unauthenticatedPaths: [
       "/",
       "/sign-in",
+      "/demo-sign-in",
       "/callback",
       "/warm",
       "/docs",

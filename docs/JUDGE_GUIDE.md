@@ -3,6 +3,16 @@
 **Live product:** <https://relay-continuity-nine.vercel.app> · **Ten-minute walkthrough:**
 [README → For judges](../README.md#for-judges) · **Everything else:** [docs index](README.md)
 
+## Real product, demo accounts for speed
+
+Relay works with real organisations: anyone signs in with their own email (WorkOS) and connects
+their real GitHub, Linear, Notion and Slack accounts, and that is the normal path. Doing that
+while judging would be slow, and a brand-new organisation would not yet show the edge cases
+(a leaver, stale knowledge, conflicting sources, a blocked handover). So, to give you the full
+experience in minutes, we also ship a pre-seeded sample organisation and one shared demo account
+per role (home page → **Judging? Sign in as any role**, one click, no password to type). They
+are real accounts in a real workspace and use exactly the same code; nothing is mocked.
+
 ## The problem
 
 Every team has work that only one or two people really understand: the deploy pipeline, the
