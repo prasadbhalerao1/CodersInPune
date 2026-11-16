@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { ResetSampleButton } from "@/components/reset-sample";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { RelayLines } from "@/components/brand";
 import { HandoverBanner } from "@/components/handover-banner";
@@ -181,11 +182,17 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
         title={workspace.data.name}
         description="Where continuity stands today: what needs attention, what is moving, and what changed."
         actions={
-          canManage(workspace.data) ? (
-            <Link href={`${base}/responsibilities/new`} className={buttonVariants({ size: "sm" })}>
-              New responsibility
-            </Link>
-          ) : null
+          <span className="flex items-center gap-2">
+            {workspace.data.name === "Northwind Labs (demo)" ? <ResetSampleButton /> : null}
+            {canManage(workspace.data) ? (
+              <Link
+                href={`${base}/responsibilities/new`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                New responsibility
+              </Link>
+            ) : null}
+          </span>
         }
       />
       <div className="mx-auto flex w-full max-w-350 flex-col gap-6 p-6">
