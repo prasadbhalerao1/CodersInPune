@@ -27,6 +27,7 @@ import type {
   NarrativeView,
   TimelineCategory,
   TimelineEvent,
+  TimelineThread,
   TimelineView,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -460,6 +461,7 @@ export function MemoryReplay({
                 ? narrative.chapters.filter((c) => c.event_ids.includes(selected))
                 : []
             }
+            thread={timeline.threads?.find((t) => t.id === byId.get(selected)!.thread_id)}
             onJump={jump}
             onClose={() => setSelected(null)}
           />
@@ -473,6 +475,8 @@ export function MemoryReplay({
           </p>
           <SourceLine timeline={timeline} />
         </div>
+
+        {timeline.threads?.length ? <RelatedWork threads={timeline.threads} onJump={jump} /> : null}
 
         <div className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-xs">
           <div>
@@ -882,16 +886,60 @@ function ChapterAxis({
   );
 }
 
+function RelatedWork({
+  threads,
+  onJump,
+}: {
+  threads: TimelineThread[];
+  onJump: (ids: string[]) => void;
+}) {
+  return (
+    <section aria-label="Related work" className="bg-card rounded-lg border p-4 shadow-xs">
+      <h2 className="text-sm font-semibold">Related work</h2>
+      <p className="text-muted-foreground mt-0.5 text-xs">
+        Records that reference each other, grouped into one piece of work. Joined only by explicit
+        references (an issue, the pull request that fixes it, the page that names it), never by
+        similar titles or dates.
+      </p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {threads.map((t) => (
+          <li key={t.id}>
+            <button
+              type="button"
+              onClick={() => onJump(t.event_ids)}
+              className="hover:bg-muted/60 w-full rounded-md border px-2.5 py-1.5 text-left transition-colors"
+            >
+              <span className="block text-xs font-medium">{t.title}</span>
+              <span className="text-muted-foreground block text-[11px]">
+                {t.event_ids.length} records · {t.sources.join(" + ")} ·{" "}
+                {new Date(t.first_at).toLocaleDateString("en-GB", {
+                  month: "short",
+                  year: "numeric",
+                })}
+                {t.first_at.slice(0, 7) !== t.last_at.slice(0, 7)
+                  ? ` to ${new Date(t.last_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}`
+                  : ""}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function EventInspector({
   event: e,
   byId,
   chapters,
+  thread,
   onJump,
   onClose,
 }: {
   event: TimelineEvent;
   byId: Map<string, TimelineEvent>;
   chapters: NarrativeView["chapters"];
+  thread?: TimelineThread;
   onJump: (ids: string[]) => void;
   onClose: () => void;
 }) {
@@ -937,7 +985,39 @@ function EventInspector({
         ) : null}
         <dt className="text-muted-foreground">Importance</dt>
         <dd className="capitalize">{e.significance}</dd>
+        {thread ? (
+          <>
+            <dt className="text-muted-foreground">Part of</dt>
+            <dd>
+              <button
+                type="button"
+                onClick={() => onJump(thread.event_ids)}
+                className="text-left underline-offset-2 hover:underline"
+              >
+                {thread.title} ({thread.event_ids.length} records)
+              </button>
+            </dd>
+          </>
+        ) : null}
       </dl>
+      {e.commits?.length ? (
+        <div>
+          <p className="text-muted-foreground mb-1 text-xs font-medium">
+            Commits ({e.commits.length})
+          </p>
+          <ul className="flex flex-col gap-1 text-xs">
+            {e.commits.map((c) => (
+              <li key={c.sha} className="flex gap-2">
+                <code className="text-muted-foreground shrink-0">{c.sha.slice(0, 7)}</code>
+                <span className="min-w-0">
+                  {c.message}
+                  {c.author ? <span className="text-muted-foreground"> · {c.author}</span> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {e.linked_events.filter((id) => byId.has(id)).length ? (
         <div>
           <p className="text-muted-foreground mb-1 text-xs font-medium">Referenced in the record</p>

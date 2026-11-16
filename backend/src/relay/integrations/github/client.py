@@ -15,7 +15,7 @@ user (`GET /user/installations`), because `installation_id` on the redirect can 
 import base64
 import time
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any
 
@@ -68,6 +68,14 @@ class Team:
 
 
 @dataclass(frozen=True, slots=True)
+class Commit:
+    sha: str
+    message: str  # first line only
+    author: str | None
+    at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
 class WorkItem:
     kind: str  # pull_request | issue
     number: int
@@ -83,6 +91,7 @@ class WorkItem:
     updated_at: datetime
     closed_at: datetime | None
     merged_at: datetime | None
+    commits: tuple[Commit, ...] = ()
 
 
 def _when(value: object) -> datetime | None:
@@ -122,6 +131,11 @@ def work_item(data: dict[str, Any], kind: str) -> WorkItem:
         closed_at=_when(data.get("closed_at")),
         merged_at=merged_at,
     )
+
+
+# Commits are fetched for the most recently updated pull requests, a page each.
+MAX_PRS_WITH_COMMITS = 50
+MAX_COMMITS = 30
 
 
 class GitHubClient:
@@ -334,6 +348,39 @@ class GitHubClient:
 
     # ---- activity metadata (Pull requests / Issues: read)
 
+    async def commits(self, token: str, full_name: str, number: int) -> tuple[Commit, ...]:
+        """A pull request's commits (messages, authors, dates; never diffs). Best effort: a
+        failure here leaves the pull request without commits instead of failing the sync."""
+        try:
+            response = await self._call(
+                "GET",
+                f"{self._s.github_api_base_url}/repos/{full_name}/pulls/{number}/commits",
+                token,
+                params={"per_page": MAX_COMMITS},
+            )
+        except GitHubError:
+            return ()
+        if response.status_code >= 400:
+            return ()
+        out = []
+        for c in response.json()[:MAX_COMMITS]:
+            info = c.get("commit") or {}
+            author = info.get("author") or {}
+            login = (
+                (c.get("author") or {}).get("login") if isinstance(c.get("author"), dict) else None
+            )
+            out.append(
+                Commit(
+                    sha=str(c.get("sha", ""))[:12],
+                    message=str(info.get("message") or "").splitlines()[0][:200]
+                    if info.get("message")
+                    else "",
+                    author=login or author.get("name"),
+                    at=_when(author.get("date")),
+                )
+            )
+        return tuple(out)
+
     async def work_items(
         self, token: str, full_name: str, since: datetime, limit: int = 200
     ) -> list[WorkItem]:
@@ -345,6 +392,8 @@ class GitHubClient:
             item = work_item(pr, "pull_request")
             if item.updated_at < since or len(items) >= limit:
                 break
+            if len(items) < MAX_PRS_WITH_COMMITS:
+                item = replace(item, commits=await self.commits(token, full_name, item.number))
             items.append(item)
         issues = 0
         async for issue in self._paginate(

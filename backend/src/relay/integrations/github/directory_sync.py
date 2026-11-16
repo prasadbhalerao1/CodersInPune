@@ -13,7 +13,7 @@ import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -211,13 +211,31 @@ async def upsert_work_items(
             "gh_updated_at": item.updated_at,
             "closed_at": item.closed_at,
             "merged_at": item.merged_at,
+            "commits": [
+                {
+                    "sha": c.sha,
+                    "message": c.message,
+                    "author": c.author,
+                    "at": c.at.isoformat() if c.at else None,
+                }
+                for c in item.commits
+            ],
         }
         stmt = insert(GitHubWorkItem).values(values)
         result = await session.execute(
             stmt.on_conflict_do_update(
                 index_elements=["tenant_id", "repository_id", "kind", "number"],
                 set_={
-                    k: stmt.excluded[k] for k in values if k not in ("tenant_id", "repository_id")
+                    k: stmt.excluded[k]
+                    for k in values
+                    if k not in ("tenant_id", "repository_id", "commits")
+                }
+                # Webhook deliveries carry no commits: keep the ones a sync already read.
+                | {
+                    "commits": func.coalesce(
+                        func.nullif(stmt.excluded.commits, text("'[]'::jsonb")),
+                        GitHubWorkItem.commits,
+                    )
                 },
                 where=GitHubWorkItem.gh_updated_at <= stmt.excluded.gh_updated_at,
             ).returning(GitHubWorkItem.id)

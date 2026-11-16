@@ -296,6 +296,8 @@ class GitHubWorkItem(Base):
     gh_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # A pull request's commits: sha, first line of the message, author and date. No code.
+    commits: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
 
 
 class WebhookDelivery(Base):

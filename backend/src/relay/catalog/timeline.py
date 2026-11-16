@@ -69,6 +69,13 @@ _ISSUE_REF = re.compile(r"(?:^|[\s(])#(\d+)\b")
 _LINEAR_REF = re.compile(r"\b([A-Z][A-Z0-9]{1,9}-\d+)\b")
 
 
+class TimelineCommit(BaseModel):
+    sha: str
+    message: str  # first line
+    author: str | None
+    at: datetime | None
+
+
 class TimelineEvent(BaseModel):
     id: str  # stable within a responsibility, e.g. "gh:northwind/deploy#12"
     occurred_at: datetime
@@ -82,6 +89,21 @@ class TimelineEvent(BaseModel):
     actor: str | None
     uncertainty_level: Literal["factual"] = "factual"
     linked_events: list[str] = []
+    thread_id: str | None = None  # the related-work thread this record belongs to, if any
+    commits: list[TimelineCommit] = []  # a pull request's commits, oldest first
+
+
+class TimelineThread(BaseModel):
+    """Records joined by explicit references (an issue, the PR that fixes it, the page that
+    names it): one piece of work told across tools. Never joined by similar titles or dates."""
+
+    id: str
+    title: str
+    event_ids: list[str]  # oldest first
+    sources: list[str]
+    categories: list[str]
+    first_at: datetime
+    last_at: datetime
 
 
 class TimelineView(BaseModel):
@@ -94,6 +116,7 @@ class TimelineView(BaseModel):
     sources: list[SourceStatus]
     first_at: datetime | None
     last_at: datetime | None
+    threads: list[TimelineThread] = []
 
 
 def categorise(labels: list[str], title: str) -> tuple[Category, str]:
@@ -123,6 +146,7 @@ async def responsibility_timeline(
         *await _knowledge(access, responsibility_id),
     ]
     _link(events)
+    threads = _threads(events)
     events.sort(key=lambda e: (e.occurred_at, e.id), reverse=True)
     counts = {c: 0 for c in CATEGORIES}
     for e in events:
@@ -144,6 +168,7 @@ async def responsibility_timeline(
         sources=await source_status(access),
         first_at=events[-1].occurred_at if events else None,
         last_at=events[0].occurred_at if events else None,
+        threads=threads,
     )
 
 
@@ -230,6 +255,8 @@ async def _github(access: WorkspaceAccess, rid: uuid.UUID) -> list[TimelineEvent
         )
         noun = "Pull request" if pr else "Issue"
         labels = f" Labels: {', '.join(item.labels)}." if item.labels else ""
+        commits = [TimelineCommit.model_validate(c) for c in item.commits or []]
+        work = f" {len(commits)} commit{'s' if len(commits) != 1 else ''}." if commits else ""
         out.append(
             TimelineEvent(
                 id=f"gh:{repo}#{item.number}",
@@ -239,11 +266,12 @@ async def _github(access: WorkspaceAccess, rid: uuid.UUID) -> list[TimelineEvent
                 title=item.title,
                 summary=f"{noun} #{item.number} in {repo} {verb}"
                 + (f" by {item.author_login}" if item.author_login and pr else "")
-                + f".{labels}",
+                + f".{work}{labels}",
                 significance=significance,
                 source_system="GitHub",
                 source_url=item.html_url,
                 actor=item.author_login,
+                commits=commits,
             )
         )
     return out
@@ -357,15 +385,61 @@ async def _knowledge(access: WorkspaceAccess, rid: uuid.UUID) -> list[TimelineEv
     return out
 
 
+def _threads(events: list[TimelineEvent]) -> list[TimelineThread]:
+    """Group linked records into threads (connected components of the factual links)."""
+    parent = {e.id: e.id for e in events}
+
+    def root(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for e in events:
+        for other in e.linked_events:
+            if other in parent:
+                a, b = root(e.id), root(other)
+                if a != b:
+                    parent[max(a, b)] = min(a, b)
+    groups: dict[str, list[TimelineEvent]] = {}
+    for e in events:
+        groups.setdefault(root(e.id), []).append(e)
+    threads = []
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        members.sort(key=lambda e: (e.occurred_at, e.id))
+        # Named after the work item that started it: the first issue, else the first record.
+        anchor = next((e for e in members if e.id.startswith(("li:", "gh:"))), members[0])
+        thread_id = "th:" + members[0].id
+        for e in members:
+            e.thread_id = thread_id
+        threads.append(
+            TimelineThread(
+                id=thread_id,
+                title=anchor.title,
+                event_ids=[e.id for e in members],
+                sources=sorted({e.source_system for e in members}),
+                categories=sorted({e.category for e in members}),
+                first_at=members[0].occurred_at,
+                last_at=members[-1].occurred_at,
+            )
+        )
+    threads.sort(key=lambda t: t.last_at, reverse=True)
+    return threads
+
+
 def _link(events: list[TimelineEvent]) -> None:
     """Link events whose text names another event (#12 in the same repo, or ENG-42)."""
     by_id = {e.id: e for e in events}
     for e in events:
-        text = f"{e.title} {e.summary}"
+        # Commit messages count too: "fixes #12" or "PAY-41" in a commit links its pull request.
+        messages = " ".join(c.message for c in e.commits)
+        text = f"{e.title} {e.summary} {messages}"
         targets: set[str] = set()
         if e.id.startswith("gh:"):
             repo = e.id[3:].split("#")[0]
-            targets |= {f"gh:{repo}#{n}" for n in _ISSUE_REF.findall(f" {e.title}")}
+            targets |= {f"gh:{repo}#{n}" for n in _ISSUE_REF.findall(f" {e.title} {messages}")}
         targets |= {f"li:{key}" for key in _LINEAR_REF.findall(text)}
         for target in targets - {e.id}:
             if target in by_id:

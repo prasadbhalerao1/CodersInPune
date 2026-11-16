@@ -123,6 +123,7 @@ async def history(api: Api) -> tuple[Ws, str]:
                     gh_updated_at=at,
                     closed_at=at if state != "open" else None,
                     merged_at=at if state == "merged" else None,
+                    commits=COMMITS.get(number, []) if repo == "acme/deploy" else [],
                 )
             )
         linear = LinearConnection(
@@ -162,6 +163,25 @@ async def history(api: Api) -> tuple[Ws, str]:
             )
         )
     return ws, rid
+
+
+# The postmortem PR's commits name the canary PR: commits alone link the two.
+COMMITS: dict[int, list[dict[str, Any]]] = {
+    9: [
+        {
+            "sha": "a1b2c3",
+            "message": "Write up the checkout outage",
+            "author": "arjun-gh",
+            "at": None,
+        },
+        {
+            "sha": "d4e5f6",
+            "message": "Follow-up for #7: alert on canary errors",
+            "author": None,
+            "at": None,
+        },
+    ]
+}
 
 
 async def ws_user(api: Api, ws: Ws) -> uuid.UUID:
@@ -218,6 +238,27 @@ async def test_references_in_titles_link_events(api: Api) -> None:
     }
     assert "gh:acme/deploy#3" in events["gh:acme/deploy#4"]["linked_events"]
     assert "gh:acme/deploy#4" in events["gh:acme/deploy#3"]["linked_events"]
+
+
+async def test_linked_records_form_one_thread_of_related_work(api: Api) -> None:
+    ws, rid = await history(api)
+    view = await ws.call("GET", f"/responsibilities/{rid}/timeline")
+    events = {e["id"]: e for e in view["events"]}
+    # The issue and the PR that fixes it are one piece of work, oldest first, named after the issue.
+    (thread,) = [t for t in view["threads"] if "gh:acme/deploy#3" in t["event_ids"]]
+    assert thread["event_ids"] == ["gh:acme/deploy#3", "gh:acme/deploy#4"]
+    assert thread["title"] == "Deploys time out after 10 minutes"
+    assert events["gh:acme/deploy#4"]["thread_id"] == thread["id"]
+    # A record that references nothing stays on its own: no thread is guessed from dates or titles.
+    assert events["gh:acme/deploy#11"]["thread_id"] is None
+    assert all(len(t["event_ids"]) >= 2 for t in view["threads"])
+    # A pull request's commits are read too: a commit naming #7 joins the postmortem to it.
+    assert [c["sha"] for c in events["gh:acme/deploy#9"]["commits"]] == ["a1b2c3", "d4e5f6"]
+    assert "2 commits" in events["gh:acme/deploy#9"]["summary"]
+    assert events["gh:acme/deploy#9"]["thread_id"] == events["gh:acme/deploy#7"]["thread_id"]
+    # Rebuilt on every read, never stored: the same threads come back.
+    again = await ws.call("GET", f"/responsibilities/{rid}/timeline")
+    assert again["threads"] == view["threads"]
 
 
 async def test_members_see_only_workspace_audience_sources(api: Api) -> None:

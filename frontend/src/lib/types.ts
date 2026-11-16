@@ -1784,6 +1784,14 @@ export type ScoreParts = {
   }[];
 };
 
+export type DownstreamImpact = {
+  responsibility_id: string;
+  name: string;
+  criticality: string;
+  via: string;
+  root: string;
+  depth: number;
+};
 export type SimulationView = {
   person: SimulationPersonRef;
   backup: SimulationPersonRef | null;
@@ -1804,6 +1812,7 @@ export type SimulationView = {
   days: number | null;
   affected_assets: string[];
   due_in_window: number;
+  downstream?: DownstreamImpact[];
 };
 export type SimulationCandidate = {
   person: SimulationPersonRef | null;
@@ -1846,6 +1855,17 @@ export type TimelineEvent = {
   actor: string | null;
   uncertainty_level: "factual";
   linked_events: string[];
+  thread_id?: string | null;
+  commits?: { sha: string; message: string; author: string | null; at: string | null }[];
+};
+export type TimelineThread = {
+  id: string;
+  title: string;
+  event_ids: string[];
+  sources: string[];
+  categories: string[];
+  first_at: string;
+  last_at: string;
 };
 export type TimelineView = {
   responsibility_id: string;
@@ -1857,6 +1877,7 @@ export type TimelineView = {
   sources: SourceStatus[];
   first_at: string | null;
   last_at: string | null;
+  threads?: TimelineThread[];
 };
 export type NarrativeChapter = {
   title: string;
