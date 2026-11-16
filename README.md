@@ -205,6 +205,9 @@ Linear and Notion (read-only), rule-based risks, the What If? simulator, AI-assi
 analysis, briefs, interviews, meetings and answers that always cite their sources, audited
 handover cases with follow-through, Slack sharing, eight roles, and a full audit trail.
 
+Each next step, with the point at which it becomes worth building:
+[scope and next steps](docs/submission/ROUND3_SCOPE_AND_NEXT_STEPS.md).
+
 **Deliberate choices:**
 - AI proposes; people decide. No model can change ownership, approve or edit a source.
 - Connectors read only. Relay never writes to GitHub, Linear or Notion.
@@ -216,12 +219,13 @@ handover cases with follow-through, Slack sharing, eight roles, and a full audit
 
 ## Roadmap
 
-1. **Next:** automated nightly dumps with a scheduled restore drill under a dedicated backup role;
-   repository- and asset-level Memory Replay; side-by-side brief diffs at sentence level.
+1. **Next:** repository- and asset-level Memory Replay; side-by-side brief diffs at sentence
+   level. (Nightly encrypted backups with an automatic restore drill, under a read-only backup
+   role, already run.)
 2. **Soon:** calendar and HR-system signals (planned leave feeding the simulator
    automatically); Slack threads and Jira issues as evidence (Slack posting ships today);
    semantic retrieval for Ask Relay on the pgvector extension already installed; Linear and
-   Notion webhooks with the same sync checkpoint GitHub uses; saved multi-person What If?
+   Notion webhooks, and for Notion the sync checkpoint GitHub and Linear already use; saved multi-person What If?
    scenarios; scheduled continuity reviews per team.
 3. **Later:** organisation-wide resilience trends; SCIM provisioning; self-hosted model
    support for regulated customers.
