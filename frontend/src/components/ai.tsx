@@ -1,5 +1,6 @@
 import { RunProgress } from "@/components/run-progress";
 import { formatDateTime } from "@/components/page";
+import { EvidenceSheet } from "@/components/evidence-sheet";
 import { Badge } from "@/components/ui/badge";
 import type { ClaimKind, ClaimType, Confidence, EvidenceView, RunView } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ export function EvidenceList({ evidence }: { evidence: EvidenceView[] }) {
           <li key={e.id} className={cn(e.status !== "active" && "opacity-60")}>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="text-muted-foreground font-mono">{e.ref}</span>
+              <EvidenceSheet evidence={e} />
               <span className="font-medium">
                 {SOURCE[e.source_system]} · {e.source_type.replaceAll("_", " ")}
               </span>
