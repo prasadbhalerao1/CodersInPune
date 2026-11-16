@@ -30,8 +30,9 @@ class ClaimDraft(BaseModel):
     kind: ClaimKind
     text: str = Field(description="One or two sentences, plain language.", max_length=1200)
     confidence: Literal["high", "medium", "low"] = "medium"
+    # Required (no default) so a model must write the refs it relies on, not skip the key.
     evidence: list[str] = Field(
-        default_factory=list, description="Evidence refs like E3 that support this claim."
+        description="Evidence refs like ['E3'] that support this claim; empty only for a question."
     )
     # A plain string: some providers reject `date-time` formats in output schemas.
     when: str | None = Field(
