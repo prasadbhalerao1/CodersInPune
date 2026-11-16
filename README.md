@@ -32,7 +32,7 @@ below starts from that link and only uses buttons you can see. Allow about ten m
 2. Sign in with any email address. WorkOS emails you a one-time code; Relay never sees a
    password.
 3. On **Workspaces**, click **Create sample workspace**. In a few seconds you are inside
-   *Northwind Labs (demo)*: eight fictional people, seven responsibilities, a year of
+   *Northwind Labs (sample)*: eight fictional people, seven responsibilities, a year of
    GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving.
 
 **Demo accounts (one per role):** on the home page, open **Judging? Sign in as any role** and
@@ -92,7 +92,7 @@ for every tutorial. Tours can be skipped, resumed and replayed; guidance can be 
 1. In the sidebar, click **Responsibilities**, then **Production deployments**.
 2. Click **Memory replay** (top right).
 3. Press **Replay history** and watch the project evolve event by event; use the category
-   chips to filter (try **Incident**).
+   chips to filter (try **Incident**), or narrow it with **From / To** dates.
 4. Click **Explain this history**. The AI groups events into chapters on the time axis.
 5. Click **Inspect** on any event, then ask *"Why does every payments-api deploy need a
    canary?"* under **Ask about this history**.
@@ -118,15 +118,22 @@ confirms nothing in the workspace was changed.
 ### 4. Execute a safer handover: Handover Copilot (3 minutes)
 
 1. Go back to **Overview** and click **Open handover**.
-2. Check **Brief coverage**: which responsibilities have cited evidence and which critical
-   ones still need an answer from the current owner. Read the brief: *What you now own*, *Knowledge gaps and open questions*, *Risks and
+2. Check the **evidence strength** under the summary (Strong, Partial or Weak, with the
+   counts behind it) and **Brief coverage**: which responsibilities have cited evidence and
+   which critical ones still need an answer from the current owner. **Who to ask** lists the
+   current holders, backups and previous owners from the ownership records. Read the brief: *What you now own*, *Knowledge gaps and open questions*, *Risks and
    conflicts*, *Recommended first steps*. Expand any **sources** link to see the evidence.
 3. In **Ask about this handover**, ask *"How should I deploy payments-api?"*, then ask
    something the evidence cannot answer, such as *"What is the AWS root password recovery
    process?"*
+   Under the answer, **Worth asking next** suggests follow-ups from the brief's own gaps.
 4. Under **Versions**, click **Compare** on an earlier version to see what changed.
 5. Click **Open memory replay** under *Where this work came from*, then come back and click
    **Acknowledge receipt**.
+
+**Then close the loop:** the incoming owner clicks **Accept ownership** on the case. A case
+can't be completed while tasks are open, a required readiness check is unmet, or an incoming
+owner hasn't accepted; the case header lists exactly what it is waiting on.
 
 **Look for:** the answer cites its sources and points out the conflicting old runbook; the
 second question gets *Not in the evidence* instead of an invented answer. After you

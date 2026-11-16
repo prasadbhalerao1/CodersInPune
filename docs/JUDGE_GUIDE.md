@@ -13,6 +13,20 @@ experience in minutes, we also ship a pre-seeded sample organisation and one sha
 per role (home page → **Judging? Sign in as any role**, one click, no password to type). They
 are real accounts in a real workspace and use exactly the same code; nothing is mocked.
 
+## What changed in the last build
+
+- **Incoming owner acceptance:** the person receiving a responsibility clicks *Accept
+  ownership*. A case completes only when its tasks are done, readiness is met and every
+  incoming owner who uses Relay has accepted. A coordinator can record acceptance for someone
+  who doesn't use Relay.
+- **Handover brief:** an evidence-strength label (from fresh, cited sources and coverage, not
+  the model's own confidence), *Who to ask* from ownership records, and follow-up suggestions
+  in the Copilot.
+- **Memory Replay:** a date-range filter.
+- **Reliability:** a double-clicked or retried create makes one record (`Idempotency-Key`);
+  GitHub sync resumes from a checkpoint with a daily full reconcile; connector health loads
+  in one query.
+
 ## The problem
 
 Every team has work that only one or two people really understand: the deploy pipeline, the
