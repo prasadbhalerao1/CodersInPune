@@ -35,9 +35,11 @@ below starts from that link and only uses buttons you can see. Allow about ten m
    *Northwind Labs (sample)*: eight fictional people, seven responsibilities, a year of
    GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving.
 
-**Demo accounts (one per role):** on the home page, open **Judging? Sign in as any role** and
-pick one; the sign-in opens with the email filled in. All eight are real accounts and members
-of the same *Northwind Labs (judges)* sample. Password for all: `relay-password@987`.
+**Sample accounts (one per role):** the home page shows **Judges: sign in instantly**. Click
+**Sign in as Owner** for one-click sign-in, or open the other roles; every email has a copy
+button. All eight are real WorkOS accounts and members of the same *Northwind Labs (judges)*
+sample. Password for all: `relay-password@987`. The sample is shared by every judge; for a
+private clean copy, click **Fresh sample** on the workspace overview.
 
 | Role | Email | Best for |
 |---|---|---|
@@ -208,8 +210,9 @@ handover cases with follow-through, Slack sharing, eight roles, and a full audit
 - Connectors read only. Relay never writes to GitHub, Linear or Notion.
 - Ask Relay retrieves with permission-aware search; semantic retrieval is planned behind a
   measured trigger ([ADR 0003](docs/adr/0003-ask-relay-retrieval.md)).
-- Sign-in is passwordless through WorkOS, so there are no shared passwords; judges get a
-  private sample workspace and can try any role.
+- Customers sign in with their own WorkOS identity (email code, password or SSO). The only
+  shared password belongs to the sample role accounts, which reach nothing but the sample
+  organisation; any judge can also make a private sample and switch roles with *Try Relay as*.
 
 ## Roadmap
 
