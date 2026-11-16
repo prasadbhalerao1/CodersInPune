@@ -86,6 +86,10 @@ class GitHubInstallation(Base):
     # Source snapshots are purged 30 days after this (connectors.purge_disconnected).
     disconnected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_error: Mapped[str | None] = mapped_column(Text)
+    # Incremental sync: activity is fetched from `sync_cursor` (the start of the last
+    # successful run, minus an overlap); a full window runs again daily (`reconciled_at`).
+    sync_cursor: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reconciled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class GitHubRepository(Base):

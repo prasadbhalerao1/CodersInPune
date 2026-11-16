@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { ActionForm, SubmitButton } from "@/components/action-form";
@@ -98,7 +99,20 @@ export default async function HealthPage({
                   ) : null}
                 </div>
                 <div className="flex flex-col gap-3 px-4 py-3 text-sm">
-                  <p className={cn(c.health !== "healthy" && "font-medium")}>{c.advice}</p>
+                  <p className={cn(c.health !== "healthy" && "font-medium")}>
+                    {c.advice}
+                    {["revoked", "failed", "attention_required"].includes(c.health) ? (
+                      <>
+                        {" "}
+                        <Link
+                          href={`/w/${workspaceId}/integrations/${c.provider}`}
+                          className="text-primary font-medium hover:underline"
+                        >
+                          Reconnect or check settings
+                        </Link>
+                      </>
+                    ) : null}
+                  </p>
                   <dl className="text-muted-foreground grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
                     <div>
                       <dt>Last sync</dt>

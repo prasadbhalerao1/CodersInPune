@@ -570,6 +570,26 @@ async def _apply_evidence(
     return True
 
 
+SYNC_OVERLAP = timedelta(minutes=15)
+RECONCILE_EVERY = timedelta(days=1)
+
+
+def activity_window(
+    installation: GitHubInstallation, now: datetime, days: int
+) -> tuple[datetime, bool]:
+    """Where this sync reads activity from, and whether it is a full (reconciling) run.
+
+    Incremental runs start at the last successful run minus an overlap, so nothing updated
+    while that run was in flight is missed; writes are upserts, so the overlap is harmless.
+    A full window runs first and then daily, to catch anything an incremental run missed.
+    """
+    window = now - timedelta(days=days)
+    cursor, reconciled = installation.sync_cursor, installation.reconciled_at
+    if cursor is None or reconciled is None or now - reconciled >= RECONCILE_EVERY:
+        return window, True
+    return max(cursor - SYNC_OVERLAP, window), False
+
+
 async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.JobContext) -> None:
     """Idempotent: re-running converges on the same repositories and suggestions."""
     if ctx.http is None or ctx.settings is None:
@@ -659,7 +679,8 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     limit = asyncio.Semaphore(FETCH_CONCURRENCY)
 
     days = ctx.settings.github_activity_days
-    since = datetime.now(UTC) - timedelta(days=days)
+    started = datetime.now(UTC)
+    since, full = activity_window(installation, started, days)
     notes: list[str] = []
 
     async def fetch(
@@ -706,6 +727,11 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     installation.status = "active"
     installation.last_synced_at = func.now()
     installation.last_sync_status = "ok" if ok and not notes else "partial"
+    if ok and not notes:
+        # Advance the checkpoint only after a fully successful run.
+        installation.sync_cursor = started
+        if full:
+            installation.reconciled_at = started
     installation.last_sync_error = " ".join(dict.fromkeys(notes)) or None
 
 

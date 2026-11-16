@@ -20,6 +20,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from relay.audit import service as audit
 from relay.catalog.models import KnowledgeItem
@@ -169,40 +170,55 @@ async def health(access: WorkspaceAccess) -> list[ConnectorView]:
     authorize(access, Permission.INTEGRATION_MANAGE)
     now = datetime.now(UTC)
     views = []
-    for provider, model in MODELS.items():
+    connections = [
+        (provider, c)
+        for provider, model in MODELS.items()
         for c in await access.session.scalars(
             select(model).where(
                 visible(access, Permission.INTEGRATION_MANAGE, model.tenant_id),
                 model.status != "disconnected",
             )
-        ):
-            runs = list(
-                await access.session.scalars(
-                    select(ConnectorRun)
-                    .where(ConnectorRun.connection_ref == c.id)
-                    .order_by(ConnectorRun.finished_at.desc())
-                    .limit(20)
-                )
+        )
+    ]
+    # The 20 latest runs of every connection in one query (not one query per connection).
+    ranked = (
+        select(
+            ConnectorRun,
+            func.row_number()
+            .over(
+                partition_by=ConnectorRun.connection_ref,
+                order_by=ConnectorRun.finished_at.desc(),
             )
-            counted = [r for r in runs if r.status != "skipped"]
-            state, advice = _health(c, runs, now)
-            views.append(
-                ConnectorView(
-                    provider=provider,
-                    ref=c.id,
-                    name=_NAME[provider](c),
-                    health=state,
-                    advice=advice,
-                    last_synced_at=c.last_synced_at,
-                    last_success_at=next((r.finished_at for r in runs if r.status == "ok"), None),
-                    failure_rate=round(
-                        sum(1 for r in counted if r.status == "error") / len(counted), 2
-                    )
-                    if counted
-                    else None,
-                    runs=[RunView.model_validate(r, from_attributes=True) for r in runs[:10]],
-                )
+            .label("n"),
+        )
+        .where(ConnectorRun.connection_ref.in_([c.id for _, c in connections]))
+        .subquery()
+    )
+    latest = aliased(ConnectorRun, ranked)
+    runs_by: dict[object, list[ConnectorRun]] = {}
+    for run in await access.session.scalars(
+        select(latest).where(ranked.c.n <= 20).order_by(ranked.c.finished_at.desc())
+    ):
+        runs_by.setdefault(run.connection_ref, []).append(run)
+    for provider, c in connections:
+        runs = runs_by.get(c.id, [])
+        counted = [r for r in runs if r.status != "skipped"]
+        state, advice = _health(c, runs, now)
+        views.append(
+            ConnectorView(
+                provider=provider,
+                ref=c.id,
+                name=_NAME[provider](c),
+                health=state,
+                advice=advice,
+                last_synced_at=c.last_synced_at,
+                last_success_at=next((r.finished_at for r in runs if r.status == "ok"), None),
+                failure_rate=round(sum(1 for r in counted if r.status == "error") / len(counted), 2)
+                if counted
+                else None,
+                runs=[RunView.model_validate(r, from_attributes=True) for r in runs[:10]],
             )
+        )
     return views
 
 
