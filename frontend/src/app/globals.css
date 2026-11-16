@@ -144,6 +144,29 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Tailwind v4 leaves buttons with the default arrow; anything clickable gets a hand. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  summary,
+  select:not(:disabled),
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="date"]:not(:disabled),
+  input[type="color"]:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"],
+  select:disabled,
+  input:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11", "ss01";
