@@ -101,7 +101,7 @@ class AskIn(StrictInput):
 class CopilotOutput(BaseModel):
     found: bool = Field(description="False if the evidence does not answer the question.")
     answer: str = Field(max_length=2000, description="The answer, or what is missing.")
-    evidence: list[str] = Field(default_factory=list, description="Refs like E3 it rests on.")
+    evidence: list[str] = Field(description="Refs like ['E3'] it rests on; empty if not found.")
     confidence: Literal["high", "medium", "low"] = "medium"
 
 

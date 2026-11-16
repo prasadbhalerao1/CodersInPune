@@ -59,7 +59,9 @@ class AnalysisOutput(BaseModel):
 class QuestionDraft(BaseModel):
     question: str = Field(max_length=500)
     why: str = Field(max_length=500, description="What gap in the evidence this closes.")
-    evidence: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(
+        description="Refs like ['E3'] that show the gap; empty only if nothing relates."
+    )
     responsibility: str | None = Field(
         default=None, description="Ref of the responsibility evidence it concerns, if any."
     )
