@@ -1,7 +1,6 @@
 # Relay documentation
 
-**Short on time?** Read the [final product PDF](Relay_Final_Product.pdf) (everything in one
-file), or open the [live product](https://relay-continuity-nine.vercel.app) and follow the
+**Short on time?** Read the [final product PDF](Relay_Final_Product.pdf) (10 pages), or open the [live product](https://relay-continuity-nine.vercel.app) and follow the
 [ten-minute walkthrough](../README.md#for-judges).
 
 Otherwise, the folders are numbered in reading order.
@@ -20,4 +19,6 @@ Otherwise, the folders are numbered in reading order.
 The specification (SRS and PRD, v3.0) is in
 [devDocs/1-round1-submission](../devDocs/1-round1-submission/relay_srs_prd.md). How Relay was planned,
 researched and reviewed, including the Round 1 and Round 2 submissions, is in
-[devDocs/](../devDocs/README.md).
+[devDocs/](../devDocs/README.md). Everything above, plus the specification, every API endpoint
+and data model and every screen, is in one file:
+[Relay_Complete_Documentation.pdf](Relay_Complete_Documentation.pdf).

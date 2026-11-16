@@ -9,7 +9,8 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 | | |
 |---|---|
 | **Live product** | <https://relay-continuity-nine.vercel.app> (the home page has one-click sign-in for judges) |
-| **Final product document (PDF)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): every feature, the architecture, testing, the roadmap and the full API reference |
+| **Final product document (PDF, 10 pages)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): the three improvements, everything beyond them, architecture, design decisions, testing and roadmap |
+| **Complete reference (PDF)** | [Documentation/Relay_Complete_Documentation.pdf](Documentation/Relay_Complete_Documentation.pdf): the specification, every API endpoint and data model, decision records, the product guide and every screen |
 | **Ten-minute walkthrough** | [For judges](#for-judges), below |
 | **Judge guide** | [judge-guide.md](Documentation/1-start-here/judge-guide.md): the problem, the lifecycle and an evidence matrix |
 | **All documentation** | [Documentation/](Documentation/README.md) |
@@ -257,7 +258,8 @@ The repository has two documentation folders:
 
 | Folder | What's in it |
 |---|---|
-| [Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf) | Everything in one document, including the full API reference |
+| [Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf) | The 10-page final product document |
+| [Relay_Complete_Documentation.pdf](Documentation/Relay_Complete_Documentation.pdf) | The complete reference, including the full API reference |
 | [1-start-here](Documentation/1-start-here/) | Judge guide, project overview, competitive analysis |
 | [2-round3-improvements](Documentation/2-round3-improvements/) | What we committed in Round 2, what we delivered, feature matrix, traceability |
 | [3-architecture](Documentation/3-architecture/) | Architecture, AI design, trust and privacy, SSO, decision records |
