@@ -48,6 +48,7 @@ from relay.integrations.notion.models import NotionConnection, NotionPage, Notio
 from relay.intelligence import capsules, interviews, meetings, runs
 from relay.jobs.app import create_job_app
 from relay.platform import workspaces
+from relay.platform.models import Tenant
 from relay.platform.workspaces import WorkspaceView
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 
@@ -62,6 +63,10 @@ MEMBERS = {  # synthetic member id -> (role, display name)
     "demo_sara": ("member", "Sara Kim"),
     "demo_ines": ("knowledge_steward", "Ines Duarte"),
     "demo_leo": ("member", "Leo Martins"),
+    # One persona for each remaining role, so every role can be seen doing its job.
+    "demo_dev": ("team_manager", "Dev Patel"),
+    "demo_riya": ("auditor", "Riya Desai"),
+    "demo_kai": ("guest", "Kai Nakamura"),
 }
 
 
@@ -124,12 +129,16 @@ async def seed_workspace(  # type: ignore[no-untyped-def]
                     status="active",
                     display_name=name,
                     email=f"{first}@{DOMAIN}",
-                    member_type="contractor" if sub == "demo_leo" else "employee",
+                    member_type="contractor" if sub in ("demo_leo", "demo_kai") else "employee",
                 )
             )
             users[sub] = user_id
 
     async with open_workspace_access(factory, _identity(owner), tenant) as access:
+        # Marks the sample and its creator, who may try Relay as any role here.
+        await access.session.execute(
+            update(Tenant).where(Tenant.id == tenant).values(sample_owner_id=access.user_id)
+        )
         ids = await _catalog(access, users)
     async with open_workspace_access(factory, _identity(owner), tenant) as access:
         await _connectors(access, ids)

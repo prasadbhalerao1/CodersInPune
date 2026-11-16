@@ -10,6 +10,8 @@ The live product is at https://relay-continuity-nine.vercel.app (sign-in require
 - [README and ten-minute walkthrough](https://github.com/prasadbhalerao1/CodersInPune/blob/main/README.md): what to click on the live product
 - [Project overview](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/PROJECT_OVERVIEW.md): capabilities, architecture, AI evaluation, operations
 - [Competitive analysis](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/competitive-analysis.md): service catalogues, knowledge tools, offboarding and incident tools compared, with sources
+- [Product guide](https://relay-continuity-nine.vercel.app/docs): every feature and every number, with its exact formula and the code that computes it; full text at [/llms-full.txt](https://relay-continuity-nine.vercel.app/llms-full.txt)
+- [Submission pack](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/submission/README.md): workflow traceability, feature inventory, quality scorecard
 - [Round 3 improvements delivered](https://github.com/prasadbhalerao1/CodersInPune/blob/main/docs/round3/improvements-delivered.md): AI Handover Copilot, What If? simulator and Project Memory Replay, mapped to code and tests
 
 ## Core capabilities
@@ -19,6 +21,11 @@ The live product is at https://relay-continuity-nine.vercel.app (sign-in require
 - Project Memory Replay: merged, cited history per responsibility; AI chapters labelled Inferred; cited Q&A
 - What If? simulator: deterministic, read-only impact of an absence, cover candidates with overload flags
 - Handover Copilot: per-recipient brief with Fact / Rule / AI inference labels, brief coverage, version comparison, approval and acknowledgement, cited Q&A that answers "Not in the evidence" rather than guessing
+- Handover Autopilot: one click runs the whole case analysis while you watch each tool call; ends in proposals a person accepts
+- Meeting intelligence: transcript in; decisions, actions, open questions and risks out, each citing its line; accepted items become decision records and case tasks
+- Ask Relay: workspace-wide questions answered from records the asker can open, with citations, or "not in the records"
+- Decision log, expertise map (named vs capable backups), 30/60/90 continuation plan, handover rehearsal graded against the evidence, knowledge flagged when its code changes, voice answers in the exit interview, Slack sharing
+- Eight roles, each with a stated purpose; sample workspaces let you try Relay as any role
 - Audited handover cases: plan, approve, execute and verify with separation of duties, then follow-through that checks each transfer took hold (measuring the work, not the person)
 
 ## Technical

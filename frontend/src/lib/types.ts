@@ -469,7 +469,12 @@ export type WorkspaceRole =
   | "team_manager";
 export type MemberType = "employee" | "contractor" | "external";
 
-export type RoleView = { role: WorkspaceRole; description: string; permissions: string[] };
+export type RoleView = {
+  role: WorkspaceRole;
+  description: string;
+  purpose?: string;
+  permissions: string[];
+};
 
 export type IdentityConflict = {
   kind: "github_login_mismatch" | "email_mismatch" | "duplicate_email" | "pending_match";
@@ -2032,4 +2037,11 @@ export type RehearsalGrade = {
   source_title: string;
   source_excerpt: string;
   source_url: string | null;
+};
+
+export type DemoRoleView = {
+  sample: boolean;
+  can_switch: boolean;
+  role: string;
+  roles: { role: string; purpose: string }[];
 };

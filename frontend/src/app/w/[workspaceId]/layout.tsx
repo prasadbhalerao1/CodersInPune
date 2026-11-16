@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { MobileSearchButton } from "@/components/command-menu";
 import { formatDateTime } from "@/components/page";
+import { SampleBanner } from "@/components/sample-banner";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { TourRunner } from "@/components/tour";
 import { WorkspaceContextBridge } from "@/components/workspace-context";
@@ -13,7 +14,10 @@ async function WorkspaceChrome({ params }: { params: Promise<{ workspaceId: stri
   const { workspaceId } = await params;
   // Not attempt(): its notFound() would escape this segment's not-found page from a
   // layout. Chrome is optional; the page itself explains a missing or forbidden workspace.
-  const workspace = await api.getWorkspace(workspaceId).catch(() => null);
+  const [workspace, sample] = await Promise.all([
+    api.getWorkspace(workspaceId).catch(() => null),
+    api.demoRole(workspaceId).catch(() => null),
+  ]);
   if (!workspace) return null;
   const { name, role, deletion_scheduled_for: deletionAt } = workspace;
   return (
@@ -35,6 +39,7 @@ async function WorkspaceChrome({ params }: { params: Promise<{ workspaceId: stri
         </details>
         <MobileSearchButton />
       </div>
+      {sample?.sample ? <SampleBanner workspaceId={workspaceId} view={sample} /> : null}
       {deletionAt ? (
         <p
           role="status"

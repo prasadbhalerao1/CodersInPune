@@ -143,3 +143,47 @@ async def test_sample_shows_code_drift_on_the_old_runbook(api: Api) -> None:
     ).json()
     assert [d["title"] for d in drift] == ["Deploy payments-api (old runbook)"]
     assert drift[0]["merged_since"] > 0
+
+
+async def test_creator_can_try_every_role_and_switch_back(api: Api) -> None:
+    created = await api.client.post(
+        "/workspaces/sample", headers={**api.as_user(OWNER), "Idempotency-Key": "role-sample-001"}
+    )
+    ws = created.json()["id"]
+    me = api.as_user(OWNER)
+    members = (await api.client.get(f"/workspaces/{ws}/members", headers=me)).json()
+    roles = {m["role"] for m in members}
+    assert roles >= {
+        "owner",
+        "admin",
+        "continuity_manager",
+        "knowledge_steward",
+        "team_manager",
+        "member",
+        "auditor",
+        "guest",
+    }  # a persona for every role
+    status = (await api.client.get(f"/workspaces/{ws}/demo-role", headers=me)).json()
+    assert (status["sample"], status["can_switch"], status["role"]) == (True, True, "owner")
+
+    switched = await api.client.put(
+        f"/workspaces/{ws}/demo-role", headers=me, json={"role": "guest"}
+    )
+    assert switched.json()["role"] == "guest"
+    denied = await api.client.post(
+        f"/workspaces/{ws}/responsibilities", headers=me, json={"name": "X", "criticality": "low"}
+    )
+    assert denied.status_code == 403  # a guest reads, never writes
+    back = await api.client.put(f"/workspaces/{ws}/demo-role", headers=me, json={"role": "owner"})
+    assert back.json()["role"] == "owner"  # the creator can always return
+    bad = await api.client.put(f"/workspaces/{ws}/demo-role", headers=me, json={"role": "god"})
+    assert bad.status_code == 422
+
+
+async def test_real_workspaces_never_allow_role_switching(api: Api) -> None:
+    ws = await api.create_workspace(OWNER, "Real Co")
+    me = api.as_user(OWNER)
+    status = (await api.client.get(f"/workspaces/{ws}/demo-role", headers=me)).json()
+    assert (status["sample"], status["can_switch"]) == (False, False)
+    tried = await api.client.put(f"/workspaces/{ws}/demo-role", headers=me, json={"role": "guest"})
+    assert tried.status_code == 404

@@ -29,6 +29,7 @@ from relay.platform.models import Tenant
 from relay.policy.permissions import (
     ROLE_DESCRIPTIONS,
     ROLE_PERMISSIONS,
+    ROLE_PURPOSE,
     Permission,
     authorize,
     visible,
@@ -146,6 +147,7 @@ def _record(
 class RoleView(BaseModel):
     role: str
     description: str
+    purpose: str = ""
     permissions: list[str]
 
 
@@ -156,10 +158,78 @@ async def list_roles(access: WorkspaceAccess) -> list[RoleView]:
         RoleView(
             role=role,
             description=ROLE_DESCRIPTIONS.get(role, ""),
+            purpose=ROLE_PURPOSE.get(role, ""),
             permissions=sorted(str(p) for p in permissions),
         )
         for role, permissions in ROLE_PERMISSIONS.items()
     ]
+
+
+# ---------------------------------------------------------------- try a role (samples)
+
+
+class DemoRoleIn(StrictInput):
+    role: str
+
+
+class RoleOption(BaseModel):
+    role: str
+    purpose: str
+
+
+class DemoRoleView(BaseModel):
+    sample: bool  # this is a sample workspace
+    can_switch: bool  # the caller created it, so may try any role here
+    role: str
+    roles: list[RoleOption] = []
+
+
+async def _sample(access: WorkspaceAccess) -> Tenant | None:
+    tenant = await access.session.get(Tenant, access.tenant_id)
+    return tenant if tenant is not None and tenant.sample_owner_id is not None else None
+
+
+async def demo_role(access: WorkspaceAccess) -> DemoRoleView:
+    tenant = await _sample(access)
+    return DemoRoleView(
+        sample=tenant is not None,
+        can_switch=tenant is not None and tenant.sample_owner_id == access.user_id,
+        role=access.role,
+        roles=_role_options() if tenant is not None else [],
+    )
+
+
+def _role_options() -> list[RoleOption]:
+    return [RoleOption(role=r, purpose=ROLE_PURPOSE.get(r, "")) for r in ROLE_PERMISSIONS]
+
+
+async def set_demo_role(access: WorkspaceAccess, data: DemoRoleIn) -> DemoRoleView:
+    """Let a sample's creator experience Relay as any role. The permission check is the
+    creator check itself (not a role), so a creator who became a guest can switch back.
+    Real workspaces never allow this: they have no sample owner."""
+    tenant = await _sample(access)
+    if tenant is None or tenant.sample_owner_id != access.user_id:
+        raise ApiError(
+            404, "not_found", "Role switching is only available in your sample workspace."
+        )
+    if data.role not in ROLE_PERMISSIONS:
+        raise ApiError(422, "unknown_role", "Choose one of the workspace roles.")
+    membership = await access.session.get(Membership, access.membership_id)
+    if membership is None:
+        raise ApiError(404, "not_found", "Membership not found.")
+    previous = membership.role
+    membership.role = data.role
+    audit.record(
+        access.session,
+        tenant_id=access.tenant_id,
+        action="workspace.demo_role_changed",
+        actor_user_id=access.user_id,
+        target_type="membership",
+        target_id=membership.id,
+        details={"from": previous, "to": data.role},
+    )
+    await access.session.flush()
+    return DemoRoleView(sample=True, can_switch=True, role=data.role, roles=_role_options())
 
 
 # ---------------------------------------------------------------- members

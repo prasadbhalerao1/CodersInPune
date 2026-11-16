@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import type {
   ContinuationPlan,
   DecisionEntry,
+  DemoRoleView,
   DriftItem,
   ExpertiseMap,
   MeetingDetail,
@@ -433,6 +434,7 @@ export const api = {
   codeDrift: (id: string) => relayFetch<DriftItem[]>(`${ws(id)}/knowledge-drift`),
   rehearsal: (id: string, capsuleId: string) =>
     relayFetch<{ drills: RehearsalDrill[] }>(`${ws(id)}/ai/capsules/${capsuleId}/rehearsal`),
+  demoRole: (id: string) => relayFetch<DemoRoleView>(`${ws(id)}/demo-role`),
   decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

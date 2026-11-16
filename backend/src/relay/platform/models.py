@@ -39,6 +39,8 @@ class Tenant(Base):
     # Owner scheduled deletion; purged by `relay-purge-workspaces` after the grace period.
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deletion_requested_by: Mapped[uuid.UUID | None]
+    # Set only on sample workspaces: their creator may try Relay as any role there.
+    sample_owner_id: Mapped[uuid.UUID | None]
 
 
 class TenantProbe(Base):

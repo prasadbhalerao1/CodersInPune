@@ -76,3 +76,13 @@ async def accept(
 @router.get("/roles")
 async def roles(access: CurrentWorkspace) -> list[svc.RoleView]:
     return await svc.list_roles(access)
+
+
+@router.get("/demo-role")
+async def demo_role(access: CurrentWorkspace) -> svc.DemoRoleView:
+    return await svc.demo_role(access)
+
+
+@router.put("/demo-role")
+async def set_demo_role(access: CurrentWorkspace, body: svc.DemoRoleIn) -> svc.DemoRoleView:
+    return await svc.set_demo_role(access, body)

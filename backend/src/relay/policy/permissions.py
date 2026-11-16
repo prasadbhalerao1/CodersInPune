@@ -126,6 +126,20 @@ ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
     | {Permission.CASE_COMMENT, Permission.KNOWLEDGE_WRITE, Permission.AI_READ},
 }
 # Plain-language summary of each role, for the Roles & Permissions screen.
+# Why each role exists: the job it does in keeping work moving through a handover.
+ROLE_PURPOSE: Final[dict[str, str]] = {
+    "owner": "Accountable for the workspace itself: who administers it and whether it exists.",
+    "admin": "Runs the workspace day to day: members, integrations, AI settings and policies.",
+    "continuity_manager": "Runs handovers: opens cases, approves plans and moves ownership, "
+    "without needing admin rights.",
+    "knowledge_steward": "Keeps knowledge trustworthy: verifies it, settles disputes and "
+    "retires what is out of date.",
+    "team_manager": "Leads a team: manages the responsibilities their team holds, nothing else.",
+    "member": "Does the work: writes knowledge, completes tasks and receives handovers.",
+    "auditor": "Checks compliance: reads everything, including the audit log, and changes nothing.",
+    "guest": "An outside contractor or consultant: can read what they need, never change it.",
+}
+
 ROLE_DESCRIPTIONS: Final[dict[str, str]] = {
     "owner": "Everything, including billing-level decisions and removing admins.",
     "admin": "Everything except transferring ownership.",

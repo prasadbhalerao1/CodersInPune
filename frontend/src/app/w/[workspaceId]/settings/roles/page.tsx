@@ -64,6 +64,7 @@ export default async function RolesPage({ params }: PageProps<"/w/[workspaceId]/
             {sorted.map((r) => (
               <li key={r.role} className="rounded-lg border p-3 text-sm">
                 <p className="font-medium">{ROLE_LABEL[r.role] ?? r.role}</p>
+                {r.purpose ? <p className="text-xs font-medium">Why: {r.purpose}</p> : null}
                 <p className="text-muted-foreground text-xs">{r.description}</p>
               </li>
             ))}

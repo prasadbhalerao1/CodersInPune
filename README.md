@@ -28,6 +28,18 @@ below starts from that link and only uses buttons you can see. Allow about ten m
    *Northwind Labs (demo)*: eight fictional people, seven responsibilities, a year of
    GitHub, Linear and Notion history, and an engineer, Arjun, who is leaving.
 
+**Demo access:** there is no shared demo password, by design. Sign-in is a one-time code sent
+to the email you type, so every judge gets a private, pre-seeded copy that behaves exactly
+as production does. The sample exists so you don't need to connect your own GitHub, Linear,
+Notion or Slack. A workspace you create yourself works the same way, with your tools
+connected in **Integrations**.
+
+**Try every role:** the sample has a person in each of the eight roles: Maya (admin), Tom
+(continuity manager), Ines (knowledge steward), Dev (team manager), Priya (member), Riya
+(auditor), Kai (guest), and you (owner). The banner at the top has **Try Relay as…**, which
+switches *your own* role in the sample, so you see exactly what that role can and can't do.
+**Switch back to Owner** at any time. Settings → Roles explains why each role exists.
+
 **Look for:** the Overview leads with *A handover is waiting for you*, a continuity-health
 ring, a setup checklist with the next useful tour, and the gaps that would hurt if someone
 left tomorrow. New to Relay? Click **Take the tour**, or open **Learn Relay** in the sidebar
