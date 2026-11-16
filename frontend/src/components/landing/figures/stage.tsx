@@ -14,6 +14,26 @@ import { clamp01, type Dims, type Joints, type Vec } from "./rig";
 /** Kill switch for the whole layer: NEXT_PUBLIC_RELAY_FIGURES=0 renders no figure anywhere. */
 export const FIGURES_ON = process.env.NEXT_PUBLIC_RELAY_FIGURES !== "0";
 
+// Decorative motion waits until the page has loaded and the browser is idle, so reading,
+// scrolling and clicking are never competing with the figures for the main thread.
+let motionReady = false;
+const motionWaiters: (() => void)[] = [];
+function whenIdle(cb: () => void) {
+  if (motionReady) return cb();
+  motionWaiters.push(cb);
+  if (motionWaiters.length > 1) return;
+  const go = () => {
+    motionReady = true;
+    motionWaiters.splice(0).forEach((f) => f());
+  };
+  const afterLoad = () =>
+    window.requestIdleCallback
+      ? window.requestIdleCallback(go, { timeout: 4000 })
+      : window.setTimeout(go, 2500);
+  if (document.readyState === "complete") afterLoad();
+  else window.addEventListener("load", afterLoad, { once: true });
+}
+
 /** dt in seconds; `still` asks the scene for a representative motionless frame. */
 export type Frame = (dt: number, w: number, h: number, still: boolean) => void;
 
@@ -47,12 +67,20 @@ export function useStage(ref: RefObject<SVGSVGElement | null>, frame: Frame) {
       if (w > 0) frameRef.current(dt, w, h, false);
       raf = requestAnimationFrame(loop);
     };
+    let visible = false;
     const start = () => {
+      visible = true;
       if (raf || reduce) return;
+      if (!motionReady) {
+        once(); // a still frame until the page is idle
+        whenIdle(() => visible && start());
+        return;
+      }
       last = 0;
       raf = requestAnimationFrame(loop);
     };
     const stop = () => {
+      visible = false;
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
     };

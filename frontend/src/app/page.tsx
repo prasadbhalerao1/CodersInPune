@@ -7,7 +7,7 @@ import { ArrowRight, Play } from "lucide-react";
 
 import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
 import { Petals } from "@/components/landing/petals";
-import { QuantumCapsule3D } from "@/components/landing/quantum-capsule-3d";
+import { QuantumCapsuleLazy } from "@/components/landing/quantum-capsule-lazy";
 import { HeroReadout } from "@/components/landing/hero-readout";
 import { RelayMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -50,8 +50,14 @@ export default function HomePage() {
     <div className="landing-root bg-page text-strong selection:bg-lime selection:text-cta-fg relative min-h-svh overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }} />
 
-      <Interlude />
-      <Films />
+      {/* Separate boundaries let React hydrate the page in small slices instead of one long
+          task, so the first click never waits behind decorative layers. */}
+      <Suspense fallback={null}>
+        <Interlude />
+      </Suspense>
+      <Suspense fallback={null}>
+        <Films />
+      </Suspense>
       <BlueArt />
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
@@ -133,7 +139,7 @@ export default function HomePage() {
 
           {/* Capsule: large, diagonal, overlapping the copy column (desktop) */}
           <div className="pointer-events-none absolute top-1/2 right-[5%] z-10 hidden w-[60vw] max-w-[1080px] -translate-y-[50%] lg:block">
-            <QuantumCapsule3D />
+            <QuantumCapsuleLazy />
           </div>
 
           {/* What-if readout (desktop): the same numbers as the simulator below */}
@@ -188,7 +194,7 @@ export default function HomePage() {
                   { x: 1040, y: 800, rot: 62, s: 1.2, o: 0.8, blur: true },
                 ]}
               />
-              <QuantumCapsule3D />
+              <QuantumCapsuleLazy />
               <div className="mt-2 flex justify-center">
                 <HeroReadout />
               </div>
@@ -208,10 +214,14 @@ export default function HomePage() {
           </div>
         </section>
 
-        <LandingSections />
+        <Suspense fallback={null}>
+          <LandingSections />
+        </Suspense>
       </main>
 
-      <LandingFooter />
+      <Suspense fallback={null}>
+        <LandingFooter />
+      </Suspense>
     </div>
   );
 }

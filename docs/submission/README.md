@@ -44,6 +44,8 @@ The problem statement asks for **Connect → Reconstruct → Verify → Review �
 | Production build | `pnpm build` succeeds | `cd frontend && pnpm build` |
 | AI safety evaluation | 31 labelled cases in CI, 0 unsupported claims stored, 0 permission leaks | `backend/tests/intelligence/test_eval.py` |
 | Browser journeys | Public and signed-in journeys from the landing page | `frontend/e2e/` |
+| Lighthouse, production `/docs` (mobile profile) | Performance 98, Accessibility 100, Best practices 96, SEO 92; LCP 2.2 s, CLS 0, TBT 20 ms | `npx lighthouse https://relay-continuity-nine.vercel.app/docs` |
+| Lighthouse, landing page (desktop profile) | LCP 0.8 s, FCP 0.4 s, CLS 0; the 3D hero loads after the page is idle | `npx lighthouse https://relay-continuity-nine.vercel.app --preset=desktop` |
 | Tenant isolation and schema conventions | Enforced by tests that inspect the live schema | `tests/security/` |
 
 ## 4. Security
