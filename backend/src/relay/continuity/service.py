@@ -1615,6 +1615,11 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
                 can_accept=i.recipient_person_id in mine
                 and i.accepted_at is None
                 and case.status not in lifecycle.CLOSED,
+                can_record_acceptance=role_allows(access.role, Permission.CASE_MANAGE)
+                and i.recipient_person_id is not None
+                and i.recipient_person_id not in mine
+                and i.accepted_at is None
+                and case.status not in lifecycle.CLOSED,
             )
             for i in items
         ],

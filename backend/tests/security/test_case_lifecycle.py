@@ -461,12 +461,17 @@ async def test_incoming_owner_accepts_and_completion_waits_for_it(api: Api, ws: 
     await Ws(api, ws.id, "user_auditor").call("POST", f"/cases/{cid}/scope/{item}/accept", 403)
     seen = await member.call("GET", f"/cases/{cid}")
     assert seen["scope"][0]["can_accept"]
+    assert not seen["scope"][0]["can_record_acceptance"]  # their own: they accept directly
+    coordinator = await ws.call("GET", f"/cases/{cid}")
+    assert coordinator["scope"][0]["can_record_acceptance"]
+    assert not coordinator["scope"][0]["can_accept"]
     accepted = await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
     first = accepted["scope"][0]["accepted_at"]
     assert first
     assert not accepted["scope"][0]["can_accept"]
     again = await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
     assert again["scope"][0]["accepted_at"] == first
+    assert not (await ws.call("GET", f"/cases/{cid}"))["scope"][0]["can_record_acceptance"]
 
     # Completion waits for open tasks.
     executed = await ws.call("POST", f"/cases/{cid}/execute")

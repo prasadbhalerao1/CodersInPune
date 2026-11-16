@@ -269,6 +269,7 @@ export type ScopeItemView = {
   can_decline: boolean;
   accepted_at: string | null;
   can_accept: boolean;
+  can_record_acceptance: boolean;
 };
 
 export type TaskView = {

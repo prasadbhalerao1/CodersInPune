@@ -187,6 +187,8 @@ class ScopeItemView(BaseModel):
     can_decline: bool = False
     # The signed-in user is the incoming person and has not accepted yet.
     can_accept: bool = False
+    # A coordinator (case.manage) may record acceptance for someone, e.g. confirmed in person.
+    can_record_acceptance: bool = False
 
 
 class TaskView(BaseModel):

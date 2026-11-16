@@ -1,8 +1,11 @@
 import Link from "next/link";
 
+import { ActionForm, SubmitButton } from "@/components/action-form";
 import { formatDateTime, Section } from "@/components/page";
 import { CriticalityBadge, ROLE_LABEL } from "@/components/ui/badge";
 import type { CaseDetail, ScopeItemView } from "@/lib/types";
+
+import { acceptScopeAction } from "../actions";
 
 function Line({ when, who, note }: { when: string; who: string; note?: string }) {
   return (
@@ -130,6 +133,18 @@ export function OwnershipPlan({
               <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
                 Accepted by {item.recipient.name} · {formatDateTime(item.accepted_at)}
               </p>
+            ) : item.recipient && item.can_record_acceptance ? (
+              <ActionForm
+                action={acceptScopeAction.bind(null, workspaceId, c.id, item.id)}
+                className="mt-1 flex flex-wrap items-center gap-2 text-xs"
+              >
+                <span className="text-muted-foreground">
+                  Waiting for {item.recipient.name} to accept.
+                </span>
+                <SubmitButton size="sm" variant="outline" pendingLabel="Recording…">
+                  Record acceptance for {item.recipient.name}
+                </SubmitButton>
+              </ActionForm>
             ) : null}
           </li>
         ))}
