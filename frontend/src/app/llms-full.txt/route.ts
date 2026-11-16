@@ -1,4 +1,4 @@
-import { EXPLAIN } from "@/lib/explain";
+import { EXPLAIN, type Explanation } from "@/lib/explain";
 import { REPO_URL, SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -19,7 +19,7 @@ export function GET() {
     `Live product: ${SITE_URL} · Guide: ${SITE_URL}/docs · Source: ${REPO_URL}`,
     "",
   ];
-  for (const [key, e] of Object.entries(EXPLAIN)) {
+  for (const [key, e] of Object.entries(EXPLAIN) as [string, Explanation][]) {
     parts.push(`## ${e.title}`, "", e.summary, "");
     if (e.formula) parts.push(`How it is calculated: ${e.formula}`, "");
     if (e.inputs.length) parts.push(`What it uses: ${e.inputs.join("; ")}.`, "");
