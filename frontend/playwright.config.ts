@@ -31,5 +31,11 @@ export default defineConfig({
       testMatch: /round3\.spec\.ts/,
       use: { ...chrome, storageState: "e2e/.auth/user.json" },
     },
+    {
+      // Autopilot, meetings, decisions, expertise, plan, drift, simulator report, Slack.
+      name: "beyond",
+      testMatch: /beyond\.spec\.ts/,
+      use: { ...chrome, storageState: "e2e/.auth/user.json" },
+    },
   ],
 });
