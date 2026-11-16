@@ -429,6 +429,10 @@ function followUps(c: CapsuleView): string[] {
   const open = c.sections
     .flatMap((s) => s.points)
     .filter((p) => p.kind === "missing" || p.kind === "question")
-    .map((p) => (p.text.length > 120 ? `${p.text.slice(0, 117)}…` : p.text));
+    .map((p) => {
+      const text = p.text.length > 110 ? `${p.text.slice(0, 107).trimEnd()}…` : p.text;
+      // Gaps are written as statements; ask about them as questions.
+      return text.trimEnd().endsWith("?") ? text : `What do we know about this gap: ${text}`;
+    });
   return [...uncovered, ...open, "What should I do first this week?"];
 }
