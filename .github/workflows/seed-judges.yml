@@ -1,0 +1,34 @@
+# Seeds the judges' shared sample workspace: one WorkOS account per role, all members of the
+# same Northwind Labs sample. Run by hand (Actions → Seed judges → Run workflow) after the
+# accounts exist in WorkOS. Pass `role:email=workos_user_id` pairs so no WorkOS key is needed
+# here. Idempotent: running it again keeps one workspace.
+name: Seed judges
+
+on:
+  workflow_dispatch:
+    inputs:
+      accounts:
+        description: "role:email=workos_user_id pairs, comma separated"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --frozen --no-dev
+      - name: relay-seed-judges
+        env:
+          RELAY_ENVIRONMENT: production
+          RELAY_DATABASE_URL: ${{ secrets.RELAY_MIGRATION_DATABASE_URL }}
+          RELAY_WORKOS_CLIENT_ID: client_01M6XQZCZ6RGBWKAB32V4Q5PDC
+          RELAY_JUDGE_ACCOUNTS: ${{ inputs.accounts }}
+        run: uv run --no-sync relay-seed-judges

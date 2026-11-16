@@ -6,8 +6,8 @@ from relay.demo.seed import parse_accounts
 
 
 def test_accounts_parse_into_roles() -> None:
-    accounts = parse_accounts("owner:A@x.com, auditor:b@x.com")
-    assert accounts == {"owner": "a@x.com", "auditor": "b@x.com"}
+    accounts = parse_accounts("owner:A@x.com, auditor:b@x.com=user_01ABC")
+    assert accounts == {"owner": ("a@x.com", None), "auditor": ("b@x.com", "user_01ABC")}
 
 
 @pytest.mark.parametrize(

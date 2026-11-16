@@ -38,7 +38,7 @@ from relay.continuity import workflow
 from relay.directory import service as directory
 from relay.identity.models import Membership, UserAccount
 from relay.identity.tokens import VerifiedIdentity
-from relay.identity.workos_api import WorkOSClient
+from relay.identity.workos_api import WorkOSClient, WorkOSUser
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
 from relay.integrations.github.models import GitHubInstallation, GitHubRepository, GitHubWorkItem
 from relay.integrations.linear.models import (
@@ -776,14 +776,19 @@ async def _meetings(
 JUDGES_NAME = "Northwind Labs (judges)"
 
 
-def parse_accounts(spec: str) -> dict[str, str]:
-    """`owner:a@x.com,admin:b@x.com,...` -> {role: email}; every role must be a real role."""
-    accounts: dict[str, str] = {}
+def parse_accounts(spec: str) -> dict[str, tuple[str, str | None]]:
+    """`owner:a@x.com,admin:b@x.com=user_01...` -> {role: (email, WorkOS id or None)}.
+
+    Every role must be a real role. A WorkOS id after `=` skips the lookup, so the seed can run
+    where the WorkOS API key isn't available (e.g. CI).
+    """
+    accounts: dict[str, tuple[str, str | None]] = {}
     for part in filter(None, (p.strip() for p in spec.split(","))):
-        role, _, email = part.partition(":")
+        role, _, rest = part.partition(":")
+        email, _, workos_id = rest.partition("=")
         if role not in ROLE_PERMISSIONS or "@" not in email:
             raise ValueError(f"not a role:email pair: {part!r}")
-        accounts[role] = email.strip().lower()
+        accounts[role] = (email.strip().lower(), workos_id.strip() or None)
     if "owner" not in accounts:
         raise ValueError("an owner account is required")
     return accounts
@@ -798,11 +803,15 @@ async def seed_judges(spec: str) -> uuid.UUID:
     factory = create_session_factory(engine)
     jobs = create_job_app(settings, factory)
     try:
+        users: dict[str, WorkOSUser] = {}
         async with httpx.AsyncClient(timeout=20) as http:
             client = WorkOSClient(settings, http)
-            users = {}
-            for role, email in accounts.items():
-                found = await client.find_user_by_email(email)
+            for role, (email, workos_id) in accounts.items():
+                found = (
+                    WorkOSUser(id=workos_id, email=email, email_verified=True, display_name=None)
+                    if workos_id
+                    else await client.find_user_by_email(email)
+                )
                 if found is None:
                     raise SystemExit(f"No WorkOS user for {email}: create it first.")
                 users[role] = found
