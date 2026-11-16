@@ -36,9 +36,9 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from relay.catalog import assets as catalog_assets
-from relay.catalog import knowledge
+from relay.catalog import knowledge, stewardship
 from relay.catalog import service as catalog
-from relay.catalog.models import KnowledgeItem
+from relay.catalog.models import KnowledgeItem, Responsibility, ResponsibilityDependency
 from relay.config import Settings
 from relay.continuity import service as cases
 from relay.continuity import workflow
@@ -153,6 +153,7 @@ async def seed_workspace(  # type: ignore[no-untyped-def]
             update(Tenant).where(Tenant.id == tenant).values(sample_owner_id=access.user_id)
         )
         ids = await _catalog(access, users)
+        await _dependencies(access)
     async with open_workspace_access(factory, _identity(owner), tenant) as access:
         await _connectors(access, ids)
     async with open_workspace_access(factory, _identity(owner), tenant) as access:
@@ -179,6 +180,41 @@ async def _owner_id(access: WorkspaceAccess) -> uuid.UUID:
     )
     assert owner is not None
     return owner
+
+
+# Refunds need the payments API, which ships through the deploy pipeline: a chain the What If?
+# simulator follows when the pipeline's owner is away. (dependent, depends on)
+DEPENDENCIES = (
+    ("Payments API operations", "Production deployments"),
+    ("Refund approvals", "Payments API operations"),
+)
+
+
+async def _dependencies(access: WorkspaceAccess) -> None:
+    """Record the sample's dependency chain; skips any already recorded, so reruns are safe."""
+    by_name = {
+        r.name: r.id
+        for r in await access.session.scalars(
+            select(Responsibility).where(Responsibility.tenant_id == access.tenant_id)
+        )
+    }
+    for dependent, target in DEPENDENCIES:
+        if dependent not in by_name or target not in by_name:
+            continue
+        exists = await access.session.scalar(
+            select(func.count())
+            .select_from(ResponsibilityDependency)
+            .where(
+                ResponsibilityDependency.responsibility_id == by_name[dependent],
+                ResponsibilityDependency.depends_on_responsibility_id == by_name[target],
+            )
+        )
+        if not exists:
+            await stewardship.add_dependency(
+                access,
+                by_name[dependent],
+                stewardship.DependencyIn(depends_on_responsibility_id=by_name[target]),
+            )
 
 
 async def _catalog(access: WorkspaceAccess, users: dict[str, uuid.UUID]) -> dict[str, uuid.UUID]:
@@ -417,6 +453,22 @@ async def _connectors(access: WorkspaceAccess, ids: dict[str, uuid.UUID]) -> Non
     await _history(access, ids, github.id, linear.id)
 
 
+# Commit messages (first lines) behind the sample's pull requests; some name the issue or the
+# Linear ticket they belong to, which is how Memory Replay ties the work together.
+PR_COMMITS: dict[int, tuple[str, ...]] = {
+    14: ("Raise step timeout to 30 minutes", "Log the step that timed out (refs #12)"),
+    21: ("Add canary stage", "Route 5% of traffic to the canary", "Canary dashboard link"),
+    26: ("Fail promotion on canary 5xx rate", "Alert on blocked promotion (#25)"),
+    31: ("Bump runner image to Ubuntu 24.04", "Pin Node 22 in the runner"),
+    34: ("Rollback procedure draft", "Add flag cleanup step"),
+    38: (
+        "Rollback command for payments-api",
+        "Keep the previous release warm",
+        "Tests for rollback",
+    ),
+}
+
+
 # A year of synthetic work on the deploy pipeline, for Project Memory Replay and the
 # simulator's open work: (kind, number, title, labels, state, days ago, assignees).
 DEPLOY_HISTORY: tuple[tuple[str, int, str, list[str], str, int, list[str]], ...] = (
@@ -490,6 +542,17 @@ async def _history(
     session.add(repo)
     await session.flush()
     for kind, number, title, labels, state, days, assignees in DEPLOY_HISTORY:
+        commits = [
+            {
+                "sha": f"{number:04d}{i:02d}a7c3e9",
+                "message": message,
+                "author": "leo-nw" if number in (31, 34) else "arjun-nw",
+                "at": (
+                    NOW - timedelta(days=days, hours=6 * (len(PR_COMMITS.get(number, ())) - i))
+                ).isoformat(),
+            }
+            for i, message in enumerate(PR_COMMITS.get(number, ()))
+        ]
         at = NOW - timedelta(days=days)
         path = "pull" if kind == "pull_request" else "issues"
         session.add(
@@ -509,6 +572,7 @@ async def _history(
                 gh_updated_at=at,
                 closed_at=at if state != "open" else None,
                 merged_at=at if state == "merged" else None,
+                commits=commits,
             )
         )
     session.add(
@@ -847,6 +911,8 @@ async def seed_judges(spec: str) -> uuid.UUID:
                 )
                 .values(last_sync_status="ok", last_sync_error=None)
             )
+        async with open_workspace_access(factory, _identity(users["owner"].id), ws.id) as access:
+            await _dependencies(access)
         # Each role account *is* that role's sample person: the person's directory email becomes
         # the account's email, so its My Work and "Accept ownership" are real, while the
         # membership keeps the account's own address, so Relay's emails reach whoever signed in.

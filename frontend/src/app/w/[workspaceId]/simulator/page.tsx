@@ -437,6 +437,33 @@ function Results({ workspaceId, view }: { workspaceId: string; view: SimulationV
             )}
           </Section>
 
+          {view.downstream?.length ? (
+            <Section
+              title="Downstream impact"
+              description="Work that depends on something left with nobody, followed through the recorded dependencies."
+            >
+              <ul className="flex flex-col gap-2">
+                {view.downstream.map((d) => (
+                  <li
+                    key={d.responsibility_id}
+                    className="bg-card rounded-lg border px-3 py-2.5 text-sm shadow-xs"
+                  >
+                    <p className="font-medium">
+                      {d.name}{" "}
+                      <span className="text-muted-foreground text-xs font-normal capitalize">
+                        {d.criticality}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Depends on {d.via}
+                      {d.depth > 1 ? `, which leads back to ${d.root}` : ""} (no cover).
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+
           {view.existing_risks.length > 0 ? (
             <Section title="Already open" description="Risks recorded on these today.">
               <ul className="flex flex-col gap-1.5 text-sm">

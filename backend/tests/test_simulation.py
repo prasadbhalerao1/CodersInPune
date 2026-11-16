@@ -100,6 +100,36 @@ async def test_a_backup_covering_everything_leaves_nothing_uncovered(api: Api) -
     assert view["readiness_score"] > view["baseline_score"]
 
 
+async def test_downstream_work_that_depends_on_uncovered_work_is_shown(api: Api) -> None:
+    ws, ids = await org(api)
+    refunds = await ws.responsibility("Refund approvals", "high")
+    payments = await ws.responsibility("Payments API operations", "critical")
+    await assign(ws, refunds, "primary", ids["Maya"])
+    await assign(ws, payments, "primary", ids["Maya"])
+
+    def depends(rid: str, on: str) -> Any:
+        return ws.call(
+            "POST",
+            f"/responsibilities/{rid}/dependencies",
+            201,
+            json={"depends_on_responsibility_id": on, "relationship": "depends_on"},
+        )
+
+    # Refunds -> Payments -> Deploys, and a cycle back to Refunds that must not loop.
+    await depends(payments, ids["deploys"])
+    await depends(refunds, payments)
+    await depends(ids["deploys"], refunds)
+    view = await simulate(ws, ids["Arjun"])
+    chain = {d["name"]: (d["depth"], d["via"], d["root"]) for d in view["downstream"]}
+    assert chain == {
+        "Payments API operations": (1, "Production deployments", "Production deployments"),
+        "Refund approvals": (2, "Payments API operations", "Production deployments"),
+    }
+    # A backup who covers the root removes the chain; the real records are untouched.
+    covered = await simulate(ws, ids["Arjun"], ids["Dev"])
+    assert covered["downstream"] == []
+
+
 async def test_score_is_explained_and_full_for_someone_holding_nothing(api: Api) -> None:
     ws, ids = await org(api)
     view = await simulate(ws, ids["Dev"])

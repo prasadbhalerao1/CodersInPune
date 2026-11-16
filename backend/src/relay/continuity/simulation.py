@@ -25,6 +25,7 @@ from relay.catalog.models import (
     OwnershipAssignment,
     Responsibility,
     ResponsibilityAsset,
+    ResponsibilityDependency,
 )
 from relay.continuity.models import OPEN_STATUSES, CaseScopeItem, CaseTask, ContinuityCase
 from relay.directory.models import Person, Team, TeamMember
@@ -125,6 +126,17 @@ class ScoreParts(BaseModel):
     rows: list[ScoreRow] = []
 
 
+class DownstreamImpact(BaseModel):
+    """A responsibility that depends (directly or through others) on one left with nobody."""
+
+    responsibility_id: uuid.UUID
+    name: str
+    criticality: str
+    via: str  # the responsibility it depends on, one step closer to the uncovered one
+    root: str  # the uncovered responsibility at the start of the chain
+    depth: int  # 1 = depends on it directly
+
+
 class SimulationView(BaseModel):
     person: PersonRef
     backup: PersonRef | None
@@ -145,6 +157,7 @@ class SimulationView(BaseModel):
     days: int | None = None  # how long the person is away, if given
     affected_assets: list[str] = []
     due_in_window: int = 0
+    downstream: list[DownstreamImpact] = []  # work that depends on what would be left uncovered
 
 
 class Candidate(BaseModel):
@@ -339,7 +352,70 @@ async def simulate(
         days=days,
         affected_assets=sorted({a for s in affected for a in s.assets}),
         due_in_window=sum(1 for w in open_work if w.due_in_window),
+        downstream=await _downstream(
+            access,
+            [s for s in affected if s.cover == "uncovered"],
+            {s.responsibility_id for s in affected},
+        ),
     )
+
+
+async def _downstream(
+    access: WorkspaceAccess,
+    uncovered: list[SimulatedResponsibility],
+    affected: set[uuid.UUID],
+) -> list[DownstreamImpact]:
+    """Follow recorded dependencies outward from the uncovered responsibilities, read-only.
+
+    Only dependencies someone recorded count; nothing is inferred. Each responsibility is listed
+    once, at its shortest distance, and cycles end the walk."""
+    if not uncovered:
+        return []
+    edges = (
+        await access.session.execute(
+            select(
+                ResponsibilityDependency.responsibility_id,
+                ResponsibilityDependency.depends_on_responsibility_id,
+                Responsibility.name,
+                Responsibility.criticality,
+            )
+            .join(Responsibility, Responsibility.id == ResponsibilityDependency.responsibility_id)
+            .where(
+                visible(access, Permission.RESPONSIBILITY_READ, Responsibility.tenant_id),
+                ResponsibilityDependency.depends_on_responsibility_id.is_not(None),
+                Responsibility.status == "active",
+            )
+        )
+    ).all()
+    dependents: dict[uuid.UUID, list[tuple[uuid.UUID, str, str]]] = {}
+    for rid, target, name, criticality in edges:
+        if target is not None:
+            dependents.setdefault(target, []).append((rid, name, criticality))
+    found: list[DownstreamImpact] = []
+    seen = set(affected)
+    frontier = [(s.responsibility_id, s.name, s.name) for s in uncovered]
+    depth = 0
+    while frontier:
+        depth += 1
+        nxt = []
+        for target, target_name, root in frontier:
+            for rid, name, criticality in sorted(dependents.get(target, []), key=lambda d: d[1]):
+                if rid in seen:
+                    continue
+                seen.add(rid)
+                found.append(
+                    DownstreamImpact(
+                        responsibility_id=rid,
+                        name=name,
+                        criticality=criticality,
+                        via=target_name,
+                        root=root,
+                        depth=depth,
+                    )
+                )
+                nxt.append((rid, name, root))
+        frontier = nxt
+    return found
 
 
 async def _knowledge_counts(
