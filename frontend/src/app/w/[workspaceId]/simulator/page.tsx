@@ -2,6 +2,7 @@ import {
   ArrowRight,
   CalendarClock,
   ChevronRight,
+  Download,
   ExternalLink,
   FlaskConical,
   ShieldCheck,
@@ -132,6 +133,16 @@ export default async function SimulatorPage({
           <ApiErrorNotice error={result.error} />
         ) : (
           <>
+            {result.data.affected_responsibilities.length > 0 ? (
+              <a
+                href={`/w/${workspaceId}/simulator/report${scenario(backupId)}`}
+                download
+                className="text-primary -mb-3 inline-flex items-center gap-1.5 self-end text-sm font-medium hover:underline"
+              >
+                <Download aria-hidden className="size-4" />
+                Download scenario report (with every candidate compared)
+              </a>
+            ) : null}
             <Results workspaceId={workspaceId} view={result.data} />
             {candidates?.ok && result.data.affected_responsibilities.length > 0 ? (
               <Candidates view={candidates.data} current={backupId} link={scenario} />
