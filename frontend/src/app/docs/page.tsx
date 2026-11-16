@@ -125,6 +125,53 @@ const ROLES: [string, string][] = [
   ["guest", "An outside contractor or consultant: can read what they need, never change it."],
 ];
 
+// What each role can do: [what, permission, roles that hold it]. A trailing * means "only
+// for their own teams". backend/tests/test_role_docs.py checks every row against
+// ROLE_PERMISSIONS, so this table cannot drift from what the backend enforces.
+const CAN: [string, string, string][] = [
+  [
+    "See the workspace, people, responsibilities and cases",
+    "case.read",
+    "owner admin continuity_manager knowledge_steward team_manager member auditor guest",
+  ],
+  [
+    "Read AI output: briefs, Autopilot results, Ask Relay",
+    "ai.read",
+    "owner admin continuity_manager knowledge_steward team_manager member auditor",
+  ],
+  [
+    "Comment on cases",
+    "case.comment",
+    "owner admin continuity_manager knowledge_steward team_manager member",
+  ],
+  [
+    "Write knowledge: runbooks and decisions",
+    "knowledge.write",
+    "owner admin continuity_manager knowledge_steward team_manager member",
+  ],
+  ["Verify knowledge and settle disputes", "knowledge.verify", "owner admin knowledge_steward"],
+  [
+    "Manage responsibilities",
+    "responsibility.manage",
+    "owner admin continuity_manager team_manager*",
+  ],
+  ["Open and run handover cases", "case.manage", "owner admin continuity_manager"],
+  ["Approve handovers and sign off readiness", "case.approve", "owner admin continuity_manager"],
+  ["Run AI: Autopilot and case analysis", "ai.run", "owner admin continuity_manager"],
+  ["Accept or reject AI proposals", "ai.review", "owner admin continuity_manager"],
+  ["Run the What If? simulator", "continuity.simulate", "owner admin continuity_manager"],
+  [
+    "See insights: health and continuity debt",
+    "insights.read",
+    "owner admin continuity_manager auditor",
+  ],
+  ["Read the audit log", "audit.read", "owner admin auditor"],
+  ["Manage members and invites", "member.manage", "owner admin"],
+  ["Connect GitHub, Linear, Notion and Slack", "integration.manage", "owner admin"],
+  ["Change policies and automations", "policy.manage", "owner admin"],
+  ["Delete the workspace", "workspace.delete", "owner"],
+];
+
 const FEATURES: { key: ExplainKey; icon: typeof Bot; blurb: string }[] = [
   { key: "copilot", icon: Bot, blurb: "Ask the handover; every answer cites its evidence." },
   {
@@ -278,6 +325,56 @@ export default function DocsPage() {
                 </div>
               ))}
             </dl>
+            <div className="mt-6 overflow-x-auto rounded-xl border">
+              <table className="w-full min-w-180 text-sm">
+                <caption className="sr-only">What each role can do</caption>
+                <thead className="bg-muted/50 text-left">
+                  <tr>
+                    <th scope="col" className="p-3 font-semibold">
+                      Can they…
+                    </th>
+                    {ROLES.map(([role]) => (
+                      <th
+                        key={role}
+                        scope="col"
+                        className="p-3 text-center text-xs font-semibold capitalize"
+                      >
+                        {role.replace("_", " ")}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {CAN.map(([what, permission, holders]) => {
+                    const held = holders.split(" ");
+                    return (
+                      <tr key={permission} className="border-t">
+                        <th scope="row" className="p-3 text-left font-normal">
+                          {what}
+                        </th>
+                        {ROLES.map(([role]) => {
+                          const mark = held.includes(role)
+                            ? ["✓", "Yes", "text-emerald-700 dark:text-emerald-400"]
+                            : held.includes(`${role}*`)
+                              ? ["◐", "Own teams only", "text-amber-700 dark:text-amber-400"]
+                              : ["✕", "No", "text-muted-foreground/60"];
+                          return (
+                            <td key={role} className={`p-3 text-center ${mark[2]}`}>
+                              <span aria-hidden>{mark[0]}</span>
+                              <span className="sr-only">{mark[1]}</span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              ◐ own teams only. Members see AI output built only from evidence the whole workspace
+              may read.
+            </p>
           </section>
 
           <footer className="text-muted-foreground mt-20 border-t pt-6 text-sm">

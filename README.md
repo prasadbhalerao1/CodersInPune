@@ -40,6 +40,28 @@ connected in **Integrations**.
 switches *your own* role in the sample, so you see exactly what that role can and can't do.
 **Switch back to Owner** at any time. Settings → Roles explains why each role exists.
 
+| Can they… | Owner | Admin | Continuity mgr | Knowledge steward | Team mgr | Member | Auditor | Guest |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| See the workspace, people, responsibilities and cases | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Read AI output: briefs, Autopilot results, Ask Relay | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Comment on cases | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Write knowledge: runbooks and decisions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Verify knowledge and settle disputes | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage responsibilities | ✅ | ✅ | ✅ | ❌ | 🟡 own teams | ❌ | ❌ | ❌ |
+| Open and run handover cases | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Approve handovers and sign off readiness | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Run AI (Autopilot, analysis) and review its proposals | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Run the What If? simulator | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| See insights: health and continuity debt | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Read the audit log | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Manage members, invites and integrations | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Change policies and automations | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Delete the workspace | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+Enforced in every backend service and by database row-level security, not just hidden in the
+UI. The same table is on [/docs#roles](https://relay-continuity-nine.vercel.app/docs#roles),
+checked against the permission registry by a test.
+
 **Look for:** the Overview leads with *A handover is waiting for you*, a continuity-health
 ring, a setup checklist with the next useful tour, and the gaps that would hurt if someone
 left tomorrow. New to Relay? Click **Take the tour**, or open **Learn Relay** in the sidebar
