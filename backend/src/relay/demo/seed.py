@@ -375,6 +375,10 @@ async def _catalog(access: WorkspaceAccess, users: dict[str, uuid.UUID]) -> dict
     }
 
 
+# The sample organisation's GitHub App installation (not a real installation id).
+SAMPLE_GITHUB_INSTALLATION = 999000001
+
+
 async def _connectors(access: WorkspaceAccess, ids: dict[str, uuid.UUID]) -> None:
     """Connector rows only for health states; no tokens, never synced."""
     linear = LinearConnection(
@@ -398,16 +402,15 @@ async def _connectors(access: WorkspaceAccess, ids: dict[str, uuid.UUID]) -> Non
             match_reason="Several people match; choose one",
         )
     )
-    github = GitHubInstallation(  # the deliberate failure path: access was lost
+    github = GitHubInstallation(
         tenant_id=access.tenant_id,
-        installation_id=999000001,
+        installation_id=SAMPLE_GITHUB_INSTALLATION,
         account_login="northwind-demo",
         account_type="Organization",
         status="active",
         connected_by=access.user_id,
         last_synced_at=NOW - timedelta(hours=2),
-        last_sync_status="error",
-        last_sync_error="GitHub returned 403: the app lost access to some repositories",
+        last_sync_status="ok",
     )
     access.session.add(github)
     await access.session.flush()
@@ -833,6 +836,16 @@ async def seed_judges(spec: str) -> uuid.UUID:
                 jobs,
                 idempotency_key=f"judges-{users['owner'].id}",
                 name=JUDGES_NAME,
+            )
+        # Workspaces seeded before the sample's GitHub connection was healthy show it as synced.
+        async with unit_of_work(factory, ws.id, users["owner"].id) as session:
+            await session.execute(
+                update(GitHubInstallation)
+                .where(
+                    GitHubInstallation.tenant_id == ws.id,
+                    GitHubInstallation.installation_id == SAMPLE_GITHUB_INSTALLATION,
+                )
+                .values(last_sync_status="ok", last_sync_error=None)
             )
         # Each role account *is* that role's sample person: the person's directory email becomes
         # the account's email, so its My Work and "Accept ownership" are real, while the
