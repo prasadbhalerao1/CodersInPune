@@ -239,26 +239,28 @@ export function MemoryReplay({
             <Chip active={majorOnly} onClick={() => setMajorOnly(!majorOnly)}>
               Major events
             </Chip>
-            <label className="text-muted-foreground flex items-center gap-1 text-xs">
-              From
-              <input
-                type="date"
-                value={from}
-                max={to || undefined}
-                onChange={(e) => setFrom(e.target.value)}
-                className={cn(inputClass, "h-8 w-auto")}
-              />
-            </label>
-            <label className="text-muted-foreground flex items-center gap-1 text-xs">
-              To
-              <input
-                type="date"
-                value={to}
-                min={from || undefined}
-                onChange={(e) => setTo(e.target.value)}
-                className={cn(inputClass, "h-8 w-auto")}
-              />
-            </label>
+            <span className="flex items-center gap-2">
+              <label className="text-muted-foreground flex items-center gap-1 text-xs">
+                From
+                <input
+                  type="date"
+                  value={from}
+                  max={to || undefined}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className={cn(inputClass, "h-8 w-auto")}
+                />
+              </label>
+              <label className="text-muted-foreground flex items-center gap-1 text-xs">
+                To
+                <input
+                  type="date"
+                  value={to}
+                  min={from || undefined}
+                  onChange={(e) => setTo(e.target.value)}
+                  className={cn(inputClass, "h-8 w-auto")}
+                />
+              </label>
+            </span>
             {narrowed ? (
               <Button size="sm" variant="ghost" onClick={clearNarrowing}>
                 <X aria-hidden />
