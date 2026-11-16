@@ -1,7 +1,7 @@
 """Seed a synthetic demo organisation: `uv run relay-demo-seed --owner <workos_user_id>`.
 
 Also used by `POST /workspaces/sample` (relay.demo.api) so a new user can explore Relay
-without connecting real sources. Creates a NEW workspace ("Northwind Labs (demo)") each
+without connecting real sources. Creates a NEW workspace ("Northwind Labs (sample)") each
 run, so it never touches real data, and drives the real services (rules, audit, outbox)
 as synthetic members where a second person is needed. Everything is fictional; no
 credentials are stored: the connector rows exist only to demonstrate health states and
@@ -64,7 +64,7 @@ from relay.policy.permissions import ROLE_PERMISSIONS
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 
 NOW = datetime.now(UTC)
-SAMPLE_NAME = "Northwind Labs (demo)"
+SAMPLE_NAME = "Northwind Labs (sample)"
 DOMAIN = "northwind.example"  # reserved for documentation: never a real mailbox
 MEMBERS = {  # synthetic member id -> (role, display name)
     "demo_maya": ("admin", "Maya Chen"),
@@ -612,6 +612,8 @@ async def _cases(
     detail = await c.execute_case(access, done.id, jobs)
     for crit in detail.criteria:
         await c.update_criterion(access, done.id, crit.id, c.CriterionUpdate(status="met"))
+    # Ines accepted the handover (recorded by the coordinator) before it was closed.
+    await workflow.accept(access, done.id, detail.scope[0].id, jobs)
     await c.complete_case(access, done.id, jobs)
 
     # The live scenario: Arjun is leaving; Relay discovers what he holds.

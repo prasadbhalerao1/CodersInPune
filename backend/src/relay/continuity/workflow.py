@@ -23,11 +23,11 @@ from relay.continuity.models import (
     CaseTask,
     ContinuityCase,
 )
-from relay.directory.models import Person
+from relay.directory.models import Person, TeamMember
 from relay.governance.models import SavedView
 from relay.identity.workspace_access import WorkspaceAccess
 from relay.notifications import service as notifications
-from relay.policy.permissions import Permission, authorize, visible
+from relay.policy.permissions import Permission, authorize, role_allows, visible
 from relay.shared.api_types import LongText, Name, StrictInput
 from relay.shared.errors import ApiError
 
@@ -245,6 +245,7 @@ async def decline(
     ):
         raise ApiError(403, "not_recipient", "Only the incoming person can decline.")
     item.recipient_person_id = None
+    item.accepted_at = item.accepted_by = None
     item.declined_at, item.declined_by, item.decline_reason = (
         func.now(),
         access.user_id,
@@ -253,6 +254,44 @@ async def decline(
     cases._plan_changed(access, case)
     cases._record(access, case, "case.assignment_declined", scope_item_id=str(item_id))
     await cases._notify_case_update(access, jobs, case, "declined")
+    return await cases.get_case(access, case_id)
+
+
+async def accept(
+    access: WorkspaceAccess, case_id: uuid.UUID, item_id: uuid.UUID, jobs: procrastinate.App
+) -> cases.CaseDetail:
+    """The incoming person (or a member of the incoming team) accepts the responsibility; a
+    case manager may record it on behalf of someone who doesn't use Relay.
+
+    Allowed while the case is open and the item still has a recipient (a decline removes it).
+    Accepting twice is a no-op. Changing the recipient clears the acceptance.
+    """
+    authorize(access, Permission.CASE_READ)
+    case = await cases._load(access, case_id, lock=True)
+    if case.status in lifecycle.CLOSED:
+        raise ApiError(409, "invalid_state", "This case is closed.")
+    item = await access.session.get(CaseScopeItem, item_id, with_for_update=True)
+    if item is None or item.case_id != case_id:
+        raise ApiError(404, "scope_item_not_found", "Scope item not found.")
+    if item.recipient_person_id is None and item.recipient_team_id is None:
+        raise ApiError(409, "nothing_to_accept", "No one is set to receive this responsibility.")
+    mine = await cases.my_person_ids(access)
+    is_recipient = item.recipient_person_id in mine
+    if not is_recipient and item.recipient_team_id is not None:
+        is_recipient = bool(
+            await access.session.scalar(
+                select(TeamMember.person_id).where(
+                    TeamMember.team_id == item.recipient_team_id, TeamMember.person_id.in_(mine)
+                )
+            )
+        )
+    # A coordinator may record acceptance for someone who doesn't use Relay.
+    if not is_recipient and not role_allows(access.role, Permission.CASE_MANAGE):
+        raise ApiError(403, "not_recipient", "Only the incoming owner can accept.")
+    if item.accepted_at is None:
+        item.accepted_at, item.accepted_by = func.now(), access.user_id
+        cases._record(access, case, "case.assignment_accepted", scope_item_id=str(item_id))
+        await cases._notify_case_update(access, jobs, case, "accepted")
     return await cases.get_case(access, case_id)
 
 

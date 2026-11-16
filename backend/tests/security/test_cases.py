@@ -112,6 +112,10 @@ async def test_transfer_of_several_responsibilities_to_different_recipients(ws: 
     blocked = await ws.call("POST", f"/cases/{cid}/complete", 409)
     assert blocked["code"] == "readiness_incomplete"
     await resolve_readiness(ws, case)
+    # Open work blocks completion too.
+    blocked = await ws.call("POST", f"/cases/{cid}/complete", 409)
+    assert blocked["code"] == "tasks_open"
+    await ws.call("PATCH", f"/cases/{cid}/tasks/{task['tasks'][0]['id']}", json={"status": "done"})
     done = await ws.call("POST", f"/cases/{cid}/complete")
     assert (done["status"], done["outcome"]) == ("completed", "completed")
     history = [h["action"] for h in await ws.call("GET", f"/cases/{cid}/history")]

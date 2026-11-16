@@ -126,6 +126,11 @@ export function OwnershipPlan({
               <CriticalityBadge value={item.criticality} />
             </div>
             <ol className="flex flex-col gap-1">{plan(c, item)}</ol>
+            {item.recipient && item.accepted_at ? (
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                Accepted by {item.recipient.name} · {formatDateTime(item.accepted_at)}
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -157,6 +162,13 @@ export function Blockers({ detail: c }: { detail: CaseDetail }) {
     const who = [...new Set(overdue.map((t) => t.assignee_name ?? "unassigned"))].join(", ");
     items.push(`${overdue.length} overdue task(s): ${who}`);
   }
+  const unaccepted = c.scope.filter((s) => s.recipient && !s.accepted_at && s.state !== "excepted");
+  if (["executing", "verification"].includes(c.status) && unaccepted.length) {
+    const who = [...new Set(unaccepted.map((s) => s.recipient!.name))].join(", ");
+    items.push(`Acceptance from the incoming owner: ${who}`);
+  }
+  const open = c.tasks.filter((t) => t.status === "open").length;
+  if (c.status === "verification" && open) items.push(`${open} open task(s) to finish or cancel`);
   if (!items.length) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">

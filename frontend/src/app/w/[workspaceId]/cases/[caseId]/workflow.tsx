@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import {
   addBlockerAction,
   addParticipantAction,
+  acceptScopeAction,
   declineScopeAction,
   removeParticipantAction,
   reopenCaseAction,
@@ -332,7 +333,7 @@ export function BlockersPanel({
 // ---------------------------------------------------------------- incoming owner
 
 export function DeclinePanel({ workspaceId, caseId, detail: c }: Ctx) {
-  const mine = c.scope.filter((s) => s.can_decline);
+  const mine = c.scope.filter((s) => s.can_decline || s.can_accept);
   if (!mine.length) return null;
   return (
     <div className="rounded-lg border p-4 text-sm">
@@ -346,27 +347,36 @@ export function DeclinePanel({ workspaceId, caseId, detail: c }: Ctx) {
                 <span className="text-muted-foreground"> · from {s.current_owner_name}</span>
               ) : null}
             </span>
-            <details>
-              <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
-                I can&apos;t take this on
-              </summary>
-              <ActionForm
-                action={declineScopeAction.bind(null, workspaceId, caseId, s.id)}
-                className="mt-2"
-              >
-                <input
-                  name="reason"
-                  required
-                  maxLength={4000}
-                  placeholder="Why (the coordinator sees this)"
-                  aria-label="Reason for declining"
-                  className={inputClass}
-                />
-                <SubmitButton size="sm" variant="outline" pendingLabel="…">
-                  Decline assignment
+            {s.can_accept ? (
+              <ActionForm action={acceptScopeAction.bind(null, workspaceId, caseId, s.id)}>
+                <SubmitButton size="sm" pendingLabel="Accepting…">
+                  Accept ownership
                 </SubmitButton>
               </ActionForm>
-            </details>
+            ) : null}
+            {s.can_decline ? (
+              <details>
+                <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
+                  I can&apos;t take this on
+                </summary>
+                <ActionForm
+                  action={declineScopeAction.bind(null, workspaceId, caseId, s.id)}
+                  className="mt-2"
+                >
+                  <input
+                    name="reason"
+                    required
+                    maxLength={4000}
+                    placeholder="Why (the coordinator sees this)"
+                    aria-label="Reason for declining"
+                    className={inputClass}
+                  />
+                  <SubmitButton size="sm" variant="outline" pendingLabel="…">
+                    Decline assignment
+                  </SubmitButton>
+                </ActionForm>
+              </details>
+            ) : null}
           </li>
         ))}
       </ul>

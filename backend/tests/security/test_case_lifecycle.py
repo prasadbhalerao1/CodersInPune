@@ -426,3 +426,86 @@ async def test_cover_requests_overlaps_and_emergency_backups(api: Api, ws: Ws) -
     assert filled["scope"][0]["recipient"]["name"] == "Backup"
     assert not filled["approved"]
     await ws.call("POST", f"/cases/{request['id']}/execute", 409)
+
+
+async def test_incoming_owner_accepts_and_completion_waits_for_it(api: Api, ws: Ws) -> None:
+    await add_member(api, ws.id, "user_member", "member")
+    new = await ws.call(
+        "POST", "/people", 201, json={"display_name": "New", "email": "new@acme.test"}
+    )
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(ws.id),))
+        conn.execute(
+            "UPDATE identity.membership SET email = 'new@acme.test' "
+            "WHERE tenant_id = %s AND role = 'member'",
+            (ws.id,),
+        )
+    member = Ws(api, ws.id, "user_member")
+    rid = await owned(ws, "Billing", await ws.person("Old"))
+    case = await ws.call(
+        "POST",
+        "/cases",
+        201,
+        json={"case_type": "transfer", "title": "Billing", "starts_at": iso()},
+    )
+    cid = case["id"]
+    case = await ws.call("POST", f"/cases/{cid}/scope", 201, json={"responsibility_id": rid})
+    item = case["scope"][0]["id"]
+    await ws.call("PATCH", f"/cases/{cid}/scope/{item}", json={"recipient_person_id": new["id"]})
+    task = await ws.call("POST", f"/cases/{cid}/tasks", 201, json={"title": "Walk the runbook"})
+    await ws.call("POST", f"/cases/{cid}/submit")
+    await ws.call("POST", f"/cases/{cid}/decisions", 201, json={"decision": "approved"})
+
+    # Only the incoming owner (or a case manager) may accept; accepting twice changes nothing.
+    await add_member(api, ws.id, "user_auditor", "auditor")
+    await Ws(api, ws.id, "user_auditor").call("POST", f"/cases/{cid}/scope/{item}/accept", 403)
+    seen = await member.call("GET", f"/cases/{cid}")
+    assert seen["scope"][0]["can_accept"]
+    accepted = await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
+    first = accepted["scope"][0]["accepted_at"]
+    assert first
+    assert not accepted["scope"][0]["can_accept"]
+    again = await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
+    assert again["scope"][0]["accepted_at"] == first
+
+    # Completion waits for open tasks.
+    executed = await ws.call("POST", f"/cases/{cid}/execute")
+    await resolve_readiness(ws, executed)
+    blocked = await ws.call("POST", f"/cases/{cid}/complete", 409, json={})
+    assert blocked["code"] == "tasks_open"
+    tid = next(t["id"] for t in task["tasks"])
+    await ws.call("PATCH", f"/cases/{cid}/tasks/{tid}", json={"status": "done"})
+    done = await ws.call("POST", f"/cases/{cid}/complete", json={})
+    assert done["status"] == "completed"
+    # A closed case can't be accepted any more.
+    await member.call("POST", f"/cases/{cid}/scope/{item}/accept", 409)
+
+
+async def test_changing_the_recipient_clears_acceptance(api: Api, ws: Ws) -> None:
+    await add_member(api, ws.id, "user_member", "member")
+    new = await ws.call(
+        "POST", "/people", 201, json={"display_name": "New", "email": "new@acme.test"}
+    )
+    other = await ws.person("Other")
+    with psycopg.connect(libpq_url(OWNER_URL), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.tenant_id', %s, false)", (str(ws.id),))
+        conn.execute(
+            "UPDATE identity.membership SET email = 'new@acme.test' "
+            "WHERE tenant_id = %s AND role = 'member'",
+            (ws.id,),
+        )
+    member = Ws(api, ws.id, "user_member")
+    rid = await owned(ws, "Ops", await ws.person("Old"))
+    case = await ws.call(
+        "POST", "/cases", 201, json={"case_type": "transfer", "title": "Ops", "starts_at": iso()}
+    )
+    cid = case["id"]
+    case = await ws.call("POST", f"/cases/{cid}/scope", 201, json={"responsibility_id": rid})
+    item = case["scope"][0]["id"]
+    await ws.call("PATCH", f"/cases/{cid}/scope/{item}", json={"recipient_person_id": new["id"]})
+    await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
+    moved = await ws.call(
+        "PATCH", f"/cases/{cid}/scope/{item}", json={"recipient_person_id": other}
+    )
+    assert moved["scope"][0]["accepted_at"] is None
+    await member.call("POST", f"/cases/{cid}/scope/{item}/accept", 403)

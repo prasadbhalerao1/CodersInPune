@@ -211,6 +211,8 @@ class CaseScopeItem(Base):
     declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     declined_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
     decline_reason: Mapped[str | None] = mapped_column(Text)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_USER))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

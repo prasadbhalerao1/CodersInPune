@@ -19,7 +19,7 @@ from relay.continuity import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
 from relay.jobs import outbox
 from relay.jobs.outbox import Jobs
-from relay.shared import pagination
+from relay.shared import idempotency, pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["continuity"])
 Detail = svc.CaseDetail
@@ -44,8 +44,17 @@ async def list_cases(
 
 
 @router.post("/cases", status_code=status.HTTP_201_CREATED)
-async def create_case(access: CurrentWorkspace, body: svc.CaseIn, jobs: Jobs) -> Detail:
-    return await svc.create_case(access, body, jobs)
+async def create_case(
+    access: CurrentWorkspace,
+    body: svc.CaseIn,
+    jobs: Jobs,
+    key: idempotency.OptionalIdempotencyKey = None,
+) -> Detail:
+    if done := await idempotency.claim(access, key, "cases.create", body.model_dump(mode="json")):
+        return await svc.get_case(access, done)
+    created = await svc.create_case(access, body, jobs)
+    await idempotency.remember(access, key, created.id)
+    return created
 
 
 @router.get("/cases/{case_id}")
@@ -120,9 +129,18 @@ async def cancel(access: CurrentWorkspace, case_id: uuid.UUID, jobs: Jobs) -> De
 
 @router.post("/cases/{case_id}/tasks", status_code=status.HTTP_201_CREATED)
 async def add_task(
-    access: CurrentWorkspace, case_id: uuid.UUID, body: svc.TaskIn, jobs: Jobs
+    access: CurrentWorkspace,
+    case_id: uuid.UUID,
+    body: svc.TaskIn,
+    jobs: Jobs,
+    key: idempotency.OptionalIdempotencyKey = None,
 ) -> Detail:
-    return await svc.add_task(access, case_id, body, jobs)
+    payload = {"case": str(case_id), **body.model_dump(mode="json")}
+    if await idempotency.claim(access, key, "cases.add_task", payload):
+        return await svc.get_case(access, case_id)
+    detail = await svc.add_task(access, case_id, body, jobs)
+    await idempotency.remember(access, key, case_id)
+    return detail
 
 
 @router.patch("/cases/{case_id}/tasks/{task_id}")
@@ -201,6 +219,13 @@ async def resolve_blocker(
     body: workflow.ResolveBlockerIn,
 ) -> Detail:
     return await workflow.resolve_blocker(access, case_id, blocker_id, body)
+
+
+@router.post("/cases/{case_id}/scope/{item_id}/accept")
+async def accept(
+    access: CurrentWorkspace, case_id: uuid.UUID, item_id: uuid.UUID, jobs: Jobs
+) -> Detail:
+    return await workflow.accept(access, case_id, item_id, jobs)
 
 
 @router.post("/cases/{case_id}/scope/{item_id}/decline")

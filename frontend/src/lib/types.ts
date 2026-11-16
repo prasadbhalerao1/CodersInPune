@@ -267,6 +267,8 @@ export type ScopeItemView = {
   decline_reason: string | null;
   declined_at: string | null;
   can_decline: boolean;
+  accepted_at: string | null;
+  can_accept: boolean;
 };
 
 export type TaskView = {
@@ -1471,6 +1473,18 @@ export type CoverageItem = {
   cited: number;
 };
 
+export type StrengthView = {
+  level: "strong" | "partial" | "weak";
+  points: number;
+  cited: number;
+  fresh: number;
+  conflicts: number;
+  covered: number;
+  scope: number;
+};
+
+export type ContactView = { name: string; why: string };
+
 export type CapsuleView = {
   id: string;
   case_id: string;
@@ -1496,6 +1510,8 @@ export type CapsuleView = {
   changed_points: number;
   changed_sources: string[];
   coverage: CoverageItem[];
+  strength: StrengthView | null;
+  contacts: ContactView[];
 };
 
 export type CapsuleSummary = {

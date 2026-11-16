@@ -218,10 +218,14 @@ class ScopeItemView(BaseModel):
     state: str
     decline_reason: str | None = None
     declined_at: datetime | None = None
+    # The incoming person's explicit acceptance; a case cannot complete without it.
+    accepted_at: datetime | None = None
     # Restricted and not visible to the viewer: no details beyond its existence.
     hidden: bool = False
     # The signed-in user is the incoming person and may decline the assignment.
     can_decline: bool = False
+    # The signed-in user is the incoming person and has not accepted yet.
+    can_accept: bool = False
 
 
 class TaskView(BaseModel):
@@ -851,6 +855,8 @@ async def update_scope_item(
         item.recipient_person_id, item.recipient_team_id = person_id, team_id
         if person_id or team_id:
             item.decline_reason = item.declined_at = item.declined_by = None
+        # A new (or no) recipient has not accepted anything yet.
+        item.accepted_at = item.accepted_by = None
     if "handover_notes" in changes:
         item.handover_notes = changes["handover_notes"] or None
     if "exception_reason" in changes:
@@ -1044,6 +1050,63 @@ async def extend_coverage(
     return await get_case(access, case_id)
 
 
+async def _people_with_accounts(
+    access: WorkspaceAccess, person_ids: set[uuid.UUID | None]
+) -> set[uuid.UUID]:
+    """Directory people who are active members of this workspace (matched by email)."""
+    ids = {p for p in person_ids if p}
+    if not ids:
+        return set()
+    return set(
+        await access.session.scalars(
+            select(Person.id)
+            .join(Membership, func.lower(Membership.email) == func.lower(Person.email))
+            .where(Person.id.in_(ids), Membership.status == "active")
+        )
+    )
+
+
+async def _require_handover_done(access: WorkspaceAccess, case: ContinuityCase) -> None:
+    """A case completes only when its work is done and every incoming person has accepted.
+
+    Cover that ends (early return) is exempt from the task check: open tasks go back to the
+    returning owner, and the return briefing lists them.
+    """
+    case_id = case.id
+    open_tasks = (
+        0
+        if case.case_type == "coverage"
+        else await access.session.scalar(
+            select(func.count())
+            .select_from(CaseTask)
+            .where(CaseTask.case_id == case_id, CaseTask.status == "open")
+        )
+    )
+    if open_tasks:
+        raise ApiError(
+            409,
+            "tasks_open",
+            f"{open_tasks} task{'s are' if open_tasks != 1 else ' is'} still open: finish or "
+            "cancel them first.",
+        )
+    # Acceptance is required from incoming people who can sign in to Relay; for anyone else
+    # the coordinator may record it on their behalf, but it does not block completion.
+    pending = [
+        i
+        for i in await _scope(access.session, case_id)
+        if i.state != "excepted" and i.recipient_person_id and i.accepted_at is None
+    ]
+    members = await _people_with_accounts(access, {i.recipient_person_id for i in pending})
+    unaccepted = [i for i in pending if i.recipient_person_id in members]
+    if unaccepted:
+        raise ApiError(
+            409,
+            "handover_not_accepted",
+            f"The incoming owner has not accepted {len(unaccepted)} handed-over "
+            f"responsibilit{'ies' if len(unaccepted) != 1 else 'y'} yet.",
+        )
+
+
 async def complete_case(
     access: WorkspaceAccess,
     case_id: uuid.UUID,
@@ -1080,6 +1143,7 @@ async def complete_case(
         raise ApiError(
             409, "readiness_incomplete", "Resolve or waive every mandatory readiness check."
         )
+    await _require_handover_done(access, case)
     now = _now()
     if case.case_type != "coverage" and case.starts_at > now:
         raise ApiError(
@@ -1809,9 +1873,13 @@ async def get_case(access: WorkspaceAccess, case_id: uuid.UUID) -> CaseDetail:
                 state=i.state,
                 decline_reason=i.decline_reason,
                 declined_at=i.declined_at,
+                accepted_at=i.accepted_at,
                 can_decline=i.recipient_person_id in mine
                 and i.state == "planned"
                 and case.status in EDITABLE,
+                can_accept=i.recipient_person_id in mine
+                and i.accepted_at is None
+                and case.status not in lifecycle.CLOSED,
             )
             for i in items
         ],
