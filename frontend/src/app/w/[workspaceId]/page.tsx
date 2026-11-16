@@ -184,7 +184,7 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
         description="Where continuity stands today: what needs attention, what is moving, and what changed."
         actions={
           <span className="flex items-center gap-2">
-            {workspace.data.name === "Northwind Labs (demo)" ? <ResetSampleButton /> : null}
+            {workspace.data.name.startsWith("Northwind Labs (") ? <ResetSampleButton /> : null}
             {canManage(workspace.data) ? (
               <Link
                 href={`${base}/responsibilities/new`}

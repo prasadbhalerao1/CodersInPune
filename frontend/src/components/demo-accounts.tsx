@@ -73,14 +73,14 @@ export function DemoAccounts({
           {DEMO_ACCOUNTS.map((a, i) => (
             <li key={a.role}>
               <a
-                href={`/demo-sign-in?as=${a.role}`}
+                href={`/sign-in?as=${a.role}`}
                 className="hover:bg-muted block rounded-lg px-3 py-2"
               >
                 <span className="flex items-center gap-2 font-medium">
                   {a.label}
                   {i === 0 ? (
                     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      Best for a demo
+                      Recommended
                     </span>
                   ) : null}
                 </span>

@@ -35,7 +35,7 @@ export function WorkspaceRows({ workspaces }: { workspaces: WorkspaceView[] }) {
               1. Explore the sample (2 minutes, nothing to connect)
             </p>
             <p className="text-fg-soft mt-1 leading-relaxed">
-              <em>Northwind Labs (demo)</em> is a team mid-handover: a year of GitHub, Linear and
+              <em>Northwind Labs (sample)</em> is a team mid-handover: a year of GitHub, Linear and
               Notion history, meetings, risks and an engineer who is leaving. Use{" "}
               <strong>Create sample workspace</strong> on the right. Inside, the banner lets you try
               Relay as any of the eight roles. Recommended for judges.

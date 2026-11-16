@@ -120,7 +120,7 @@ shape is unchanged (plain arrays). Pass `?after=<cursor>&limit=N` to page.
 |---|---|---|---|
 | `GET` | `/workspaces` | any signed-in user | Workspaces where the caller has an active membership. |
 | `POST` | `/workspaces` | any signed-in user | Create a workspace; the caller becomes owner. Requires `Idempotency-Key`; 10 per hour. |
-| `POST` | `/workspaces/sample` | any signed-in user | Create the sample "Northwind Labs (demo)" workspace owned by the caller. Requires `Idempotency-Key`; 3 per day; off when `RELAY_SAMPLE_WORKSPACES=false`. |
+| `POST` | `/workspaces/sample` | any signed-in user | Create the sample "Northwind Labs (sample)" workspace owned by the caller. Requires `Idempotency-Key`; 3 per day; off when `RELAY_SAMPLE_WORKSPACES=false`. |
 
 ### 3.1 Directory API (`/people`, `/teams`, `/departments`)
 

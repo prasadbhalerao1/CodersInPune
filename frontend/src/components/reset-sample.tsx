@@ -7,7 +7,7 @@ import { createSampleWorkspaceAction, type CreateWorkspaceState } from "@/app/wo
 import { Button } from "@/components/ui/button";
 
 /**
- * A clean copy of the sample, for a fresh demo: creates a new "Northwind Labs (demo)" and
+ * A clean copy of the sample, for a fresh demo: creates a new "Northwind Labs (sample)" and
  * opens it. The current one is left as it is (it can be deleted in Settings).
  */
 export function ResetSampleButton() {

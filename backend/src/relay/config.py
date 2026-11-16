@@ -122,7 +122,7 @@ class Settings(BaseSettings):
     # Run the job worker inside the API process (single-instance free hosting only; a
     # separate `relay-worker` process is the production setup).
     embedded_worker: bool = False
-    # Let signed-in users create a synthetic "Northwind Labs (demo)" workspace from the app.
+    # Let signed-in users create a synthetic "Northwind Labs (sample)" workspace from the app.
     # It never touches real data; turn it off for customer deployments that do not want it.
     sample_workspaces: bool = True
 

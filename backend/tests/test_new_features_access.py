@@ -23,7 +23,7 @@ async def test_an_empty_workspace_loads_every_new_page(api: Api) -> None:
         "/knowledge-drift",
         "/search/expertise",
         "/integrations/slack",
-        "/demo-role",
+        "/role-preview",
     ):
         await ws.call("GET", path)  # 200 with empty data, never an error
     assert await ws.call("GET", "/meetings") == []
@@ -47,4 +47,4 @@ async def test_read_only_roles_cannot_write_anything_new(api: Api, role: str) ->
     await reader.call(
         "PUT", "/integrations/slack", 403, json={"webhook_url": "https://x", "channel": "c"}
     )
-    await reader.call("PUT", "/demo-role", 404, json={"role": "owner"})  # not a sample
+    await reader.call("PUT", "/role-preview", 404, json={"role": "owner"})  # not a sample

@@ -33,7 +33,7 @@ cd ../frontend && pnpm build && pnpm start   # terminal 3
    cd backend && uv run relay-demo-seed --owner <your WorkOS user id>
    ```
 
-   This creates **Northwind Labs (demo)**: 8 people, 3 teams, a responsibility catalogue with gaps, conflicting procedures, connector problems, and three cases (completed, active and planned).
+   This creates **Northwind Labs (sample)**: 8 people, 3 teams, a responsibility catalogue with gaps, conflicting procedures, connector problems, and three cases (completed, active and planned).
 
 Optional: set `RELAY_LLM_PROVIDERS` and a key in `backend/.env` to show AI drafts next to
 the deterministic findings. The demo works without them.
@@ -41,7 +41,7 @@ the deterministic findings. The demo works without them.
 ## 1. The problem, in one screen (1 min)
 
 - **Landing page → How it works.** The walkthrough plays the loop.
-- **Open Northwind Labs (demo).** The overview shows coverage gaps and open risks. Point out:
+- **Open Northwind Labs (sample).** The overview shows coverage gaps and open risks. Point out:
   - a critical responsibility with no backup;
   - an asset nobody stewards;
   - a stale Linear connector and a failing GitHub connector (Integrations → Health).

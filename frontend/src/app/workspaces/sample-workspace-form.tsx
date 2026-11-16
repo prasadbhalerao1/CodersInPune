@@ -21,7 +21,7 @@ export function SampleWorkspaceForm({ idempotencyKey }: { idempotencyKey: string
           Explore a sample workspace
         </h2>
         <p className="text-fg-soft mt-2 text-[13px] leading-relaxed">
-          Creates &ldquo;Northwind Labs (demo)&rdquo;: a sample team with ownership gaps, a
+          Creates &ldquo;Northwind Labs (sample)&rdquo;: a sample team with ownership gaps, a
           departure case in progress and a handover capsule to review. It never touches real data.
         </p>
       </div>

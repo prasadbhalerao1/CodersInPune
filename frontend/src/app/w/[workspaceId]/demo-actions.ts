@@ -16,7 +16,7 @@ export async function switchDemoRoleAction(
   role: string,
 ): Promise<{ error?: string }> {
   try {
-    await api.send(workspaceId, "PUT", "/demo-role", { role });
+    await api.send(workspaceId, "PUT", "/role-preview", { role });
   } catch (error) {
     if (error instanceof RelayApiError) return { error: error.message };
     throw error;

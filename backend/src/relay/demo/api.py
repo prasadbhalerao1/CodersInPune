@@ -1,6 +1,6 @@
 """Sample workspace endpoint: explore Relay on a synthetic organisation in one step.
 
-The caller becomes the owner of a new "Northwind Labs (demo)" workspace populated by the
+The caller becomes the owner of a new "Northwind Labs (sample)" workspace populated by the
 same seed as `relay-demo-seed`. Nothing real is read or written: the people are synthetic
 members who cannot sign in, and the connector rows are never synced.
 """

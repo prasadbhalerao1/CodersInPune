@@ -78,11 +78,11 @@ async def roles(access: CurrentWorkspace) -> list[svc.RoleView]:
     return await svc.list_roles(access)
 
 
-@router.get("/demo-role")
+@router.get("/role-preview")
 async def demo_role(access: CurrentWorkspace) -> svc.DemoRoleView:
     return await svc.demo_role(access)
 
 
-@router.put("/demo-role")
+@router.put("/role-preview")
 async def set_demo_role(access: CurrentWorkspace, body: svc.DemoRoleIn) -> svc.DemoRoleView:
     return await svc.set_demo_role(access, body)
