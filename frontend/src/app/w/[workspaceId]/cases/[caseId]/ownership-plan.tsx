@@ -183,7 +183,9 @@ export function Blockers({ detail: c }: { detail: CaseDetail }) {
     items.push(`Acceptance from the incoming owner: ${who}`);
   }
   const open = c.tasks.filter((t) => t.status === "open").length;
-  if (c.status === "verification" && open) items.push(`${open} open task(s) to finish or cancel`);
+  // The server refuses completion with open tasks (cover that ends early is exempt).
+  if (["executing", "verification"].includes(c.status) && open && c.case_type !== "coverage")
+    items.push(`${open} open task(s) to finish or cancel`);
   if (!items.length) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">

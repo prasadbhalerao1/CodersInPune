@@ -157,9 +157,13 @@ export function nextStep(c: CaseDetail): string {
       return "Approved and ready. Execute to apply the ownership changes.";
     case "executing":
     case "verification":
-      return c.readiness_met < c.readiness_total
-        ? `Readiness ${c.readiness_met}/${c.readiness_total}. Resolve the remaining checks, then complete.`
-        : "Readiness is complete. Verify and complete the case.";
+      if (c.readiness_met < c.readiness_total)
+        return `Readiness ${c.readiness_met}/${c.readiness_total}. Resolve the remaining checks, then complete.`;
+      if (c.case_type !== "coverage" && c.tasks.some((t) => t.status === "open"))
+        return "Readiness is complete. Finish or cancel the open tasks, then complete the case.";
+      if (c.scope.some((s) => s.recipient && !s.accepted_at && s.state !== "excepted"))
+        return "Readiness is complete. The incoming owners still need to accept, then complete the case.";
+      return "Readiness is complete. Verify and complete the case.";
     case "blocked":
       return `Blocked by ${open} open blocker${open === 1 ? "" : "s"}. Resolving them returns the case to ${STATUS_LABEL[c.blocked_from ?? "draft"].toLowerCase()}.`;
     case "completed":

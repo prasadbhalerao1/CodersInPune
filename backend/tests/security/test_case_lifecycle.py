@@ -512,8 +512,15 @@ async def test_changing_the_recipient_clears_acceptance(api: Api, ws: Ws) -> Non
     item = case["scope"][0]["id"]
     await ws.call("PATCH", f"/cases/{cid}/scope/{item}", json={"recipient_person_id": new["id"]})
     await member.call("POST", f"/cases/{cid}/scope/{item}/accept")
+    accepted = await ws.call("POST", f"/cases/{cid}/submit")  # checks are created here
+    # Accepting is the recipient's confirmation: it settles the item's attestation check.
+    [check] = [c for c in accepted["criteria"] if c["scope_item_id"] == item]
+    assert check["status"] == "met"
     moved = await ws.call(
         "PATCH", f"/cases/{cid}/scope/{item}", json={"recipient_person_id": other}
     )
     assert moved["scope"][0]["accepted_at"] is None
+    # ...and a new recipient must confirm again.
+    [check] = [c for c in moved["criteria"] if c["scope_item_id"] == item]
+    assert check["status"] == "pending"
     await member.call("POST", f"/cases/{cid}/scope/{item}/accept", 403)

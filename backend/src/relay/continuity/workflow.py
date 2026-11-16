@@ -245,6 +245,8 @@ async def decline(
     ):
         raise ApiError(403, "not_recipient", "Only the incoming person can decline.")
     item.recipient_person_id = None
+    if item.accepted_at is not None:
+        await cases.sync_acceptance_check(access, item, accepted=False)
     item.accepted_at = item.accepted_by = None
     item.declined_at, item.declined_by, item.decline_reason = (
         func.now(),
@@ -290,6 +292,7 @@ async def accept(
         raise ApiError(403, "not_recipient", "Only the incoming owner can accept.")
     if item.accepted_at is None:
         item.accepted_at, item.accepted_by = func.now(), access.user_id
+        await cases.sync_acceptance_check(access, item, accepted=True)
         cases._record(access, case, "case.assignment_accepted", scope_item_id=str(item_id))
         await cases._notify_case_update(access, jobs, case, "accepted")
     return await cases.get_case(access, case_id)

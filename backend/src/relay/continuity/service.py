@@ -309,13 +309,40 @@ def _default_criteria(
         kind, title = "access_confirmed", f"New owner has the access needed for “{name}”"
     else:
         kind, title = "attestation", f"Recipient confirms the handover of “{name}”"
-    return CaseReadinessCriterion(
+    criterion = CaseReadinessCriterion(
         tenant_id=case.tenant_id,
         case_id=case.id,
         scope_item_id=item.id,
         criterion_type=kind,
         title=title,
     )
+    if kind == "attestation" and item.accepted_at is not None:  # accepted before submission
+        criterion.status, criterion.note = "met", ACCEPTED_NOTE
+        criterion.resolved_by, criterion.resolved_at = item.accepted_by, item.accepted_at
+    return criterion
+
+
+ACCEPTED_NOTE = "Confirmed by accepting the handover."
+
+
+async def sync_acceptance_check(
+    access: WorkspaceAccess, item: CaseScopeItem, *, accepted: bool
+) -> None:
+    """Accepting a handover *is* the recipient's confirmation: it settles the item's pending
+    attestation check; clearing the acceptance reopens only a check it settled."""
+    rows = await access.session.scalars(
+        select(CaseReadinessCriterion).where(
+            CaseReadinessCriterion.scope_item_id == item.id,
+            CaseReadinessCriterion.criterion_type == "attestation",
+        )
+    )
+    for criterion in rows:
+        if accepted and criterion.status == "pending":
+            criterion.status, criterion.note = "met", ACCEPTED_NOTE
+            criterion.resolved_by, criterion.resolved_at = access.user_id, func.now()
+        elif not accepted and criterion.status == "met" and criterion.note == ACCEPTED_NOTE:
+            criterion.status, criterion.note = "pending", None
+            criterion.resolved_by = criterion.resolved_at = None
 
 
 # ---------------------------------------------------------------- commands
@@ -594,6 +621,8 @@ async def update_scope_item(
         if person_id or team_id:
             item.decline_reason = item.declined_at = item.declined_by = None
         # A new (or no) recipient has not accepted anything yet.
+        if item.accepted_at is not None:
+            await sync_acceptance_check(access, item, accepted=False)
         item.accepted_at = item.accepted_by = None
     if "handover_notes" in changes:
         item.handover_notes = changes["handover_notes"] or None
