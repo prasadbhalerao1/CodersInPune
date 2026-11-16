@@ -11,6 +11,34 @@ type Box = { kind: "load" | "new"; y: number | null; vy: number; delay: number; 
 type Sim = { sig: string; boxes: Box[]; pose: Pose; dip: number; t: number };
 
 const MAX_BOXES = 6;
+
+// Studying the candidates: hand on the chin, a look down at the card, a small shrug.
+const LOOK: Pose = { ...THINK, lean: 0.06, head: 0.5, shA: 0.22, elA: 0.7, shB: 0.25, elB: 0.65 };
+const SHRUG: Pose = { ...THINK, lean: -0.02, head: -0.06, shA: 0.5, elA: 1.7, shB: 0.55, elB: 1.6 };
+
+/** Never a frozen frame: the idle beat cycles every 10 s, with breathing and weight shifts. */
+function pondering(t: number): Pose {
+  const beat = t % 10;
+  const base = beat < 4 ? THINK : beat < 6.2 ? LOOK : beat < 7.6 ? SHRUG : THINK;
+  return alive(base, t, 1);
+}
+
+/** Breathing and a slow shift of weight from foot to foot, scaled by `k`. */
+function alive(base: Pose, t: number, k: number): Pose {
+  const breath = Math.sin(t * 2.4);
+  const shift = Math.sin(t * 0.8);
+  return {
+    ...base,
+    head: base.head + k * 0.06 * Math.sin(t * 1.3),
+    lean: base.lean + k * 0.03 * shift,
+    hipA: base.hipA + k * 0.1 * Math.max(0, shift),
+    kneeA: base.kneeA + k * 0.2 * Math.max(0, shift),
+    hipB: base.hipB + k * 0.1 * Math.max(0, -shift),
+    kneeB: base.kneeB + k * 0.2 * Math.max(0, -shift),
+    shA: base.shA + k * 0.04 * breath,
+    shB: base.shB + k * 0.04 * breath,
+  };
+}
 const GRAVITY = 2600;
 
 /**
@@ -57,12 +85,8 @@ function SandboxFigureScene({
       }));
     }
 
-    let target = active ? (strain ? STRAIN : CARRY) : THINK;
-    target = {
-      ...target,
-      head: target.head + (active ? 0 : 0.05 * Math.sin(s.t * 1.3)),
-      lean: target.lean + 0.01 * Math.sin(s.t * 2) + (strain ? 0.035 * Math.sin(s.t * 4.2) : 0),
-    };
+    let target = active ? alive(strain ? STRAIN : CARRY, s.t, 0.4) : pondering(s.t);
+    if (strain) target = { ...target, lean: target.lean + 0.035 * Math.sin(s.t * 4.2) };
     s.pose = still ? target : mix(s.pose, target, approach(dt, 7));
     s.dip *= Math.exp(-dt * 6);
     const p = {
