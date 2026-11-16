@@ -191,7 +191,7 @@ export function Autopilot({
             </ul>
           ) : null}
           <p className="text-muted-foreground mt-2 text-xs">
-            Accept or reject each one under Proposals below.
+            Accept, edit or reject each one in the proposal tray.
           </p>
         </div>
       ) : null}
