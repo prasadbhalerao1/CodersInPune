@@ -1,6 +1,7 @@
 """Handover rehearsal: drills from the brief's evidence, graded by rules against it."""
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 import pytest
 
@@ -66,7 +67,10 @@ async def test_editors_can_preview_a_brief_as_a_member_sees_it(
     full = await ws.call("GET", f"/ai/capsules/{capsule}")
     preview = await ws.call("GET", f"/ai/capsules/{capsule}?as_member=true")
     assert (full["preview_as_member"], preview["preview_as_member"]) == (False, True)
-    count = lambda v: sum(len(s["points"]) for s in v["sections"])  # noqa: E731
+
+    def count(view: dict[str, Any]) -> int:
+        return sum(len(section["points"]) for section in view["sections"])
+
     assert count(preview) <= count(full)
     assert "Vault recovery" not in str(preview)  # managers-only evidence stays out
     # A member asking for a preview just gets their own view; the flag only narrows.

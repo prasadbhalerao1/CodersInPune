@@ -9,7 +9,12 @@ type Recognition = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
+  onresult:
+    | ((e: {
+        resultIndex: number;
+        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
+      }) => void)
+    | null;
   onend: (() => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   start: () => void;
@@ -122,9 +127,15 @@ export function VoiceTextarea({
               <Volume2 aria-hidden className="size-3.5" /> Read the question aloud
             </button>
           ) : null}
-          {error ? <span role="alert" className="text-amber-700 dark:text-amber-300">{error}</span> : null}
+          {error ? (
+            <span role="alert" className="text-amber-700 dark:text-amber-300">
+              {error}
+            </span>
+          ) : null}
           {listening ? (
-            <span className="text-muted-foreground">Speech is turned into text by your browser.</span>
+            <span className="text-muted-foreground">
+              Speech is turned into text by your browser.
+            </span>
           ) : null}
         </div>
       ) : null}
