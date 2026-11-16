@@ -9,7 +9,7 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 | | |
 |---|---|
 | **Live product** | <https://relay-continuity-nine.vercel.app> (the home page has one-click sign-in for judges) |
-| **Final product document (PDF, 10 pages)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): the three improvements, everything beyond them, architecture, design decisions, testing and roadmap |
+| **Final product document (PDF, 11 pages)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): the three improvements, everything beyond them, architecture, design decisions, testing and roadmap |
 | **Complete reference (PDF)** | [Documentation/Relay_Complete_Documentation.pdf](Documentation/Relay_Complete_Documentation.pdf): the specification, every API endpoint and data model, decision records, the product guide and every screen |
 | **Ten-minute walkthrough** | [For judges](#for-judges), below |
 | **Judge guide** | [judge-guide.md](Documentation/1-start-here/judge-guide.md): the problem, the lifecycle and an evidence matrix |
@@ -242,7 +242,7 @@ Team **Midnight Ciphers** (CodersInPune Hackathon, Round 3 finalist).
 | Member | Contribution |
 |---|---|
 | Prasad Bhalerao | Backend and trust: API, tenancy and row-level security, permissions, audit, continuity cases, the What If? simulator, deployment |
-| Ayush | Integration and intelligence: GitHub, Linear and Notion connectors, the evidence pipeline, Handover Copilot and Memory Replay AI |
+| Aayush Deshpande | Integration and intelligence: GitHub, Linear and Notion connectors, the evidence pipeline, Handover Copilot and Memory Replay AI |
 | Vipul Nanaware | Product and experience: user journeys, interface and brand, onboarding and tutorials, testing with users, presentation |
 
 AI coding assistants were used throughout; how AI is used inside the product is disclosed
@@ -258,7 +258,7 @@ The repository has two documentation folders:
 
 | Folder | What's in it |
 |---|---|
-| [Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf) | The 10-page final product document |
+| [Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf) | The 11-page final product document |
 | [Relay_Complete_Documentation.pdf](Documentation/Relay_Complete_Documentation.pdf) | The complete reference, including the full API reference |
 | [1-start-here](Documentation/1-start-here/) | Judge guide, project overview, competitive analysis |
 | [2-round3-improvements](Documentation/2-round3-improvements/) | What we committed in Round 2, what we delivered, feature matrix, traceability |
