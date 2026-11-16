@@ -2,6 +2,7 @@ import "server-only";
 
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { connection } from "next/server";
+import { cache } from "react";
 
 import type {
   ContinuationPlan,
@@ -160,7 +161,19 @@ async function relayResponse(path: string, init: RequestInit, accept: string): P
   return response;
 }
 
+// Identical reads while rendering one request (a layout and its page, say) share one API
+// call. React's cache lasts for that request only, so every new request still reads fresh
+// data; writes are never cached. Each caller gets its own copy, so nobody can alter another's.
+const cachedRead = cache(async (path: string): Promise<unknown> => {
+  const response = await relayResponse(path, {}, "application/json");
+  return response.status === 204 ? undefined : response.json();
+});
+
 export async function relayFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (init.method === undefined && init.body === undefined && init.headers === undefined) {
+    const data = await cachedRead(path);
+    return (data === undefined ? data : structuredClone(data)) as T;
+  }
   const response = await relayResponse(path, init, "application/json");
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
