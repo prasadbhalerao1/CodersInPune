@@ -18,7 +18,9 @@ for a private clean copy, click **Fresh sample** on the workspace overview.
 ## What changed in the last build
 
 - **Incoming owner acceptance:** the person receiving a responsibility clicks *Accept
-  ownership*. A case completes only when its tasks are done, readiness is met and every
+  ownership* (sign in as **Team manager**: that account is Dev Patel, who is taking over
+  Production deployments from Arjun). A coordinator can also *Record acceptance* from the
+  ownership plan. A case completes only when its tasks are done, readiness is met and every
   incoming owner who uses Relay has accepted. A coordinator can record acceptance for someone
   who doesn't use Relay.
 - **Handover brief:** an evidence-strength label (from fresh, cited sources and coverage, not

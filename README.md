@@ -44,13 +44,13 @@ private clean copy, click **Fresh sample** on the workspace overview.
 | Role | Email | Best for |
 |---|---|---|
 | **Owner** (start here) | `demo-owner@example.com` | Everything, plus *Try Relay as…* to switch roles |
-| Continuity manager | `demo-continuity@example.com` | Running the handover: cases, Autopilot, approvals, What If? |
-| Member | `demo-member@example.com` | Receiving the brief, the exit interview, Ask Relay |
-| Auditor | `demo-auditor@example.com` | Reading everything incl. the audit log, changing nothing |
-| Admin | `demo-admin@example.com` | Members, integrations, policies, AI settings |
-| Knowledge steward | `demo-steward@example.com` | Verifying knowledge, settling disputes |
-| Team manager | `demo-teamlead@example.com` | Managing only their team's responsibilities |
-| Guest | `demo-guest@example.com` | An outside contractor's read-only view |
+| Continuity manager (Tom Okafor) | `demo-continuity@example.com` | Running the handover: cases, Autopilot, approvals, What If? |
+| Member (Priya Nair) | `demo-member@example.com` | Receiving the brief, the exit interview, Ask Relay |
+| Auditor (Riya Desai) | `demo-auditor@example.com` | Reading everything incl. the audit log, changing nothing |
+| Admin (Maya Chen) | `demo-admin@example.com` | Members, integrations, policies, AI settings |
+| Knowledge steward (Ines Duarte) | `demo-steward@example.com` | Verifying knowledge, settling disputes |
+| Team manager (Dev Patel) | `demo-teamlead@example.com` | The incoming owner: *Accept ownership* of Arjun's handover; manages only their team's work |
+| Guest (Kai Nakamura) | `demo-guest@example.com` | An outside contractor's read-only view |
 
 Prefer your own? Sign in with any email (WorkOS sends a one-time code), click **Create sample
 workspace** for a private copy, or create an empty workspace and connect your real GitHub,
