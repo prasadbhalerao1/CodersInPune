@@ -134,6 +134,24 @@ def create_app(
         openapi_url="/openapi.json" if docs else None,
     )
     register_error_handlers(app)
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> dict[str, object]:
+        """A readable answer for anyone who opens the API's address in a browser."""
+        return {
+            "service": "Relay API",
+            "status": "running",
+            "app": resolved.frontend_base_url,
+            "docs": "https://github.com/prasadbhalerao1/CodersInPune/tree/main/Documentation/4-api",
+            "routes": {
+                "health": "/health",
+                "liveness": "/health/live",
+                "readiness": "/health/ready",
+                "workspaces": "/workspaces (sign-in required)",
+                "workspace data": "/workspaces/{workspace_id}/... (members only)",
+            },
+        }
+
     app.add_middleware(RequestContextMiddleware)
     app.add_exception_handler(PermissionDenied, _handle_permission_denied)
     app.include_router(health.router)
