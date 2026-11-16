@@ -19,7 +19,7 @@ export default defineConfig({
   reporter: [["list"]],
   use: { baseURL, trace: "retain-on-failure" },
   projects: [
-    { name: "public", testMatch: /public\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "public", testMatch: /(public|a11y)\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     {
       name: "smoke",
       testMatch: /smoke\.spec\.ts/,

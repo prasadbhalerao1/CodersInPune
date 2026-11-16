@@ -518,10 +518,18 @@ export function BlueHalf() {
                     closing tasks. It measures the work, not the person.
                   </p>
                   <ul className={`${panel} flex flex-wrap gap-2`}>
-                    <Chip tone="var(--ac)">Settled</Chip>
-                    <Chip tone="var(--peri)">Settling in</Chip>
-                    <Chip tone="var(--peri)">Check in</Chip>
-                    <Chip tone="var(--coral)">New holder not recorded</Chip>
+                    {(
+                      [
+                        ["var(--ac)", "Settled"],
+                        ["var(--peri)", "Settling in"],
+                        ["var(--peri)", "Check in"],
+                        ["var(--coral)", "New holder not recorded"],
+                      ] as const
+                    ).map(([tone, label]) => (
+                      <li key={label}>
+                        <Chip tone={tone}>{label}</Chip>
+                      </li>
+                    ))}
                   </ul>
                 </Feature>
               </div>
