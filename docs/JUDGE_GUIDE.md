@@ -59,6 +59,21 @@ Each arrow is a link in the product:
 | Executed case | Follow-through | Per responsibility: settled, settling in or check in, with a link back to Memory Replay |
 | Insights | What If? | **What if … is away?** on every person in Key-person exposure |
 
+### Also in Round 3: the busywork, done with evidence
+
+| Feature | Where | What a judge can try in two minutes |
+|---|---|---|
+| **Handover Autopilot** | Case → Analysis → *Run Autopilot* | Watch every step stream in: the case it read, the evidence it gathered, the rules it checked, each AI reviewer and the evidence tools it called. It ends with proposals waiting for a person. |
+| **Meeting intelligence** | Meetings | Open *Arjun handover kickoff*: decisions, actions (owner, due date), questions and risks, each linked to its transcript line. Accept a decision and it becomes an ADR; accept an action and it becomes a case task. |
+| **Decision log** | Decision log | One timeline of every decision: recorded ADRs, meeting decisions and decisions reconstructed by analyses, filterable by source. |
+| **Ask Relay** | Ask Relay | Ask "What did we decide about webhooks?". The answer streams, cites records you can open, and says "not in the records" rather than guessing. |
+| **Expertise map** | Expertise map | Responsibilities × people, the most fragile work first. It separates a backup *on paper* from a *capable* one. |
+| **30/60/90 plan** | Case → 30/60/90 plan | The successor's first 90 days, built from the case. Each step says why and can be added as a task. |
+| **Code drift** | Knowledge | "Code changed since review": the old deploy runbook is flagged because pull requests were merged after it was last checked. |
+| **Voice interview** | Case → Interview | The leaver can answer by voice; the browser turns speech into text, which they edit before saving. |
+| **Scenario report** | What-if simulator | Download the scenario as a report: the score's working and every cover candidate compared. |
+| **Slack** | Integrations → Slack, then a meeting | Connect a channel (encrypted webhook, test message first), then *Post to #channel* on a meeting. |
+
 ## Why the approach matters
 
 - **Deterministic where it decides, generative where it explains.** Risks, readiness,
@@ -98,6 +113,8 @@ relative to `backend/tests/` unless they start with `e2e/` (Playwright, in `fron
 | Follow-through after a handover | Per transferred responsibility: holder recorded, reviewed or recorded activity since, tasks closed; settled / settling in / check in; measures the work, not the person | `relay/continuity/follow_through.py`, `cases/[caseId]/follow-through.tsx` | `GET /cases/{id}/follow-through` | `test_follow_through_shows_whether_each_transfer_took_hold`, `e2e/smoke.spec.ts` |
 | Guidance and tutorials | Per-user switch; tours unlock from workspace state; resume/replay/reset | `relay/guidance/`, `components/tour.tsx` | `GET/PATCH /guidance` | `test_guidance.py` (4), `e2e/round3.spec.ts` |
 | Integration readiness | Ready only after first sync drains; retrying and attention states from the outbox and connector health | `relay/guidance/service.py` | `GET /guidance` | `test_guidance.py` (Linear syncing → retrying → ready → attention) |
+| Autopilot, meetings, Ask Relay | Streamed agent run over the analysis engine; transcript extraction with line citations; workspace answers citing only given evidence | `relay/intelligence/autopilot.py`, `meetings.py`, `ask.py` | `/cases/{id}/autopilot`, `/meetings`, `/decisions`, `/ask` | `intelligence/test_autopilot.py`, `test_meetings.py`, `test_ask.py` |
+| Expertise, plan, code drift, Slack | Bus-factor matrix; rule-built 30/60/90 plan; merged-PR drift on knowledge; encrypted Slack webhook | `relay/search/service.py`, `continuity/plan.py`, `catalog/drift.py`, `integrations/slack/` | `/search/expertise`, `/cases/{id}/plan`, `/knowledge-drift`, `/integrations/slack` | `test_expertise.py`, `test_continuation_plan.py`, `test_code_drift.py`, `test_slack.py` |
 | Connectors | GitHub App, Linear and Notion, read-only, encrypted credentials, signed webhooks | `relay/integrations/` | `/integrations/*` | `security/test_github_evidence.py`, `test_linear.py`, `test_notion.py`, `e2e/public.spec.ts` |
 | Tenant isolation | Forced RLS, restricted role, composite tenant FKs | `migrations/`, `relay/shared/` | all | `security/test_tenant_isolation.py`, `test_schema_conventions.py`, `test_workspace_access.py` |
 | Permissions | Registry-based `authorize()` / `visible()` in every service | `relay/policy/permissions.py` | all | `security/test_permissions_audit_jobs.py`, `test_route_auth.py` |
