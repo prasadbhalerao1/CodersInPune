@@ -157,6 +157,8 @@ export function nextStep(c: CaseDetail): string {
       return "Approved and ready. Execute to apply the ownership changes.";
     case "executing":
     case "verification":
+      if (c.case_type !== "coverage" && new Date(c.starts_at).getTime() > Date.now())
+        return `Handed over. The ownership changes take effect on ${formatDateTime(c.starts_at)}; complete the case after that, once readiness, tasks and acceptance are done.`;
       if (c.readiness_met < c.readiness_total)
         return `Readiness ${c.readiness_met}/${c.readiness_total}. Resolve the remaining checks, then complete.`;
       if (c.case_type !== "coverage" && c.tasks.some((t) => t.status === "open"))

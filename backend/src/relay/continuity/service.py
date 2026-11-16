@@ -1344,7 +1344,9 @@ def _allowed_actions(access: WorkspaceAccess, case: ContinuityCase, approved: bo
     if manage and case.status in lifecycle.EXECUTABLE and approved:
         actions.append("execute")
     if manage and case.status in lifecycle.RUNNING:
-        actions.append("complete")
+        # A transfer completes once it has taken effect (cover may end early at any time).
+        if case.case_type == "coverage" or case.starts_at <= _now():
+            actions.append("complete")
         if case.case_type == "coverage":
             actions.append("extend")
     if manage and case.status in OPEN:

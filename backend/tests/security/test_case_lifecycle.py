@@ -524,3 +524,29 @@ async def test_changing_the_recipient_clears_acceptance(api: Api, ws: Ws) -> Non
     [check] = [c for c in moved["criteria"] if c["scope_item_id"] == item]
     assert check["status"] == "pending"
     await member.call("POST", f"/cases/{cid}/scope/{item}/accept", 403)
+
+
+async def test_a_transfer_is_completed_only_once_it_takes_effect(api: Api, ws: Ws) -> None:
+    rid = await owned(ws, "Ledger", await ws.person("Old"))
+    case = await ws.call(
+        "POST",
+        "/cases",
+        201,
+        json={"case_type": "transfer", "title": "Ledger", "starts_at": iso(timedelta(days=10))},
+    )
+    cid = case["id"]
+    case = await ws.call("POST", f"/cases/{cid}/scope", 201, json={"responsibility_id": rid})
+    item = case["scope"][0]["id"]
+    await ws.call(
+        "PATCH",
+        f"/cases/{cid}/scope/{item}",
+        json={"recipient_person_id": await ws.person("New")},
+    )
+    await ws.call("POST", f"/cases/{cid}/submit")
+    await ws.call("POST", f"/cases/{cid}/decisions", 201, json={"decision": "approved"})
+    executed = await ws.call("POST", f"/cases/{cid}/execute")
+    # Not offered (and refused) until the ownership change takes effect.
+    assert "complete" not in executed["allowed_actions"]
+    await resolve_readiness(ws, executed)
+    refused = await ws.call("POST", f"/cases/{cid}/complete", 409, json={})
+    assert refused["code"] == "not_yet_effective"
