@@ -22,6 +22,7 @@ import {
 } from "../../ai-actions";
 import { CapsuleStatusBadge } from "../status";
 import { Copilot } from "./copilot";
+import { Rehearsal } from "./rehearsal";
 import { BriefCoverage } from "./coverage";
 import { NextSteps } from "./next-steps";
 import { VersionDiff } from "./version-diff";
@@ -82,11 +83,12 @@ export default async function CapsulePage({
   const version = requested && Number.isInteger(requested) ? requested : undefined;
   const against = typeof query.compare === "string" ? Number(query.compare) : undefined;
   const compare = against && Number.isInteger(against) ? against : undefined;
-  const [capsule, versions, questions, detail] = await Promise.all([
+  const [capsule, versions, questions, detail, rehearsal] = await Promise.all([
     attempt(api.capsule(workspaceId, capsuleId, version)),
     attempt(api.capsuleVersions(workspaceId, capsuleId)),
     attempt(api.capsuleQuestions(workspaceId, capsuleId)),
     attempt(api.getCase(workspaceId, caseId)),
+    attempt(api.rehearsal(workspaceId, capsuleId)),
   ]);
   const previous = compare ? await attempt(api.capsule(workspaceId, capsuleId, compare)) : null;
   const scope = detail.ok ? detail.data.scope.filter((s) => !s.hidden) : [];
@@ -288,6 +290,9 @@ export default async function CapsulePage({
         </div>
 
         <aside className="flex flex-col gap-6 xl:sticky xl:top-20 xl:self-start">
+          {rehearsal?.ok ? (
+            <Rehearsal workspaceId={workspaceId} capsuleId={c.id} drills={rehearsal.data.drills} />
+          ) : null}
           {questions.ok ? (
             <Copilot
               workspaceId={workspaceId}

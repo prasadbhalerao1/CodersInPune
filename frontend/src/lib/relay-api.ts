@@ -10,6 +10,7 @@ import type {
   ExpertiseMap,
   MeetingDetail,
   MeetingSummary,
+  RehearsalDrill,
   SlackStatus,
   AiAdminView,
   AnswerView,
@@ -430,6 +431,8 @@ export const api = {
     relayFetch<ContinuationPlan>(`${ws(id)}/cases/${caseId}/plan`),
   slack: (id: string) => relayFetch<SlackStatus>(`${ws(id)}/integrations/slack`),
   codeDrift: (id: string) => relayFetch<DriftItem[]>(`${ws(id)}/knowledge-drift`),
+  rehearsal: (id: string, capsuleId: string) =>
+    relayFetch<{ drills: RehearsalDrill[] }>(`${ws(id)}/ai/capsules/${capsuleId}/rehearsal`),
   decisions: (id: string) => relayFetch<DecisionEntry[]>(`${ws(id)}/decisions`),
   send: <T>(id: string, method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: object) =>
     relayFetch<T>(`${ws(id)}${path}`, {

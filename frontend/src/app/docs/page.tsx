@@ -33,7 +33,7 @@ const GROUPS: { title: string; intro: string; keys: ExplainKey[] }[] = [
     title: "Working with AI, safely",
     intro:
       "Features that do the busywork and stop before anything changes: a person accepts every result.",
-    keys: ["autopilot", "ask_relay", "meetings", "decision_log", "continuation_plan"],
+    keys: ["autopilot", "ask_relay", "meetings", "decision_log", "continuation_plan", "rehearsal"],
   },
   {
     title: "Numbers and how they are calculated",

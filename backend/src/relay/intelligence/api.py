@@ -5,7 +5,17 @@ from fastapi.responses import StreamingResponse
 
 from relay.identity.auth import Identity
 from relay.identity.workspace_access import CurrentWorkspace, open_workspace_access
-from relay.intelligence import ask, autopilot, capsules, copilot, interviews, meetings, memory, runs
+from relay.intelligence import (
+    ask,
+    autopilot,
+    capsules,
+    copilot,
+    interviews,
+    meetings,
+    memory,
+    rehearsal,
+    runs,
+)
 from relay.intelligence import service as svc
 from relay.jobs.outbox import Jobs
 from relay.shared.rate_limit import rate_limit
@@ -348,3 +358,17 @@ async def ask_workspace(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/ai/capsules/{capsule_id}/rehearsal")
+async def rehearsal_drills(
+    access: CurrentWorkspace, capsule_id: uuid.UUID
+) -> rehearsal.RehearsalView:
+    return await rehearsal.drills(access, capsule_id)
+
+
+@router.post("/ai/capsules/{capsule_id}/rehearsal", dependencies=[rate_limit("rehearsal", 60, 600)])
+async def rehearsal_grade(
+    access: CurrentWorkspace, capsule_id: uuid.UUID, body: rehearsal.RehearsalAnswerIn
+) -> rehearsal.GradeView:
+    return await rehearsal.grade(access, capsule_id, body)

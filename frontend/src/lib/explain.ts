@@ -230,6 +230,17 @@ export const EXPLAIN = {
       "Open the item, check it against the merged changes, then mark it reviewed or edit it.",
     source: "backend/src/relay/catalog/drift.py",
   },
+  rehearsal: {
+    title: "Handover rehearsal",
+    summary:
+      "Practise the handover before you need it: drills built from this brief's evidence, each answer checked against its source.",
+    formula:
+      "Drills come from the brief's procedures, decisions, open work and readiness checks you may see, one of each kind first, up to six. Each source's key terms are its title words, then its most frequent meaningful words (up to 8). Score = key terms your answer uses ÷ key terms × 100. Ready ≥ 70, partly ≥ 35. No AI is involved, so the grade is the same every time.",
+    inputs: ["The handover brief's evidence, filtered to what you are allowed to see"],
+    reading:
+      "Missed terms point at what to re-read; the source excerpt is shown under the grade. Only the score is recorded, never your answer.",
+    source: "backend/src/relay/intelligence/rehearsal.py",
+  },
   ask_relay: {
     title: "Ask Relay",
     summary:

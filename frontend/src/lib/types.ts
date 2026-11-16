@@ -2015,3 +2015,21 @@ export type DriftItem = {
   merged_since: number;
   latest: { title: string; number: number; repository: string; url: string; merged_at: string }[];
 };
+
+export type RehearsalDrill = {
+  id: string;
+  kind: "knowledge" | "decision" | "work" | "risk";
+  prompt: string;
+  source_title: string;
+};
+
+export type RehearsalGrade = {
+  drill_id: string;
+  score: number;
+  verdict: "ready" | "partly" | "not_yet";
+  covered: string[];
+  missed: string[];
+  source_title: string;
+  source_excerpt: string;
+  source_url: string | null;
+};

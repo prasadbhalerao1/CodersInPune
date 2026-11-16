@@ -70,6 +70,7 @@ Each arrow is a link in the product:
 | **Expertise map** | Expertise map | Responsibilities × people, the most fragile work first. It separates a backup *on paper* from a *capable* one. |
 | **30/60/90 plan** | Case → 30/60/90 plan | The successor's first 90 days, built from the case. Each step says why and can be added as a task. |
 | **Code drift** | Knowledge | "Code changed since review": the old deploy runbook is flagged because pull requests were merged after it was last checked. |
+| **Handover rehearsal** | Handover brief (as recipient) | Answer drills built from the brief's evidence; each answer is graded by rules against its source, showing what you covered, what you missed and the passage to re-read. |
 | **Voice interview** | Case → Interview | The leaver can answer by voice; the browser turns speech into text, which they edit before saving. |
 | **Scenario report** | What-if simulator | Download the scenario as a report: the score's working and every cover candidate compared. |
 | **Slack** | Integrations → Slack, then a meeting | Connect a channel (encrypted webhook, test message first), then *Post to #channel* on a meeting. |
