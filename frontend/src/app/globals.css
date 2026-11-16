@@ -160,6 +160,37 @@
   input[type="color"]:not(:disabled) {
     cursor: pointer;
   }
+  /* Every disclosure (<details>) opens and closes smoothly: height eases, content fades in.
+     Browsers without ::details-content still get the fade-in on open. */
+  :root {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    block-size: 0;
+    overflow-y: clip;
+    opacity: 0;
+    transition:
+      block-size 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 180ms ease,
+      content-visibility 220ms allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+  @supports not selector(::details-content) {
+    details[open] > :not(summary) {
+      animation: disclose 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    details::details-content {
+      transition: none;
+    }
+    details[open] > :not(summary) {
+      animation: none;
+    }
+  }
   button:disabled,
   [aria-disabled="true"],
   select:disabled,
@@ -194,6 +225,12 @@
 
 /* Motion: short, quiet, and only where it explains a change (something arrived, moved
    or responded). Durations stay under 300 ms; everything is off for reduced motion. */
+@keyframes disclose {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
 @keyframes relay-rise {
   from {
     opacity: 0;
