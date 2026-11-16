@@ -833,9 +833,17 @@ async def seed_judges(spec: str) -> uuid.UUID:
                 idempotency_key=f"judges-{users['owner'].id}",
                 name=JUDGES_NAME,
             )
+        # Each role account *is* that role's sample person (its membership carries the person's
+        # directory email), so its My Work, handovers and "Accept ownership" are real.
+        personas: dict[str, str] = {}
+        for name_role, name in MEMBERS.values():
+            personas.setdefault(name_role, name)
         for role, user in users.items():
             if role == "owner":
                 continue
+            persona = personas.get(role)
+            email = f"{persona.split()[0].lower()}@{DOMAIN}" if persona else user.email
+            display = f"{persona} (sample account)" if persona else user.email.split("@")[0]
             async with unit_of_work(factory, ws.id, user.id) as session:
                 user_id = (
                     await session.execute(
@@ -854,12 +862,13 @@ async def seed_judges(spec: str) -> uuid.UUID:
                         user_id=user_id,
                         role=role,
                         status="active",
-                        display_name=user.display_name or user.email.split("@")[0],
-                        email=user.email,
+                        display_name=display,
+                        email=email,
                         member_type="contractor" if role == "guest" else "employee",
                     )
                     .on_conflict_do_update(
-                        index_elements=["tenant_id", "user_id"], set_={"role": role}
+                        index_elements=["tenant_id", "user_id"],
+                        set_={"role": role, "email": email, "display_name": display},
                     )
                 )
         return ws.id
