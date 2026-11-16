@@ -46,7 +46,11 @@ The problem statement asks for **Connect → Reconstruct → Verify → Review �
 | Browser journeys | Public and signed-in journeys from the landing page | `frontend/e2e/` |
 | Tenant isolation and schema conventions | Enforced by tests that inspect the live schema | `tests/security/` |
 
-## 4. Disclosures
+## 4. Security
+
+OWASP ASVS Level 2 mapping, dependency audits and the secret scan: [security.md](security.md).
+
+## 5. Disclosures
 
 - **Libraries and services:** listed in `backend/pyproject.toml` and `frontend/package.json`;
   hosted on Render, Vercel and Neon; sign-in by WorkOS; AI through Google Gemini (with Groq,
