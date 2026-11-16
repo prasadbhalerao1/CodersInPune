@@ -2,8 +2,9 @@
 
 from datetime import UTC, datetime, timedelta
 
+from relay.integrations.checkpoint import SYNC_OVERLAP, activity_window, advance
 from relay.integrations.github.models import GitHubInstallation
-from relay.integrations.github.service import SYNC_OVERLAP, activity_window
+from relay.integrations.linear.models import LinearConnection
 
 NOW = datetime(2026, 11, 16, 12, tzinfo=UTC)
 
@@ -32,3 +33,15 @@ def test_an_old_checkpoint_never_reads_beyond_the_window() -> None:
     old = NOW - timedelta(days=400)
     since, _ = activity_window(_inst(old, NOW - timedelta(hours=1)), NOW, 90)
     assert since == NOW - timedelta(days=90)
+
+
+def test_linear_uses_the_same_checkpoint() -> None:
+    connection = LinearConnection(sync_cursor=None, reconciled_at=None)
+    _, full = activity_window(connection, NOW, 90)
+    assert full
+    advance(connection, NOW, full=full)
+    assert (connection.sync_cursor, connection.reconciled_at) == (NOW, NOW)
+    later = NOW + timedelta(hours=1)
+    assert activity_window(connection, later, 90) == (NOW - SYNC_OVERLAP, False)
+    advance(connection, later, full=False)
+    assert (connection.sync_cursor, connection.reconciled_at) == (later, NOW)

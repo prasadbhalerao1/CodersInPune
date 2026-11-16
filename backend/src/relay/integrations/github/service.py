@@ -32,7 +32,7 @@ from relay.catalog import service as catalog
 from relay.directory.models import Person, Team
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
-from relay.integrations import connectors
+from relay.integrations import checkpoint, connectors
 from relay.integrations.github import directory_sync
 from relay.integrations.github.client import (
     GitHubClient,
@@ -570,26 +570,6 @@ async def _apply_evidence(
     return True
 
 
-SYNC_OVERLAP = timedelta(minutes=15)
-RECONCILE_EVERY = timedelta(days=1)
-
-
-def activity_window(
-    installation: GitHubInstallation, now: datetime, days: int
-) -> tuple[datetime, bool]:
-    """Where this sync reads activity from, and whether it is a full (reconciling) run.
-
-    Incremental runs start at the last successful run minus an overlap, so nothing updated
-    while that run was in flight is missed; writes are upserts, so the overlap is harmless.
-    A full window runs first and then daily, to catch anything an incremental run missed.
-    """
-    window = now - timedelta(days=days)
-    cursor, reconciled = installation.sync_cursor, installation.reconciled_at
-    if cursor is None or reconciled is None or now - reconciled >= RECONCILE_EVERY:
-        return window, True
-    return max(cursor - SYNC_OVERLAP, window), False
-
-
 async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.JobContext) -> None:
     """Idempotent: re-running converges on the same repositories and suggestions."""
     if ctx.http is None or ctx.settings is None:
@@ -680,7 +660,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
 
     days = ctx.settings.github_activity_days
     started = datetime.now(UTC)
-    since, full = activity_window(installation, started, days)
+    since, full = checkpoint.activity_window(installation, started, days)
     notes: list[str] = []
 
     async def fetch(
@@ -729,9 +709,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
     installation.last_sync_status = "ok" if ok and not notes else "partial"
     if ok and not notes:
         # Advance the checkpoint only after a fully successful run.
-        installation.sync_cursor = started
-        if full:
-            installation.reconciled_at = started
+        checkpoint.advance(installation, started, full=full)
     installation.last_sync_error = " ".join(dict.fromkeys(notes)) or None
 
 

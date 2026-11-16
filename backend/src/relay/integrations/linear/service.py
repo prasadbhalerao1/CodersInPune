@@ -30,7 +30,7 @@ from relay.catalog.models import OwnershipAssignment, Responsibility
 from relay.directory.models import Person
 from relay.identity.tokens import VerifiedIdentity
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
-from relay.integrations import connectors
+from relay.integrations import checkpoint, connectors
 from relay.integrations.linear.client import LinearClient, LinearError, parse_when
 from relay.integrations.linear.models import (
     LinearConnection,
@@ -372,7 +372,8 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         return
     if oauth.expiring(connection):
         token = await _refresh(connection, linear, ctx.settings) or token
-    since = _now() - timedelta(days=ACTIVITY_DAYS)
+    started = _now()
+    since, full = checkpoint.activity_window(connection, started, ACTIVITY_DAYS)
     try:
         teams, projects, users, issues = (
             await linear.teams(token),
@@ -509,6 +510,7 @@ async def handle_sync(session: AsyncSession, event: OutboxEvent, ctx: outbox.Job
         _match(identity, people)
     connection.last_synced_at, connection.last_sync_status = func.now(), "ok"
     connection.last_sync_error = None
+    checkpoint.advance(connection, started, full=full)
     # Self-scheduling reconciliation: at most one future sync is pending at a time.
     if ctx.jobs is not None and (
         connection.next_reconcile_at is None or connection.next_reconcile_at <= _now()

@@ -75,6 +75,10 @@ class LinearConnection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_status: Mapped[str] = mapped_column(Text, server_default="never")
+    # Incremental sync, as for GitHub (integrations/checkpoint.py): issues are fetched from
+    # `sync_cursor` minus an overlap; the full window runs again daily (`reconciled_at`).
+    sync_cursor: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reconciled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Paused: credentials and data are kept, but no sync runs.
     paused: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
