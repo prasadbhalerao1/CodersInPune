@@ -217,8 +217,9 @@ handover cases with follow-through, Slack sharing, eight roles, and a full audit
    repository- and asset-level Memory Replay; side-by-side brief diffs at sentence level.
 2. **Soon:** calendar and HR-system signals (planned leave feeding the simulator
    automatically); Slack threads and Jira issues as evidence (Slack posting ships today);
-   semantic retrieval for Ask Relay on the pgvector extension already installed; handover
-   rehearsal drills graded against the evidence; scheduled continuity reviews per team.
+   semantic retrieval for Ask Relay on the pgvector extension already installed; Linear and
+   Notion webhooks with the same sync checkpoint GitHub uses; saved multi-person What If?
+   scenarios; scheduled continuity reviews per team.
 3. **Later:** organisation-wide resilience trends; SCIM provisioning; self-hosted model
    support for regulated customers.
 
