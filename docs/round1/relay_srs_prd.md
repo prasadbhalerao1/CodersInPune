@@ -18,6 +18,8 @@
 |---|---|---|
 | 0.1 | 8 Nov 2026 | Product concept and initial feature map consolidated |
 | 1.0 | 8 Nov 2026 | Combined PRD and SRS baseline, including agentic design, UX, roles, edge cases and release plan |
+| 2.0 | 11 Nov 2026 | Round 2: the three committed improvements (AI Handover Copilot, What If? Continuity Simulator, Project Memory Replay) |
+| 3.0 | 16 Nov 2026 | Round 3: aligned with the built product. New section 0 (what Relay does today); requirements added for ownership acceptance, the completion gate, idempotent creates, incremental sync, scenario comparison, shareable replay, brief evidence strength, contacts and per-role judge accounts; roles, connectors and decisions updated |
 
 ## How to read this document
 
@@ -26,6 +28,67 @@
 - **P0/P1/P2** indicate delivery priority, not product importance in the abstract.
 - Items marked **provisional target** are engineering targets to validate through testing, not existing performance claims.
 - Features described as **later phase** belong in the product architecture but are not required for the first release.
+- **Section 0** describes the product as built (release 3.0). Sections 1 to 24 are the specification; where the build went further than the 1.0 baseline, the new requirements are marked **(3.0)**.
+
+---
+
+# 0. Release 3.0: what Relay does today
+
+Relay is a working, multi-tenant SaaS. Organisations sign in with their own accounts (WorkOS:
+email codes, passwords or SSO), connect GitHub, Linear, Notion and Slack, and run real
+handovers on their own records. A pre-seeded sample organisation and one account per role exist
+so evaluators can see every workflow and edge case in minutes without connecting anything; they
+use exactly the same code paths as a customer workspace.
+
+## 0.1 Modules delivered
+
+| Module (section 6) | What is built | Where in the app |
+|---|---|---|
+| A. Overview and My Work | Workspace health, continuity debt, the next recommended step; a personal queue of tasks, approvals, reviews and handovers addressed to me | Overview, My Work |
+| B. Continuity Cases | Transfer, coverage, departure, onboarding and project handover cases; scope, recipients, approvals bound to the plan version, execution, incoming-owner acceptance, a completion gate, blockers, comments, split, reopen, emergency mode, saved views, idempotent creation | Cases |
+| C. Responsibilities | Catalogue with criticality, owners and backups over valid time, dependencies, access, reviews, archive and restore, history as of any date | Responsibilities |
+| D. People, Teams and Organisation | People, teams, departments, managers, profiles, identity matching to GitHub and Linear, CSV import | People, Teams, Departments, Import |
+| E. Projects, Systems and Assets | Assets linked to responsibilities, with criticality, tags and links | Assets |
+| F. Knowledge Operations | Knowledge items with kinds, visibility, versions, stewardship review, disputes, feedback, freshness and code drift against the linked repository | Knowledge |
+| G. Continuity Intelligence and Debt | Case analysis by four AI reviewers with deterministic rules underneath; Handover Autopilot; risk register with lifecycle; continuity debt | Case → Analysis, Risks, Insights |
+| H. Onboarding, Readiness and Rehearsal | Readiness criteria (met, blocked, waived, needs review, unable to assess), handover rehearsal, 30/60/90 continuation plan, knowledge capture interview (voice-capable) | Case detail |
+| I. Insights and Reports | Insights dashboard, downloadable simulator report, audit export | Insights, What If?, Audit |
+| J. Integrations | GitHub App with webhooks and incremental sync; Linear (OAuth, incremental sync); Notion; Slack notifications; connection health with reconnect | Integrations |
+| K. Agents and Automations | Configurable agents and automation rules, follow-ups, retention, ownership transfer automation; every agent output is a proposal a person accepts | Agents, Automations |
+
+## 0.2 The three improvements committed in Round 2
+
+| Improvement | What it does | Code |
+|---|---|---|
+| **AI Handover Copilot** | A handover brief per recipient: every statement cites its evidence; an evidence-strength label (strong, partial, weak) from source freshness, citation coverage and conflicts; "Who to ask" from ownership history; a streamed, stoppable Copilot conversation saved per brief that says "not in the evidence" rather than guess, with suggested follow-up questions; approval, acknowledgement, rehearsal and version history | `intelligence/capsules.py`, `copilot.py`, `rehearsal.py` |
+| **What If? Continuity Simulator** | Choose a person, a period and an optional backup: affected responsibilities, coverage before and after, new single points of failure, open work left without cover, orphaned knowledge and a readiness score with its working shown. Candidate backups are compared side by side; up to three scenarios can be pinned and compared; the report downloads; a case opens pre-filled. Read-only by construction | `continuity/simulation.py` |
+| **Project Memory Replay** | A responsibility's history rebuilt from GitHub, Linear, Notion and Relay: grouped by month, filtered by category, source, person, date range and significance, searchable, playable, with evidence per event and gaps flagged. Filters live in the URL, so a narrowed replay can be shared. The AI narrative is kept separate from recorded facts | `catalog/timeline.py`, `intelligence/memory.py` |
+
+## 0.3 Further capabilities shipped in Round 3
+
+Handover Autopilot · meeting intelligence (decisions and actions become ADRs and case tasks) ·
+decision log · Ask Relay (workspace questions answered with citations) · expertise map ·
+30/60/90 continuation plan · handover rehearsal · code drift on knowledge · Slack notifications ·
+incoming-owner acceptance and a completion gate · guided tours and an explanation (ⓘ) on every
+score · Ctrl K search · phone layout and dark mode · one account per role with one-click sign-in
+for evaluators.
+
+## 0.4 Platform guarantees in the build
+
+| Guarantee | How it is enforced |
+|---|---|
+| Tenant isolation | Every tenant table has forced row-level security; the app role has no bypass; tenant context is set per transaction (`tests/security/test_schema_conventions.py`) |
+| Authorisation inside services | Every read and write calls `authorize()` or `visible()` from one permission registry; unknown roles and permissions are denied; the roles table in the product guide is tested against the registry |
+| Audit | Append-only audit events written in the same transaction as the change |
+| Reliable background work | Transactional outbox into Procrastinate; idempotent handlers |
+| No duplicate records | Create requests carry an idempotency key kept across retries; reusing a key for a different request is rejected |
+| Fresh, cheap sync | GitHub and Linear resume from a saved checkpoint with an overlap and run a full reconciliation daily; the checkpoint advances only after a fully successful run |
+| AI proposes, people decide | Models never hold write tools; citations outside the evidence are removed; every AI output has a deterministic fallback |
+| Accessibility | WCAG 2.2 AA checks with axe in end-to-end tests; keyboard reachable; reduced motion respected |
+
+Full traceability from each judging criterion to code, tests and evidence:
+[`docs/submission/ROUND3_JUDGING_TRACEABILITY.md`](../submission/ROUND3_JUDGING_TRACEABILITY.md);
+module status: [`docs/submission/ROUND3_FEATURE_MATRIX.md`](../submission/ROUND3_FEATURE_MATRIX.md).
 
 
 # 1. Executive product brief
@@ -678,6 +741,13 @@ Every major screen must support empty state, loading state, partial data, stale 
 | Knowledge Steward | Maintain knowledge quality and review important records within scope |
 | Member | Search authorised information, contribute knowledge and complete tasks |
 | Auditor | Read-only access to permitted audit records and case evidence |
+| Guest **(3.0)** | An outside contractor or collaborator: read-only on what they are given, no AI output |
+
+**As built (3.0):** eight workspace roles: Owner, Admin, Continuity Manager, Knowledge Steward,
+Team Manager (scoped to the responsibilities their teams hold), Member, Auditor and Guest.
+Current and incoming owner are case relationships, not roles: an incoming owner is the
+recipient of a scope item and is the one who accepts it. The live can/can't table is in the
+product guide (`/docs#roles`) and is tested against the permission registry.
 
 Roles are assignable at workspace, department, team, resource or case scope where appropriate. Users can hold multiple roles.
 
@@ -1237,6 +1307,21 @@ Initial use cases:
 - Generate draft updates, not silently overwrite pages.
 - Respect workspace/page access restrictions where available.
 
+### As built (3.0)
+
+| Connector | Scope in the build |
+|---|---|
+| GitHub | GitHub App installation, webhooks, repositories, CODEOWNERS, pull requests and issues as ownership evidence, identity matching, incremental sync from a checkpoint with a daily full reconcile, code drift on linked knowledge, approved external issue creation |
+| Linear | OAuth with token refresh, teams, projects, issues and assignees, identity matching, incremental issue sync from a checkpoint with a daily full reconcile |
+| Notion | Read-only: pages and databases imported as knowledge with source links and freshness |
+| Slack | Notifications to a channel (incoming webhook) |
+| CSV | People, teams and responsibilities import with a preview before anything is written |
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-INT-CHK-001 **(3.0)** | Activity sync MUST resume from the start of the last fully successful run minus an overlap, MUST run a full-window reconciliation at least daily, and MUST NOT advance the checkpoint after a failed or partial run. | P0 |
+| FR-INT-CHK-002 **(3.0)** | The integration health page MUST show each connection's last sync and error, and offer reconnection when access is lost. | P1 |
+
 ## 12.3 Later connector candidates
 
 - **Slack:** relevant channel/project context and approved messages; private messages should be excluded by default.
@@ -1371,6 +1456,7 @@ The following requirements are testable system requirements. Priorities may be a
 | FR-IAM-007 | The system MUST flag ambiguous identity matches for human resolution. | P0 |
 | FR-IAM-008 | The system SHOULD support OIDC/SSO for enterprise environments. | P1 |
 | FR-IAM-009 | The system MUST terminate or restrict sessions according to configured deactivation/security policy. | P0 |
+| FR-IAM-EVAL-001 **(3.0)** | For evaluation, the service MAY provide one shared account per role in a sample organisation with one-click sign-in. These accounts MUST use the same identity provider and code paths as customer accounts, and MUST be clearly labelled as sample access. | P2 |
 
 ## 14.2 Organisation, people and teams
 
@@ -1430,6 +1516,9 @@ The following requirements are testable system requirements. Priorities may be a
 | FR-CASE-010 | A case MUST support blockers, exceptions, deadlines and escalation. | P0 |
 | FR-CASE-011 | The system MUST preserve cancelled and reopened case history. | P0 |
 | FR-CASE-012 | A high-criticality case MUST NOT close without required approvals and readiness criteria unless an authorised exception is recorded. | P0 |
+| FR-CASE-013 **(3.0)** | The incoming owner of each scope item MUST be able to accept it explicitly. Acceptance MUST be refused on a completed or cancelled case and when the item has no recipient; it MUST be idempotent, audited, and cleared when the recipient changes or the assignment is declined. A case manager MAY record acceptance on someone's behalf. | P0 |
+| FR-CASE-014 **(3.0)** | A case MUST NOT complete while tasks are open or while a recipient with a Relay account has not accepted their handover. The refusal MUST say what is missing. Cover that ends early is exempt from the open-task check. | P0 |
+| FR-CASE-015 **(3.0)** | Creating a case, task or comment MUST be idempotent: a retried or double-submitted request with the same key returns the first result, and reusing a key for a different request is rejected. | P0 |
 
 ## 14.6 Tasks, approvals and readiness
 
@@ -1446,6 +1535,7 @@ The following requirements are testable system requirements. Priorities may be a
 | FR-TASK-009 | Readiness criteria MUST be explicit, measurable and linked to evidence where appropriate. | P0 |
 | FR-TASK-010 | Readiness results MUST support pass, fail, needs human review and unable to assess. | P0 |
 | FR-TASK-011 | The system MUST not infer readiness solely from document views or chat engagement. | P0 |
+| FR-TASK-012 **(3.0)** | The case page MUST list every blocker to completion (readiness, open tasks, missing acceptance) in one place. | P1 |
 
 ## 14.7 Knowledge and evidence
 
@@ -1480,6 +1570,16 @@ The following requirements are testable system requirements. Priorities may be a
 | FR-CI-008 | The system MUST maintain a Continuity Debt backlog. | P1 |
 | FR-CI-009 | Risk prioritisation MUST be explainable and configurable. | P1 |
 | FR-CI-010 | The system MUST not rank employee performance using continuity findings. | P0 |
+
+### Requirements added in 3.0 for the three improvements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-BRIEF-001 **(3.0)** | A handover brief MUST show an evidence-strength label (strong, partial, weak) computed from source freshness, citation coverage and conflicts, with the counts behind it. | P0 |
+| FR-BRIEF-002 **(3.0)** | A handover brief MUST list people to ask, drawn from current and recent ownership records the reader may see. | P1 |
+| FR-BRIEF-003 **(3.0)** | The Copilot MUST suggest follow-up questions from the brief's gaps and unexplored sections. | P1 |
+| FR-SIM-001 **(3.0)** | The simulator MUST let a user pin up to three scenarios and compare their outcomes side by side, without writing anything. | P1 |
+| FR-REPLAY-001 **(3.0)** | Memory Replay filters, including a date range, MUST be reflected in the URL so a narrowed replay can be shared. | P1 |
 
 ## 14.9 Search and AI answers
 
@@ -2118,6 +2218,22 @@ These assumptions require validation with pilot users.
 6. Which cross-functional connector after the initial engineering stack has the highest customer value.
 7. How much customer data is retained after source disconnection/deletion.
 8. Which metrics are visible to managers vs administrators and employees.
+
+## 21.4a Decisions taken by release 3.0
+
+| Question | Decision |
+|---|---|
+| Agent framework | A small custom orchestrator behind one LLM gateway ([ADR 0001](../adr/0001-llm-gateway.md)); no framework dependency |
+| Queue and scheduler | Procrastinate on PostgreSQL behind a transactional outbox; no Redis or Celery |
+| Authentication | WorkOS AuthKit (email codes, passwords, SSO) |
+| Search | PostgreSQL keyword and full-text retrieval ([ADR 0003](../adr/0003-ask-relay-retrieval.md)); pgvector when workspaces outgrow it |
+| Model provider | Gemini, with a local Ollama option and deterministic fallbacks for every AI feature |
+| Email | Resend |
+| Hosting | API and worker on Render, web on Vercel, database on Neon |
+| Offboarding | Shipped as the departure case type |
+| Context Capsules | Generated on demand and stored as versioned artefacts with approval and acknowledgement |
+| Readiness criteria | Template defaults per case type, editable per case |
+| Sync freshness | Webhooks for GitHub; scheduled and on-demand sync for Linear and Notion, incremental from a checkpoint ([ADR 0002](../adr/0002-github-reconciliation-interval.md)) |
 
 ## 21.5 Decisions already established in discussion
 
