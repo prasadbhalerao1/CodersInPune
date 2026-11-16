@@ -8,6 +8,7 @@ from relay.catalog import drift
 from relay.catalog import knowledge as svc
 from relay.catalog import knowledge_governance as gov
 from relay.identity.workspace_access import CurrentWorkspace
+from relay.shared import idempotency
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["knowledge"])
 
@@ -46,9 +47,18 @@ async def for_responsibility(
 
 @router.post("/responsibilities/{responsibility_id}/knowledge", status_code=status.HTTP_201_CREATED)
 async def add(
-    access: CurrentWorkspace, responsibility_id: uuid.UUID, body: svc.KnowledgeIn
+    access: CurrentWorkspace,
+    responsibility_id: uuid.UUID,
+    body: svc.KnowledgeIn,
+    key: idempotency.OptionalIdempotencyKey = None,
 ) -> svc.KnowledgeView:
-    return await svc.add_knowledge(access, responsibility_id, body)
+    scope = f"knowledge.create:{responsibility_id}"
+    payload = body.model_dump(mode="json")
+    if done := await idempotency.claim(access, key, scope, payload):
+        return await svc.get_knowledge(access, done)
+    created = await svc.add_knowledge(access, responsibility_id, body)
+    await idempotency.remember(access, key, created.id)
+    return created
 
 
 @router.patch("/knowledge/{item_id}")

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Response, status
 from relay.directory import identities, profiles
 from relay.directory import service as svc
 from relay.identity.workspace_access import CurrentWorkspace
-from relay.shared import pagination
+from relay.shared import idempotency, pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["directory"])
 
@@ -34,8 +34,17 @@ async def list_people(
 
 
 @router.post("/people", status_code=status.HTTP_201_CREATED)
-async def create_person(access: CurrentWorkspace, body: svc.PersonIn) -> svc.PersonView:
-    return await svc.create_person(access, body)
+async def create_person(
+    access: CurrentWorkspace,
+    body: svc.PersonIn,
+    key: idempotency.OptionalIdempotencyKey = None,
+) -> svc.PersonView:
+    scope, payload = "people.create", body.model_dump(mode="json")
+    if done := await idempotency.claim(access, key, scope, payload):
+        return await svc.get_person(access, done)
+    created = await svc.create_person(access, body)
+    await idempotency.remember(access, key, created.id)
+    return created
 
 
 @router.patch("/people/{person_id}")

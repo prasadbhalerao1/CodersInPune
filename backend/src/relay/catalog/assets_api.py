@@ -4,7 +4,7 @@ from fastapi import APIRouter, Response, status
 
 from relay.catalog import assets as svc
 from relay.identity.workspace_access import CurrentWorkspace
-from relay.shared import pagination
+from relay.shared import idempotency, pagination
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["assets"])
 
@@ -41,8 +41,17 @@ async def list_assets(
 
 
 @router.post("/assets", status_code=status.HTTP_201_CREATED)
-async def create_asset(access: CurrentWorkspace, body: svc.AssetIn) -> svc.AssetDetail:
-    return await svc.create_asset(access, body)
+async def create_asset(
+    access: CurrentWorkspace,
+    body: svc.AssetIn,
+    key: idempotency.OptionalIdempotencyKey = None,
+) -> svc.AssetDetail:
+    scope, payload = "assets.create", body.model_dump(mode="json")
+    if done := await idempotency.claim(access, key, scope, payload):
+        return await svc.get_asset(access, done)
+    created = await svc.create_asset(access, body)
+    await idempotency.remember(access, key, created.id)
+    return created
 
 
 @router.get("/assets/{asset_id}")

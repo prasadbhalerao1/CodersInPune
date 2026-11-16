@@ -55,3 +55,27 @@ async def test_same_key_creates_once_and_a_different_payload_is_rejected(api: Ap
     plain = await ws.call("POST", "/responsibilities", 201, json={"name": "Ledger"})
     other = await ws.call("POST", "/responsibilities", 201, json={"name": "Ledger 2"})
     assert plain["id"] != other["id"]
+
+
+async def test_people_assets_and_knowledge_are_created_once(api: Api, ws: Ws) -> None:
+    base = f"/workspaces/{ws.id}"
+    rid = (await ws.call("POST", "/responsibilities", 201, json={"name": "Payments"}))["id"]
+    creates = [
+        ("/people", {"display_name": "Asha Rao"}, "person-key-0001"),
+        ("/assets", {"name": "payments-api", "asset_type": "repository"}, "asset-key-0001"),
+        (
+            f"/responsibilities/{rid}/knowledge",
+            {"kind": "procedure", "title": "Rotate keys", "body": "Monthly, from the vault."},
+            "knowledge-key-0001",
+        ),
+    ]
+    for path, body, key in creates:
+        first = await api.client.post(base + path, json=body, headers=_headers(api, key))
+        again = await api.client.post(base + path, json=body, headers=_headers(api, key))
+        assert (first.status_code, again.status_code) == (201, 201), path
+        assert first.json()["id"] == again.json()["id"], path
+
+    people = await ws.call("GET", "/people")
+    assert [p["display_name"] for p in people].count("Asha Rao") == 1
+    knowledge = await ws.call("GET", f"/responsibilities/{rid}/knowledge")
+    assert [k["title"] for k in knowledge] == ["Rotate keys"]

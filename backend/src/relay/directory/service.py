@@ -271,6 +271,14 @@ async def create_person(access: WorkspaceAccess, data: PersonIn) -> PersonView:
     return _person_view(person, await department_names(access))
 
 
+async def get_person(access: WorkspaceAccess, person_id: uuid.UUID) -> PersonView:
+    authorize(access, Permission.DIRECTORY_READ)
+    person = await access.session.get(Person, person_id)
+    if person is None:
+        raise ApiError(404, "person_not_found", "Person not found.")
+    return _person_view(person, await department_names(access))
+
+
 async def update_person(
     access: WorkspaceAccess, person_id: uuid.UUID, data: PersonUpdate
 ) -> PersonView:
