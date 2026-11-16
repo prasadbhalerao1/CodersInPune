@@ -9,6 +9,13 @@
 #
 # Secrets (environment `production`): RELAY_MIGRATION_DATABASE_URL (owner, libpq form
 # accepted), RELAY_BACKUP_PASSPHRASE.
+#
+# Forced RLS applies to the owner too, so the dump runs as `relay_backup`: a NOLOGIN role
+# with BYPASSRLS and pg_read_all_data that only relay_owner may SET ROLE to. The app role
+# is untouched. One-time setup, as the Neon project owner (neondb_owner):
+#   CREATE ROLE relay_backup NOLOGIN BYPASSRLS;
+#   GRANT pg_read_all_data TO relay_backup;
+#   GRANT relay_backup TO relay_owner WITH INHERIT FALSE, SET TRUE;
 name: Backup
 
 on:
@@ -46,7 +53,7 @@ jobs:
           [ -n "$PASSPHRASE" ] || { echo "RELAY_BACKUP_PASSPHRASE is not set"; exit 1; }
           url=$(printf '%s' "$URL" | sed 's#^postgresql+psycopg://#postgresql://#')
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
-          /usr/lib/postgresql/18/bin/pg_dump --format=custom --no-owner --no-privileges "$url" > relay.dump
+          /usr/lib/postgresql/18/bin/pg_dump --role=relay_backup --format=custom --no-owner --no-privileges "$url" > relay.dump
           printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
             --symmetric --cipher-algo AES256 -o "relay-$stamp.dump.gpg" relay.dump
           echo "STAMP=$stamp" >> "$GITHUB_ENV"
