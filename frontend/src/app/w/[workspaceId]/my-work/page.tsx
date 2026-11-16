@@ -165,7 +165,9 @@ export default async function MyWorkPage({
                         {a.case_title}
                       </span>
                     </span>
-                    <span className="text-primary shrink-0 text-xs font-medium">Review and accept</span>
+                    <span className="text-primary shrink-0 text-xs font-medium">
+                      Review and accept
+                    </span>
                   </Link>
                 </li>
               ))}
