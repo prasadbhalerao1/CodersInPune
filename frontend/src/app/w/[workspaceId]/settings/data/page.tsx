@@ -114,6 +114,7 @@ export default async function DataPage({ params }: PageProps<"/w/[workspaceId]/s
               <ActionForm
                 action={setRetentionAction.bind(null, workspaceId)}
                 className="flex-row items-end gap-2"
+                success="Retention saved"
               >
                 <Field label="Keep for (days)" htmlFor="retention">
                   <input

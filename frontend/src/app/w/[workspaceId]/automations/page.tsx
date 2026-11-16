@@ -79,6 +79,7 @@ function Rule({
       <ActionForm
         action={updateAutomationAction.bind(null, workspaceId, rule.template)}
         className="flex-row flex-wrap items-center gap-3"
+        success="Saved"
       >
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="enabled" defaultChecked={rule.enabled} className="size-4" />
@@ -117,7 +118,10 @@ function Rule({
         </span>
         {rule.open_follow_ups ? <span>{rule.open_follow_ups} open follow-ups</span> : null}
         <span className="flex-1" />
-        <ActionForm action={runAutomationAction.bind(null, workspaceId, rule.template, false)}>
+        <ActionForm
+          action={runAutomationAction.bind(null, workspaceId, rule.template, false)}
+          success="Queued: results appear here shortly"
+        >
           <SubmitButton size="sm" variant="ghost" pendingLabel="Queuing…">
             Run now
           </SubmitButton>

@@ -41,6 +41,7 @@ export default async function GovernanceSettingsPage({
                 <ActionForm
                   action={updateTierAction.bind(null, workspaceId, t.criticality)}
                   className="flex-row flex-wrap items-center gap-4"
+                  success="Saved"
                 >
                   <span className="w-24">
                     <CriticalityBadge value={t.criticality} />

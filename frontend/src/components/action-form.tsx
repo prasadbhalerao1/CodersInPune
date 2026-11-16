@@ -21,13 +21,18 @@ export function ActionForm({
   children,
   className,
   id,
+  success,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   children: ReactNode;
   className?: string;
   /** Lets inputs elsewhere on the page join this form via their `form` attribute. */
   id?: string;
+  /** Shown briefly after a successful save, for forms whose effect isn't otherwise visible. */
+  success?: string;
 }) {
+  const [saved, setSaved] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // One key per submission intent, made at the first submit (not at render, so server and
   // client markup match): a double click or a retry after an error reuses it, so the API
   // creates nothing twice. It is dropped once a submission succeeds.
@@ -36,7 +41,14 @@ export function ActionForm({
     key.current ??= newKey();
     fd.set("idempotency_key", key.current);
     const result = await action(prev, fd);
-    if (!result.error) key.current = null;
+    if (!result.error) {
+      key.current = null;
+      if (success) {
+        setSaved(true);
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => setSaved(false), 3000);
+      }
+    }
     return result;
   }, {});
   return (
@@ -45,6 +57,18 @@ export function ActionForm({
       {state.error ? (
         <p role="alert" className="text-destructive text-sm">
           {state.error}
+        </p>
+      ) : null}
+      {success ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className={cn(
+            "text-sm text-emerald-700 transition-opacity duration-300 dark:text-emerald-400",
+            saved && !state.error ? "opacity-100" : "pointer-events-none h-0 opacity-0",
+          )}
+        >
+          {saved && !state.error ? `✓ ${success}` : ""}
         </p>
       ) : null}
     </form>

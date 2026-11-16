@@ -52,6 +52,7 @@ export default async function NotificationSettingsPage({
           <ActionForm
             action={savePreferencesAction.bind(null, workspaceId)}
             className="rounded-lg border"
+            success="Preferences saved"
           >
             <ul className="divide-y">
               {preferences.data.map((p) => (
