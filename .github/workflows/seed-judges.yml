@@ -27,7 +27,6 @@ jobs:
       - run: uv sync --frozen --no-dev
       - name: relay-seed-judges
         env:
-          RELAY_ENVIRONMENT: production
           RELAY_DATABASE_URL: ${{ secrets.RELAY_MIGRATION_DATABASE_URL }}
           RELAY_WORKOS_CLIENT_ID: client_01M6XQZCZ6RGBWKAB32V4Q5PDC
           RELAY_JUDGE_ACCOUNTS: ${{ inputs.accounts }}
