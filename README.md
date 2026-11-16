@@ -11,6 +11,7 @@ ownership through reviewed, audited handovers. AI only proposes; people decide.
 | **Live product** | <https://midnight-ciphers.cv> (the home page has one-click sign-in for judges) |
 | **Final product document (PDF, 11 pages)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): the three improvements, everything beyond them, architecture, design decisions, testing and roadmap |
 | **Complete reference (PDF)** | [Documentation/Relay_Complete_Documentation.pdf](Documentation/Relay_Complete_Documentation.pdf): the specification, every API endpoint and data model, decision records, the product guide and every screen |
+| **Product video** | [Documentation/video/Relay_Walkthrough.mp4](Documentation/video/Relay_Walkthrough.mp4) (recorded during Round 3 development; a final cut follows) |
 | **Ten-minute walkthrough** | [For judges](#for-judges), below |
 | **Judge guide** | [judge-guide.md](Documentation/1-start-here/judge-guide.md): the problem, the lifecycle and an evidence matrix |
 | **All documentation** | [Documentation/](Documentation/README.md) |
