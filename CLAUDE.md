@@ -1,8 +1,8 @@
 # Relay: repository conventions
 
-Relay is an organisational continuity SaaS. Decisions live in `docs/blueprint/`
+Relay is an organisational continuity SaaS. Decisions live in `devDocs/3-planning-and-decisions/blueprint/`
 (Decision Register = D1–D26, Implementation Plan = milestones). Read the relevant
-section there; don't re-derive decisions. Record any deviation as an ADR in `docs/adr/`.
+section there; don't re-derive decisions. Record any deviation as an ADR in `Documentation/3-architecture/decisions/`.
 
 ## Layout
 - `backend/`: Python 3.14, FastAPI, SQLAlchemy 2.x async, psycopg 3, Alembic. `uv`.

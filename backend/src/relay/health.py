@@ -60,7 +60,7 @@ async def ready(request: Request, response: Response) -> HealthResponse:
 
 
 # Alert when a count crosses its threshold. Each name is an actionable condition with a
-# runbook entry (docs/runbooks/incident-response.md#alerts); counts never identify a tenant.
+# runbook entry (Documentation/6-operations/incident-response.md#alerts); counts never identify a tenant.
 THRESHOLDS: dict[str, tuple[str, int]] = {
     "worker_down": ("worker_heartbeat_age_s", 300),
     "queue_backlog": ("oldest_ready_age_s", 900),

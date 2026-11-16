@@ -4,12 +4,16 @@ Relay keeps work moving when people and responsibilities change. It finds what s
 owns, rebuilds the context from GitHub, Linear and Notion with cited evidence, and moves
 ownership through reviewed, audited handovers. AI only proposes; people decide.
 
-## Demo
+## Start here
 
-- **Judges: start here →** [step-by-step walkthrough](#for-judges) · [judge guide with evidence matrix](docs/JUDGE_GUIDE.md) · [documentation index](docs/README.md)
-- **Walkthrough Video**: [`artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4`](artifacts/product-walkthrough/Relay_Product_Walkthrough.mp4) (1080p master recording)
-- **Live Deployment**: [https://relay-continuity-nine.vercel.app](https://relay-continuity-nine.vercel.app)
-- **Project Dossier (PDF)**: [`artifacts/Relay_Project_Overview_Round2.pdf`](artifacts/Relay_Project_Overview_Round2.pdf) (Round 2 publication build)
+| | |
+|---|---|
+| **Live product** | <https://relay-continuity-nine.vercel.app> (the home page has one-click sign-in for judges) |
+| **Final product document (PDF)** | [Documentation/Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf): every feature, the architecture, testing, the roadmap and the full API reference |
+| **Ten-minute walkthrough** | [For judges](#for-judges), below |
+| **Judge guide** | [judge-guide.md](Documentation/1-start-here/judge-guide.md): the problem, the lifecycle and an evidence matrix |
+| **All documentation** | [Documentation/](Documentation/README.md) |
+| **How we got here** | [devDocs/](devDocs/README.md): Round 1 and Round 2 submissions, research, audits and design notes |
 
 > **Relay is a production SaaS, not a mock-up.** It signs real users in (WorkOS), connects to
 > real GitHub, Linear, Notion and Slack accounts, and runs on a real Postgres database with
@@ -160,9 +164,9 @@ On the same sample workspace:
 
 - **Your own data:** create an empty workspace and open **Integrations** to connect GitHub,
   Linear or Notion (read-only).
-- **The code:** [docs/round3/improvements-delivered.md](docs/round3/improvements-delivered.md)
+- **The code:** [improvements-delivered.md](Documentation/2-round3-improvements/2-what-we-delivered.md)
   maps every Round 3 commitment to its code and tests;
-  [docs/demo-script.md](docs/demo-script.md) is the full scripted demo.
+  [demo-script.md](devDocs/7-demo-and-early-builds/demo-script.md) is the full scripted demo.
 - **Run it locally:** see [Run it yourself](#run-it-yourself): two commands after a free
   WorkOS sign-up.
 
@@ -206,13 +210,13 @@ analysis, briefs, interviews, meetings and answers that always cite their source
 handover cases with follow-through, Slack sharing, eight roles, and a full audit trail.
 
 Each next step, with the point at which it becomes worth building:
-[scope and next steps](docs/submission/ROUND3_SCOPE_AND_NEXT_STEPS.md).
+[scope and next steps](Documentation/7-roadmap/scope-and-next-steps.md).
 
 **Deliberate choices:**
 - AI proposes; people decide. No model can change ownership, approve or edit a source.
 - Connectors read only. Relay never writes to GitHub, Linear or Notion.
 - Ask Relay retrieves with permission-aware search; semantic retrieval is planned behind a
-  measured trigger ([ADR 0003](docs/adr/0003-ask-relay-retrieval.md)).
+  measured trigger ([ADR 0003](Documentation/3-architecture/decisions/0003-ask-relay-retrieval.md)).
 - Customers sign in with their own WorkOS identity (email code, password or SSO). The only
   shared password belongs to the sample role accounts, which reach nothing but the sample
   organisation; any judge can also make a private sample and switch roles with *Try Relay as*.
@@ -241,35 +245,33 @@ Team **Midnight Ciphers** (CodersInPune Hackathon, Round 3 finalist).
 | Vipul Nanaware | Product and experience: user journeys, interface and brand, onboarding and tutorials, testing with users, presentation |
 
 AI coding assistants were used throughout; how AI is used inside the product is disclosed
-in [docs/ai.md](docs/ai.md).
+in [Documentation/ai.md](Documentation/3-architecture/ai-design.md).
 
 ## Documentation
 
-| Doc | What's in it |
+The repository has two documentation folders:
+
+- **[Documentation/](Documentation/README.md)**: the final product documentation. Start here.
+- **[devDocs/](devDocs/README.md)**: how Relay was built: the Round 1 and Round 2 submissions,
+  the original blueprint and decisions, research, release audits and design notes.
+
+| Folder | What's in it |
 |---|---|
-| [docs/README.md](docs/README.md) | Documentation index |
-| [docs/JUDGE_GUIDE.md](docs/JUDGE_GUIDE.md) | Problem, continuity lifecycle, implementation-evidence matrix, judging criteria |
-| [docs/competitive-analysis.md](docs/competitive-analysis.md) | Adjacent products and the gaps adopted, adapted, deferred or rejected |
-| [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture, data flow, integrations, AI pipeline, quality evidence |
-| [docs/api-reference.md](docs/api-reference.md) | Full API endpoint listing, AI capabilities, external service config, library reference |
-| [docs/openapi.json](docs/openapi.json) | OpenAPI schema generated from the code (every route, request and response) |
-| [docs/round3/testing-notes.md](docs/round3/testing-notes.md) | Round 3 testing: journeys, failure cases, permissions, reliability |
-| [docs/round3/improvements-delivered.md](docs/round3/improvements-delivered.md) | Round 3: the three improvements as delivered, with the tests that prove each commitment |
-| [docs/improvements.md](docs/improvements.md) | Round 3 improvements (AI Handover Copilot, "What If?" Simulator, Project Memory Replay) with acceptance criteria, plus Round 2 delivery status |
-| [docs/architecture.md](docs/architecture.md) | System boundary, modules, data flows, inventory |
-| [docs/ai.md](docs/ai.md) | AI-use disclosure: evidence pipeline, validation, injection handling, providers |
-| [docs/trust.md](docs/trust.md) | Privacy, security, accessibility and responsible design |
-| [docs/demo-script.md](docs/demo-script.md) | Scripted demo on the seeded organisation |
-| [deployment.md](deployment.md) | Deploying to Vercel + Render + Neon, or one Docker host |
-| [docs/sso.md](docs/sso.md), [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | SSO setup, incident response |
-| `docs/blueprint/`, `docs/adr/` | Decision Register, implementation plan, ADRs |
-| `docs/release-audit/` | Full release audit: traceability, security review, production readiness |
+| [Relay_Final_Product.pdf](Documentation/Relay_Final_Product.pdf) | Everything in one document, including the full API reference |
+| [1-start-here](Documentation/1-start-here/) | Judge guide, project overview, competitive analysis |
+| [2-round3-improvements](Documentation/2-round3-improvements/) | What we committed in Round 2, what we delivered, feature matrix, traceability |
+| [3-architecture](Documentation/3-architecture/) | Architecture, AI design, trust and privacy, SSO, decision records |
+| [4-api](Documentation/4-api/) | API reference and the OpenAPI schema (255 operations) |
+| [5-testing-and-quality](Documentation/5-testing-and-quality/) | Test report, testing notes, security, performance |
+| [6-operations](Documentation/6-operations/) | Deployment, environment setup, incident response |
+| [7-roadmap](Documentation/7-roadmap/) | Roadmap, scope and next steps |
+| [Specification (SRS and PRD v3.0)](devDocs/1-round1-submission/relay_srs_prd.md) | Requirements, updated to match the built product |
 
 Conventions for contributors: `CLAUDE.md`.
 
 ## Deploying
 
-See [deployment.md](deployment.md) for the managed path (Vercel, Render and Neon, with a
+See [deployment.md](Documentation/6-operations/deployment.md) for the managed path (Vercel, Render and Neon, with a
 Render Blueprint). The single-host Docker Compose stack is covered in
 [deploy/README.md](deploy/README.md), with the variable reference in
 [deploy/.env.production.example](deploy/.env.production.example).

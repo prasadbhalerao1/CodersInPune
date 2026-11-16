@@ -62,7 +62,7 @@ jobs:
             });
             const issue = open.data[0];
             const note = `Alerts: \`${problems || "none"}\`\nCounts: \`${process.env.COUNTS || "{}"}\`\n` +
-              `Runbook: docs/runbooks/incident-response.md#alerts · ${new Date().toISOString()}`;
+              `Runbook: Documentation/6-operations/incident-response.md#alerts · ${new Date().toISOString()}`;
             if (problems && !issue) {
               await github.rest.issues.create({
                 ...context.repo, title: `Relay incident: ${problems}`, labels: ["incident"], body: note,
