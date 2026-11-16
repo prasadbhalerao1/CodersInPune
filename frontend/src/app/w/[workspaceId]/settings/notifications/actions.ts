@@ -1,24 +1,15 @@
 "use server";
 
-import { refresh, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 import type { ActionState } from "@/lib/action-state";
+import { mutateIn } from "@/lib/mutate";
 import { api, RelayApiError } from "@/lib/relay-api";
 import type { EmailCategory } from "@/lib/types";
 
 const CATEGORIES: EmailCategory[] = ["tasks", "reminders", "approvals", "mentions", "case_updates"];
 
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}/settings`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
-}
+const mutate = mutateIn("/settings");
 
 export async function savePreferencesAction(
   workspaceId: string,

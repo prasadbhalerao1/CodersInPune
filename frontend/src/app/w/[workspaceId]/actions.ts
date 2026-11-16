@@ -1,8 +1,8 @@
 "use server";
 
 import { idempotencyKey, type ActionState } from "@/lib/action-state";
+import { mutate } from "@/lib/mutate";
 
-import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { api, RelayApiError } from "@/lib/relay-api";
@@ -18,18 +18,6 @@ function assignee(fd: FormData): { person_id?: string; team_id?: string } {
   if (kind === "person" && id) return { person_id: id };
   if (kind === "team" && id) return { team_id: id };
   throw new RelayApiError(422, "assignee_required", "Choose a person or team.");
-}
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
 }
 
 /** Governance fields shared by create and edit; one line per procedure/prerequisite. */
@@ -164,14 +152,20 @@ export async function createPersonAction(
   fd: FormData,
 ): Promise<ActionState> {
   return mutate(workspaceId, () =>
-    api.send(workspaceId, "POST", "/people", {
-      display_name: text(fd, "display_name"),
-      email: optional(fd, "email"),
-      title: optional(fd, "title"),
-      github_login: optional(fd, "github_login"),
-      department_id: optional(fd, "department_id"),
-      manager_person_id: optional(fd, "manager_person_id"),
-    }),
+    api.send(
+      workspaceId,
+      "POST",
+      "/people",
+      {
+        display_name: text(fd, "display_name"),
+        email: optional(fd, "email"),
+        title: optional(fd, "title"),
+        github_login: optional(fd, "github_login"),
+        department_id: optional(fd, "department_id"),
+        manager_person_id: optional(fd, "manager_person_id"),
+      },
+      idempotencyKey(fd),
+    ),
   );
 }
 

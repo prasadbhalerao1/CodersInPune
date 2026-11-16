@@ -1,24 +1,11 @@
 "use server";
 
-import { refresh, revalidatePath } from "next/cache";
-
-import type { ActionState } from "@/lib/action-state";
-import { api, RelayApiError } from "@/lib/relay-api";
+import { idempotencyKey, type ActionState } from "@/lib/action-state";
+import { mutate } from "@/lib/mutate";
+import { api } from "@/lib/relay-api";
 
 const text = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 const optional = (fd: FormData, key: string) => text(fd, key) || undefined;
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
-}
 
 export async function addKnowledgeAction(
   workspaceId: string,
@@ -30,13 +17,19 @@ export async function addKnowledgeAction(
     return { error: "Add a link or write the content." };
   }
   return mutate(workspaceId, () =>
-    api.send(workspaceId, "POST", `/responsibilities/${responsibilityId}/knowledge`, {
-      kind: text(fd, "kind") || "note",
-      title: text(fd, "title"),
-      body: optional(fd, "body"),
-      url: optional(fd, "url"),
-      visibility: text(fd, "visibility") || "workspace",
-    }),
+    api.send(
+      workspaceId,
+      "POST",
+      `/responsibilities/${responsibilityId}/knowledge`,
+      {
+        kind: text(fd, "kind") || "note",
+        title: text(fd, "title"),
+        body: optional(fd, "body"),
+        url: optional(fd, "url"),
+        visibility: text(fd, "visibility") || "workspace",
+      },
+      idempotencyKey(fd),
+    ),
   );
 }
 

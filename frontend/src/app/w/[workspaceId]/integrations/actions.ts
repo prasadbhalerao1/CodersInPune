@@ -4,21 +4,10 @@ import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
+import { mutate } from "@/lib/mutate";
 import { api, RelayApiError } from "@/lib/relay-api";
 
 const gh = "/integrations/github";
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
-}
 
 export async function connectGitHubAction(
   workspaceId: string,

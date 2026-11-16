@@ -1,11 +1,11 @@
 "use server";
 
 import { idempotencyKey, type ActionState } from "@/lib/action-state";
+import { mutate } from "@/lib/mutate";
 
-import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { api, RelayApiError } from "@/lib/relay-api";
+import { api } from "@/lib/relay-api";
 import type { CaseStatus, CaseType, SavedPage } from "@/lib/types";
 
 // Thin wrappers over the case API. The backend enforces lifecycle, permissions and
@@ -13,18 +13,6 @@ import type { CaseStatus, CaseType, SavedPage } from "@/lib/types";
 
 const text = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 const optional = (fd: FormData, key: string) => text(fd, key) || undefined;
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
-}
 
 const casePath = (caseId: string, suffix = "") => `/cases/${encodeURIComponent(caseId)}${suffix}`;
 

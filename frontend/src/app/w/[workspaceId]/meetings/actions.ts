@@ -1,8 +1,9 @@
 "use server";
 
 import { idempotencyKey, type ActionState } from "@/lib/action-state";
+import { mutate } from "@/lib/mutate";
 
-import { refresh, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { api, RelayApiError } from "@/lib/relay-api";
@@ -37,18 +38,6 @@ export async function createMeetingAction(
   }
   revalidatePath(`/w/${workspaceId}/meetings`);
   redirect(`/w/${workspaceId}/meetings/${made.id}`);
-}
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh();
-  return {};
 }
 
 export async function reviewMeetingItemAction(

@@ -1,24 +1,14 @@
 "use server";
 
-import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
+import { mutateIn } from "@/lib/mutate";
 import { api, RelayApiError } from "@/lib/relay-api";
 
 const base = "/integrations/linear";
 
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}/integrations`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
-}
+const mutate = mutateIn("/integrations");
 
 export async function connectLinearAction(workspaceId: string): Promise<ActionState> {
   let url = "";

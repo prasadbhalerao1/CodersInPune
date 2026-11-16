@@ -1,21 +1,8 @@
 "use server";
 
-import { refresh, revalidatePath } from "next/cache";
-
 import type { ActionState } from "@/lib/action-state";
-import { api, RelayApiError } from "@/lib/relay-api";
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh();
-  return {};
-}
+import { mutate } from "@/lib/mutate";
+import { api } from "@/lib/relay-api";
 
 export async function setRetentionAction(
   workspaceId: string,

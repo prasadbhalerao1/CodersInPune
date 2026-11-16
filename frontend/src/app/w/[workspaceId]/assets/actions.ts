@@ -1,24 +1,11 @@
 "use server";
 
-import { refresh, revalidatePath } from "next/cache";
-
-import type { ActionState } from "@/lib/action-state";
-import { api, RelayApiError } from "@/lib/relay-api";
+import { idempotencyKey, type ActionState } from "@/lib/action-state";
+import { mutate } from "@/lib/mutate";
+import { api } from "@/lib/relay-api";
 
 const text = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 const optional = (fd: FormData, key: string) => text(fd, key) || undefined;
-
-async function mutate(workspaceId: string, run: () => Promise<unknown>): Promise<ActionState> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof RelayApiError) return { error: error.message };
-    throw error;
-  }
-  revalidatePath(`/w/${workspaceId}`, "layout");
-  refresh(); // re-render the current route; data is never cached
-  return {};
-}
 
 export async function createAssetAction(
   workspaceId: string,
@@ -26,14 +13,20 @@ export async function createAssetAction(
   fd: FormData,
 ): Promise<ActionState> {
   return mutate(workspaceId, () =>
-    api.send(workspaceId, "POST", "/assets", {
-      name: text(fd, "name"),
-      asset_type: text(fd, "asset_type"),
-      url: optional(fd, "url"),
-      description: optional(fd, "description"),
-      criticality: optional(fd, "criticality"),
-      tags: tags(fd),
-    }),
+    api.send(
+      workspaceId,
+      "POST",
+      "/assets",
+      {
+        name: text(fd, "name"),
+        asset_type: text(fd, "asset_type"),
+        url: optional(fd, "url"),
+        description: optional(fd, "description"),
+        criticality: optional(fd, "criticality"),
+        tags: tags(fd),
+      },
+      idempotencyKey(fd),
+    ),
   );
 }
 
