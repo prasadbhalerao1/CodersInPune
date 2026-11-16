@@ -20,6 +20,8 @@ Last updated: 16 Nov 2026. Status values: **Verified** (tested and checked), **I
 | One shared action helper; case DTOs moved to `continuity/schemas.py` | Verified | Full suite passes unchanged |
 | Judge sign-in card with copyable credentials; one-click sign-in confirmed in production | Verified | `/sign-in?as=owner` redirects to `/workspaces` |
 | Interface polish: pointer cursors, animated dropdowns, landing figures never freeze | Implemented | Checked in the browser |
+| Nightly encrypted backup with automatic restore drill, through a read-only `relay_backup` role | Verified | `Backup` workflow run on 16 Nov: restore at schema 0049, forced RLS on every tenant table |
+| Judge role accounts linked to their sample people; coordinators can record acceptance | Verified | Team manager (Dev Patel) sees *Accept ownership* in production; `security/test_case_lifecycle.py` |
 | Connector health in one query; reconnect link | Verified | Integration health tests pass |
 | One sign-in route; one-click role accounts; no "demo" in any URL | Verified | Production `/sign-in?as=wizard` falls back to the hosted sign-in; role preview tests pass |
 | Judges' per-role accounts seeded in production | Verified | `Seed judges` workflow run, success |
@@ -39,7 +41,6 @@ Last updated: 16 Nov 2026. Status values: **Verified** (tested and checked), **I
 
 | Item | Why |
 |---|---|
-| Create the read-only `relay_backup` role in Neon (three SQL lines in `.github/workflows/backup.yml`) | Needs the Neon project owner; the nightly backup then dumps through it |
 | Connect Slack in the production workspace | The webhook URL is a secret and is pasted by the owner |
 | Run the signed-in browser journeys (`pnpm e2e:login`, then the `round3` and `beyond` projects) | The saved test login has expired |
 | Rotate secrets after judging | Some passed through development chats |
