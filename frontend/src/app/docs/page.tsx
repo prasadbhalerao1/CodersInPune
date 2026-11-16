@@ -13,12 +13,20 @@ import Link from "next/link";
 
 import { RelayMark } from "@/components/brand";
 import { EXPLAIN, type Explanation, type ExplainKey } from "@/lib/explain";
-import { REPO_URL } from "@/lib/site";
+import { REPO_URL, SITE_URL } from "@/lib/site";
 
 import { DocsNav, type NavGroup } from "./docs-nav";
 
 export const metadata: Metadata = {
   title: "Product guide",
+  alternates: { canonical: "/docs" },
+  openGraph: {
+    title: "How Relay works: the product guide",
+    description:
+      "Every Relay feature and every number, with its exact formula and the code that computes it.",
+    url: "/docs",
+    type: "article",
+  },
   description:
     "How Relay works: the three headline features, every number and its formula, what AI does and doesn't do, permissions, conflicts and stale data.",
 };
@@ -135,8 +143,22 @@ export default function DocsPage() {
     })),
     { title: "Principles", items: PRINCIPLES.map((p) => ({ id: p.id, title: p.title })) },
   ];
+  const structured = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: "How Relay works",
+    about: "Organisational continuity and knowledge handover",
+    url: `${SITE_URL}/docs`,
+    hasPart: Object.entries(EXPLAIN).map(([key, e]) => ({
+      "@type": "WebPageElement",
+      name: e.title,
+      description: e.summary,
+      url: `${SITE_URL}/docs#${key}`,
+    })),
+  });
   return (
     <div className="bg-background min-h-full">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structured }} />
       <header className="bg-background/80 sticky top-0 z-20 border-b backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold">
