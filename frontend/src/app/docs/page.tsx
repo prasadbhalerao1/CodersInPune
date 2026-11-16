@@ -98,6 +98,25 @@ const PRINCIPLES = [
   },
 ];
 
+// Why each role exists. Mirrors ROLE_PURPOSE in backend/src/relay/policy/permissions.py;
+// backend/tests/test_role_docs.py fails if the two drift apart.
+const ROLES: [string, string][] = [
+  ["owner", "Accountable for the workspace itself: who administers it and whether it exists."],
+  ["admin", "Runs the workspace day to day: members, integrations, AI settings and policies."],
+  [
+    "continuity_manager",
+    "Runs handovers: opens cases, approves plans and moves ownership, without needing admin rights.",
+  ],
+  [
+    "knowledge_steward",
+    "Keeps knowledge trustworthy: verifies it, settles disputes and retires what is out of date.",
+  ],
+  ["team_manager", "Leads a team: manages the responsibilities their team holds, nothing else."],
+  ["member", "Does the work: writes knowledge, completes tasks and receives handovers."],
+  ["auditor", "Checks compliance: reads everything, including the audit log, and changes nothing."],
+  ["guest", "An outside contractor or consultant: can read what they need, never change it."],
+];
+
 const FEATURES: { key: ExplainKey; icon: typeof Bot; blurb: string }[] = [
   { key: "copilot", icon: Bot, blurb: "Ask the handover; every answer cites its evidence." },
   {
@@ -215,6 +234,28 @@ export default function DocsPage() {
                 </article>
               ))}
             </div>
+          </section>
+
+          <section aria-labelledby="roles" className="mt-20">
+            <p
+              id="roles"
+              className="text-muted-foreground scroll-mt-24 text-[11px] font-semibold tracking-[0.08em] uppercase"
+            >
+              Roles: who does what in a handover
+            </p>
+            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+              Eight roles, each for a real job. Permissions come from one registry and are enforced
+              inside every service and by the database. In a sample workspace you can try Relay as
+              any role from the banner at the top.
+            </p>
+            <dl className="mt-4 grid gap-3 md:grid-cols-2">
+              {ROLES.map(([role, purpose]) => (
+                <div key={role} className="bg-card rounded-xl border p-4">
+                  <dt className="font-semibold capitalize">{role.replace("_", " ")}</dt>
+                  <dd className="text-muted-foreground mt-1 text-sm">{purpose}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
           <footer className="text-muted-foreground mt-20 border-t pt-6 text-sm">

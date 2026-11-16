@@ -1879,7 +1879,8 @@ export type TourId =
   | "what_if"
   | "copilot"
   | "recipient"
-  | "verify";
+  | "verify"
+  | "assistants";
 
 export type IntegrationReadiness = {
   provider: "github" | "linear" | "notion";

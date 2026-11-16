@@ -178,4 +178,36 @@ export const TOURS: Record<TourId, Tour> = {
       },
     ],
   },
+  assistants: {
+    title: "Let Relay do the busywork",
+    summary:
+      "Meetings, Ask Relay, Autopilot, the decision log and the expertise map: evidence in, proposals out.",
+    minutes: 2,
+    steps: [
+      {
+        title: "Meetings become records",
+        body: "Paste a transcript: Relay lists the decisions, actions, open questions and risks, each linked to the line it came from. Accepting a decision records it; accepting an action creates a task.",
+      },
+      {
+        target: '[href$="/ask"]',
+        title: "Ask Relay anything",
+        body: 'Ask about owners, decisions or how something works. Answers cite records you can open, or say "not in the records" rather than guessing.',
+      },
+      {
+        target: '[href$="/decisions"]',
+        title: "Every decision in one place",
+        body: "Recorded decisions, meeting decisions and decisions reconstructed by analyses, each linked to where it was made.",
+      },
+      {
+        target: '[href$="/expertise"]',
+        title: "Who could carry the work tomorrow",
+        body: "Responsibilities against people, most fragile first. A backup on paper is not the same as a backup who has written the work down.",
+      },
+      {
+        target: '[href$="/cases"]',
+        title: "Handover Autopilot",
+        body: "Open a case, then Analysis, then Run Autopilot: watch each step and tool call, and review the proposals it leaves. Nothing changes until you accept.",
+      },
+    ],
+  },
 };

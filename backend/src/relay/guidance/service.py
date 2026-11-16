@@ -29,7 +29,7 @@ from relay.shared.api_types import StrictInput
 
 TourId = Literal[
     "basics", "ownership", "integrations", "memory_replay", "what_if", "copilot", "recipient",
-    "verify",
+    "verify", "assistants",
 ]  # fmt: skip
 TOURS: tuple[TourId, ...] = TourId.__args__  # type: ignore[attr-defined]
 IntegrationState = Literal[
@@ -224,6 +224,7 @@ async def guidance(access: WorkspaceAccess) -> GuidanceView:
         "copilot": (capsule is not None, "Appears once a handover is prepared.", capsule_path),
         "recipient": (acked is not None, "Appears after you acknowledge a handover.", "/my-work"),
         "verify": (done_case is not None, "Appears after a case is executed.", "/cases"),
+        "assistants": (True, None, "/meetings"),
     }
     completed = set(state.completed if state else [])
     progress = state.progress if state else {}
