@@ -74,6 +74,29 @@ const FRONT: Pose = {
   shB: 0.3,
   elB: 0.25,
 };
+/**
+ * Standing about between gestures: breathing, a slow weight shift from foot to foot, the odd
+ * glance around. Never a frozen frame, so the figure reads as waiting, not stuck.
+ */
+function idling(t: number): Pose {
+  const breath = Math.sin(t * 2.4);
+  const shift = Math.sin(t * 0.8);
+  const glance = Math.sin(t * 0.55) * Math.sin(t * 1.3);
+  return {
+    ...FRONT,
+    lean: 0.05 * shift,
+    head: 0.22 * glance + 0.03 * breath,
+    hipA: FRONT.hipA + 0.12 * Math.max(0, shift),
+    kneeA: FRONT.kneeA + 0.24 * Math.max(0, shift),
+    hipB: FRONT.hipB + 0.12 * Math.max(0, -shift),
+    kneeB: FRONT.kneeB + 0.24 * Math.max(0, -shift),
+    shA: FRONT.shA + 0.08 * breath,
+    shB: FRONT.shB + 0.08 * breath,
+    elA: FRONT.elA + 0.14 * shift,
+    elB: FRONT.elB - 0.14 * shift,
+  };
+}
+
 const STARTLE: Pose = {
   ...FRONT,
   lean: -0.2,
@@ -289,8 +312,8 @@ function HeroCrewScene() {
       } else if (s.greet === "idle") {
         if (s.hover) go("cheer");
         else if (nearPointer) go("flinch");
-        else if (idle > 14) go("knock");
-        else if (idle > 7 && idle < 7.05) go("beckon");
+        else if (idle > 10) go("knock");
+        else if (idle - dt < 4 && idle >= 4) go("beckon");
       } else if (s.greet === "cheer" && !s.hover && A.grounded && s.gt > 0.5) go("idle");
       else if (s.greet === "flinch" && s.gt > 1.1 && A.grounded) go("idle");
       else if (s.greet === "beckon" && s.gt > BECKON_TIME) go("idle");
@@ -373,7 +396,7 @@ function HeroCrewScene() {
       } else if (s.greet === "knock") {
         pose = { ...FRONT, ...pick(knock(s.gt)) };
       } else {
-        pose = FRONT;
+        pose = idling(s.t);
       }
       s.a.f += (fTarget - s.a.f) * approach(dt, 9);
       s.a.pose = still ? pose : mix(s.a.pose, pose, approach(dt, moving ? 16 : 10));
