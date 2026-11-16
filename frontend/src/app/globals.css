@@ -225,6 +225,12 @@
 
 /* Motion: short, quiet, and only where it explains a change (something arrived, moved
    or responded). Durations stay under 300 ms; everything is off for reduced motion. */
+@keyframes capsule-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
 @keyframes disclose {
   from {
     opacity: 0;
