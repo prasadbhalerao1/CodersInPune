@@ -78,11 +78,8 @@ export function DemoAccounts({
         </summary>
         <ul className="mt-1 space-y-0.5">
           {others.map((a) => (
-            <li key={a.role}>
-              <a
-                href={`/sign-in?as=${a.role}`}
-                className="hover:bg-muted block rounded-lg px-2 py-1.5"
-              >
+            <li key={a.role} className="hover:bg-muted flex items-start gap-1 rounded-lg">
+              <a href={`/sign-in?as=${a.role}`} className="min-w-0 flex-1 px-2 py-1.5">
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="font-medium">{a.label}</span>
                   <span className="text-muted-foreground truncate font-mono text-[11px]">
@@ -91,6 +88,14 @@ export function DemoAccounts({
                 </span>
                 <span className="text-muted-foreground block text-xs">{a.shows}</span>
               </a>
+              <span className="pt-1.5 pr-1">
+                <CopyButton
+                  value={a.email}
+                  label={`${a.label} email`}
+                  copied={copied}
+                  onCopy={copy}
+                />
+              </span>
             </li>
           ))}
         </ul>
