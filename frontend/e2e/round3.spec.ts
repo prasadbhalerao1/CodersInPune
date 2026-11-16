@@ -38,7 +38,7 @@ test("from the landing page into a fresh sample workspace", async ({ page }) => 
   if (reused) {
     // Same-named workspaces are listed oldest first: the last is the newest sample.
     await page
-      .getByRole("link", { name: /Northwind Labs \(demo\)/ })
+      .getByRole("link", { name: /Northwind Labs \(sample\)/ })
       .last()
       .click();
     await page.waitForURL(/\/w\/[0-9a-f-]{36}$/);
@@ -54,7 +54,14 @@ test("memory replay: filter, play, inspect, explain and ask", async ({ page }) =
   test.setTimeout(120_000);
   await page.goto(overview);
   await sidebar(page, "Responsibilities");
-  await page.getByRole("link", { name: "Production deployments", exact: true }).first().click();
+  // The simulator also links "Production deployments": wait until the list has replaced it.
+  await page.waitForURL(/\/responsibilities$/);
+  await expect(page.getByRole("heading", { name: "Responsibilities", exact: true })).toBeVisible();
+  await page
+    .getByRole("link", { name: "Production deployments", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await settle(page);
   await page.getByRole("link", { name: "Memory replay" }).click();
   await page.waitForURL(/\/timeline$/);
@@ -80,7 +87,7 @@ test("memory replay: filter, play, inspect, explain and ask", async ({ page }) =
   const explain = page.getByRole("button", { name: "Explain this history" });
   if (await explain.isVisible()) await explain.click();
   await expect(
-    page.getByText(/Inferred ·|AI is not configured|switched off|could not answer/).first(),
+    page.getByText(/^Inferred( ·.*)?$|AI is not configured|switched off|could not answer/).first(),
   ).toBeVisible({ timeout: 90_000 });
 
   await page.getByLabel("Your question").fill("Why does every payments-api deploy need a canary?");
@@ -120,7 +127,13 @@ test("what if: Arjun away for two weeks, compare cover, nothing changes", async 
 
   // Real ownership is untouched: Dev is not an owner of Production deployments.
   await sidebar(page, "Responsibilities");
-  await page.getByRole("link", { name: "Production deployments", exact: true }).first().click();
+  await page.waitForURL(/\/responsibilities$/);
+  await expect(page.getByRole("heading", { name: "Responsibilities", exact: true })).toBeVisible();
+  await page
+    .getByRole("link", { name: "Production deployments", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await settle(page);
   const owners = page.locator("section").filter({ hasText: "Current owners" }).first();
   await expect(owners.getByText("Arjun Rao").first()).toBeVisible();

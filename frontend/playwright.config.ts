@@ -19,21 +19,26 @@ export default defineConfig({
   reporter: [["list"]],
   use: { baseURL, trace: "retain-on-failure" },
   projects: [
+    // One-click sample Owner sign-in; the signed-in suites depend on it.
+    { name: "role-login", testMatch: /role\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "public", testMatch: /(public|a11y)\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     {
       name: "smoke",
+      dependencies: ["role-login"],
       testMatch: /smoke\.spec\.ts/,
       use: { ...chrome, storageState: "e2e/.auth/user.json" },
     },
     {
       // The judge journey through the Round 3 features (same saved session as smoke).
       name: "round3",
+      dependencies: ["role-login"],
       testMatch: /round3\.spec\.ts/,
       use: { ...chrome, storageState: "e2e/.auth/user.json" },
     },
     {
       // Autopilot, meetings, decisions, expertise, plan, drift, simulator report, Slack.
       name: "beyond",
+      dependencies: ["role-login"],
       testMatch: /beyond\.spec\.ts/,
       use: { ...chrome, storageState: "e2e/.auth/user.json" },
     },

@@ -26,7 +26,7 @@ test("open the newest sample workspace from the landing page", async ({ page }) 
   await page.waitForURL(/\/workspaces$/);
   await settle(page);
   await page
-    .getByRole("link", { name: /Northwind Labs \(demo\)/ })
+    .getByRole("link", { name: /Northwind Labs \(sample\)/ })
     .last()
     .click();
   await page.waitForURL(/\/w\/[0-9a-f-]{36}$/);
@@ -88,7 +88,8 @@ test("a case's 30/60/90 plan turns a step into a task", async ({ page }) => {
   const add = page.getByRole("button", { name: /Add as task/ }).first();
   const before = await page.getByText("On the task list").count();
   await add.click();
-  await expect(page.getByText("On the task list")).toHaveCount(before + 1);
+  // Steps with the same work share one task, so one click can mark more than one step.
+  await expect.poll(() => page.getByText("On the task list").count()).toBeGreaterThan(before);
   // The Analysis tab carries Handover Autopilot.
   await page.getByRole("link", { name: "Analysis", exact: true }).click();
   await settle(page);
