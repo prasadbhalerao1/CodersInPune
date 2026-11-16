@@ -8,6 +8,7 @@ Endpoints (WorkOS API reference, checked 2026-11-08):
 
 import logging
 from dataclasses import dataclass
+from urllib.parse import quote
 
 import httpx
 
@@ -65,6 +66,13 @@ class WorkOSClient:
             email_verified=data.get("email_verified") is True,
             display_name=" ".join(str(n) for n in names if n) or None,
         )
+
+    async def find_user_by_email(self, email: str) -> WorkOSUser | None:
+        data = await self._request("GET", f"/user_management/users?email={quote(email)}")
+        rows = data.get("data")
+        if not isinstance(rows, list) or not rows:
+            return None
+        return await self.get_user(str(rows[0]["id"]))
 
     async def send_invitation(self, email: str, expires_in_days: int) -> str | None:
         """Best effort: returns the WorkOS invitation id, or None if the email wasn't sent."""

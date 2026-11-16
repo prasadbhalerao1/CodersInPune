@@ -18,10 +18,12 @@ What it sets up (SRS Appendix A/B):
 
 import argparse
 import asyncio
+import os
 import sys
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import procrastinate
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -36,6 +38,7 @@ from relay.continuity import workflow
 from relay.directory import service as directory
 from relay.identity.models import Membership, UserAccount
 from relay.identity.tokens import VerifiedIdentity
+from relay.identity.workos_api import WorkOSClient
 from relay.identity.workspace_access import WorkspaceAccess, open_workspace_access
 from relay.integrations.github.models import GitHubInstallation, GitHubRepository, GitHubWorkItem
 from relay.integrations.linear.models import (
@@ -50,6 +53,7 @@ from relay.jobs.app import create_job_app
 from relay.platform import workspaces
 from relay.platform.models import Tenant
 from relay.platform.workspaces import WorkspaceView
+from relay.policy.permissions import ROLE_PERMISSIONS
 from relay.shared.db import create_engine, create_session_factory, unit_of_work
 
 NOW = datetime.now(UTC)
@@ -95,6 +99,7 @@ async def seed_workspace(  # type: ignore[no-untyped-def]
     factory,
     jobs: procrastinate.App,
     idempotency_key: str | None = None,
+    name: str = SAMPLE_NAME,
 ) -> tuple[WorkspaceView, bool]:
     """Create and populate a sample workspace owned by `owner`.
 
@@ -102,7 +107,7 @@ async def seed_workspace(  # type: ignore[no-untyped-def]
     workspace without seeding it a second time.
     """
     ws, created = await workspaces.create_workspace(
-        factory, jobs, _identity(owner), SAMPLE_NAME, idempotency_key or f"demo-{uuid.uuid7()}"
+        factory, jobs, _identity(owner), name, idempotency_key or f"demo-{uuid.uuid7()}"
     )
     if not created:
         return ws, False
@@ -681,10 +686,6 @@ def main() -> None:
     print(f"Demo workspace created: {tenant}")
 
 
-if __name__ == "__main__":
-    main()
-
-
 MEETINGS = (
     (
         "Arjun handover kickoff",
@@ -768,3 +769,98 @@ async def _meetings(
         .where(KnowledgeItem.title == "Deploy payments-api (old runbook)")
         .values(updated_at=long_ago, last_reviewed_at=long_ago)
     )
+
+
+# ---------------------------------------------------------------- judges' shared workspace
+
+JUDGES_NAME = "Northwind Labs (judges)"
+
+
+def parse_accounts(spec: str) -> dict[str, str]:
+    """`owner:a@x.com,admin:b@x.com,...` -> {role: email}; every role must be a real role."""
+    accounts: dict[str, str] = {}
+    for part in filter(None, (p.strip() for p in spec.split(","))):
+        role, _, email = part.partition(":")
+        if role not in ROLE_PERMISSIONS or "@" not in email:
+            raise ValueError(f"not a role:email pair: {part!r}")
+        accounts[role] = email.strip().lower()
+    if "owner" not in accounts:
+        raise ValueError("an owner account is required")
+    return accounts
+
+
+async def seed_judges(spec: str) -> uuid.UUID:
+    """One shared sample with a real sign-in for each role. The accounts must already exist
+    in WorkOS (created with passwords by a person); this only looks them up by email."""
+    accounts = parse_accounts(spec)
+    settings = Settings()
+    engine = create_engine(settings)
+    factory = create_session_factory(engine)
+    jobs = create_job_app(settings, factory)
+    try:
+        async with httpx.AsyncClient(timeout=20) as http:
+            client = WorkOSClient(settings, http)
+            users = {}
+            for role, email in accounts.items():
+                found = await client.find_user_by_email(email)
+                if found is None:
+                    raise SystemExit(f"No WorkOS user for {email}: create it first.")
+                users[role] = found
+        async with jobs.open_async():
+            ws, _ = await seed_workspace(
+                users["owner"].id,
+                settings,
+                factory,
+                jobs,
+                idempotency_key=f"judges-{users['owner'].id}",
+                name=JUDGES_NAME,
+            )
+        for role, user in users.items():
+            if role == "owner":
+                continue
+            async with unit_of_work(factory, ws.id, user.id) as session:
+                user_id = (
+                    await session.execute(
+                        insert(UserAccount)
+                        .values(workos_user_id=user.id)
+                        .on_conflict_do_update(
+                            index_elements=["workos_user_id"], set_={"workos_user_id": user.id}
+                        )
+                        .returning(UserAccount.id)
+                    )
+                ).scalar_one()
+                await session.execute(
+                    insert(Membership)
+                    .values(
+                        tenant_id=ws.id,
+                        user_id=user_id,
+                        role=role,
+                        status="active",
+                        display_name=user.display_name or user.email.split("@")[0],
+                        email=user.email,
+                        member_type="contractor" if role == "guest" else "employee",
+                    )
+                    .on_conflict_do_update(
+                        index_elements=["tenant_id", "user_id"], set_={"role": role}
+                    )
+                )
+        return ws.id
+    finally:
+        await engine.dispose()
+
+
+def judges_main() -> None:
+    parser = argparse.ArgumentParser(description="Seed the judges' shared sample workspace.")
+    parser.add_argument(
+        "--accounts",
+        default=os.environ.get("RELAY_JUDGE_ACCOUNTS", ""),
+        help="role:email pairs, comma separated (or RELAY_JUDGE_ACCOUNTS)",
+    )
+    args = parser.parse_args()
+    loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
+    tenant = asyncio.run(seed_judges(args.accounts), loop_factory=loop_factory)
+    print(f"Judges' workspace ready: {tenant}")
+
+
+if __name__ == "__main__":
+    main()

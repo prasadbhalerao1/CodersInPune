@@ -26,13 +26,36 @@ export function WorkspacesBackdrop() {
 export function WorkspaceRows({ workspaces }: { workspaces: WorkspaceView[] }) {
   if (workspaces.length === 0) {
     return (
-      <div className="glass-clear flex flex-col justify-center self-start p-8">
-        <span className="text-ac text-[13px] font-medium">Start here</span>
-        <h2 className="font-heading text-strong mt-2 text-2xl font-bold">No workspaces yet</h2>
-        <p className="text-fg-soft mt-2 max-w-md text-sm leading-relaxed">
-          The quickest way to see Relay is the sample workspace: a team in the middle of a handover,
-          with ownership risks to review and an absence simulator to try.
-        </p>
+      <div className="glass-clear flex flex-col self-start p-8">
+        <span className="text-ac text-[13px] font-medium">Welcome to Relay</span>
+        <h2 className="font-heading text-strong mt-2 text-2xl font-bold">Two ways to start</h2>
+        <ol className="mt-5 flex flex-col gap-5 text-sm">
+          <li>
+            <p className="text-strong font-semibold">
+              1. Explore the sample (2 minutes, nothing to connect)
+            </p>
+            <p className="text-fg-soft mt-1 leading-relaxed">
+              <em>Northwind Labs (demo)</em> is a team mid-handover: a year of GitHub, Linear and
+              Notion history, meetings, risks and an engineer who is leaving. Use{" "}
+              <strong>Create sample workspace</strong> on the right. Inside, the banner lets you try
+              Relay as any of the eight roles. Recommended for judges.
+            </p>
+          </li>
+          <li>
+            <p className="text-strong font-semibold">2. Set up your own organisation</p>
+            <ul className="text-fg-soft mt-1 flex list-disc flex-col gap-1 pl-5 leading-relaxed">
+              <li>Create a workspace (right): it is private to your team.</li>
+              <li>
+                Connect GitHub, Linear, Notion or Slack in <strong>Integrations</strong>, all
+                read-only, or import a CSV. This is optional: you can start by hand.
+              </li>
+              <li>
+                Add your first responsibility and its owner. The setup checklist then guides you to
+                backups, knowledge and your first what-if.
+              </li>
+            </ul>
+          </li>
+        </ol>
       </div>
     );
   }
