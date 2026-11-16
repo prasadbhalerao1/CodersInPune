@@ -15,7 +15,7 @@ evidence, existing knowledge items, open work, and accumulated risks.
 
 The brief surfaces what the incoming owner must know, flags missing or conflicting
 information, highlights important changes since the last review, and recommends concrete
-handover tasks — each finding backed by cited evidence references. The incoming owner can
+handover tasks: each finding backed by cited evidence references. The incoming owner can
 ask questions about the handover and receive answers grounded exclusively in the
 authorised evidence attached to that case, never from generic model knowledge.
 
@@ -149,7 +149,7 @@ before taking over.
 Relay already ingests GitHub PRs, issues, and commit metadata; Linear issues and project
 cycles; and Notion knowledge pages. That data is currently used only for ownership
 signals and evidence citations. Project Memory Replay turns the same authorised,
-already-fetched data into a navigable timeline that answers "how did we get here?" — the
+already-fetched data into a navigable timeline that answers "how did we get here?": the
 one question no handover document currently answers well.
 
 **What exists in Round 2.**

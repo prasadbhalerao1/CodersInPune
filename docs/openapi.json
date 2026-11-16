@@ -5,6 +5,38 @@
   "version": "0.1.0"
  },
  "paths": {
+  "/health": {
+   "get": {
+    "tags": [
+     "health"
+    ],
+    "summary": "Overview",
+    "description": "The address people try first: overall health, plus where the specific probes live.",
+    "operationId": "overview_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthOverview"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Service Unavailable",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthOverview"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/health/live": {
    "get": {
     "tags": [
@@ -1105,6 +1137,25 @@
        "type": "string",
        "format": "uuid",
        "title": "Workspace Id"
+      }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
       }
      }
     ],
@@ -2773,6 +2824,25 @@
        "format": "uuid",
        "title": "Workspace Id"
       }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
      }
     ],
     "requestBody": {
@@ -3492,6 +3562,25 @@
        "format": "uuid",
        "title": "Workspace Id"
       }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
      }
     ],
     "requestBody": {
@@ -4170,6 +4259,76 @@
     }
    }
   },
+  "/workspaces/{workspace_id}/knowledge-drift": {
+   "get": {
+    "tags": [
+     "knowledge"
+    ],
+    "summary": "Code Drift",
+    "description": "Knowledge that may be outdated: its code changed after it was last reviewed.",
+    "operationId": "code_drift_workspaces__workspace_id__knowledge_drift_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     },
+     {
+      "name": "responsibility_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Responsibility Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/DriftItem"
+         },
+         "title": "Response Code Drift Workspaces  Workspace Id  Knowledge Drift Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/workspaces/{workspace_id}/imports/preview": {
    "post": {
     "tags": [
@@ -4805,6 +4964,25 @@
        "type": "string",
        "format": "uuid",
        "title": "Workspace Id"
+      }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
       }
      }
     ],
@@ -6274,6 +6452,25 @@
        "format": "uuid",
        "title": "Workspace Id"
       }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
      }
     ],
     "requestBody": {
@@ -7125,6 +7322,25 @@
        "format": "uuid",
        "title": "Workspace Id"
       }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
      }
     ],
     "requestBody": {
@@ -7965,6 +8181,74 @@
       }
      }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CaseDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/cases/{case_id}/scope/{item_id}/accept": {
+   "post": {
+    "tags": [
+     "continuity"
+    ],
+    "summary": "Accept",
+    "operationId": "accept_workspaces__workspace_id__cases__case_id__scope__item_id__accept_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "case_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Case Id"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -9850,6 +10134,64 @@
     }
    }
   },
+  "/workspaces/{workspace_id}/cases/{case_id}/plan": {
+   "get": {
+    "tags": [
+     "continuity"
+    ],
+    "summary": "Continuation Plan",
+    "operationId": "continuation_plan_workspaces__workspace_id__cases__case_id__plan_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "case_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Case Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ContinuationPlan"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/me/profile": {
    "put": {
     "tags": [
@@ -10220,6 +10562,110 @@
           "$ref": "#/components/schemas/relay__identity__members__RoleView"
          },
          "title": "Response Roles Workspaces  Workspace Id  Roles Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/role-preview": {
+   "get": {
+    "tags": [
+     "members"
+    ],
+    "summary": "Demo Role",
+    "operationId": "demo_role_workspaces__workspace_id__role_preview_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DemoRoleView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "members"
+    ],
+    "summary": "Set Demo Role",
+    "operationId": "set_demo_role_workspaces__workspace_id__role_preview_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DemoRoleIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DemoRoleView"
         }
        }
       }
@@ -12106,6 +12552,207 @@
       "HTTPBearer": []
      }
     ]
+   }
+  },
+  "/workspaces/{workspace_id}/integrations/slack": {
+   "get": {
+    "tags": [
+     "slack"
+    ],
+    "summary": "Slack Status",
+    "operationId": "slack_status_workspaces__workspace_id__integrations_slack_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SlackStatus"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "slack"
+    ],
+    "summary": "Connect Slack",
+    "operationId": "connect_slack_workspaces__workspace_id__integrations_slack_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SlackIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SlackStatus"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "slack"
+    ],
+    "summary": "Disconnect Slack",
+    "operationId": "disconnect_slack_workspaces__workspace_id__integrations_slack_delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/meetings/{meeting_id}/slack": {
+   "post": {
+    "tags": [
+     "slack"
+    ],
+    "summary": "Share Meeting",
+    "operationId": "share_meeting_workspaces__workspace_id__meetings__meeting_id__slack_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "meeting_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Meeting Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PostedView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/workspaces/{workspace_id}/insights": {
@@ -14229,6 +14876,16 @@
        ],
        "title": "Version"
       }
+     },
+     {
+      "name": "as_member",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "As Member"
+      }
      }
     ],
     "responses": {
@@ -14809,6 +15466,717 @@
     }
    }
   },
+  "/workspaces/{workspace_id}/ai/capsules/{capsule_id}/questions/stream": {
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Copilot Ask Stream",
+    "description": "The copilot answer as server-sent events (see `copilot.ask_stream`).",
+    "operationId": "copilot_ask_stream_workspaces__workspace_id__ai_capsules__capsule_id__questions_stream_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     },
+     {
+      "name": "capsule_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Capsule Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AskIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/cases/{case_id}/autopilot": {
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Autopilot Run",
+    "description": "Handover Autopilot as server-sent events (see `autopilot.start`).",
+    "operationId": "autopilot_run_workspaces__workspace_id__cases__case_id__autopilot_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     },
+     {
+      "name": "case_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Case Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AutopilotIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/meetings": {
+   "get": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "List Meetings",
+    "operationId": "list_meetings_workspaces__workspace_id__meetings_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/MeetingSummary"
+         },
+         "title": "Response List Meetings Workspaces  Workspace Id  Meetings Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Create Meeting",
+    "operationId": "create_meeting_workspaces__workspace_id__meetings_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 8,
+         "maxLength": 128,
+         "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MeetingIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MeetingDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/meetings/{meeting_id}": {
+   "get": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Get Meeting",
+    "operationId": "get_meeting_workspaces__workspace_id__meetings__meeting_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "meeting_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Meeting Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MeetingDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/meetings/{meeting_id}/extract": {
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Reextract Meeting",
+    "operationId": "reextract_meeting_workspaces__workspace_id__meetings__meeting_id__extract_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "meeting_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Meeting Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MeetingDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/meeting-items/{item_id}/accept": {
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Accept Meeting Item",
+    "operationId": "accept_meeting_item_workspaces__workspace_id__meeting_items__item_id__accept_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MeetingItemView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/meeting-items/{item_id}/dismiss": {
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Dismiss Meeting Item",
+    "operationId": "dismiss_meeting_item_workspaces__workspace_id__meeting_items__item_id__dismiss_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MeetingItemView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/decisions": {
+   "get": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Decision Log",
+    "operationId": "decision_log_workspaces__workspace_id__decisions_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/DecisionEntry"
+         },
+         "title": "Response Decision Log Workspaces  Workspace Id  Decisions Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/ask": {
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Ask Workspace",
+    "description": "Ask Relay: a workspace-wide question, answered as server-sent events.",
+    "operationId": "ask_workspace_workspaces__workspace_id__ask_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AskWorkspaceIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/workspaces/{workspace_id}/ai/capsules/{capsule_id}/rehearsal": {
+   "get": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Rehearsal Drills",
+    "operationId": "rehearsal_drills_workspaces__workspace_id__ai_capsules__capsule_id__rehearsal_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "capsule_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Capsule Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RehearsalView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "intelligence"
+    ],
+    "summary": "Rehearsal Grade",
+    "operationId": "rehearsal_grade_workspaces__workspace_id__ai_capsules__capsule_id__rehearsal_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "capsule_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Capsule Id"
+      }
+     },
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RehearsalAnswerIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/GradeView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/workspaces/{workspace_id}/search": {
    "get": {
     "tags": [
@@ -14969,10 +16337,89 @@
      }
     }
    }
+  },
+  "/workspaces/{workspace_id}/search/expertise": {
+   "get": {
+    "tags": [
+     "search"
+    ],
+    "summary": "Expertise",
+    "operationId": "expertise_workspaces__workspace_id__search_expertise_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "workspace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Workspace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExpertiseMap"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
   "schemas": {
+   "AcceptanceForMe": {
+    "properties": {
+     "case_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Case Id"
+     },
+     "case_title": {
+      "type": "string",
+      "title": "Case Title"
+     },
+     "responsibility_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Responsibility Id"
+     },
+     "responsibility_name": {
+      "type": "string",
+      "title": "Responsibility Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "case_id",
+     "case_title",
+     "responsibility_id",
+     "responsibility_name"
+    ],
+    "title": "AcceptanceForMe",
+    "description": "Work I am named to take over and have not accepted yet, on a case still open."
+   },
    "AccessGrantIn": {
     "properties": {
      "user_id": {
@@ -15441,6 +16888,22 @@
      "question"
     ],
     "title": "AskIn"
+   },
+   "AskWorkspaceIn": {
+    "properties": {
+     "question": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 3,
+      "title": "Question"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "question"
+    ],
+    "title": "AskWorkspaceIn"
    },
    "AssetDetail": {
     "properties": {
@@ -16513,6 +17976,25 @@
      "metadata"
     ],
     "title": "AuditEventView"
+   },
+   "AutopilotIn": {
+    "properties": {
+     "recipient_user_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recipient User Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "AutopilotIn"
    },
    "BackupLoad": {
     "properties": {
@@ -17659,6 +19141,11 @@
    },
    "CapsuleView": {
     "properties": {
+     "preview_as_member": {
+      "type": "boolean",
+      "title": "Preview As Member",
+      "default": false
+     },
      "id": {
       "type": "string",
       "format": "uuid",
@@ -17806,6 +19293,24 @@
       },
       "type": "array",
       "title": "Coverage",
+      "default": []
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/StrengthView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "contacts": {
+      "items": {
+       "$ref": "#/components/schemas/ContactView"
+      },
+      "type": "array",
+      "title": "Contacts",
       "default": []
      }
     },
@@ -18225,7 +19730,7 @@
      },
      "duplicates": {
       "items": {
-       "$ref": "#/components/schemas/relay__continuity__service__CaseLink"
+       "$ref": "#/components/schemas/relay__continuity__schemas__CaseLink"
       },
       "type": "array",
       "title": "Duplicates",
@@ -18234,7 +19739,7 @@
      "parent": {
       "anyOf": [
        {
-        "$ref": "#/components/schemas/relay__continuity__service__CaseLink"
+        "$ref": "#/components/schemas/relay__continuity__schemas__CaseLink"
        },
        {
         "type": "null"
@@ -18243,7 +19748,7 @@
      },
      "children": {
       "items": {
-       "$ref": "#/components/schemas/relay__continuity__service__CaseLink"
+       "$ref": "#/components/schemas/relay__continuity__schemas__CaseLink"
       },
       "type": "array",
       "title": "Children",
@@ -19096,6 +20601,40 @@
     ],
     "title": "ClaimView"
    },
+   "CodeChange": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "number": {
+      "type": "integer",
+      "title": "Number"
+     },
+     "repository": {
+      "type": "string",
+      "title": "Repository"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "merged_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Merged At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "title",
+     "number",
+     "repository",
+     "url",
+     "merged_at"
+    ],
+    "title": "CodeChange"
+   },
    "CommentIn": {
     "properties": {
      "body": {
@@ -19267,6 +20806,53 @@
      "runs"
     ],
     "title": "ConnectorView"
+   },
+   "ContactView": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "why": {
+      "type": "string",
+      "title": "Why"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "why"
+    ],
+    "title": "ContactView",
+    "description": "Someone the incoming owner can ask, and why: from ownership records, not from the AI."
+   },
+   "ContinuationPlan": {
+    "properties": {
+     "case_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Case Id"
+     },
+     "starts_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Starts At"
+     },
+     "phases": {
+      "items": {
+       "$ref": "#/components/schemas/PhaseView"
+      },
+      "type": "array",
+      "title": "Phases"
+     }
+    },
+    "type": "object",
+    "required": [
+     "case_id",
+     "starts_at",
+     "phases"
+    ],
+    "title": "ContinuationPlan"
    },
    "CorrectionIn": {
     "properties": {
@@ -19665,6 +21251,141 @@
     ],
     "title": "DebtItem"
    },
+   "DecisionEntry": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "origin": {
+      "type": "string",
+      "enum": [
+       "meeting",
+       "knowledge",
+       "analysis"
+      ],
+      "title": "Origin"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "decided_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decided At"
+     },
+     "rationale": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rationale"
+     },
+     "responsibility_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Responsibility Id"
+     },
+     "responsibility_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Responsibility Name"
+     },
+     "meeting_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Meeting Id"
+     },
+     "meeting_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Meeting Title"
+     },
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Id"
+     },
+     "knowledge_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Knowledge Id"
+     },
+     "lines": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Lines",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "text",
+     "origin",
+     "status",
+     "decided_at"
+    ],
+    "title": "DecisionEntry"
+   },
    "DecisionIn": {
     "properties": {
      "decision": {
@@ -19853,6 +21574,51 @@
      "sent_at"
     ],
     "title": "DeliveryView"
+   },
+   "DemoRoleIn": {
+    "properties": {
+     "role": {
+      "type": "string",
+      "title": "Role"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "role"
+    ],
+    "title": "DemoRoleIn"
+   },
+   "DemoRoleView": {
+    "properties": {
+     "sample": {
+      "type": "boolean",
+      "title": "Sample"
+     },
+     "can_switch": {
+      "type": "boolean",
+      "title": "Can Switch"
+     },
+     "role": {
+      "type": "string",
+      "title": "Role"
+     },
+     "roles": {
+      "items": {
+       "$ref": "#/components/schemas/RoleOption"
+      },
+      "type": "array",
+      "title": "Roles",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "sample",
+     "can_switch",
+     "role"
+    ],
+    "title": "DemoRoleView"
    },
    "DepartmentIn": {
     "properties": {
@@ -20120,6 +21886,94 @@
      "reason"
     ],
     "title": "DisputeIn"
+   },
+   "DriftItem": {
+    "properties": {
+     "knowledge_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Knowledge Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "responsibility_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Responsibility Id"
+     },
+     "responsibility_name": {
+      "type": "string",
+      "title": "Responsibility Name"
+     },
+     "checked_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Checked At"
+     },
+     "merged_since": {
+      "type": "integer",
+      "title": "Merged Since"
+     },
+     "latest": {
+      "items": {
+       "$ref": "#/components/schemas/CodeChange"
+      },
+      "type": "array",
+      "title": "Latest"
+     }
+    },
+    "type": "object",
+    "required": [
+     "knowledge_id",
+     "title",
+     "kind",
+     "responsibility_id",
+     "responsibility_name",
+     "checked_at",
+     "merged_since",
+     "latest"
+    ],
+    "title": "DriftItem"
+   },
+   "Drill": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "knowledge",
+       "decision",
+       "work",
+       "risk"
+      ],
+      "title": "Kind"
+     },
+     "prompt": {
+      "type": "string",
+      "title": "Prompt"
+     },
+     "source_title": {
+      "type": "string",
+      "title": "Source Title"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "kind",
+     "prompt",
+     "source_title"
+    ],
+    "title": "Drill"
    },
    "EmailStatusView": {
     "properties": {
@@ -20418,6 +22272,93 @@
     ],
     "title": "ExpertView",
     "description": "Someone to ask, with the visible evidence why. Not a ranking or a score."
+   },
+   "ExpertiseMap": {
+    "properties": {
+     "people": {
+      "items": {
+       "additionalProperties": {
+        "type": "string"
+       },
+       "type": "object"
+      },
+      "type": "array",
+      "title": "People"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/ExpertiseRow"
+      },
+      "type": "array",
+      "title": "Rows"
+     }
+    },
+    "type": "object",
+    "required": [
+     "people",
+     "rows"
+    ],
+    "title": "ExpertiseMap"
+   },
+   "ExpertiseRow": {
+    "properties": {
+     "responsibility_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Responsibility Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "criticality": {
+      "type": "string",
+      "title": "Criticality"
+     },
+     "bus_factor": {
+      "type": "integer",
+      "title": "Bus Factor"
+     },
+     "named_backup": {
+      "type": "boolean",
+      "title": "Named Backup"
+     },
+     "capable_backup": {
+      "type": "boolean",
+      "title": "Capable Backup"
+     },
+     "team_covered": {
+      "type": "boolean",
+      "title": "Team Covered"
+     },
+     "cells": {
+      "additionalProperties": {
+       "items": {
+        "type": "string",
+        "enum": [
+         "primary",
+         "backup",
+         "knowledge"
+        ]
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Cells"
+     }
+    },
+    "type": "object",
+    "required": [
+     "responsibility_id",
+     "name",
+     "criticality",
+     "bus_factor",
+     "named_backup",
+     "capable_backup",
+     "team_covered",
+     "cells"
+    ],
+    "title": "ExpertiseRow"
    },
    "ExposedRisk": {
     "properties": {
@@ -21011,6 +22952,72 @@
     ],
     "title": "GovernanceView"
    },
+   "GradeView": {
+    "properties": {
+     "drill_id": {
+      "type": "string",
+      "title": "Drill Id"
+     },
+     "score": {
+      "type": "integer",
+      "title": "Score"
+     },
+     "verdict": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "partly",
+       "not_yet"
+      ],
+      "title": "Verdict"
+     },
+     "covered": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Covered"
+     },
+     "missed": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Missed"
+     },
+     "source_title": {
+      "type": "string",
+      "title": "Source Title"
+     },
+     "source_excerpt": {
+      "type": "string",
+      "title": "Source Excerpt"
+     },
+     "source_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Source Url"
+     }
+    },
+    "type": "object",
+    "required": [
+     "drill_id",
+     "score",
+     "verdict",
+     "covered",
+     "missed",
+     "source_title",
+     "source_excerpt",
+     "source_url"
+    ],
+    "title": "GradeView"
+   },
    "GuidanceUpdate": {
     "properties": {
      "enabled": {
@@ -21036,7 +23043,8 @@
          "what_if",
          "copilot",
          "recipient",
-         "verify"
+         "verify",
+         "assistants"
         ]
        },
        {
@@ -21072,7 +23080,8 @@
            "what_if",
            "copilot",
            "recipient",
-           "verify"
+           "verify",
+           "assistants"
           ]
          },
          {
@@ -21149,7 +23158,8 @@
          "what_if",
          "copilot",
          "recipient",
-         "verify"
+         "verify",
+         "assistants"
         ]
        },
        {
@@ -21328,6 +23338,46 @@
      "recorded_at"
     ],
     "title": "HandoverRecordView"
+   },
+   "HealthOverview": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "unavailable"
+      ],
+      "title": "Status"
+     },
+     "checks": {
+      "additionalProperties": {
+       "type": "string",
+       "enum": [
+        "ok",
+        "unavailable"
+       ]
+      },
+      "type": "object",
+      "title": "Checks",
+      "default": {}
+     },
+     "routes": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Routes",
+      "default": {
+       "live": "/health/live",
+       "ready": "/health/ready"
+      }
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "HealthOverview"
    },
    "HealthResponse": {
     "properties": {
@@ -23366,6 +25416,356 @@
     ],
     "title": "MatchView"
    },
+   "MeetingDetail": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "held_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Held At"
+     },
+     "responsibility_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Responsibility Id"
+     },
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Id"
+     },
+     "extract_mode": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "ai",
+         "rules"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extract Mode"
+     },
+     "counts": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Counts"
+     },
+     "pending": {
+      "type": "integer",
+      "title": "Pending"
+     },
+     "lines": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Lines"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/MeetingItemView"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "can_review": {
+      "type": "boolean",
+      "title": "Can Review"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "held_at",
+     "responsibility_id",
+     "case_id",
+     "extract_mode",
+     "counts",
+     "pending",
+     "lines",
+     "items",
+     "can_review"
+    ],
+    "title": "MeetingDetail"
+   },
+   "MeetingIn": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Title"
+     },
+     "held_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Held At"
+     },
+     "transcript": {
+      "type": "string",
+      "maxLength": 60000,
+      "minLength": 1,
+      "title": "Transcript"
+     },
+     "responsibility_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Responsibility Id"
+     },
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "title",
+     "transcript"
+    ],
+    "title": "MeetingIn"
+   },
+   "MeetingItemView": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "meeting_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Meeting Id"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "decision",
+       "action",
+       "question",
+       "risk"
+      ],
+      "title": "Kind"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "owner_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Owner Name"
+     },
+     "due_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due Text"
+     },
+     "lines": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Lines"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "ai",
+       "rules"
+      ],
+      "title": "Source"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "proposed",
+       "accepted",
+       "dismissed"
+      ],
+      "title": "Status"
+     },
+     "result_ref": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Result Ref"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "meeting_id",
+     "kind",
+     "text",
+     "owner_name",
+     "due_text",
+     "lines",
+     "source",
+     "status",
+     "result_ref"
+    ],
+    "title": "MeetingItemView"
+   },
+   "MeetingSummary": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "held_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Held At"
+     },
+     "responsibility_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Responsibility Id"
+     },
+     "case_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Case Id"
+     },
+     "extract_mode": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "ai",
+         "rules"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extract Mode"
+     },
+     "counts": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Counts"
+     },
+     "pending": {
+      "type": "integer",
+      "title": "Pending"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "held_at",
+     "responsibility_id",
+     "case_id",
+     "extract_mode",
+     "counts",
+     "pending"
+    ],
+    "title": "MeetingSummary"
+   },
    "MemberUpdate": {
     "properties": {
      "role": {
@@ -23610,7 +26010,7 @@
      },
      "mentions": {
       "items": {
-       "$ref": "#/components/schemas/relay__continuity__service__MentionView"
+       "$ref": "#/components/schemas/relay__continuity__schemas__MentionView"
       },
       "type": "array",
       "title": "Mentions",
@@ -23646,6 +26046,14 @@
       },
       "type": "array",
       "title": "Handovers",
+      "default": []
+     },
+     "to_accept": {
+      "items": {
+       "$ref": "#/components/schemas/AcceptanceForMe"
+      },
+      "type": "array",
+      "title": "To Accept",
       "default": []
      }
     },
@@ -24536,6 +26944,109 @@
     ],
     "title": "PersonView"
    },
+   "PhaseView": {
+    "properties": {
+     "days": {
+      "type": "integer",
+      "enum": [
+       30,
+       60,
+       90
+      ],
+      "title": "Days"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "goal": {
+      "type": "string",
+      "title": "Goal"
+     },
+     "steps": {
+      "items": {
+       "$ref": "#/components/schemas/PlanStep"
+      },
+      "type": "array",
+      "title": "Steps"
+     }
+    },
+    "type": "object",
+    "required": [
+     "days",
+     "title",
+     "goal",
+     "steps"
+    ],
+    "title": "PhaseView"
+   },
+   "PlanStep": {
+    "properties": {
+     "phase": {
+      "type": "integer",
+      "enum": [
+       30,
+       60,
+       90
+      ],
+      "title": "Phase"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "why": {
+      "type": "string",
+      "title": "Why"
+     },
+     "source_kind": {
+      "type": "string",
+      "enum": [
+       "scope",
+       "task",
+       "criterion",
+       "case"
+      ],
+      "title": "Source Kind"
+     },
+     "source_label": {
+      "type": "string",
+      "title": "Source Label"
+     },
+     "responsibility_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Responsibility Id"
+     },
+     "due_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Due At"
+     },
+     "already_task": {
+      "type": "boolean",
+      "title": "Already Task"
+     }
+    },
+    "type": "object",
+    "required": [
+     "phase",
+     "title",
+     "why",
+     "source_kind",
+     "source_label",
+     "due_at",
+     "already_task"
+    ],
+    "title": "PlanStep"
+   },
    "PolicyUpdate": {
     "properties": {
      "critical_requires_backup": {
@@ -24627,6 +27138,25 @@
      "updated_at"
     ],
     "title": "PolicyView"
+   },
+   "PostedView": {
+    "properties": {
+     "channel": {
+      "type": "string",
+      "title": "Channel"
+     },
+     "posted_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Posted At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "channel",
+     "posted_at"
+    ],
+    "title": "PostedView"
    },
    "PreferenceView": {
     "properties": {
@@ -25600,6 +28130,45 @@
      "name"
     ],
     "title": "Ref"
+   },
+   "RehearsalAnswerIn": {
+    "properties": {
+     "drill_id": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 8,
+      "title": "Drill Id"
+     },
+     "answer": {
+      "type": "string",
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Answer"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "drill_id",
+     "answer"
+    ],
+    "title": "RehearsalAnswerIn"
+   },
+   "RehearsalView": {
+    "properties": {
+     "drills": {
+      "items": {
+       "$ref": "#/components/schemas/Drill"
+      },
+      "type": "array",
+      "title": "Drills"
+     }
+    },
+    "type": "object",
+    "required": [
+     "drills"
+    ],
+    "title": "RehearsalView"
    },
    "RelatedView": {
     "properties": {
@@ -27266,6 +29835,24 @@
     ],
     "title": "RiskView"
    },
+   "RoleOption": {
+    "properties": {
+     "role": {
+      "type": "string",
+      "title": "Role"
+     },
+     "purpose": {
+      "type": "string",
+      "title": "Purpose"
+     }
+    },
+    "type": "object",
+    "required": [
+     "role",
+     "purpose"
+    ],
+    "title": "RoleOption"
+   },
    "RuleUpdate": {
     "properties": {
      "enabled": {
@@ -27860,6 +30447,18 @@
       ],
       "title": "Declined At"
      },
+     "accepted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accepted At"
+     },
      "hidden": {
       "type": "boolean",
       "title": "Hidden",
@@ -27868,6 +30467,16 @@
      "can_decline": {
       "type": "boolean",
       "title": "Can Decline",
+      "default": false
+     },
+     "can_accept": {
+      "type": "boolean",
+      "title": "Can Accept",
+      "default": false
+     },
+     "can_record_acceptance": {
+      "type": "boolean",
+      "title": "Can Record Acceptance",
       "default": false
      }
     },
@@ -27885,6 +30494,88 @@
      "state"
     ],
     "title": "ScopeItemView"
+   },
+   "ScoreParts": {
+    "properties": {
+     "possible": {
+      "type": "integer",
+      "title": "Possible"
+     },
+     "cover_weight": {
+      "type": "integer",
+      "title": "Cover Weight"
+     },
+     "knowledge_weight": {
+      "type": "integer",
+      "title": "Knowledge Weight"
+     },
+     "second_holder_weight": {
+      "type": "integer",
+      "title": "Second Holder Weight"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/ScoreRow"
+      },
+      "type": "array",
+      "title": "Rows",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "possible",
+     "cover_weight",
+     "knowledge_weight",
+     "second_holder_weight"
+    ],
+    "title": "ScoreParts",
+    "description": "The readiness score's inputs, so the page can show its working.\n\nEach `*_weight` is the criticality weight (critical 4 ... low 1) of the affected\nresponsibilities that meet that part; `possible` is the weight of all of them.\nreadiness = round(100 * (0.60 * cover + 0.25 * knowledge + 0.15 * second_holder) / possible)"
+   },
+   "ScoreRow": {
+    "properties": {
+     "responsibility_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Responsibility Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "criticality": {
+      "type": "string",
+      "title": "Criticality"
+     },
+     "weight": {
+      "type": "integer",
+      "title": "Weight"
+     },
+     "covered": {
+      "type": "boolean",
+      "title": "Covered"
+     },
+     "knowledge": {
+      "type": "boolean",
+      "title": "Knowledge"
+     },
+     "second_holder": {
+      "type": "boolean",
+      "title": "Second Holder"
+     }
+    },
+    "type": "object",
+    "required": [
+     "responsibility_id",
+     "name",
+     "criticality",
+     "weight",
+     "covered",
+     "knowledge",
+     "second_holder"
+    ],
+    "title": "ScoreRow",
+    "description": "One affected responsibility's contribution to the readiness score."
    },
    "SearchHit": {
     "properties": {
@@ -28159,6 +30850,16 @@
       "type": "integer",
       "title": "Readiness Score"
      },
+     "score_parts": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ScoreParts"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
      "score_basis": {
       "type": "string",
       "title": "Score Basis"
@@ -28222,6 +30923,97 @@
      "simulated_at"
     ],
     "title": "SimulationView"
+   },
+   "SlackIn": {
+    "properties": {
+     "webhook_url": {
+      "type": "string",
+      "maxLength": 300,
+      "title": "Webhook Url"
+     },
+     "channel": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Channel"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "webhook_url",
+     "channel"
+    ],
+    "title": "SlackIn"
+   },
+   "SlackStatus": {
+    "properties": {
+     "connected": {
+      "type": "boolean",
+      "title": "Connected"
+     },
+     "channel": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Channel"
+     },
+     "connected_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Connected At"
+     },
+     "last_posted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Posted At"
+     },
+     "last_error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Error"
+     },
+     "can_manage": {
+      "type": "boolean",
+      "title": "Can Manage"
+     },
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     }
+    },
+    "type": "object",
+    "required": [
+     "connected",
+     "can_manage",
+     "available"
+    ],
+    "title": "SlackStatus"
    },
    "SnapshotView": {
     "properties": {
@@ -28596,6 +31388,55 @@
      "access"
     ],
     "title": "StewardshipView"
+   },
+   "StrengthView": {
+    "properties": {
+     "level": {
+      "type": "string",
+      "enum": [
+       "strong",
+       "partial",
+       "weak"
+      ],
+      "title": "Level"
+     },
+     "points": {
+      "type": "integer",
+      "title": "Points"
+     },
+     "cited": {
+      "type": "integer",
+      "title": "Cited"
+     },
+     "fresh": {
+      "type": "integer",
+      "title": "Fresh"
+     },
+     "conflicts": {
+      "type": "integer",
+      "title": "Conflicts"
+     },
+     "covered": {
+      "type": "integer",
+      "title": "Covered"
+     },
+     "scope": {
+      "type": "integer",
+      "title": "Scope"
+     }
+    },
+    "type": "object",
+    "required": [
+     "level",
+     "points",
+     "cited",
+     "fresh",
+     "conflicts",
+     "covered",
+     "scope"
+    ],
+    "title": "StrengthView",
+    "description": "How far the brief can be relied on, from its evidence rather than the model's own\nconfidence: a label (no false precision) plus the counts it rests on."
    },
    "Suggestion": {
     "properties": {
@@ -30078,7 +32919,8 @@
        "what_if",
        "copilot",
        "recipient",
-       "verify"
+       "verify",
+       "assistants"
       ],
       "title": "Id"
      },
@@ -30617,7 +33459,7 @@
     ],
     "title": "MentionView"
    },
-   "relay__continuity__service__CaseLink": {
+   "relay__continuity__schemas__CaseLink": {
     "properties": {
      "id": {
       "type": "string",
@@ -30646,7 +33488,7 @@
     ],
     "title": "CaseLink"
    },
-   "relay__continuity__service__MentionView": {
+   "relay__continuity__schemas__MentionView": {
     "properties": {
      "notification_id": {
       "type": "string",
@@ -30818,6 +33660,11 @@
      "description": {
       "type": "string",
       "title": "Description"
+     },
+     "purpose": {
+      "type": "string",
+      "title": "Purpose",
+      "default": ""
      },
      "permissions": {
       "items": {

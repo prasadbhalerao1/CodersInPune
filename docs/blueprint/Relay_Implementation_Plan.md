@@ -1,8 +1,8 @@
-# Relay — Implementation Plan (Founder-led, AI-assisted)
+# Relay: Implementation Plan (Founder-led, AI-assisted)
 
 | Field | Value |
 |---|---|
-| Version | 0.1 — for founder review |
+| Version | 0.1: for founder review |
 | Date | 8 Nov 2026 |
 | Replaces | Blueprint §O (both the team plan and the §O.0 solo draft) |
 | Depends on | `Relay_Architecture_Decision_Register.md` (decision IDs D1–D26, spikes S1–S7) |
@@ -44,11 +44,11 @@ Bands are relative to one founder working with AI assistance. They are not dates
 ```
 Phase 0  Decisions & spikes (S1–S7)                                      band M (total)
    │
-Phase 1  Continuity foundation — no AI, no integrations
+Phase 1  Continuity foundation: no AI, no integrations
    M0 Platform foundations ─► M1 Org & Catalog ─► M2 Coverage Risks & Home
                                              └──► M3 Manual Transfer cases ─► M4 Coverage & Departure
    ═══ First meaningful product (usable by a design partner) after M4 ═══
-Phase 2  Connected sources — still no AI
+Phase 2  Connected sources: still no AI
    M5 Connector framework + GitHub ─► M6 Linear + approved actions ─► M7 Knowledge + Notion
 Phase 3  Intelligence
    M8 AI runtime + case analysis ─► M9 Interviews, Capsules, Return Briefing
@@ -58,13 +58,13 @@ Phase 4  Pilot readiness
 
 | Milestone | Band | Hard dependencies | Decisions/spikes that must be approved first |
 |---|---|---|---|
-| Phase 0 | M | — | — |
+| Phase 0 | M | - | - |
 | M0 | L | Phase 0 (S2, S4, S6) | D5, D7, D8, D11, D23, D24, D26 |
 | M1 | L | M0 | D1, D14, D15, D25 |
 | M2 | M | M1 | D12 |
 | M3 | XL (split into M3a/M3b) | M1 (M2 recommended) | D2 (schema), D16, D17, D21 |
 | M4 | M | M3 | D4 |
-| M5 | L | M3 (for suggestions → catalog), S1 GitHub | — |
+| M5 | L | M3 (for suggestions → catalog), S1 GitHub | - |
 | M6 | M | M5 framework, S1 Linear | D18 |
 | M7 | L | M5, S1 Notion | D3, D13, D22 |
 | M8 | L | M7 (evidence + knowledge), S3 | D2 (behaviour), D6, D10 |
@@ -89,7 +89,7 @@ Phase 4  Pilot readiness
 
 Each milestone below lists: **Outcome · Features · Backend · Frontend · Database · Testing · Security · Demo/verification · Dependencies · Exit criteria.** The common Definition of Done in §6 also applies to every milestone.
 
-### Phase 0 — Decisions & spikes (band M)
+### Phase 0: Decisions & spikes (band M)
 
 - **Outcome.** All M0-blocking decisions approved, and spikes answered with one-page decision records (`docs/adr/`).
 - **Work.**
@@ -104,7 +104,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
   - ADRs for D5, D7, D8, D11, D23, D24 and D26 are signed by the founder.
   - The repo conventions file (`CLAUDE.md`/`AGENTS.md`) is written: module layout, layering rules, testing rules, the guardrails in §5.
 
-### M0 — Platform foundations (band L)
+### M0: Platform foundations (band L)
 
 - **Outcome.** A secure, empty multi-tenant SaaS shell. A user can sign up, create a workspace, invite a member and manage teams. Every guardrail is in place and enforced by CI.
 - **Features.**
@@ -163,7 +163,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
   - Deployed to staging on the chosen platform with backups on.
   - A restore drill has been run once.
 
-### M1 — Organisation & Catalog (band L)
+### M1: Organisation & Catalog (band L)
 
 - **Outcome.** An organisation can model its teams and responsibilities, including ownership history. This is the core record of Relay.
 - **Features.**
@@ -204,7 +204,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M0. D1, D14, D15, D25.
 - **Exit.** A design partner could keep their responsibility catalogue in Relay.
 
-### M2 — Coverage Risks & Home (band M)
+### M2: Coverage Risks & Home (band M)
 
 - **Outcome.** Relay tells managers where continuity is weak, before anything happens.
 - **Features.**
@@ -241,9 +241,9 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M1. D12.
 - **Exit.** Coverage hygiene works end-to-end with no integrations.
 
-### M3 — Manual Transfer cases (band XL → split)
+### M3: Manual Transfer cases (band XL → split)
 
-**M3a — Case engine & planning (band L)**
+**M3a: Case engine & planning (band L)**
 - **Outcome.** A manager can open a Transfer case, define scope items and plan the work.
 - **Features.**
   - Playbook engine (code-defined, versioned, per-tenant parameters).
@@ -266,7 +266,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
   - `playbook_version`, `case`, `case_stage_history`, `case_participant` (valid-time), `case_scope_item`, `task`, `task_dependency`, `comment`, `mention`.
   - **Evidence-audience schema introduced now:** `evidence_pool_entry` with an audience enum. It stays empty until M7/M8, so that D2 doesn't force a later migration of case permissions.
 
-**M3b — Approvals, readiness, closure, inbox (band L)**
+**M3b: Approvals, readiness, closure, inbox (band L)**
 - **Outcome.** The transfer is completed *verifiably*, and ownership switches on the effective date.
 - **Features.**
   - Approval requests bound to content hash; approval sheet showing what / where / who sees / reversible.
@@ -302,7 +302,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M1 (M2 recommended). D2 schema, D16, D17, D21.
 - **Exit.** A complete AI-free transfer runs with no dead ends; every edge case in PRD §17.4 has a test or a documented deferral.
 
-### M4 — Coverage & Departure (band M)
+### M4: Coverage & Departure (band M)
 
 - **Outcome.** The two highest-value recurring and acute playbooks run manually. **This completes the first meaningful product.**
 - **Features.**
@@ -319,7 +319,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M3. D4.
 - **Exit.** **Design-partner ready (manual).** A 2–3 person team could run real handovers in Relay with no integrations.
 
-### M5 — Connector framework + GitHub (band L)
+### M5: Connector framework + GitHub (band L)
 
 - **Outcome.** Relay bootstraps the catalogue from GitHub and keeps source state fresh, honestly reporting staleness.
 - **Features.**
@@ -346,7 +346,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M3 (catalogue + cases exist), S1 GitHub items.
 - **Exit.** Sync is restartable, idempotent and visibly fresh or stale.
 
-### M6 — Linear + approved external actions (band M)
+### M6: Linear + approved external actions (band M)
 
 - **Outcome.** Case tasks can be pushed to Linear after approval, with receipts. This is still deterministic: no AI.
 - **Features.**
@@ -365,7 +365,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M5 framework, S1 Linear items, D18.
 - **Exit.** PRD AC-04 and AC-05 pass with real systems.
 
-### M7 — Knowledge + Notion (band L)
+### M7: Knowledge + Notion (band L)
 
 - **Outcome.** Operational knowledge is linked, owned, verified against source revisions and kept fresh. Evidence and audiences become real.
 - **Features.**
@@ -391,7 +391,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M5, S1 Notion, D3, D13, D22.
 - **Exit.** The evidence model is stable enough to freeze for AI evals.
 
-### M8 — AI runtime + case analysis (band L)
+### M8: AI runtime + case analysis (band L)
 
 - **Outcome.** Relay drafts evidence-backed impact findings and plan additions inside cases. Humans accept, edit or reject. Nothing is executed without approval.
 - **Features.**
@@ -425,7 +425,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
   - Acceptance/edit/reject metrics are captured.
   - PRD AC-02 passes (partial-source banner).
 
-### M9 — Interviews, Capsules, Return Briefing (band L)
+### M9: Interviews, Capsules, Return Briefing (band L)
 
 - **Outcome.** Capturing tacit knowledge and onboarding the receiver become low-effort and evidence-linked. This delivers the full PRD Appendix A demo.
 - **Features.**
@@ -444,7 +444,7 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 - **Dependencies.** M8, D9.
 - **Exit.** PRD AC-01 (full), AC-06 and AC-08 pass.
 
-### M10 — Pilot hardening (band L, scope chosen by the pilot)
+### M10: Pilot hardening (band L, scope chosen by the pilot)
 
 - **Candidates** (pick by the pilot's needs):
   - Insights v1 (coverage, case outcomes, knowledge health, AI quality).
@@ -508,18 +508,18 @@ Each milestone below lists: **Outcome · Features · Backend · Frontend · Data
 
 | Layer | Always (from M0) | Added at |
 |---|---|---|
-| Domain unit + Hypothesis state machines | ✓ | — |
-| DB integration (testcontainers Postgres + pgvector) | ✓ | — |
-| Generated tenant-isolation route matrix | ✓ | — |
-| Generated permission matrix from registry | ✓ | — |
-| Migration lint (RLS/unique/FK/grants) | ✓ | — |
-| Fake-clock workflow tests | — | M3 |
-| Playwright E2E: one happy path + one negative path per milestone | ✓ (growing) | — |
-| Connector contract tests with recorded fixtures | — | M5 |
-| Executor idempotency/fault injection | — | M6 |
-| Canary-string leakage tests (search, capsules, AI context) | — | M7 |
-| Agent evals + CI gate | — | M8 |
-| Live connector nightly, load, accessibility audit, pentest | — | M10 |
+| Domain unit + Hypothesis state machines | ✓ | - |
+| DB integration (testcontainers Postgres + pgvector) | ✓ | - |
+| Generated tenant-isolation route matrix | ✓ | - |
+| Generated permission matrix from registry | ✓ | - |
+| Migration lint (RLS/unique/FK/grants) | ✓ | - |
+| Fake-clock workflow tests | - | M3 |
+| Playwright E2E: one happy path + one negative path per milestone | ✓ (growing) | - |
+| Connector contract tests with recorded fixtures | - | M5 |
+| Executor idempotency/fault injection | - | M6 |
+| Canary-string leakage tests (search, capsules, AI context) | - | M7 |
+| Agent evals + CI gate | - | M8 |
+| Live connector nightly, load, accessibility audit, pentest | - | M10 |
 
 Generated test suites (isolation and permissions) matter most for an AI-assisted solo build. They stop an assistant, or a tired founder, from shipping a route without authorisation.
 

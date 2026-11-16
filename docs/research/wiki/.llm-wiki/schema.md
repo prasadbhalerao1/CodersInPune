@@ -1,4 +1,4 @@
-# WIKI_SCHEMA.md — LLM Wiki Schema Reference
+# WIKI_SCHEMA.md: LLM Wiki Schema Reference
 
 This file defines all page types, required fields, naming conventions, and structural rules for the LLM Wiki. It is the canonical reference for how the wiki is organized.
 
@@ -18,7 +18,7 @@ Read this file when you need to understand:
 | `concept` | `{slug}.md` | Define a term, idea, methodology, framework, or tool |
 | `article` | `{YYYY-MM-DD}-{slug}.md` | Research notes, blog drafts, meeting notes, diary entries, imported documents |
 | `person` | `{slug}.md` | Author, researcher, historical figure, notable individual |
-| `synthesis` | `synth-{YYYY-MM-DD}-{slug}.md` | Saved query answer — a synthesized page from existing knowledge |
+| `synthesis` | `synth-{YYYY-MM-DD}-{slug}.md` | Saved query answer: a synthesized page from existing knowledge |
 
 ---
 
@@ -26,7 +26,7 @@ Read this file when you need to understand:
 
 **Purpose**: Define a term, idea, methodology, framework, tool, or entity.
 
-**File naming**: `{slug}.md` — lowercase kebab-case, ASCII-safe. Examples:
+**File naming**: `{slug}.md`: lowercase kebab-case, ASCII-safe. Examples:
 
 - `transformer-architecture.md`
 - `retrieval-augmented-generation.md`
@@ -72,8 +72,8 @@ related_concepts: []                # Explicit related slugs (beyond wikilinks)
 [Concrete examples or use cases.]
 
 ## Related Concepts / 相关概念
-- [[related-slug]] — brief description of relationship
-- [[another-slug]] — brief description of relationship
+- [[related-slug]]: brief description of relationship
+- [[another-slug]]: brief description of relationship
 
 ## References / 参考资料
 - Source material used to construct this page
@@ -85,7 +85,7 @@ related_concepts: []                # Explicit related slugs (beyond wikilinks)
 
 **Purpose**: Research notes, blog drafts, meeting notes, diary entries, imported web articles, PDF summaries.
 
-**File naming**: `{YYYY-MM-DD}-{slug}.md` — date-prefixed for chronological sorting. Examples:
+**File naming**: `{YYYY-MM-DD}-{slug}.md`: date-prefixed for chronological sorting. Examples:
 
 - `2026-04-28-weekly-review.md`
 - `2026-04-27-transformer-paper-notes.md`
@@ -123,14 +123,14 @@ diary_date: YYYY-MM-DD              # For diary entries
 [2-4 sentence overview.]
 
 ## Content / 内容
-[Main body — flexible format depending on content type.]
+[Main body: flexible format depending on content type.]
 
 ## Key Takeaways / 关键收获
 - Takeaway 1
 - Takeaway 2
 
 ## Related / 关联
-- [[related-slug]] — connection
+- [[related-slug]]: connection
 ```
 
 ---
@@ -139,7 +139,7 @@ diary_date: YYYY-MM-DD              # For diary entries
 
 **Purpose**: Author, researcher, historical figure, notable individual.
 
-**File naming**: `{slug}.md` — lowercase kebab-case of the person's name. Examples:
+**File naming**: `{slug}.md`: lowercase kebab-case of the person's name. Examples:
 
 - `alan-turing.md`
 - `andrej-karpathy.md`
@@ -175,15 +175,15 @@ affiliations: []                    # Organizations they're associated with
 # {Name}
 
 ## Bio / 简介
-[Brief biography — 3-5 sentences.]
+[Brief biography: 3-5 sentences.]
 
 ## Key Contributions / 主要贡献
 - Contribution 1
 - Contribution 2
 
 ## Related Work / 相关工作
-- [[related-concept]] — their role
-- [[related-person]] — collaboration or influence
+- [[related-concept]]: their role
+- [[related-person]]: collaboration or influence
 
 ## Links / 链接
 - [Personal site](url)
@@ -194,7 +194,7 @@ affiliations: []                    # Organizations they're associated with
 
 ## 4. Synthesis Page (`type: synthesis`)
 
-**Purpose**: A saved query answer — synthesized from existing wiki pages. These are the "compounding" part of the wiki: explorations that become permanent knowledge.
+**Purpose**: A saved query answer: synthesized from existing wiki pages. These are the "compounding" part of the wiki: explorations that become permanent knowledge.
 
 **File naming**: `synth-{YYYY-MM-DD}-{slug}.md`. Examples:
 
@@ -284,7 +284,7 @@ When a contradiction is detected between pages, format as:
 > | Page | Claim / 主张 |
 > |------|-------------|
 > | [[page-a]] | "Claim A from this page" |
-> | [[page-b]] | "Claim B — contradicts A" |
+> | [[page-b]] | "Claim B: contradicts A" |
 >
 > *Detected: YYYY-MM-DD | Status: unresolved*
 ```
@@ -299,7 +299,7 @@ The index at `.llm-wiki/index.md` is **auto-generated** and follows this format:
 
 ```markdown
 # Wiki Index
-<!-- AUTO-GENERATED — DO NOT EDIT BY HAND -->
+<!-- AUTO-GENERATED: DO NOT EDIT BY HAND -->
 **Last generated:** {ISO timestamp}
 **Source hash:** {sha256 of concatenated frontmatter}
 **Total pages:** {N}
@@ -311,13 +311,13 @@ The index at `.llm-wiki/index.md` is **auto-generated** and follows this format:
 
 ## By Tag
 ### {tag-name} ({N} pages)
-- [[slug]] — summary
+- [[slug]]: summary
 
 ## Orphan Pages / 孤立页面
-- [[slug]] — summary (no incoming links)
+- [[slug]]: summary (no incoming links)
 
 ## Review Queue / 审核队列
-- [[slug]] — ⚠️ issue description
+- [[slug]]: ⚠️ issue description
 ```
 
 ---
@@ -348,9 +348,9 @@ When deriving a slug from a title:
 
 ### Page Language (`language` field)
 
-- `en` — Page body is primarily English
-- `zh` — Page body is primarily Chinese
-- `bilingual` — Page has substantial content in both languages
+- `en`: Page body is primarily English
+- `zh`: Page body is primarily Chinese
+- `bilingual`: Page has substantial content in both languages
 
 ### Source Language Detection (during ingest)
 
@@ -380,7 +380,7 @@ When answering a query:
 
 ## Health Check Categories
 
-### Structural (Quick Lint — bash-assisted, zero cost)
+### Structural (Quick Lint: bash-assisted, zero cost)
 
 | Check | Script | Severity if fails |
 |-------|--------|-------------------|
@@ -389,7 +389,7 @@ When answering a query:
 | Orphan pages | `find-orphans.sh` | ⚠️ Warning |
 | Stale index | `check-stale.sh` | ⚠️ Warning |
 
-### Semantic (Full Lint — LLM-intensive, token cost)
+### Semantic (Full Lint: LLM-intensive, token cost)
 
 | Check | Severity if fails |
 |-------|-------------------|

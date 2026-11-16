@@ -1,8 +1,8 @@
-# Relay — Architecture and Product Implementation Blueprint
+# Relay: Architecture and Product Implementation Blueprint
 
 | Field | Value |
 |---|---|
-| Version | 0.1 — for review |
+| Version | 0.1: for review |
 | Date | 8 Nov 2026 |
 | Inputs | `docs/round1/relay_srs_prd.md` (PRD/SRS v1.0), `docs/round1/Relay_Competitive_Study_Open_Source_Review.md` (v1.0) |
 | Status | Proposal. Nothing here is approved until reviewed. No code has been written. |
@@ -32,7 +32,7 @@ Priorities use the PRD's scheme: **P0** = needed for the first usable release, *
 **The five biggest problems in the current specification** (detail in §B):
 1. **Cold start.** The product depends on a responsibility catalogue that no customer has on day one, and the spec has no feature for populating it.
 2. **The hero story contradicts the scope.** Every narrative (§1.3, Appendix A, the first JTBD row) is about an engineer *leaving*, but offboarding is marked "later phase".
-3. **Source-permission mirroring is assumed but is not fully achievable** with the chosen first connectors. Notion in particular does not appear to expose per-user page permissions through its API [ASSUME — spike S1].
+3. **Source-permission mirroring is assumed but is not fully achievable** with the chosen first connectors. Notion in particular does not appear to expose per-user page permissions through its API [ASSUME: spike S1].
 4. **Ten "agents" where about three need an LLM loop.** Most listed agents are deterministic logic. Keeping them as LLM agents adds cost, latency and failure modes without adding value.
 5. **Inconsistent core taxonomies.** These include four different fact/inference label sets, case "roles" mixed into RBAC, an 11-state case machine that mixes lifecycle with conditions, and two separate ownership systems (responsibilities and assets).
 
@@ -52,7 +52,7 @@ Relay makes that accountability **explicit, time-aware and evidenced**, then mak
 
 ### A.2 Central value proposition
 
-> **Relay makes accountability transferable — and proves the transfer happened.**
+> **Relay makes accountability transferable: and proves the transfer happened.**
 
 Three supporting claims, in order of how hard they are for competitors to copy:
 1. **A time-aware responsibility and coverage model across functions.** Who owns what, who backs them up, and since when, for services, processes, accounts and projects, not just software.
@@ -105,7 +105,7 @@ Three supporting claims, in order of how hard they are for competitors to copy:
 | C1 | PRD §6.2 vs FR-CASE-002 vs §19.2 | Initial case types are listed as 4 (including project handover) in §6.2 and as 3 elsewhere. | [CHANGE] v1 ships **one transfer primitive** and four playbooks: *Responsibility Transfer* (covers ownership, service and project handover), *Temporary Coverage*, *Onboarding*, and a light *Departure* playbook (see C2). |
 | C2 | §1.3, Appendix A, JTBD row 1 vs §6.2/§9.9 | The hero story is a departing engineer, but offboarding is "later phase". | [CHANGE] Ship a **Departure** playbook in v1 *without* HRIS integration. A departure is a parent case that spawns one Transfer per responsibility the person holds, plus the consent/review step from ServiceNow's pattern. HRIS-triggered offboarding stays P2. Without this, the demo story describes a feature that isn't in the release. |
 | C3 | §7.1, §9.4, §10.7 `basis`, FR-KNOW-014 | Four different label sets for facts and inferences ("verified fact / source observation / AI inference / human decision"; "direct source fact / deterministic rule / AI inference / human decision"; etc.). "Verified" is a *status*, not a *basis*. | [CHANGE] Use **two orthogonal fields** everywhere. `basis` ∈ {`source_observed`, `rule_derived`, `human_stated`, `ai_inferred`}. `verification` ∈ {`unverified`, `verified`, `disputed`, `stale`}. One UI chip vocabulary. (§I.4) |
-| C4 | §8.1 role catalogue and §8.3 matrix | "Current/Outgoing Owner" and "Incoming Owner" are listed as roles, but they are *relationships to a specific case*. Mixing them into RBAC produces rules like "Incoming Owner: create case — no by default", which makes no sense. | [CHANGE] Three tiers: workspace roles, scoped grants and relationship roles (§F). |
+| C4 | §8.1 role catalogue and §8.3 matrix | "Current/Outgoing Owner" and "Incoming Owner" are listed as roles, but they are *relationships to a specific case*. Mixing them into RBAC produces rules like "Incoming Owner: create case: no by default", which makes no sense. | [CHANGE] Three tiers: workspace roles, scoped grants and relationship roles (§F). |
 | C5 | PRD §10.3 vs study §10.2 vs PRD §19.2 | Three different agent catalogues: Coordination, Simulation, Onboarding Guide and Incident Assistant appear in some and not others. | [CHANGE] One capability registry (§I.2). Most items become deterministic services. |
 | C6 | FR-CASE-008 vs §17.1 | §17.1 uses an "Awaiting Assignment" state that is not in the state list. "Blocked" and "Reopened" are conditions or transitions, not lifecycle stages. | [CHANGE] A 6-stage lifecycle plus orthogonal flags (§K.3). |
 | C7 | §6.5 / FR-ASSET-003 vs §9.3 / FR-RESP | Both Assets and Responsibilities "have owners", so there are two ownership systems that will disagree. | [CHANGE] Decision D1: **ownership assignments attach only to Responsibilities.** An asset's "owner" is derived from the responsibility that stewards it. Importing from GitHub creates "Maintain *payment-service*" responsibilities automatically. |
@@ -157,7 +157,7 @@ Three supporting claims, in order of how hard they are for competitors to copy:
 
 | # | Item | Problem | Recommendation |
 |---|---|---|---|
-| I1 | **Source ACL mirroring** (FR-INT-010, AC-03) for all connectors | GitHub: feasible (repo visibility, team and collaborator access). Linear: team-level access, including private teams, is likely feasible. **Notion: the public API does not appear to expose who can see a page.** An integration only sees pages shared with it [ASSUME — spike S1]. | [CHANGE] Per-connector permission strategy (§M.3). For Notion, use admin-defined **visibility mappings** (teamspace/page tree → Relay teams), optionally confirmed by per-user OAuth checks at read time. State this limitation honestly in the connector UI. |
+| I1 | **Source ACL mirroring** (FR-INT-010, AC-03) for all connectors | GitHub: feasible (repo visibility, team and collaborator access). Linear: team-level access, including private teams, is likely feasible. **Notion: the public API does not appear to expose who can see a page.** An integration only sees pages shared with it [ASSUME: spike S1]. | [CHANGE] Per-connector permission strategy (§M.3). For Notion, use admin-defined **visibility mappings** (teamspace/page tree → Relay teams), optionally confirmed by per-user OAuth checks at read time. State this limitation honestly in the connector UI. |
 | I2 | "Calibrated confidence" | Not achievable from LLM outputs without labelled data. | Deterministic evidence strength (A4). |
 | I3 | Global contradiction / duplicate detection (FR-KNOW-007) | This is O(n²) and LLM-expensive across a whole corpus, with many false positives. | Scope comparisons to items **linked to the same responsibility or asset**, triggered by changes. Use embedding similarity as the candidate filter and an LLM only for the final pairwise check. P1. |
 | I4 | Ten agents (§10.3) | Each LLM agent adds latency, cost, eval burden and prompt-injection surface. | 6 LLM *skills* + 2 bounded agents. Everything else is deterministic (§I.2). |
@@ -227,21 +227,21 @@ Below, each feature has: **Problem · Function · Users · In → Out · Depends
 
 ### C.1 Workspace & Identity
 
-**1.1 Workspace setup** — P0 [SPEC FR-ORG-001, NEW checklist]
+**1.1 Workspace setup**: P0 [SPEC FR-ORG-001, NEW checklist]
 - Problem: Admins don't know what to configure first, so time-to-value is long.
 - Function: Create the workspace, set the time zone and criticality definitions, then follow a guided setup checklist (M4).
 - Users: Workspace Owner, Admin. In → Out: org details → workspace + checklist state. Depends on: auth.
 - AC: A new owner reaches "first risks visible" without docs. Every checklist step can be skipped and resumed later. Skipping integrations leaves a fully manual workspace usable.
 
-**1.2 Members & invitations** — P0 [SPEC FR-IAM-004, FR-IAM-009]
+**1.2 Members & invitations**: P0 [SPEC FR-IAM-004, FR-IAM-009]
 - Function: Invite by email or domain. States: pending, active, suspended, deactivated. Member types: employee, contractor, guest.
 - AC: Deactivating a user ends their sessions within the configured window, keeps their historical attribution, and fires the deactivated-owner rule (M9).
 
-**1.3 Departments & teams** — P0 [SPEC FR-ORG-002/003/004]
+**1.3 Departments & teams**: P0 [SPEC FR-ORG-002/003/004]
 - Function: Hierarchy (department → team, optional), memberships with effective dates, team leads.
 - AC: Membership changes are historised. "Members of team T on date D" is queryable.
 
-**1.4 Identity mapping** — P0 [SPEC §12.5, FR-IAM-006/007, FR-ORG-007/008]
+**1.4 Identity mapping**: P0 [SPEC §12.5, FR-IAM-006/007, FR-ORG-007/008]
 - Function: Link Relay users to GitHub/Linear/Notion identities. Auto-match only on verified email. Everything else is a suggestion. Admins resolve conflicts.
 - In → Out: connector identities → `identity_link` (state: `suggested / confirmed / rejected`).
 - AC: Users are never merged on display name. Unmatched identities are listed. Signals attributed to an unmatched identity never create ownership suggestions for a Relay user.
@@ -251,144 +251,144 @@ Below, each feature has: **Problem · Function · Users · In → Out · Depends
 
 ### C.2 Catalog
 
-**2.1 Responsibilities** — P0 [SPEC §6.3, §9.1, FR-RESP-*]
+**2.1 Responsibilities**: P0 [SPEC §6.3, §9.1, FR-RESP-*]
 - Problem: Accountability is implicit and scattered.
 - Function: CRUD and archive. Fields: name, description, type (from a template library), criticality, owning team, escalation path, review cadence, required knowledge, access prerequisites, verification state. Has a detail page with tabs: Overview, Owners & history, Assets, Knowledge, Cases, Risks, Activity.
 - Users: Team Managers (edit), everyone (view within scope).
 - AC: Filter by team, owner, backup, type, criticality and review state (FR-RESP-011). Inferred responsibilities show as `suggested` until confirmed (FR-RESP-010).
 
-**2.2 Ownership assignments & history** — P0 [SPEC §9.3, §13.3, FR-RESP-002…006]
+**2.2 Ownership assignments & history**: P0 [SPEC §9.3, §13.3, FR-RESP-002…006]
 - Function: Roles `primary` (exactly one at any time per policy), `co_owner`, `backup`, `temporary`. Assignee is a user or team. A team assignment requires a named accountable contact for `critical`. Effective-dated, backdated corrections allowed (recorded with a reason), never overwritten.
 - AC: "Who owned R on 1 June?" returns a correct answer, including after a backdated correction. Overlapping primaries are rejected by a DB constraint (§K.4). A future-dated assignment takes effect with no job running (temporal query).
 
-**2.3 Coverage policy** — P0 [SPEC FR-CI-001/002, REC]
+**2.3 Coverage policy**: P0 [SPEC FR-CI-001/002, REC]
 - Function: Per-criticality tier rules: backup required, max-review-age for linked runbooks, team-ownership-needs-named-contact, SoD on closure.
 - AC: Changing a policy re-evaluates findings within one scheduler cycle.
 
-**2.4 Assets & dependencies** — P0 (dependencies P1) [SPEC §6.5, FR-ASSET-*]
+**2.4 Assets & dependencies**: P0 (dependencies P1) [SPEC §6.5, FR-ASSET-*]
 - Function: Generic assets with a type registry (`repository`, `service`, `project`, `process`, `account`, `vendor`, `document_collection`, custom). Typed metadata is validated against a per-type JSON schema. Assets link to source records. Dependencies are typed edges (`depends_on`, `part_of`, `escalates_to`, `documents`) with provenance.
 - AC: Assets display "stewarded by responsibility R (owner X)" (D1). An archived or deleted source asset shows as unavailable, not as missing.
 
-**2.5 Ownership Suggestions** — P0 [NEW, M1]
+**2.5 Ownership Suggestions**: P0 [NEW, M1]
 - Problem: The catalogue is empty on day one.
 - Function: The deterministic extractor reads CODEOWNERS, `catalog-info.yaml` (`spec.owner`), GitHub team repo maintainers, Linear team leads and project leads, and Notion page/database owners. It proposes responsibilities and assignments. An LLM skill *optionally* proposes human-readable names and groupings (e.g. merging 4 repos into "Payments platform"). Bulk review UI.
 - In → Out: source records → `suggestion` records → confirmed responsibilities and assignments.
 - AC: Every suggestion shows its source evidence. Bulk accept requires a confirmation that names the count. Rejected suggestions are not re-proposed unless the source changes.
 
-**2.6 CSV import** — P0 [NEW, M2]
+**2.6 CSV import**: P0 [NEW, M2]
 - AC: Dry-run preview, per-row validation errors, idempotent re-import (natural keys), audit entry.
 
-**2.7 "Who's irreplaceable?"** — P1 [CHANGE, I9]
+**2.7 "Who's irreplaceable?"**: P1 [CHANGE, I9]
 - Function: For a person, team or department: responsibilities with a single active holder, no backup, or a backup who is the same person as the primary's backup elsewhere (concentration).
 - AC: Deterministic. Shown on the person page (to permitted viewers) and as Risk findings. It must not be presented as a measure of the person.
 
-**2.8 Relationship explorer (graph)** — P2 [SPEC FR-ASSET-007]
+**2.8 Relationship explorer (graph)**: P2 [SPEC FR-ASSET-007]
 - Optional tab on the responsibility and asset detail pages, depth ≤ 2. Never required for any workflow.
 
 ### C.3 Continuity Cases
 
-**3.1 Playbooks** — P0 [SPEC §9.2, CHANGE C1]
+**3.1 Playbooks**: P0 [SPEC §9.2, CHANGE C1]
 - Function: Versioned definitions *in code* (typed Python/YAML) with per-tenant parameters: stages, required participants, task templates, approval rules, readiness criteria, reminder policy, closure rules, retention class. Tenants configure parameters. There is no builder until P2/P3 [SPEC §4.3].
 - v1 playbooks: **Responsibility Transfer**, **Temporary Coverage**, **Onboarding (new hire)**, **Departure (light)**. P2: Internal Move (= Departure-like, person stays), Account Handover, Emergency (a flag on Transfer/Departure in v1, see §G.7), Vendor/Process transition.
 - AC: Cases pin a playbook version. Tenant parameter changes are audited.
 
-**3.2 Case creation** — P0 [SPEC §7.7, FR-CASE-001/004/009]
+**3.2 Case creation**: P0 [SPEC §7.7, FR-CASE-001/004/009]
 - Function: A wizard with at most 4 steps: type → subject (person or responsibilities) → people & dates → scope/sources & data-use notice. Duplicate-case warning. Cases can be created from a Risk finding, a person page or a responsibility page with fields prefilled.
 - AC: Creatable with zero integrations. Data-use notice text is stored with the case. The duplicate check runs on subject overlap among active cases.
 
-**3.3 Scope items (transfers)** — P0 [NEW, M3]
+**3.3 Scope items (transfers)**: P0 [NEW, M3]
 - Function: One item per responsibility: `from`, `to` (may be "TBD"), assignment role to transfer, effective date, state (`proposed → confirmed → in_transfer → ready → transferred | retained | excepted`).
 - AC: The case can't move to *Verifying* while any item has `to = TBD` unless the item is `retained` or `excepted`.
 
-**3.4 Plan & tasks** — P0 [SPEC FR-TASK-001…005]
+**3.4 Plan & tasks**: P0 [SPEC FR-TASK-001…005]
 - Function: Playbook tasks are generated deterministically. AI-proposed extra tasks land in a proposal tray (§I). Each task has assignee (user or team), due date, dependencies, `native | external`, external ref and sync state, plus completion evidence.
 - AC: An external task shows its source link and last-sync time. A task completed in Linear reconciles within one sync cycle.
 
-**3.5 Approvals & consent** — P0 [SPEC §10.8, FR-TASK-006/007/008, §9.9 consent]
+**3.5 Approvals & consent**: P0 [SPEC §10.8, FR-TASK-006/007/008, §9.9 consent]
 - Function: Approval requests are bound to a subject version and content hash (A5). The approval sheet shows: what will happen, where, who will see it, the source data involved, and whether it's reversible [SPEC §10.8]. Consent is a special approval by the outgoing owner for sharing items into the evidence pool.
 - AC: An edit after approval invalidates it (material changes) or flags it (cosmetic changes, per policy). The executor refuses on hash mismatch (AC-04).
 
-**3.6 Readiness** — P0 [SPEC FR-TASK-009/010/011, CHANGE C13]
+**3.6 Readiness**: P0 [SPEC FR-TASK-009/010/011, CHANGE C13]
 - Criteria types: `attestation` (receiver confirms they understood X), `task_completed`, `artefact_linked` (e.g. a PR they merged), `supervised_demo` (verifier signs off), `access_confirmed` (receiver confirms access to listed systems), `qa_reviewed` (receiver's questions answered by the outgoing owner or an SME).
 - Results: `pass / fail / needs_review / unable_to_assess` per criterion [SPEC].
 - AC: No criterion can be passed by an AI. Document views and chat activity are never criteria.
 
-**3.7 Closure & effective-dated switch** — P0 [SPEC §9.5 step 12, FR-CASE-012]
+**3.7 Closure & effective-dated switch**: P0 [SPEC §9.5 step 12, FR-CASE-012]
 - Function: Closure validates the rules (all items resolved, required approvals present, readiness met or excepted with an approver). It then writes new ownership assignments effective on each item's date. Outcomes: `completed`, `completed_with_exceptions`, `cancelled`.
 - AC: Critical-tier closure requires an approver distinct from the initiator (SoD, if enabled). Reopening creates a new status segment and preserves the prior closure.
 
-**3.8 Case activity** — P0 [SPEC §7.8 Activity]
+**3.8 Case activity**: P0 [SPEC §7.8 Activity]
 - A timeline of human actions, system events, connector changes and agent runs, each linking to its run trace.
 
 ### C.4 Knowledge
 
-**4.1 Linked knowledge** — P0 [REC, SPEC §6.6]
+**4.1 Linked knowledge**: P0 [REC, SPEC §6.6]
 - Problem: Knowledge already lives in Notion, GitHub and elsewhere. Copying it creates competing truth.
 - Function: A Relay knowledge item *wraps* a source record: type, owner/steward, scope, review cadence, verification and an excerpt. Content stays in the source.
 - AC: Opening a linked item shows the current source revision, the last verified revision, and "changed since verified" if they differ.
 
-**4.2 Native knowledge** — P0 [SPEC FR-KNOW-002/005]
+**4.2 Native knowledge**: P0 [SPEC FR-KNOW-002/005]
 - Function: Relay-authored items (handover notes, interview outputs, contacts, gotchas) with an editor and immutable versions.
 - v1 types [CHANGE, reduced from 11]: `procedure/runbook`, `decision`, `overview` (system/project/process), `contact/escalation`, `gotcha/known-issue`, `handover-note`, `faq`. Each type has a light structured template (e.g. a runbook has preconditions, steps, rollback, escalation). Others come later.
 
-**4.3 Verification** — P0 [SPEC Guru lesson, REC]
+**4.3 Verification**: P0 [SPEC Guru lesson, REC]
 - Function: "Verify" records `(verifier, at, source_revision_hash, validity_until)`. A source change produces a deterministic transition `verified → stale (changed since verified)`. Expiry of the validity window does the same.
 - AC: Verification can't be performed by the system or by AI. Stale is never displayed as wrong, only as "needs re-check" [SPEC §17.2].
 
-**4.4 Review queue** — P0 [SPEC §7.11]
+**4.4 Review queue**: P0 [SPEC §7.11]
 - Function: Stewards and owners see stale, expiring, disputed and AI-drafted items with their evidence. Actions: verify, edit-and-verify, dispute with reason, archive, reassign steward.
 
-**4.5 Knowledge Capture Interviews** — P0 [SPEC §10.3-E, study §9.5]
+**4.5 Knowledge Capture Interviews**: P0 [SPEC §10.3-E, study §9.5]
 - Function: **Asynchronous question cards**, not a mandatory chat. The Interview capability generates questions from gaps (missing escalation, a runbook without rollback, an undocumented deploy). Each card shows *why it's being asked*. Answer types: text, link, "unknown", "not applicable", "can't share". There is also a free-form **brain-dump** intake: the outgoing owner pastes notes and Relay structures them into draft statements. An optional chat mode exists for follow-ups.
 - AC: No question repeats something already verified. Answers carry author, time and visibility. Draft knowledge needs owner review before entering the evidence pool for other participants.
 
-**4.6 Briefings (Capsule / Return Briefing / Onboarding Path)** — P0 (Return Briefing in M8) [SPEC §6.6, §10.3-I, CHANGE]
+**4.6 Briefings (Capsule / Return Briefing / Onboarding Path)**: P0 (Return Briefing in M8) [SPEC §6.6, §10.3-I, CHANGE]
 - Function: One composer service. Sections are deterministic (responsibilities, contacts, open work, procedures, risks, open questions). An optional LLM summary paragraph per section must cite statements. It is rendered **per viewer**: items the viewer can't see appear as "1 item requires access" plus an access-request action (M7).
 - AC: Every sentence in an AI summary maps to at least one cited statement. Uncited sentences fail validation and are dropped.
 
-**4.7 Search** — P0 (hybrid P1) [SPEC §11.5, FR-SEARCH-*]
+**4.7 Search**: P0 (hybrid P1) [SPEC §11.5, FR-SEARCH-*]
 - Function: ⌘K search across responsibilities, assets, people, cases and knowledge. Postgres FTS plus trigram for identifiers. Permission predicate applied in SQL. Hybrid semantic search (pgvector + reciprocal-rank fusion) in P1, after a retrieval eval baseline.
 
-**4.8 Scoped Ask** — P1 [CHANGE C10]
+**4.8 Scoped Ask**: P1 [CHANGE C10]
 - Function: "Ask about this case/responsibility" using the evidence pool or the viewer's visible scope. The answer is cited, states its limitations, and records feedback.
 - AC: Answers never use content the asker can't access (FR-SEARCH-007). "I don't have evidence" is a valid answer and is tested for.
 
-**4.9 Duplicate/conflict suggestions** — P1 [SPEC FR-KNOW-007, CHANGE I3]
+**4.9 Duplicate/conflict suggestions**: P1 [SPEC FR-KNOW-007, CHANGE I3]
 - Scoped to items sharing a responsibility or asset. A conflict produces a finding with both sources and timestamps (AC-07).
 
 ### C.5 Risks (Continuity Debt)
 
-**5.1 Rules engine** — P0 [SPEC §6.7, FR-CI-*]
+**5.1 Rules engine**: P0 [SPEC §6.7, FR-CI-*]
 - Deterministic rules in v1: no primary; no backup (per policy); owner deactivated; owner is the only holder of N critical responsibilities; linked runbook stale or expired; critical responsibility with no linked procedure; asset without a stewarding responsibility; declared-ownership mismatch (A7); case overdue; readiness exception unresolved past its due date; connector stale affecting critical scope.
 - Rules are versioned code. Each finding stores `rule_id@version`, evidence and affected scope.
 
-**5.2 Findings triage** — P0
+**5.2 Findings triage**: P0
 - States: `open → acknowledged → in_remediation → resolved | accepted_risk (until date, by whom) | dismissed (reason)`. Auto-resolves when the rule no longer matches (with history).
 - AC: Every finding answers *what, why, evidence, suggested fix, owner*. Dismissed findings do not reopen for the same evidence.
 
-**5.3 Prioritisation** — P1 [SPEC FR-CI-009]
+**5.3 Prioritisation**: P1 [SPEC FR-CI-009]
 - Displayed as transparent tiers (Urgent / High / Normal), computed from criticality × exposure (e.g. the owner is leaving within 30 days) × age. The factors are shown and there is no false-precision score [SPEC §6.7].
 
-**5.4 Remediation actions** — P0
+**5.4 Remediation actions**: P0
 - From a finding: assign a backup (opens an inline assignment flow), request a review, create a case, accept the risk.
 
 ### C.6 Work & Communication
 
-**6.1 My Work inbox** — P0 [SPEC §6.1, §7.5]
+**6.1 My Work inbox**: P0 [SPEC §6.1, §7.5]
 - Tabs: *To do* (tasks), *Approvals*, *Questions for me* (interview cards), *Reviews* (knowledge), *Mentions*, *Done*. Each item shows its origin case or responsibility, its due date and the next action.
 - AC: Bulk actions only for safe kinds (mark read, snooze, complete Relay-native tasks with no evidence requirement). There is no bulk approve for critical items.
 
-**6.2 Notifications** — P0 in-app + email [SPEC §7.15, FR-NOTIF-*]
+**6.2 Notifications**: P0 in-app + email [SPEC §7.15, FR-NOTIF-*]
 - Bodies contain no sensitive content, only secure links. Deduped by `(recipient, event_key)`.
 
-**6.3 Reminders & escalation** — P0 [NEW, M6]
+**6.3 Reminders & escalation**: P0 [NEW, M6]
 - Playbook-defined schedules, capped reminders, then escalation to the case coordinator, then the scoped manager.
 
-**6.4 Comments & mentions** — P0 [NEW, M5]
+**6.4 Comments & mentions**: P0 [NEW, M5]
 
-**6.5 Digests** — P1 (weekly Risks digest per manager is the main recurring-engagement mechanism).
+**6.5 Digests**: P1 (weekly Risks digest per manager is the main recurring-engagement mechanism).
 
-### C.7 Insights — P1 [SPEC §6.9]
+### C.7 Insights: P1 [SPEC §6.9]
 
 Reports, each with definition, denominator, filters, exclusions and data coverage [SPEC]:
 - Coverage (critical responsibilities with a primary and a backup, by team).
@@ -401,9 +401,9 @@ No per-person rankings [SPEC FR-CI-010].
 
 ### C.8 Integrations
 
-**8.1 Connector framework** — P0 [SPEC §12.1, FR-INT-*]. See §J.5.
+**8.1 Connector framework**: P0 [SPEC §12.1, FR-INT-*]. See §J.5.
 
-**8.2 GitHub, Linear, Notion** — P0 [SPEC §12.2]. Read scope and the single write action per connector:
+**8.2 GitHub, Linear, Notion**: P0 [SPEC §12.2]. Read scope and the single write action per connector:
 
 | Connector | Read (v1) | Write (v1, approval-gated) | Permission strategy |
 |---|---|---|---|
@@ -413,15 +413,15 @@ No per-person rankings [SPEC FR-CI-010].
 
 No source code is crawled [SPEC §12.2]. File-path allowlist for docs only.
 
-**8.3 Health & diagnostics** — P0 [SPEC §7.13, §12.4]. "Healthy" is never shown when the last successful sync is older than the freshness objective [SPEC].
+**8.3 Health & diagnostics**: P0 [SPEC §7.13, §12.4]. "Healthy" is never shown when the last successful sync is older than the freshness objective [SPEC].
 
-**8.4 Approved write actions** — P0. Executed by the Action Executor (§I.3) with idempotency and receipts.
+**8.4 Approved write actions**: P0. Executed by the Action Executor (§I.3) with idempotency and receipts.
 
 ### C.9 Intelligence (admin-facing)
 
 - **9.1 Capability registry** P0: capabilities with version, model policy, tool allowlist, budget and an on/off kill switch [SPEC FR-AGENT-010].
 - **9.2 Run viewer** P0: inputs (references), evidence used, tool calls, output, validation, proposals created, approvals, cost [SPEC §10.6].
-- **9.3 Policies & budgets** P0 (per-tenant monthly AI budget; per-run caps P0) [SPEC FR-AGENT-011 is P1 — CHANGE to P0, because a runaway cost is a launch blocker].
+- **9.3 Policies & budgets** P0 (per-tenant monthly AI budget; per-run caps P0) [SPEC FR-AGENT-011 is P1: CHANGE to P0, because a runaway cost is a launch blocker].
 - **9.4 Evals dashboard** P1: offline eval scores per capability version plus online acceptance rates.
 
 ### C.10 Governance
@@ -479,25 +479,25 @@ Decision vocabulary: **BUILD** (we write it, core IP) · **BORROW** (adopt a pat
 
 | Capability | Decision | Rationale | Revisit trigger |
 |---|---|---|---|
-| Responsibility, ownership, coverage model | BUILD | Core differentiation | — |
-| Case engine, playbooks, approvals, readiness | BUILD | Core workflow | — |
+| Responsibility, ownership, coverage model | BUILD | Core differentiation | - |
+| Case engine, playbooks, approvals, readiness | BUILD | Core workflow | - |
 | Workflow durability | BUILD (Postgres state machine + job queue) | Cases wait days on humans; that is *data*, not long-running process state. A DB state machine handles it. | Steps begin to need cross-service sagas, sub-second timers at volume, or >1 engineer-month/quarter is spent on engine bugs → evaluate Temporal |
 | Job queue / scheduler | INTEGRATE a Postgres-backed queue (Procrastinate, spike S2) or BUILD a minimal `SKIP LOCKED` queue | No new infrastructure; transactional enqueue with domain writes | Sustained >~200 jobs/s or queue contention measured → Redis-backed queue |
-| Agent orchestration | BUILD (deterministic engine owns flow) | One source of workflow truth | — |
-| LLM step runner | INTEGRATE PydanticAI behind our own `llm` port, *or* thin custom layer over provider SDK (spike S3) | Typed outputs + tool schemas without a second state machine | — |
+| Agent orchestration | BUILD (deterministic engine owns flow) | One source of workflow truth | - |
+| LLM step runner | INTEGRATE PydanticAI behind our own `llm` port, *or* thin custom layer over provider SDK (spike S3) | Typed outputs + tool schemas without a second state machine | - |
 | Connector framework | BUILD narrow contract; INTEGRATE official SDKs/HTTP | Need precise permission/sync semantics | >6 connectors and demand for long tail → study Onyx connector designs / evaluate embedding a connector platform |
 | Search | INTEGRATE Postgres FTS + pg_trgm; pgvector for hybrid (P1) | Same DB, same permission predicates, same transaction | Measured recall/latency fails at target corpus → evaluate a dedicated engine |
 | Temporal ownership | BUILD in Postgres (ranges + exclusion constraints) | Simple, testable, transactional | "As-of" reasoning over extracted *unstructured* facts at scale → evaluate Graphiti |
 | Knowledge extraction | BUILD small typed pipeline | Narrow, evidence-preserving | Eval shows extraction quality ceiling → evaluate Cognee |
 | Document parsing | INTEGRATE standard parsers only when files are supported (P2) | v1 sources are API-structured (Markdown/blocks) | Customers need complex PDFs/tables → evaluate RAGFlow components |
-| Wiki/editor | AVOID building a wiki; INTEGRATE an editor component for native items | [SPEC] don't replace Notion | — |
+| Wiki/editor | AVOID building a wiki; INTEGRATE an editor component for native items | [SPEC] don't replace Notion | - |
 | Authorization engine | BUILD in-app policy module | Rules need domain context (case participation, evidence pool) and SQL list filtering | Customer-defined custom roles/relations at scale → evaluate OpenFGA/SpiceDB |
-| AuthN / SSO / SCIM | INTEGRATE managed provider (D7) | Commodity, security-critical | — |
-| Email | INTEGRATE (Postmark / Resend / SES) | Commodity | — |
-| Observability | INTEGRATE OpenTelemetry + Sentry (or equivalent) | Commodity | — |
-| LLM tracing for dev/evals | Optional INTEGRATE (e.g. Langfuse self-hosted) | Product-grade run records live in our DB regardless (they're user-visible) | — |
+| AuthN / SSO / SCIM | INTEGRATE managed provider (D7) | Commodity, security-critical | - |
+| Email | INTEGRATE (Postmark / Resend / SES) | Commodity | - |
+| Observability | INTEGRATE OpenTelemetry + Sentry (or equivalent) | Commodity | - |
+| LLM tracing for dev/evals | Optional INTEGRATE (e.g. Langfuse self-hosted) | Product-grade run records live in our DB regardless (they're user-visible) | - |
 | Automation builder | DEFER | [SPEC §4.3] | ≥3 customers need playbooks we can't express by parameters |
-| Graph visualisation | DEFER (P2, React Flow) | Secondary [SPEC] | — |
+| Graph visualisation | DEFER (P2, React Flow) | Secondary [SPEC] | - |
 | HR lifecycle | INTEGRATE HRIS later (P2) | [SPEC] not an HRMS | Pilot demand names a specific HRIS |
 
 ### E.2 Project-by-project decisions
@@ -506,33 +506,33 @@ Licence notes come from the competitive study unless marked *(mine)*. **All lice
 
 | Project | Problem it solves | Relay overlap | Concept to learn | Build ourselves | Integrate? | Unnecessary | Licence / commercial implication | Decision |
 |---|---|---|---|---|---|---|---|---|
-| ServiceNow (commercial) | HR-driven offboarding KT | Departure | Consent step, discovery scope/time range | Departure playbook | No | — | Proprietary; no reuse | BORROW (pattern) |
+| ServiceNow (commercial) | HR-driven offboarding KT | Departure | Consent step, discovery scope/time range | Departure playbook | No | - | Proprietary; no reuse | BORROW (pattern) |
 | Guru (commercial) | Trusted knowledge | Knowledge | Verification + review cadence, SME routing | Verification tied to source revision | Possible P2 connector (import Guru cards as linked knowledge) | Full KM authoring | Proprietary | BORROW |
 | Glean (commercial) | Enterprise search | Search | ACL-aware connectors, freshness | Targeted search | No | Broad search | Proprietary | BORROW |
-| Atlassian Rovo (commercial) | Agents in Atlassian | Agent UX | Skill vs tool, confirmations | Capability registry | Jira/Confluence connectors P2 | — | Proprietary | BORROW |
+| Atlassian Rovo (commercial) | Agents in Atlassian | Agent UX | Skill vs tool, confirmations | Capability registry | Jira/Confluence connectors P2 | - | Proprietary | BORROW |
 | OpsLevel (commercial) | Service catalogue | Eng. catalogue | Scorecard → remediation | Risks | P2 connector (import ownership) for customers using it | Scorecards for eng. standards | Proprietary | BORROW + DEFER connector |
-| GitLab Duo (commercial) | Dev agents | Low | Run transparency | Run viewer | GitLab connector P2 | — | Proprietary | BORROW |
+| GitLab Duo (commercial) | Dev agents | Low | Run transparency | Run viewer | GitLab connector P2 | - | Proprietary | BORROW |
 | Backstage | Dev portal / catalogue | Eng. catalogue | Entity kinds, lifecycle, `owner ≠ authz` | Asset model | **INTEGRATE as data**: parse `catalog-info.yaml` from GitHub (P0, cheap, high value) | Deploying Backstage | Apache-2.0; we only read customer YAML (no code reuse) | BORROW + INTEGRATE (data format) |
 | SourceAnt | Engineering knowledge for AI tools | Eng. knowledge, MCP | Typed knowledge, status, scoped context packs, staleness | Knowledge types, statuses | DEFER: possible future connector reading a customer's SourceAnt knowledge | Code review, code graph | MIT core per study; verify `LICENSE.md` and hosted/EE parts | BORROW; DEFER integration |
-| codebase-memory-mcp | Code graph via MCP | Eng. impact | Symbol/call impact | — | DEFER optional repo-intelligence adapter | Making code graph core | MIT per study | DEFER |
-| knowledge-transfer | Dev handover package | Capsule | Omissions report, dry-run, receipts, verify-vs-source | Capsule, receipts, export (P2) | No (it's a coding-agent skill) | — | MIT per study; reuse possible but low value | BORROW |
-| Graphiti | Temporal knowledge graph | Ownership history | Valid-time vs record-time, invalidation not deletion | Bitemporal assignments in Postgres | DEFER | Graph DB | Apache-2.0 per study; requires a graph backend (Neo4j or alternatives) — operational cost | BORROW; DEFER |
+| codebase-memory-mcp | Code graph via MCP | Eng. impact | Symbol/call impact | - | DEFER optional repo-intelligence adapter | Making code graph core | MIT per study | DEFER |
+| knowledge-transfer | Dev handover package | Capsule | Omissions report, dry-run, receipts, verify-vs-source | Capsule, receipts, export (P2) | No (it's a coding-agent skill) | - | MIT per study; reuse possible but low value | BORROW |
+| Graphiti | Temporal knowledge graph | Ownership history | Valid-time vs record-time, invalidation not deletion | Bitemporal assignments in Postgres | DEFER | Graph DB | Apache-2.0 per study; requires a graph backend (Neo4j or alternatives): operational cost | BORROW; DEFER |
 | Cognee | AI memory / extraction pipeline | Extraction, retrieval | Ingest → dedupe → enrich → index stages; forget semantics | Typed pipeline | DEFER (eval vs our pipeline) | Using it as domain model | Apache-2.0 per study | BORROW; DEFER |
-| Onyx | RAG platform w/ 50+ connectors | Connectors, search | Connector checkpoints, permission sync, reindex flows | Narrow connectors | DEFER | Embedding a second product | MIT CE / separate EE licence for `ee` dirs — **must exclude EE code** | BORROW; DEFER |
+| Onyx | RAG platform w/ 50+ connectors | Connectors, search | Connector checkpoints, permission sync, reindex flows | Narrow connectors | DEFER | Embedding a second product | MIT CE / separate EE licence for `ee` dirs: **must exclude EE code** | BORROW; DEFER |
 | OpenMetadata | Metadata governance | Provenance, lineage | Typed entity schemas, change events, versioning | Provenance model | No | Data-asset focus | Apache-2.0 | BORROW |
-| Temporal | Durable execution | Workflow engine | Activities vs orchestration, signals, timers, replay | DB state machine with same concepts | DEFER (trigger above) | — | MIT server per study; SDK licence to verify *(I believe the Python SDK is MIT)*; self-hosting adds Cassandra/Postgres + ops, or Temporal Cloud cost | BORROW; DEFER |
-| Kestra | Declarative orchestration | Low | Execution logs, retries UI | — | No | Second engine | Apache-2.0 | BORROW (UX only); AVOID as dependency |
-| LangGraph *(mine)* | Agent graph + checkpointing + interrupts | Agent orchestration | Interrupt/resume for HITL | — | No | It would duplicate our workflow engine's state, creating two sources of workflow truth | MIT *(verify)* | AVOID for v1 |
-| PydanticAI *(mine)* | Typed LLM agents/tools | LLM steps | — | — | INTEGRATE behind port (spike S3) | — | MIT *(verify)* | INTEGRATE (conditional) |
-| Procrastinate *(mine)* | Postgres task queue for Python | Background jobs | — | — | INTEGRATE (spike S2) | — | MIT *(verify)* | INTEGRATE (conditional) |
-| Mem0 | Agent memory | Low | Memory scopes, deletion | — | No | Personal memory store | Apache-2.0 per study | AVOID (scope risk: personal memory) |
-| AnythingLLM | Doc chat app | Low | Provider config UX | — | No | Doc-chat product | MIT per study | BORROW (UX) |
-| RAGFlow | Document parsing/RAG | Parsing | Layout-aware chunking | — | DEFER | — | Apache-2.0 label; verify components | DEFER |
-| Docmost | Wiki | Knowledge UX | Page history, comments | — | No | Wiki | **AGPL-3.0** core + EE — no code reuse without legal review | BORROW (UX only) |
-| Outline | Wiki | Knowledge UX | Navigation, minimalism | — | No | Wiki | **BSL 1.1**, not OSI open source; document-service restriction | BORROW (UX only) |
-| Frappe HR | HRMS | HR lifecycle | Leave/transfer sequencing | — | No | HRMS | **GPL-3.0** | BORROW (concepts only) |
-| n8n | Automation | Low | Trigger/action vocabulary, run debugging | — | No | Builder | **Sustainable Use License** (not OSI) — no embedding/resale | BORROW (UX only) |
-| UI libs *(mine)*: shadcn/ui, Radix, TanStack Query/Table, React Flow, Tiptap | UI building blocks | — | — | — | INTEGRATE | — | MIT *(verify)*; **Tiptap Pro extensions are commercial** — core only | INTEGRATE |
+| Temporal | Durable execution | Workflow engine | Activities vs orchestration, signals, timers, replay | DB state machine with same concepts | DEFER (trigger above) | - | MIT server per study; SDK licence to verify *(I believe the Python SDK is MIT)*; self-hosting adds Cassandra/Postgres + ops, or Temporal Cloud cost | BORROW; DEFER |
+| Kestra | Declarative orchestration | Low | Execution logs, retries UI | - | No | Second engine | Apache-2.0 | BORROW (UX only); AVOID as dependency |
+| LangGraph *(mine)* | Agent graph + checkpointing + interrupts | Agent orchestration | Interrupt/resume for HITL | - | No | It would duplicate our workflow engine's state, creating two sources of workflow truth | MIT *(verify)* | AVOID for v1 |
+| PydanticAI *(mine)* | Typed LLM agents/tools | LLM steps | - | - | INTEGRATE behind port (spike S3) | - | MIT *(verify)* | INTEGRATE (conditional) |
+| Procrastinate *(mine)* | Postgres task queue for Python | Background jobs | - | - | INTEGRATE (spike S2) | - | MIT *(verify)* | INTEGRATE (conditional) |
+| Mem0 | Agent memory | Low | Memory scopes, deletion | - | No | Personal memory store | Apache-2.0 per study | AVOID (scope risk: personal memory) |
+| AnythingLLM | Doc chat app | Low | Provider config UX | - | No | Doc-chat product | MIT per study | BORROW (UX) |
+| RAGFlow | Document parsing/RAG | Parsing | Layout-aware chunking | - | DEFER | - | Apache-2.0 label; verify components | DEFER |
+| Docmost | Wiki | Knowledge UX | Page history, comments | - | No | Wiki | **AGPL-3.0** core + EE: no code reuse without legal review | BORROW (UX only) |
+| Outline | Wiki | Knowledge UX | Navigation, minimalism | - | No | Wiki | **BSL 1.1**, not OSI open source; document-service restriction | BORROW (UX only) |
+| Frappe HR | HRMS | HR lifecycle | Leave/transfer sequencing | - | No | HRMS | **GPL-3.0** | BORROW (concepts only) |
+| n8n | Automation | Low | Trigger/action vocabulary, run debugging | - | No | Builder | **Sustainable Use License** (not OSI): no embedding/resale | BORROW (UX only) |
+| UI libs *(mine)*: shadcn/ui, Radix, TanStack Query/Table, React Flow, Tiptap | UI building blocks | - | - | - | INTEGRATE | - | MIT *(verify)*; **Tiptap Pro extensions are commercial**: core only | INTEGRATE |
 
 ---
 
@@ -552,47 +552,47 @@ allowed(actor, action, resource) =
   AND action_policy(action, resource) satisfied                  -- approvals, SoD, sensitivity, budget
 ```
 
-**Tier 1 — Workspace roles** (exactly one per member): `Owner`, `Admin`, `Member`, `Guest` (contractor/external: sees only what they're explicitly attached to), `Auditor` (read-only governance; can be scoped).
+**Tier 1: Workspace roles** (exactly one per member): `Owner`, `Admin`, `Member`, `Guest` (contractor/external: sees only what they're explicitly attached to), `Auditor` (read-only governance; can be scoped).
 
-**Tier 2 — Scoped grants** (any number, each bound to a scope = workspace | department | team | knowledge collection):
+**Tier 2: Scoped grants** (any number, each bound to a scope = workspace | department | team | knowledge collection):
 `Continuity Manager`, `Team Manager`, `Knowledge Steward`, `Integration Manager` [NEW: lets admins delegate connector setup for a scope without full admin].
 
-**Tier 3 — Relationship roles** (derived from data, never assigned in a roles screen):
+**Tier 3: Relationship roles** (derived from data, never assigned in a roles screen):
 - On responsibilities: `Primary`, `Co-owner`, `Backup`, `Temporary`.
 - On cases: `Coordinator` (accountable manager), `Outgoing`, `Receiving`, `Approver` (per approval request), `Contributor/SME`, `Observer`.
 - On knowledge: `Steward/Owner`, `Author`.
 
 ### F.2 Permission matrix
 
-Legend: ✅ allowed · S = within their scope · R = when the relationship exists · P = allowed subject to action policy/approval · — = not allowed. *Guest* = only on resources they're attached to.
+Legend: ✅ allowed · S = within their scope · R = when the relationship exists · P = allowed subject to action policy/approval ·: = not allowed. *Guest* = only on resources they're attached to.
 
 **Workspace & governance**
 
 | Action | Owner | Admin | Cont. Mgr | Team Mgr | Steward | Integ. Mgr | Member | Guest | Auditor |
 |---|---|---|---|---|---|---|---|---|---|
-| Transfer workspace ownership, billing | ✅ | — | — | — | — | — | — | — | — |
-| Manage settings, policies, retention | ✅ | ✅ | — | — | — | — | — | — | — |
-| Invite / suspend members | ✅ | ✅ | — | S (invite to team) | — | — | — | — | — |
-| Assign workspace roles | ✅ | ✅ (not Owner) | — | — | — | — | — | — | — |
-| Assign scoped grants | ✅ | ✅ | S (below own) | S (Steward in team) | — | — | — | — | — |
-| Connect/configure connectors | ✅ | ✅ | — | — | — | S | — | — | — |
-| Resolve identity matches | ✅ | ✅ | — | — | — | S | — | — | — |
-| Configure capabilities, budgets, kill switch | ✅ | ✅ | — | — | — | — | — | — | — |
-| View agent run traces | ✅ | ✅ | S | S | S (knowledge runs) | — | R (runs in their cases, redacted) | — | S (read) |
-| Read audit log | ✅ | ✅ | S | S (team/case) | S (knowledge) | S (connector) | own actions | — | S ✅ |
-| Export data | P | P | P (scope) | — | — | — | — | — | P |
+| Transfer workspace ownership, billing | ✅ | - | - | - | - | - | - | - | - |
+| Manage settings, policies, retention | ✅ | ✅ | - | - | - | - | - | - | - |
+| Invite / suspend members | ✅ | ✅ | - | S (invite to team) | - | - | - | - | - |
+| Assign workspace roles | ✅ | ✅ (not Owner) | - | - | - | - | - | - | - |
+| Assign scoped grants | ✅ | ✅ | S (below own) | S (Steward in team) | - | - | - | - | - |
+| Connect/configure connectors | ✅ | ✅ | - | - | - | S | - | - | - |
+| Resolve identity matches | ✅ | ✅ | - | - | - | S | - | - | - |
+| Configure capabilities, budgets, kill switch | ✅ | ✅ | - | - | - | - | - | - | - |
+| View agent run traces | ✅ | ✅ | S | S | S (knowledge runs) | - | R (runs in their cases, redacted) | - | S (read) |
+| Read audit log | ✅ | ✅ | S | S (team/case) | S (knowledge) | S (connector) | own actions | - | S ✅ |
+| Export data | P | P | P (scope) | - | - | - | - | - | P |
 
 **Catalog**
 
 | Action | Owner/Admin | Cont. Mgr | Team Mgr | Steward | Member | Guest | Auditor |
 |---|---|---|---|---|---|---|---|
 | View responsibilities | ✅ | S | S | S | ✅ non-restricted* | R | S |
-| Create/edit responsibility | ✅ | S | S | — | propose | — | — |
-| Set criticality ≤ high | ✅ | S | S | — | — | — | — |
-| Set criticality = critical | ✅ | S | P (approval by Cont. Mgr/Admin) | — | — | — | — |
-| Change ownership assignment (outside a case) | P | S·P | S·P | — | — | — | — |
-| Assign backup | ✅ | S | S | — | R (primary may *propose*) | — | — |
-| Accept suggestions (bulk) | ✅ | S | S | — | — | — | — |
+| Create/edit responsibility | ✅ | S | S | - | propose | - | - |
+| Set criticality ≤ high | ✅ | S | S | - | - | - | - |
+| Set criticality = critical | ✅ | S | P (approval by Cont. Mgr/Admin) | - | - | - | - |
+| Change ownership assignment (outside a case) | P | S·P | S·P | - | - | - | - |
+| Assign backup | ✅ | S | S | - | R (primary may *propose*) | - | - |
+| Accept suggestions (bulk) | ✅ | S | S | - | - | - | - |
 
 \* [ASSUME] By default, responsibility records (not their evidence) are visible to all members. That is what makes "find who owns X" work. Admins can mark a responsibility `restricted`.
 
@@ -600,30 +600,30 @@ Legend: ✅ allowed · S = within their scope · R = when the relationship exist
 
 | Action | Admin | Cont. Mgr | Team Mgr | Coordinator | Outgoing | Receiving | Approver | Contributor | Member | Auditor |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Create case | ✅ | S | S | — | P (self-initiated transfer, policy) | — | — | — | request | — |
-| View case | ✅ | S | S | R | R | R | R (subject only) | R (assigned items) | — | S |
-| Edit scope, dates, participants | ✅ | S | S | R | propose | propose | — | — | — | — |
-| Share own items into evidence pool | — | — | — | — | R ✅ | R ✅ (own) | — | R (own) | — | — |
-| Answer interview questions | — | — | — | — | R | R | — | R | — | — |
-| Edit outgoing context (their statements) | — | review | review | review | R ✅ | comment | — | own | — | — |
-| Accept/reject AI proposals | ✅ | S | S | R | R (own context) | — | — | — | — | — |
-| Approve actions/transfers | P | S·P | S·P | R·P | consent | accept receipt | R ✅ | — | — | — |
-| Assign tasks | ✅ | S | S | R | — | — | — | — | — | — |
-| Pass readiness criterion | — | — | — | R (if verifier) | R (if verifier) | self-attest only | — | R (if verifier) | — | — |
-| Close case | P | S·P | S·P | R·P (SoD for critical) | — | — | — | — | — | — |
-| Reopen / cancel | ✅ | S | S | R | — | — | — | — | — | — |
+| Create case | ✅ | S | S | - | P (self-initiated transfer, policy) | - | - | - | request | - |
+| View case | ✅ | S | S | R | R | R | R (subject only) | R (assigned items) | - | S |
+| Edit scope, dates, participants | ✅ | S | S | R | propose | propose | - | - | - | - |
+| Share own items into evidence pool | - | - | - | - | R ✅ | R ✅ (own) | - | R (own) | - | - |
+| Answer interview questions | - | - | - | - | R | R | - | R | - | - |
+| Edit outgoing context (their statements) | - | review | review | review | R ✅ | comment | - | own | - | - |
+| Accept/reject AI proposals | ✅ | S | S | R | R (own context) | - | - | - | - | - |
+| Approve actions/transfers | P | S·P | S·P | R·P | consent | accept receipt | R ✅ | - | - | - |
+| Assign tasks | ✅ | S | S | R | - | - | - | - | - | - |
+| Pass readiness criterion | - | - | - | R (if verifier) | R (if verifier) | self-attest only | - | R (if verifier) | - | - |
+| Close case | P | S·P | S·P | R·P (SoD for critical) | - | - | - | - | - | - |
+| Reopen / cancel | ✅ | S | S | R | - | - | - | - | - | - |
 
 **Knowledge**
 
 | Action | Admin | Steward | Owner/Author | Team Mgr | Member | Guest |
 |---|---|---|---|---|---|---|
 | View knowledge item | ✅ (within L5) | S | R | S | scope + L5 | R + L5 |
-| Create native item | ✅ | S | — | S | ✅ (draft) | — |
-| Link source item as knowledge | ✅ | S | — | S | propose | — |
-| Edit | ✅ | S | R | — | suggest | — |
-| Verify | — (unless Steward) | S | R (own items, if policy) | if Steward | — | — |
+| Create native item | ✅ | S | - | S | ✅ (draft) | - |
+| Link source item as knowledge | ✅ | S | - | S | propose | - |
+| Edit | ✅ | S | R | - | suggest | - |
+| Verify | - (unless Steward) | S | R (own items, if policy) | if Steward | - | - |
 | Dispute | ✅ | ✅ | ✅ | ✅ | ✅ | R |
-| Publish to broader audience | P | S·P | P | S·P | — | — |
+| Publish to broader audience | P | S·P | P | S·P | - | - |
 
 ### F.3 Source-level access (L5)
 
@@ -634,7 +634,7 @@ The rule: **Relay never shows source-derived content to a user unless the source
 Defined per tenant, defaults per criticality tier:
 - **Approval rules:** `(action_type, condition) → required approver set, count, SoD constraints, expiry`. Examples: external task creation → case coordinator; critical closure → Continuity Manager ≠ initiator; publishing knowledge to the workspace → Steward of the scope.
 - **Standing approvals** (P1, autonomy L2 "pre-approved policy" [SPEC study §10.5]): e.g. "Coordinator pre-approves Linear issue creation into team X for this case". The approval is still bound to the action type and target, logged per execution, and revocable.
-- **Restricted actions (L3)** — access grants or revocation, employment state, deleting source content: **not implemented** [SPEC §10.4].
+- **Restricted actions (L3)**: access grants or revocation, employment state, deleting source content: **not implemented** [SPEC §10.4].
 
 ### F.5 Implementation
 
@@ -790,7 +790,7 @@ Every screen answers four questions: *What am I looking at? Why does it matter? 
 | **Agents & Automations** (Settings) | What AI does and what it costs | Failed runs, budget near limit, low acceptance | Toggle capability, set budget, inspect run | Capability catalogue (version, model tier, tools, approval rules, acceptance %), run list, run trace view, budget meter |
 | **Roles & Permissions** (Settings) | Who can do what | Users with broad grants | Assign roles/grants, view effective permissions | Role reference (read-only definitions), member grants table, **"Explain access"** tool (user × resource → allowed? why?) [NEW] |
 | **Audit Log** (Settings) | Accountability record | Security events | Filter, export (audited) | Immutable event table, actor/target/action filters, correlation drill-through |
-| **Settings: Workspace/Policies/Data** | Configuration | — | Edit criticality definitions, coverage policies, playbook parameters, retention | Forms with change history |
+| **Settings: Workspace/Policies/Data** | Configuration | - | Edit criticality definitions, coverage policies, playbook parameters, retention | Forms with change history |
 
 ### H.4 Case detail workspace (primary operational screen)
 
@@ -819,17 +819,17 @@ Every screen answers four questions: *What am I looking at? Why does it matter? 
 
 | State | Component | Rule |
 |---|---|---|
-| Empty (first-use) | `EmptyState` with a one-line why + primary action (e.g. "No responsibilities yet — Import from GitHub · Import CSV · Create") | Never a blank table |
-| Empty (filtered) | "No results for these filters" + clear | — |
-| Loading | Skeletons matching layout; no spinners over 300 ms for lists | — |
+| Empty (first-use) | `EmptyState` with a one-line why + primary action (e.g. "No responsibilities yet: Import from GitHub · Import CSV · Create") | Never a blank table |
+| Empty (filtered) | "No results for these filters" + clear | - |
+| Loading | Skeletons matching layout; no spinners over 300 ms for lists | - |
 | Partial | `PartialDataBanner` naming the missing sources | Required whenever analysis ran with a stale/failed connector |
 | Stale | `StaleBadge` with last-sync time | Required on any source-derived item older than the freshness objective |
 | Error | `ErrorPanel`: what happened, retry, correlation ID, support link | No raw stack traces |
-| No permission | `PermissionNotice`: "You don't have access. Ask a Team Manager of Payments." — reveals no restricted content | [SPEC §17.7] |
-| Source unavailable | `UnavailableSource`: archived/deleted/revoked + next action | — |
+| No permission | `PermissionNotice`: "You don't have access. Ask a Team Manager of Payments.": reveals no restricted content | [SPEC §17.7] |
+| Source unavailable | `UnavailableSource`: archived/deleted/revoked + next action | - |
 | Conflict | `ConflictCard` showing both versions + timestamps + resolve action | AC-07 |
-| AI degraded | "AI assistance unavailable — you can continue manually" | NFR-REL-005 |
-| Success | Toast with next step ("Task created in Linear — Open") | — |
+| AI degraded | "AI assistance unavailable: you can continue manually" | NFR-REL-005 |
+| Success | Toast with next step ("Task created in Linear: Open") | - |
 
 ### H.6 Accessibility, responsiveness, onboarding
 
@@ -862,7 +862,7 @@ Every screen answers four questions: *What am I looking at? Why does it matter? 
 | Return Briefing Generator | **Briefing composer** + `summarize_section` skill | Hybrid | Change digest is SQL; summary is cited LLM text |
 | Context Capsule | **Briefing composer** (same) | Hybrid | Same service, different template |
 | Continuity Simulation | **Irreplaceable query** | Deterministic | It's a query (I9) |
-| Onboarding Guide (study) | **Briefing composer** (Onboarding Path) + Scoped Ask | Hybrid | — |
+| Onboarding Guide (study) | **Briefing composer** (Onboarding Path) + Scoped Ask | Hybrid | - |
 | Incident Knowledge Assistant (study) | P2: `link_incident` + Knowledge Review skills | LLM skills | Later phase |
 | [NEW] Ownership Suggestions | Deterministic extractor + `propose_responsibility_grouping` skill | Hybrid | Bootstrap (M1) |
 | [NEW] Scoped Ask | **Ask** agent | **Bounded LLM agent** (read-only tools) | Q&A over the evidence pool or the viewer's scope |
@@ -929,7 +929,7 @@ Each sub-step is its own `workflow_step` row, so a crash resumes from the last c
 
 ### I.6 State persisted
 
-`workflow_instance`, `workflow_step` (name, state, attempt, input_hash, output_ref, error, started/ended), `agent_run` (capability@version, actor, purpose, scope, status per PRD §10.6 lifecycle), `agent_run_event` (tool call args/results redacted, validation outcomes), `llm_call` (model, tokens in/out/cached, cost, latency, prompt_hash — not raw prompts by default), `proposal`, `approval`, `action_request`, `action_execution` (idempotency_key, external_id, status, receipt).
+`workflow_instance`, `workflow_step` (name, state, attempt, input_hash, output_ref, error, started/ended), `agent_run` (capability@version, actor, purpose, scope, status per PRD §10.6 lifecycle), `agent_run_event` (tool call args/results redacted, validation outcomes), `llm_call` (model, tokens in/out/cached, cost, latency, prompt_hash: not raw prompts by default), `proposal`, `approval`, `action_request`, `action_execution` (idempotency_key, external_id, status, receipt).
 
 [REC] Store **no hidden chain-of-thought**. Store concise rationale, evidence and structured output only [SPEC study §10.6]. Raw prompt/response capture is an admin-enabled, short-retention debug setting per tenant.
 
@@ -998,9 +998,9 @@ Each sub-step is its own `workflow_step` row, so a crash resumes from the last c
                         │ bearer token (JWT from IdP, verified in API)
 ┌───────────────────────▼────────────────────────────────────────────────────────┐
 │  relay (one Python codebase, one container image)                               │
-│   process: api     — FastAPI, uvicorn, N replicas, stateless                    │
-│   process: worker  — job queue consumers (lanes: interactive-ai, sync, default) │
-│   process: scheduler — periodic jobs, timers, outbox relay (1 replica / leader) │
+│   process: api    : FastAPI, uvicorn, N replicas, stateless                    │
+│   process: worker : job queue consumers (lanes: interactive-ai, sync, default) │
+│   process: scheduler: periodic jobs, timers, outbox relay (1 replica / leader) │
 └───────┬──────────────────────────┬─────────────────────────┬───────────────────┘
         │                          │                         │
  PostgreSQL 16+ (managed, PITR)   Object storage (exports,   External: GitHub, Linear, Notion,
@@ -1030,10 +1030,10 @@ relay/
 
 ```
 module/
-  api.py          FastAPI routers — HTTP only: parse, call service, map errors
+  api.py          FastAPI routers, HTTP only: parse, call service, map errors
   schemas.py      Pydantic request/response DTOs (never ORM models)
   service.py      Application services: transaction boundary, authorize(), orchestrate domain, emit events
-  domain.py       Pure entities/value objects/state machines/rules — no I/O, fully unit-tested
+  domain.py       Pure entities/value objects/state machines/rules: no I/O, fully unit-tested
   models.py       SQLAlchemy 2.x mapped classes (module-private)
   repository.py   Queries (incl. visible() predicates); raw SQL allowed for reports
   public.py       What other modules may import
@@ -1084,7 +1084,7 @@ Connector (per source) implements:
 |---|---|---|
 | `interactive-ai` | case analysis, interview turns, Ask, briefing summaries | Low latency; small concurrency per tenant |
 | `sync` | full/incremental sync, webhook processing, ACL refresh, embeddings | Per-tenant and per-connector concurrency caps [SPEC NFR-PERF-006] |
-| `default` | outbox relay, notifications/email, rules evaluation, reminders, retention, reports | — |
+| `default` | outbox relay, notifications/email, rules evaluation, reminders, retention, reports | - |
 
 Periodic: rules evaluation (every 15 min and on relevant events), freshness checks (hourly), reminders/escalations (every 5–15 min), nightly reconciliation sync, retention (daily), digest emails (weekly).
 
@@ -1095,7 +1095,7 @@ Periodic: rules evaluation (every 15 min and on relevant events), freshness chec
 ### J.7 AI infrastructure
 
 - LLM provider via `LLMPort` (D10). Embeddings via `EmbeddingPort` (separate decision: provider APIs vs a self-hosted open model). Anthropic does not offer a first-party embeddings API, so this needs its own choice.
-- pgvector: one `chunk` table with `tenant_id`, `source_record_version_id`, `section_ref`, `embedding vector(n)`, HNSW index. Queries always filter on tenant + visibility predicate. Use pgvector's iterative index scans for filtered queries [ASSUME — validate with pgvector version available on the chosen managed Postgres].
+- pgvector: one `chunk` table with `tenant_id`, `source_record_version_id`, `section_ref`, `embedding vector(n)`, HNSW index. Queries always filter on tenant + visibility predicate. Use pgvector's iterative index scans for filtered queries [ASSUME: validate with pgvector version available on the chosen managed Postgres].
 - Hybrid ranking: FTS (`tsvector`) + vector + reciprocal-rank fusion. Reranking only if evals show benefit.
 - Run telemetry stored in Postgres (user-visible run viewer). OpenTelemetry spans for engineering observability.
 
@@ -1117,8 +1117,8 @@ SSE endpoints for run progress, case updates and notifications. API instances `L
 | Environments | local (docker compose: postgres+pgvector, api, worker, web, mailpit), CI ephemeral, staging (synthetic data only), production | [SPEC §11.8] |
 | Hosting | Start: Vercel (web) + container PaaS or AWS ECS Fargate (api/worker/scheduler) + managed Postgres with pgvector & PITR (RDS/Aurora, Crunchy, Neon…) in the **same region** | Open D8 |
 | Region / residency | One region at launch (e.g. EU or US based on pilots); design `tenant.region` now so a second region is possible later | Open D8 [ASSUME] |
-| Secrets | Cloud secrets manager + KMS | — |
-| CI/CD | GitHub Actions: lint, type-check (mypy/pyright, tsc), tests, import-linter, evals (on prompt changes), image build, migrate (pre-deploy job), deploy | — |
+| Secrets | Cloud secrets manager + KMS | - |
+| CI/CD | GitHub Actions: lint, type-check (mypy/pyright, tsc), tests, import-linter, evals (on prompt changes), image build, migrate (pre-deploy job), deploy | - |
 | Migrations | Expand/contract pattern; backward-compatible for one release; run as a separate job before rollout | [SPEC §18.4] |
 | Backups/DR | PITR + daily snapshot, quarterly restore drill. Provisional targets RPO ≤ 15 min, RTO ≤ 4 h [ASSUME] | [SPEC NFR-REL-002] |
 | Observability | OpenTelemetry → vendor (Grafana/Datadog/Honeycomb); Sentry for errors; correlation ID across request → job → run → connector call | [SPEC §15.8] |
@@ -1301,7 +1301,7 @@ Envelope [SPEC §16.3]: `event_id, type, version, tenant_id, occurred_at, actor 
 - Tenant isolation layers: (1) tenant from token, (2) explicit `tenant_id` on repositories, (3) RLS, (4) composite FKs, (5) per-tenant job keys, (6) vector queries filtered by tenant, (7) caches keyed by tenant (only in-process caches exist in v1), (8) automated cross-tenant tests (§N) [SPEC AC-09].
 - OWASP API Top 10 baseline: object-level auth (BOLA) is covered by `authorize` on every ID, mass assignment by Pydantic `extra="forbid"`, resource consumption by pagination caps, rate limits and AI budgets [SPEC §15.4].
 
-### M.3 Source permission strategy per connector [CHANGE I1] — validate in spike S1
+### M.3 Source permission strategy per connector [CHANGE I1]: validate in spike S1
 
 | Connector | What the API likely offers [ASSUME] | Relay strategy | Revocation detection |
 |---|---|---|---|
@@ -1311,7 +1311,7 @@ Envelope [SPEC §16.3]: `event_id, type, version, tenant_id, occurred_at, actor 
 
 The UI must show each connector's strategy honestly ("Notion visibility is managed by Relay mappings, not Notion permissions").
 
-### M.4 Evidence pool and per-viewer filtering [NEW — central design]
+### M.4 Evidence pool and per-viewer filtering [NEW: central design]
 
 Problem: AI synthesis can leak restricted content even when citations are hidden. The PRD requires that "a manager must not receive private content solely because an employee is leaving" (§17.6), and that the incoming owner must not inherit source permissions.
 
@@ -1332,9 +1332,9 @@ Audited: auth events, role/grant changes, connector config, credential events, c
 | Data | Default retention | Deletion trigger |
 |---|---|---|
 | Source content snapshots & chunks/embeddings | While connected and in scope | Source delete/revoke → removed within 24 h; disconnect → per policy (default 30 days) |
-| Evidence excerpts in closed cases | Case retention (e.g. 2 years) or until source deletion if policy says "follow source" | — |
-| Relay-native knowledge | Until deleted by owner/steward | — |
-| Agent run metadata | 1 year | — |
+| Evidence excerpts in closed cases | Case retention (e.g. 2 years) or until source deletion if policy says "follow source" | - |
+| Relay-native knowledge | Until deleted by owner/steward | - |
+| Agent run metadata | 1 year | - |
 | Raw prompts/responses (debug mode only) | ≤ 14 days | auto |
 | Audit events | 1–7 years (policy) | Legal hold overrides |
 | Tenant | Deletion request → 30 days soft → hard delete including backups' expiry window | Verified job + certificate |
@@ -1421,7 +1421,7 @@ The PRD acceptance scenarios AC-01…AC-10 are each implemented as named automat
 | S4 | AI runtime + case analysis: registry, LLM gateway, budgets, validator, proposals, run viewer, evidence pool + consent | "Analyse case" produces evidence-backed findings and proposed tasks |
 | S5 | Linear connector (read + approval-gated issue creation with receipts), Interviews, Capsule, access-request tasks | **PRD Appendix A demo**, with knowledge as manual links |
 | S6 | Notion connector + knowledge verification + review queue; Temporary Coverage + Return Briefing; light Departure | Absence case with auto-expiring cover; a Notion runbook goes stale and gets re-verified |
-| S7 | Pilot hardening (the deferred items, chosen by what the pilot needs) | — |
+| S7 | Pilot hardening (the deferred items, chosen by what the pilot needs) | - |
 
 [ASSUME] Roughly 4–6 months full-time to reach S6. This depends heavily on hours available and how much code review the AI-generated code needs.
 
@@ -1435,7 +1435,7 @@ The PRD acceptance scenarios AC-01…AC-10 are each implemented as named automat
 
 *Team-based plan (long-term reference). Assumptions [ASSUME]: 3–5 engineers and one product owner.*
 
-### Phase 0 — Validation & spikes (≈2–3 weeks, in parallel with M0)
+### Phase 0: Validation & spikes (≈2–3 weeks, in parallel with M0)
 
 - Customer discovery (8–12 interviews, using the competitive study's §13 questions). Validate: Departure in v1, Temporary Coverage frequency, readiness acceptance, the "Risks" label.
 - Spikes (each ends in a one-page decision record):
@@ -1447,7 +1447,7 @@ The PRD acceptance scenarios AC-01…AC-10 are each implemented as named automat
   - **S6** Auth provider (B2B orgs, SSO path, pricing, FastAPI JWT verification).
   - **S7** Legal: model provider DPA/zero-retention, licence register template (SBOM).
 
-### Phase 1 — First usable release (manual-first, then connectors, then AI)
+### Phase 1: First usable release (manual-first, then connectors, then AI)
 
 | Milestone | Delivers (vertical slice) | Demo | Exit criteria |
 |---|---|---|---|
@@ -1463,11 +1463,11 @@ The PRD acceptance scenarios AC-01…AC-10 are each implemented as named automat
 
 Total Phase 1: roughly 7–9 months at this team size [ASSUME]. **Reprioritisation option:** if a demo or pilot date forces it, M5/M6 (AI) can move ahead of M4's Notion work, but **never ahead of M2**. The case workflow must be correct without AI first.
 
-### Phase 2 — Cross-functional (from PRD §19.3, adjusted)
+### Phase 2: Cross-functional (from PRD §19.3, adjusted)
 
 HRIS trigger (one validated vendor), Internal Move and Account Handover playbooks, Slack/Google Workspace (customer-chosen), department responsibility templates, conflict/duplicate detection, Incident-to-Knowledge, Decision lineage, capsule export with omissions report, standing approvals, MCP/read API, graph tab, outbound webhooks, Notion append write-back.
 
-### Phase 3 — Enterprise (PRD §19.4)
+### Phase 3: Enterprise (PRD §19.4)
 
 Playbook builder, SCIM, legal hold, multi-region, dedicated tenancy, advanced audit (hash chain), Temporal **only if** the D5 trigger fired.
 
@@ -1479,7 +1479,7 @@ Playbook builder, SCIM, legal hold, multi-region, dedicated tenancy, advanced au
 |---|---|---|---|---|
 | **D1** | Ownership model | (a) Owners on responsibilities *and* assets; (b) **ownership only on responsibilities; asset owner derived** | (b) + hard single-primary invariant + `co_owner` role | M1 |
 | **D2** | Evidence pool rule (§M.4) | Approve as written / modify | Approve | M5 (design in M2) |
-| **D3** | Notion visibility strategy | (a) admin visibility mappings; (b) per-user OAuth verification; (c) both | (a) in v1, (b) P1 — pending S1 | M4 |
+| **D3** | Notion visibility strategy | (a) admin visibility mappings; (b) per-user OAuth verification; (c) both | (a) in v1, (b) P1: pending S1 | M4 |
 | **D4** | Ship light Departure playbook in v1 | Yes / No (PRD: later) | **Yes**, without HRIS | Phase 0 (customer interviews) |
 | **D5** | Workflow durability + queue | DB state machine + Procrastinate / in-house queue / Temporal | DB state machine; queue per S2; Temporal deferred with explicit trigger | M0 |
 | **D6** | LLM framework | LangGraph / PydanticAI / custom | No LangGraph; PydanticAI or custom per S3 | M5 (spike in Phase 0) |
@@ -1488,10 +1488,10 @@ Playbook builder, SCIM, legal hold, multi-region, dedicated tenancy, advanced au
 | **D9** | Context Capsule form | Live per-viewer view / frozen export / both | Live (P0), export P2 with omissions report | M6 |
 | **D10** | Model & embedding providers, data terms | Claude family as default via port; embeddings provider TBD | Claude (Haiku/Sonnet/Opus 5.5 tiers per evals); embeddings per S5; zero-retention terms mandatory | M5 (legal before pilots) |
 | **D11** | Tenancy model | Pooled multi-tenant / single-tenant | Pooled + RLS; dedicated tier later | M0 |
-| **D12** | UI label "Risks" vs "Continuity Debt" | — | "Risks" in nav; "Continuity Debt" as metric | M1 (test in interviews) |
-| **D13** | Retention defaults (§M.6) | — | Approve defaults; legal review per launch jurisdiction | M4 |
+| **D12** | UI label "Risks" vs "Continuity Debt" | - | "Risks" in nav; "Continuity Debt" as metric | M1 (test in interviews) |
+| **D13** | Retention defaults (§M.6) | - | Approve defaults; legal review per launch jurisdiction | M4 |
 | **D14** | Default visibility of responsibility records to all members | Open by default / scoped by team | Open by default (enables "who owns X"); `restricted` flag | M1 |
-| **D15** | Criticality tiers & who can set `critical` | — | 4 tiers; `critical` needs Continuity Manager/Admin | M1 |
+| **D15** | Criticality tiers & who can set `critical` | - | 4 tiers; `critical` needs Continuity Manager/Admin | M1 |
 | **D16** | Separation of duties default | Off / on for critical / on for all | On for critical only | M2 |
 | **D17** | Who may self-initiate a case (Temporary Coverage for own absence; self-transfer) | Policy | Allow self-initiated Coverage; Transfer requires manager | M2 |
 | **D18** | Linear/GitHub write actions in v1 | Create only / create + update | Create only (+ close via approved action P1) | M6 |

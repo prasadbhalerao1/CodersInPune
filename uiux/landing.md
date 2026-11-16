@@ -54,9 +54,9 @@
 ```
 
 * **Grid & Structure**: 12-column asymmetric desktop grid. Columns 1–6: Typography & Executive Actions. Columns 7–12: The Frameless Sovereign Handover Instrument, Layered Background Outline Type, and the 45° Continuity Fault Line.
-* **The 45° Crimson Slash (The Continuity Fault Line — Visual Source: Sneaker Reference)**:
+* **The 45° Crimson Slash (The Continuity Fault Line: Visual Source: Sneaker Reference)**:
   - An aggressive, bold architectural diagonal band in deep crimson (`#7E1520`) cutting through the canvas at `45deg`.
-  - Semantically represents the **Continuity Fault Line**—the hazardous gap where institutional knowledge, access privileges, and deployment leverage are severed when a key person exits.
+  - Semantically represents the **Continuity Fault Line**: the hazardous gap where institutional knowledge, access privileges, and deployment leverage are severed when a key person exits.
   - Layered *behind* the Handover Instrument and *beneath* the massive spatial outline typography.
 * **The Giant Outline Spatial Typography**:
   - The word **`CONTINUITY`** or **`ACCOUNTABILITY`** rendered in massive `10rem` (160px) all-caps display outline (`stroke-white/10 stroke-[2px] fill-transparent`) positioned in spatial depth across the fault line.

@@ -11,7 +11,7 @@ Decision Register v0.1 and ADRs for technical constraints. Full evidence per req
 3. Decision Register + ADRs → 4. Implementation Plan → 5. Competitive study (ideas only) →
 6. Earlier reports in this repo (treated as claims, re-verified).
 
-The Decision Register is marked "v0.1 — for founder review", yet `CLAUDE.md` treats it as
+The Decision Register is marked "v0.1: for founder review", yet `CLAUDE.md` treats it as
 binding. In practice the founder has built against it for all milestones, so it is treated
 as approved except where a decision is explicitly "Founder approval" pending (C-06).
 
@@ -43,9 +43,9 @@ pass in the browser on a production build, and AC-02/AC-07 against the live Gemi
 | FR-CI-009 | P1 | Rule severities fixed in code | Accept |
 | FR-AGENT-012 | P1 | Scripted regression tests, no labelled quality dataset | **Build before customer pilot** |
 | FR-ADMIN-007 | P1 | Audit retention not configurable | Decision C-02 |
-| NFR-SCAL-A03/A06 | — | Concurrency serialised, not configurable/fair-share | Accept |
-| NFR-PRIV-A02/A06/A07 | — | ACL mirroring; legal hold; per-class retention | See FR-INT-010, C-02 |
-| NFR-OBS-A01 | — | No metrics/alerting endpoint | Platform log alerts for pilot; add later |
+| NFR-SCAL-A03/A06 | - | Concurrency serialised, not configurable/fair-share | Accept |
+| NFR-PRIV-A02/A06/A07 | - | ACL mirroring; legal hold; per-class retention | See FR-INT-010, C-02 |
+| NFR-OBS-A01 | - | No metrics/alerting endpoint | Platform log alerts for pilot; add later |
 
 ## Implemented but insufficiently verified
 

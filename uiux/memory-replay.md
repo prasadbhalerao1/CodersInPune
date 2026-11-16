@@ -91,7 +91,7 @@
 * **Answer Card Anatomy**:
   - Grounded Answer: Cites exact event pins `[E4: PR #142]`.
   - Negative Knowledge Safety: If the user asks something outside the record (e.g. *"What is the AWS root password?"*), the Oracle displays an illuminated banner:
-    **`NOT IN RECONSTRUCTED HISTORY — SPECULATION REFUSED.`**
+    **`NOT IN RECONSTRUCTED HISTORY: SPECULATION REFUSED.`**
 
 ---
 

@@ -1,4 +1,4 @@
-# Relay — Competitive Study & Open-Source Landscape
+# Relay: Competitive Study & Open-Source Landscape
 
 **Document type:** Product strategy and technical research  
 **Version:** 1.0  
@@ -109,11 +109,11 @@ These are hypotheses, not proven market gaps:
 
 ---
 
-## 3. Competitive Landscape — Commercial and Hybrid Products
+## 3. Competitive Landscape: Commercial and Hybrid Products
 
 These products are competitors, substitutes or benchmarks. They are not all open-source, and their features should not be confused with permission to reuse their code or branding.
 
-### 3.1 ServiceNow — AI-assisted offboarding knowledge transfer
+### 3.1 ServiceNow: AI-assisted offboarding knowledge transfer
 
 **Category:** Enterprise workflow / HR service delivery  
 **Reference:** [ServiceNow offboarding knowledge-transfer workflow](https://www.servicenow.com/docs/r/employee-service-management/now-assist-for-hrsd/offboarding-knowledge-x-agentic-wf.html)
@@ -145,7 +145,7 @@ High overlap with employee offboarding, AI-assisted knowledge discovery, documen
 
 Relay's hypothesis is to operate across different continuity events and departments, maintain responsibility and ownership history, analyse operational impact across connected systems, manage knowledge quality over time and verify transfer readiness. ServiceNow's documented workflow already covers a meaningful part of the offboarding use case; Relay must not claim that AI-assisted offboarding handover is new.
 
-### 3.2 Guru — trusted knowledge and knowledge operations
+### 3.2 Guru: trusted knowledge and knowledge operations
 
 **Category:** Enterprise knowledge platform  
 **Reference:** [Guru features](https://www.getguru.com/features)
@@ -173,7 +173,7 @@ Relay's hypothesis is to operate across different continuity events and departme
 
 Knowledge verification, freshness checks, expert approval, AI authoring and knowledge agents are already established capabilities.
 
-### 3.3 Glean — enterprise search and people/context discovery
+### 3.3 Glean: enterprise search and people/context discovery
 
 **Category:** Enterprise AI search and workplace assistant  
 **Reference:** [Glean](https://www.glean.com/)
@@ -197,7 +197,7 @@ Knowledge verification, freshness checks, expert approval, AI authoring and know
 
 Glean is primarily an enterprise search and knowledge assistant. Relay should use retrieval as an input to continuity cases and operational actions, not make a general-purpose company chatbot its primary product.
 
-### 3.4 Atlassian Rovo — agents, skills and tools
+### 3.4 Atlassian Rovo: agents, skills and tools
 
 **Category:** Enterprise search and AI agents  
 **References:** [Rovo agents](https://support.atlassian.com/rovo/docs/agents/), [Rovo skills](https://support.atlassian.com/rovo/docs/add-skills-to-rovo-agents/), [Rovo tools](https://support.atlassian.com/rovo/docs/agent-actions/)
@@ -224,7 +224,7 @@ Glean is primarily an enterprise search and knowledge assistant. Relay should us
 
 Do not give an LLM unrestricted database or connector access. Expose typed, scoped tools such as `find_responsibilities`, `get_case_context`, `draft_handover_plan`, `create_task_after_approval` and `request_knowledge_review`.
 
-### 3.5 OpsLevel — engineering ownership and service health
+### 3.5 OpsLevel: engineering ownership and service health
 
 **Category:** Internal developer portal / engineering operations  
 **Reference:** [OpsLevel](https://www.opslevel.com/)
@@ -248,7 +248,7 @@ Do not give an LLM unrestricted database or connector access. Expose typed, scop
 
 Relay is not another service catalogue. It needs to connect ownership information to cases, knowledge capture, transfer tasks and readiness verification.
 
-### 3.6 GitLab Duo Agent Platform — governed developer agents
+### 3.6 GitLab Duo Agent Platform: governed developer agents
 
 **Category:** Software-development agent platform  
 **Reference:** [GitLab Duo Agent Platform documentation](https://docs.gitlab.com/user/duo_agent_platform/)
@@ -265,24 +265,24 @@ Relay is not another service catalogue. It needs to connect ownership informatio
 
 Agent capability should be integrated into existing work rather than exposed as an unrelated chatbot. The platform must show what an agent planned, what it read, what it changed and what remains pending.
 
-### 3.7 Backstage — open-source developer portal benchmark
+### 3.7 Backstage: open-source developer portal benchmark
 
 Backstage is covered in depth in Section 4 because it is open source. As a competitive product, its central lesson is that engineering teams need discoverable ownership, software catalogues, documentation and extensible integrations.
 
 ---
 
-## 4. Open-Source Projects — Detailed Study
+## 4. Open-Source Projects: Detailed Study
 
 This section covers the open-source projects and source-available tools identified during Relay research. The license labels are a point-in-time summary based on repository or official documentation available on 8 November 2026. Always inspect the exact version, subdirectory and dependency licenses before incorporating code.
 
-### 4.1 Directly relevant projects — study first
+### 4.1 Directly relevant projects: study first
 
 #### 4.1.1 SourceAnt
 
 **Repository:** [github.com/sourceant/sourceant](https://github.com/sourceant/sourceant)  
 **Documentation:** [Knowledge management](https://sourceant.ai/docs/knowledge-management/)  
 **License:** Repository identifies an MIT-licensed core; verify the current `LICENSE.md` and any separately licensed hosted/enterprise components before reuse.  
-**Relevance:** Very high — one of the closest engineering-context overlaps with Relay.
+**Relevance:** Very high: one of the closest engineering-context overlaps with Relay.
 
 **What it does**
 
@@ -325,13 +325,13 @@ Relay should inspect it for the engineering-specific slice of context discovery:
 
 **Why this project changes our competitive assessment**
 
-SourceAnt already operates in the space of durable engineering context, knowledge graph relationships and agent context. Relay must differentiate through cross-functional responsibilities, continuity cases, coverage/absence/offboarding workflows, cross-system task coordination and verified operational handover—not merely by saying it has an engineering knowledge graph.
+SourceAnt already operates in the space of durable engineering context, knowledge graph relationships and agent context. Relay must differentiate through cross-functional responsibilities, continuity cases, coverage/absence/offboarding workflows, cross-system task coordination and verified operational handover: not merely by saying it has an engineering knowledge graph.
 
 #### 4.1.2 knowledge-transfer
 
 **Repository:** [github.com/ferdinandobons/knowledge-transfer](https://github.com/ferdinandobons/knowledge-transfer)  
 **License:** MIT (repository license link).  
-**Relevance:** Very high — direct small-scale project handover reference.
+**Relevance:** Very high: direct small-scale project handover reference.
 
 **What it does**
 
@@ -339,11 +339,11 @@ A developer handover skill for Claude Code and Codex. It exports a project onboa
 
 The package described in its README includes:
 
-- `ONBOARDING.md` — short project map, key flows, architecture and gotchas.
-- `memories/` — transferable project facts, conventions, decisions and fragile flows.
-- `omissions.json` — privacy-safe information about omitted categories/counts.
-- `manifest.json` — export metadata and source commit information.
-- `handover.zip` — portable package.
+- `ONBOARDING.md`: short project map, key flows, architecture and gotchas.
+- `memories/`: transferable project facts, conventions, decisions and fragile flows.
+- `omissions.json`: privacy-safe information about omitted categories/counts.
+- `manifest.json`: export metadata and source commit information.
+- `handover.zip`: portable package.
 - `import-plan.json`, `import-report.json` and per-item import receipts on the receiving side.
 
 **What Relay should study/take**
@@ -375,7 +375,7 @@ The project is small and focused on AI coding-agent memories, not a full organis
 **Repository:** [github.com/backstage/backstage](https://github.com/backstage/backstage)  
 **Docs:** [Software Catalog](https://backstage.io/docs/features/software-catalog/) · [Technical overview](https://backstage.io/docs/overview/technical-overview/)  
 **License:** Apache-2.0.  
-**Relevance:** High — engineering service catalogue, ownership and plugin architecture.
+**Relevance:** High: engineering service catalogue, ownership and plugin architecture.
 
 **What it does**
 
@@ -404,7 +404,7 @@ Do not deploy an entire Backstage portal as a hidden dependency unless we have a
 **Repository:** [github.com/getzep/graphiti](https://github.com/getzep/graphiti)  
 **Docs:** [Graphiti overview](https://help.getzep.com/graphiti/graphiti/overview)  
 **License:** Apache-2.0 in the current Python package metadata.  
-**Relevance:** High — temporal relationships and historical context.
+**Relevance:** High: temporal relationships and historical context.
 
 **What it does**
 
@@ -432,7 +432,7 @@ Do not introduce a graph database merely to visualise connections. The graph is 
 **Repository:** [github.com/topoteretes/cognee](https://github.com/topoteretes/cognee)  
 **Docs:** [Cognee documentation](https://docs.cognee.ai/)  
 **License:** Apache-2.0 in the repository.  
-**Relevance:** High — AI memory and knowledge extraction.
+**Relevance:** High: AI memory and knowledge extraction.
 
 **What it does**
 
@@ -457,7 +457,7 @@ Do not let an AI memory framework define Relay's domain model. Cognee can help w
 
 **Repository:** [github.com/onyx-dot-app/onyx](https://github.com/onyx-dot-app/onyx)  
 **License:** MIT for Community Edition core; enterprise code in `ee` directories is under a separate Onyx Enterprise License.  
-**Relevance:** High — connector, retrieval and AI agent platform.
+**Relevance:** High: connector, retrieval and AI agent platform.
 
 **What it does**
 
@@ -482,7 +482,7 @@ Do not make Onyx a second product embedded behind Relay. Do not assume every fea
 
 **Repository:** [github.com/open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)  
 **License:** Apache-2.0.  
-**Relevance:** Medium-high — metadata, ownership, lineage, governance and provenance.
+**Relevance:** Medium-high: metadata, ownership, lineage, governance and provenance.
 
 **What it does**
 
@@ -540,7 +540,7 @@ A well-designed PostgreSQL-backed state machine plus a worker/queue is simpler f
 
 **Repository:** [github.com/kestra-io/kestra](https://github.com/kestra-io/kestra)  
 **License:** Apache-2.0.  
-**Relevance:** Medium — declarative/event-driven workflow orchestration.
+**Relevance:** Medium: declarative/event-driven workflow orchestration.
 
 **What it does**
 
@@ -567,7 +567,7 @@ Do not introduce both Temporal and Kestra into Relay at the start. They solve ov
 
 **Repository:** [github.com/mem0ai/mem0](https://github.com/mem0ai/mem0)  
 **License:** Apache-2.0 shown by the repository at research time.  
-**Relevance:** Medium — memory management for agents.
+**Relevance:** Medium: memory management for agents.
 
 **What it does**
 
@@ -590,7 +590,7 @@ Organisational memory must not become a user-personal-memory store by accident. 
 
 **Repository:** [github.com/Mintplex-Labs/anything-llm](https://github.com/Mintplex-Labs/anything-llm)  
 **License:** MIT shown by the repository.  
-**Relevance:** Medium — self-hosted RAG, multi-provider support and agent UX.
+**Relevance:** Medium: self-hosted RAG, multi-provider support and agent UX.
 
 **What it does**
 
@@ -613,7 +613,7 @@ Do not turn Relay into a document-chat workspace. A continuity case must drive t
 
 **Repository:** [github.com/infiniflow/ragflow](https://github.com/infiniflow/ragflow)  
 **License:** Repository currently labels the project Apache-2.0; verify per-directory and third-party component licensing before using code.  
-**Relevance:** Medium-high — document intelligence and advanced retrieval.
+**Relevance:** Medium-high: document intelligence and advanced retrieval.
 
 **What it does**
 
@@ -637,7 +637,7 @@ Do not add RAGFlow merely because Relay needs RAG. First test simpler ingestion 
 
 **Repository:** [github.com/Docmost/docmost](https://github.com/Docmost/docmost)  
 **License:** AGPL-3.0 for core; enterprise directories are under a separate enterprise license.  
-**Relevance:** Medium — collaborative knowledge UX.
+**Relevance:** Medium: collaborative knowledge UX.
 
 **What it does**
 
@@ -660,7 +660,7 @@ Relay should not recreate a complete wiki. Store knowledge metadata and evidence
 
 **Repository:** [github.com/outline/outline](https://github.com/outline/outline)  
 **License:** Current repository license is Business Source License 1.1 (BSL), not an OSI-approved open-source license at the research date. The current file specifies a future change date and Apache 2.0 change license; the exact grant also restricts commercial use as a document service.  
-**Relevance:** Medium — polished knowledge-base UX reference, not a default code-reuse candidate.
+**Relevance:** Medium: polished knowledge-base UX reference, not a default code-reuse candidate.
 
 **What Relay should study**
 
@@ -683,7 +683,7 @@ Do not label Outline as OSI open source at this version or assume the BSL permit
 **Repository:** [github.com/frappe/hrms](https://github.com/frappe/hrms)  
 **Docs:** [Frappe HR documentation](https://docs.frappe.io/hr/introduction)  
 **License:** GPL-3.0 in the repository.  
-**Relevance:** Medium — HR lifecycle and leave workflow benchmark.
+**Relevance:** Medium: HR lifecycle and leave workflow benchmark.
 
 **What it does**
 
@@ -710,7 +710,7 @@ Do not become a payroll, attendance or HRMS product. Connect to HR systems and u
 
 **Repository:** [github.com/n8n-io/n8n](https://github.com/n8n-io/n8n)  
 **License:** Sustainable Use License / fair-code for most source, with separate Enterprise License areas; not OSI-approved open source.  
-**Relevance:** Medium — automation UX and connector patterns.
+**Relevance:** Medium: automation UX and connector patterns.
 
 **What it does**
 
@@ -1012,7 +1012,7 @@ Track a decision with its rationale, evidence, approver, affected assets, constr
 
 ---
 
-## 10. Agentic Layer — Competitive Lessons and Relay Design
+## 10. Agentic Layer: Competitive Lessons and Relay Design
 
 ### 10.1 Design principles
 
@@ -1123,10 +1123,10 @@ Mutation tools must not accept arbitrary SQL, raw API URLs or unbounded free-for
 
 | Level | Capability | Policy |
 |---|---|---|
-| L0 — Observe | Read permitted sources and analyse | May run autonomously within scope |
-| L1 — Prepare | Draft reports, plans, documents and proposed tasks | May draft; must label as draft |
-| L2 — Execute after approval | Create tickets, send notifications or update approved records | Requires explicit approval by authorised person or pre-approved policy |
-| L3 — Restricted | Change access, revoke accounts, share sensitive data, perform irreversible or high-impact operations | Explicit authorised human approval; many actions remain outside Relay's scope |
+| L0: Observe | Read permitted sources and analyse | May run autonomously within scope |
+| L1: Prepare | Draft reports, plans, documents and proposed tasks | May draft; must label as draft |
+| L2: Execute after approval | Create tickets, send notifications or update approved records | Requires explicit approval by authorised person or pre-approved policy |
+| L3: Restricted | Change access, revoke accounts, share sensitive data, perform irreversible or high-impact operations | Explicit authorised human approval; many actions remain outside Relay's scope |
 
 ### 10.6 Agent run observability
 
@@ -1221,7 +1221,7 @@ Administration:
 
 ## 12. Research and Build Priority
 
-### Priority 0 — Read and prototype immediately
+### Priority 0: Read and prototype immediately
 
 | Rank | Project | Why | Concrete output from study |
 |---:|---|---|---|
@@ -1232,7 +1232,7 @@ Administration:
 | 5 | Guru | Knowledge verification and freshness | Knowledge lifecycle and review queue design |
 | 6 | Rovo | Agent skills/tools and permission design | Tool schema and approval architecture |
 
-### Priority 1 — Evaluate after first end-to-end workflow
+### Priority 1: Evaluate after first end-to-end workflow
 
 | Rank | Project | Why | Decision to make |
 |---:|---|---|---|
@@ -1243,15 +1243,15 @@ Administration:
 | 11 | OpenMetadata | Metadata/provenance patterns | Which lineage/governance concepts belong in Relay? |
 | 12 | RAGFlow | Complex document parsing | Do real customer docs require advanced parsing? |
 
-### Priority 2 — Reference only until a matching requirement appears
+### Priority 2: Reference only until a matching requirement appears
 
-- Frappe HR — HR lifecycle and leave workflow references.
-- Docmost — collaboration, wiki and page-history UX.
-- Outline — knowledge UX reference only; current BSL restriction.
-- Mem0 — agent memory patterns.
-- AnythingLLM — provider and RAG product UX.
-- n8n — automation UX and connector behaviour; licensing restricts embedding assumptions.
-- Kestra — general workflow engine and workflow builder.
+- Frappe HR: HR lifecycle and leave workflow references.
+- Docmost: collaboration, wiki and page-history UX.
+- Outline: knowledge UX reference only; current BSL restriction.
+- Mem0: agent memory patterns.
+- AnythingLLM: provider and RAG product UX.
+- n8n: automation UX and connector behaviour; licensing restricts embedding assumptions.
+- Kestra: general workflow engine and workflow builder.
 
 ---
 
@@ -1353,12 +1353,12 @@ Do not validate Relay only by asking whether people like the idea. Ask about rea
 
 ### Commercial and hybrid products
 
-- [ServiceNow — Offboarding knowledge transfer agentic workflow](https://www.servicenow.com/docs/r/employee-service-management/now-assist-for-hrsd/offboarding-knowledge-x-agentic-wf.html)
-- [Guru — Product features](https://www.getguru.com/features)
+- [ServiceNow: Offboarding knowledge transfer agentic workflow](https://www.servicenow.com/docs/r/employee-service-management/now-assist-for-hrsd/offboarding-knowledge-x-agentic-wf.html)
+- [Guru: Product features](https://www.getguru.com/features)
 - [Glean](https://www.glean.com/)
-- [Atlassian Rovo — Agents](https://support.atlassian.com/rovo/docs/agents/)
-- [Atlassian Rovo — Skills](https://support.atlassian.com/rovo/docs/add-skills-to-rovo-agents/)
-- [Atlassian Rovo — Tools/actions](https://support.atlassian.com/rovo/docs/agent-actions/)
+- [Atlassian Rovo: Agents](https://support.atlassian.com/rovo/docs/agents/)
+- [Atlassian Rovo: Skills](https://support.atlassian.com/rovo/docs/add-skills-to-rovo-agents/)
+- [Atlassian Rovo: Tools/actions](https://support.atlassian.com/rovo/docs/agent-actions/)
 - [OpsLevel](https://www.opslevel.com/)
 - [GitLab Duo Agent Platform](https://docs.gitlab.com/user/duo_agent_platform/)
 
@@ -1405,7 +1405,7 @@ It should know what responsibilities exist, where their context comes from, what
 
 The graph is not the product. The chatbot is not the product. The agent swarm is not the product. They are implementation techniques.
 
-The product is the reliable coordination of organisational continuity — with evidence, permissions, human accountability and measurable outcomes.
+The product is the reliable coordination of organisational continuity: with evidence, permissions, human accountability and measurable outcomes.
 
 **Recommended immediate action:** Study SourceAnt, knowledge-transfer, Backstage, Guru and the ServiceNow offboarding workflow first. Then prototype one complete Relay Continuity Case end-to-end before selecting Cognee, Graphiti, Onyx, Temporal, RAGFlow or any other substantial infrastructure dependency.
 

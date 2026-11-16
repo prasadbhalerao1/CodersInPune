@@ -39,7 +39,7 @@ The problem statement asks for **Connect → Reconstruct → Verify → Review �
 
 | Check | Result | How to reproduce |
 |---|---|---|
-| Backend tests (real PostgreSQL, restricted role) | 336 passed, 2 opt-in skipped (16 Nov 2026) | `cd backend && uv run pytest` |
+| Backend tests (real PostgreSQL, restricted role) | 369 passed, 2 opt-in skipped (16 Nov 2026) | `cd backend && uv run pytest` |
 | Static checks | ruff, mypy strict, ESLint, TypeScript, Prettier: clean | see README → Checks |
 | Production build | `pnpm build` succeeds | `cd frontend && pnpm build` |
 | AI safety evaluation | 31 labelled cases in CI, 0 unsupported claims stored, 0 permission leaks | `backend/tests/intelligence/test_eval.py` |

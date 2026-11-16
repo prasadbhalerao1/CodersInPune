@@ -1,4 +1,4 @@
-# ADR 0001 — LLM gateway: provider chain with Gemini key rotation
+# ADR 0001: LLM gateway with a provider chain and Gemini key rotation
 
 - Status: accepted (2026-11-09)
 - Relates to: D6 (PydanticAI behind our own port), D10 (provider via port), guardrail 9

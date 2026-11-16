@@ -127,6 +127,7 @@ model (structured output) → citation validation → human review → applied c
 | Double submit / retry | `Idempotency-Key` per submission intent (`shared/idempotency.py`, table `platform.request_key`); same key + same request returns the first result; same key + different request returns 422 |
 | Concurrent edits | Row locks (`with_for_update`) on cases, scope items, proposals; plan versions on approvals |
 | Background work | Transactional outbox; idempotent handlers; connector runs recorded with status |
-| Incremental sync | GitHub activity resumes from a stored checkpoint minus a 15-minute overlap; a full window runs daily to reconcile (`github/service.py: activity_window`) |
+| Incremental sync | GitHub activity and Linear issues resume from a stored checkpoint minus a 15-minute overlap; a full window runs daily to reconcile (`integrations/checkpoint.py`) |
+| Backups | Nightly encrypted `pg_dump` through a read-only `relay_backup` role, restored into a scratch database every run to prove it works (`.github/workflows/backup.yml`) |
 | Webhooks | GitHub deliveries deduplicated by delivery id; HMAC-verified |
 | AI failure | Timeouts, provider fallback, budget and kill switch; failures recorded with a reason and shown in plain words |

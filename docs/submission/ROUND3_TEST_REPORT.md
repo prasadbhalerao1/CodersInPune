@@ -4,8 +4,8 @@ Results from the runs on 16 Nov 2026. Every number below is from an actual run.
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend: API, services, security, AI validation (real PostgreSQL as the restricted `relay_app` role) | `cd backend && uv run pytest` | **365 passed**, 2 skipped (opt-in live-model and load tests), 7 min 16 s |
-| Backend static checks | `uv run ruff format --check . && uv run ruff check . && uv run mypy` | Clean (mypy strict, 234 files) |
+| Backend: API, services, security, AI validation (real PostgreSQL as the restricted `relay_app` role) | `cd backend && uv run pytest` | **369 passed**, 2 skipped (opt-in live-model and load tests), 8 min 21 s |
+| Backend static checks | `uv run ruff format --check . && uv run ruff check . && uv run mypy` | Clean (mypy strict, 236 files) |
 | Frontend static checks and build | `pnpm format:check && pnpm lint && pnpm typecheck && pnpm build` | Clean |
 | Accessibility (WCAG 2.2 AA, axe-core) | `pnpm exec playwright test --project=a11y` | `/` and `/docs`: no serious or critical issues |
 | Production smoke | All 100 `GET` API routes called signed-out | Clean statuses (401/403/404); no 5xx |
@@ -34,8 +34,8 @@ Results from the runs on 16 Nov 2026. Every number below is from an actual run.
 |---|---|---|
 | `e2e/public.spec.ts` | Landing, docs, protected-route redirects | CI, no account |
 | `e2e/a11y.spec.ts` | WCAG 2.2 AA on `/` and `/docs` | CI, no account |
-| `e2e/smoke.spec.ts`, `e2e/round3.spec.ts` | Sign in, sample workspace, the three improvements end to end | With a saved test login (`pnpm e2e:login`) |
-| `e2e/beyond.spec.ts` | Autopilot, meetings, Ask Relay, decision log, expertise, plan, rehearsal | With a saved test login |
+| `e2e/smoke.spec.ts`, `e2e/round3.spec.ts` | Sign in, sample workspace, the three improvements end to end | Signed in through the one-click sample Owner account: 18 of 18 pass (smoke and round3) |
+| `e2e/beyond.spec.ts` | Autopilot, meetings, Ask Relay, decision log, expertise, plan, rehearsal | Signed in the same way; all pass (26 of 26 across the signed-in suites) |
 
 More detail, including the failure cases exercised for each journey:
 [`docs/round3/testing-notes.md`](../round3/testing-notes.md).

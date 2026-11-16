@@ -1,4 +1,4 @@
-# ADR 0002 — GitHub reconciliation every 6 hours, not 15 minutes
+# ADR 0002: GitHub reconciliation every 6 hours, not 15 minutes
 
 - Status: accepted (2026-11-10)
 - Relates to: Round 1 plan §9.3 improvement 1 ("15-minute reconciliation sweep")

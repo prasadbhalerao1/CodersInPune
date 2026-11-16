@@ -33,7 +33,7 @@
 ### Section 2: The Case Command Header
 * **Layout**: Elevated charcoal plate `#0E1118` with metallic hairline border.
 * **Elements**:
-  - Title: *"Arjun Rao — Platform Departure & Ownership Transfer"* in `Cabinet Grotesk` (`text-3xl font-black text-white`).
+  - Title: *"Arjun Rao: Platform Departure & Ownership Transfer"* in `Cabinet Grotesk` (`text-3xl font-black text-white`).
   - Metadata Telemetry Bar:
     - `[ TYPE: DEPARTURE ]` (Crimson pill)
     - `[ PRIORITY: URGENT ]` (Amber pill)

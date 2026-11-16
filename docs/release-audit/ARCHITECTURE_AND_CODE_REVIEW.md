@@ -31,7 +31,7 @@ are evidence only. Clear.
 
 | Area | Assessment |
 |---|---|
-| Tenancy | `tenant_id NOT NULL`, `UNIQUE (tenant_id, id)`, composite FKs, forced RLS — enforced by `test_schema_conventions.py` on every table |
+| Tenancy | `tenant_id NOT NULL`, `UNIQUE (tenant_id, id)`, composite FKs, forced RLS: enforced by `test_schema_conventions.py` on every table |
 | Impossible states | Ownership overlaps blocked by EXCLUDE constraints; one primary at a time; dismissal/acceptance need notes (CHECK); confidential knowledge must be managers-only (CHECK); capsule approval immutable |
 | History | Ownership changes and audit append-only (grant + trigger); case status changes append-only (grant) |
 | Concurrency | Row locks on cases and risk records under change; optimistic `version` on responsibility updates (PATCH requires it); idempotency keys on workspace creation, external writes, emails |
@@ -90,8 +90,8 @@ a labelled evaluation set (FR-AGENT-012) is still needed to measure and tune it.
 | GitHub App | Installation verified against installer; tokens minted per sync | Metadata, CODEOWNERS, PRs/issues since a date | HMAC, dedupe, order-safe, via web proxy | Reported; suggestions withdrawn; data purged 30 d after disconnect | App install/sync used during development; webhooks and writes verified only against the fake (incl. lost-response recovery) |
 | Linear | OAuth, single-use hashed state, encrypted tokens, refresh | Incremental by `updatedAt`, self-scheduled reconcile | None (scheduled) | Revoked vs expired distinguished; purge 30 d | Not re-verified in this audit |
 | Notion | OAuth, encrypted tokens | Mapped sources only, revision-hashed, unchanged pages skipped | None | Withdrawn pages drop out; purge 30 d (knowledge archived) | Not re-verified |
-| WorkOS | AuthKit; API verifies JWT | — | — | Membership removal effective next request | **Yes** (Playwright smoke with a real account) |
-| Email (Resend/SMTP) | API key | Idempotent deliveries, retry with same key | — | Removed members not emailed | Simulated only |
+| WorkOS | AuthKit; API verifies JWT | - | - | Membership removal effective next request | **Yes** (Playwright smoke with a real account) |
+| Email (Resend/SMTP) | API key | Idempotent deliveries, retry with same key | - | Removed members not emailed | Simulated only |
 
 Bug fixed this cycle: `connectors.recorded` refreshed the connection before flushing, so
 successful syncs were recorded as "queued" (`d5ab090`).

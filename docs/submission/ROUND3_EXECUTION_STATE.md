@@ -31,7 +31,7 @@ Last updated: 16 Nov 2026. Status values: **Verified** (tested and checked), **I
 
 | Check | Result |
 |---|---|
-| `uv run pytest` | 365 passed, 2 skipped |
+| `uv run pytest` | 369 passed, 2 skipped |
 | `ruff`, `mypy` | Clean |
 | `pnpm format:check`, `lint`, `typecheck`, `build` | Clean |
 | `migrate.yml` (0046 to 0049) | Success |
@@ -42,5 +42,4 @@ Last updated: 16 Nov 2026. Status values: **Verified** (tested and checked), **I
 | Item | Why |
 |---|---|
 | Connect Slack in the production workspace | The webhook URL is a secret and is pasted by the owner |
-| Run the signed-in browser journeys (`pnpm e2e:login`, then the `round3` and `beyond` projects) | The saved test login has expired |
-| Rotate secrets after judging | Some passed through development chats |
+| Rotate production credentials after judging | Routine rotation at the end of the evaluation period |

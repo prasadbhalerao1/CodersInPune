@@ -119,7 +119,7 @@ With Relay, the manager creates a transition case. Relay discovers authorised re
 
 ## 1.5 Product positioning
 
-**Relay — Organisational Continuity, Powered by AI.**  
+**Relay: Organisational Continuity, Powered by AI.**  
 *Keep work moving. Preserve what matters.*
 
 Relay should be positioned as an operational continuity platform, not as an HRMS, project-management tool, developer portal, document editor, generic enterprise chatbot or employee-surveillance product.
@@ -365,7 +365,7 @@ A person may be a Team Manager in one team, Current Owner in one case, Incoming 
 
 # 6. Product scope and feature catalogue
 
-## 6.1 Module A — Overview and My Work
+## 6.1 Module A: Overview and My Work
 
 ### Overview
 A role-aware action centre that answers: what needs attention, what is active, what is at risk and what should happen next.
@@ -385,7 +385,7 @@ Do not prioritise vanity metrics such as total indexed documents, graph nodes, a
 ### My Work
 A unified personal task and review queue with filters: Assigned to me; Awaiting my approval; Needs my input; Blocked; Overdue; Completed. Tasks may originate in Relay or external systems. External tasks must retain a source link and sync state.
 
-## 6.2 Module B — Continuity Cases
+## 6.2 Module B: Continuity Cases
 
 Supported case types should be extensible. Initial types:
 - Ownership transfer.
@@ -422,7 +422,7 @@ A case has:
 
 Case creation must be possible manually even when a connected source is unavailable.
 
-## 6.3 Module C — Responsibilities
+## 6.3 Module C: Responsibilities
 
 Responsibility records describe ongoing work that must remain accountable. Examples include maintaining a service, handling customer escalations, approving a business process or owning a project outcome.
 
@@ -440,7 +440,7 @@ A responsibility should support:
 
 Responsibilities must not be inferred solely from commit frequency, document authorship or message volume. Such signals may produce a suggestion requiring review.
 
-## 6.4 Module D — People, Teams and Organisation Structure
+## 6.4 Module D: People, Teams and Organisation Structure
 
 Capabilities:
 - Organisation, department and team directory.
@@ -454,7 +454,7 @@ Capabilities:
 
 Relay should not infer sensitive personal attributes or create employee-performance profiles from connected activity.
 
-## 6.5 Module E — Projects, Systems and Assets
+## 6.5 Module E: Projects, Systems and Assets
 
 The generic Asset concept may represent:
 - Software service, repository, application or infrastructure component.
@@ -466,7 +466,7 @@ The generic Asset concept may represent:
 
 Asset types should support typed metadata without making every department depend on engineering-specific fields. Asset records may include owners, source identifiers, lifecycle state, tags, criticality, dependencies, linked knowledge, open work and ownership history.
 
-## 6.6 Module F — Knowledge Operations
+## 6.6 Module F: Knowledge Operations
 
 Knowledge Item types may include:
 - Runbook / procedure.
@@ -500,7 +500,7 @@ Features:
 
 A **Context Capsule** is a scoped package of relevant, permission-checked context for a person, project, responsibility or transition. It should contain links or authorised excerpts, not indiscriminately duplicate all source data.
 
-## 6.7 Module G — Continuity Intelligence and Continuity Debt
+## 6.7 Module G: Continuity Intelligence and Continuity Debt
 
 Continuity Intelligence detects actionable weaknesses such as:
 - Critical responsibility with no primary owner.
@@ -518,25 +518,25 @@ Each finding must include finding ID and category; severity and affected scope; 
 
 **Continuity Debt** is the backlog of unresolved findings and accepted exceptions. Its priority should be based on configurable criticality, exposure, confidence, age and business context. Avoid false precision.
 
-## 6.8 Module H — Onboarding, Readiness and Handover Rehearsal
+## 6.8 Module H: Onboarding, Readiness and Handover Rehearsal
 
 An onboarding path should be generated from responsibilities and relevant context, then reviewed by a manager. It can include required access setup; key people and escalation contacts; required knowledge items; project and system walkthroughs; assigned starter tasks; required procedure demonstrations; question-and-answer opportunities; acceptance criteria and due dates.
 
 **Handover Rehearsal** is an optional verification method. It may use a checklist, sandbox task, guided scenario or human-supervised demonstration. Relay must not claim competence from passive content consumption alone.
 
-## 6.9 Module I — Insights and Reports
+## 6.9 Module I: Insights and Reports
 
 Reports should include responsibility and backup coverage; open and overdue Continuity Cases; knowledge gap backlog and resolution; knowledge freshness and verification coverage; time to complete transitions; readiness criteria completion; integration freshness and failure rate; agent proposal acceptance/correction rate; repeated issues associated with missing context.
 
 Reports must explain filters, denominators, exclusions and data coverage. Do not rank employees by raw AI-derived continuity scores.
 
-## 6.10 Module J — Integrations
+## 6.10 Module J: Integrations
 
 Initial: GitHub, Linear and Notion. Planned next: Slack, Google Drive/Workspace, Jira, Confluence, Microsoft 365/SharePoint, selected HRIS/CRM and ticketing systems as validated.
 
 Connector framework must support source-specific capabilities, scope configuration, data permissions, incremental sync, webhook processing, rate-limit handling, retry, full reconciliation, disconnect and deletion workflows.
 
-## 6.11 Module K — Agents and Automations
+## 6.11 Module K: Agents and Automations
 
 Admin-facing capabilities:
 - View available capabilities and workflows.
@@ -1046,16 +1046,16 @@ Every run stores:
 ## 10.7 Evidence and output contract
 
 Agent outputs that affect cases or decisions should use structured schemas rather than free-form prose alone. A finding should include:
-- `claim` — concise statement.
-- `category` — finding type.
-- `evidence[]` — source IDs, URLs or record IDs, timestamps and excerpts where allowed.
-- `basis` — direct source observation, deterministic rule or AI inference.
-- `confidence` — calibrated/qualitative value where appropriate; never presented as objective truth without evaluation.
-- `freshness` — source update/last-sync information.
-- `impact_scope` — affected entities.
-- `recommendation` — suggested action.
-- `requires_review` — boolean and reason.
-- `limitations[]` — missing or inaccessible sources.
+- `claim`: concise statement.
+- `category`: finding type.
+- `evidence[]`: source IDs, URLs or record IDs, timestamps and excerpts where allowed.
+- `basis`: direct source observation, deterministic rule or AI inference.
+- `confidence`: calibrated/qualitative value where appropriate; never presented as objective truth without evaluation.
+- `freshness`: source update/last-sync information.
+- `impact_scope`: affected entities.
+- `recommendation`: suggested action.
+- `requires_review`: boolean and reason.
+- `limitations[]`: missing or inaccessible sources.
 
 If evidence is absent, the output must say so and must not be promoted to verified knowledge.
 
@@ -1205,21 +1205,21 @@ FASTAPI APPLICATION
 ## 11.4 Backend modular boundaries
 
 Recommended modules/packages:
-- `identity` — authentication context, users, identities and membership.
-- `tenancy` — organisation/workspace context and isolation.
-- `organisation` — departments, teams and memberships.
-- `responsibilities` — responsibility catalogue and ownership assignments.
-- `assets` — projects, services, processes and other asset types.
-- `knowledge` — items, versions, evidence, review and search.
-- `continuity` — cases, case types, lifecycle and templates.
-- `tasks` — assignments, deadlines, dependencies and external sync references.
-- `approvals` — approval policies and decisions.
-- `integrations` — connectors, credentials, sync runs and webhooks.
-- `agents` — orchestration, tools, runs, evaluation and budgets.
-- `insights` — findings, continuity debt and metrics.
-- `notifications` — in-app and email events.
-- `audit` — immutable/security-relevant event records.
-- `policy` — permission evaluation, action policies and data-use policies.
+- `identity`: authentication context, users, identities and membership.
+- `tenancy`: organisation/workspace context and isolation.
+- `organisation`: departments, teams and memberships.
+- `responsibilities`: responsibility catalogue and ownership assignments.
+- `assets`: projects, services, processes and other asset types.
+- `knowledge`: items, versions, evidence, review and search.
+- `continuity`: cases, case types, lifecycle and templates.
+- `tasks`: assignments, deadlines, dependencies and external sync references.
+- `approvals`: approval policies and decisions.
+- `integrations`: connectors, credentials, sync runs and webhooks.
+- `agents`: orchestration, tools, runs, evaluation and budgets.
+- `insights`: findings, continuity debt and metrics.
+- `notifications`: in-app and email events.
+- `audit`: immutable/security-relevant event records.
+- `policy`: permission evaluation, action policies and data-use policies.
 
 Modules should expose service interfaces and avoid direct cross-module table mutation. Domain events or application services should coordinate cross-module operations.
 
@@ -2046,7 +2046,7 @@ A release should not proceed if:
 
 # 19. Release plan and delivery priorities
 
-## 19.1 Phase 0 — Foundations and validation
+## 19.1 Phase 0: Foundations and validation
 
 - Validate initial customer pain with engineering managers and team leads.
 - Validate the three initial workflows: ownership transfer, absence coverage and new-owner onboarding.
@@ -2056,7 +2056,7 @@ A release should not proceed if:
 - Select agent orchestration approach through a small proof of concept.
 - Define data retention and sensitive-data exclusions.
 
-## 19.2 Phase 1 — First usable release
+## 19.2 Phase 1: First usable release
 
 ### Platform foundation
 - Organisation, user, team and role model.
@@ -2094,7 +2094,7 @@ A release should not proceed if:
 - Temporary absence coverage.
 - New-owner onboarding.
 
-## 19.3 Phase 2 — Cross-functional workflows
+## 19.3 Phase 2: Cross-functional workflows
 
 - Slack and Google Workspace/Microsoft 365 candidates based on customer demand.
 - HRIS integration under strict data minimisation and policy controls.
@@ -2105,7 +2105,7 @@ A release should not proceed if:
 - More configurable responsibility/asset types.
 - Advanced Insights and reporting.
 
-## 19.4 Phase 3 — Enterprise continuity platform
+## 19.4 Phase 3: Enterprise continuity platform
 
 - Custom workflow/playbook builder.
 - Expanded enterprise connectors.
@@ -2367,4 +2367,4 @@ Use synthetic data. Do not seed the demo with real employee records, private mes
 
 ---
 
-**End of document — Relay PRD + SRS v1.0**
+**End of document: Relay PRD + SRS v3.0**

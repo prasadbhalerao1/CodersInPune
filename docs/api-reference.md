@@ -10,15 +10,15 @@ architecture, AI pipeline, external service integrations, and key library choice
 ### Component Map
 
 ```
-Browser (Next.js / React 19 — Vercel Edge)
+Browser (Next.js / React 19: Vercel Edge)
   |  WorkOS AuthKit session cookie (httpOnly, Secure, SameSite=Lax)
   |  Server Actions call relayFetch() with Bearer token
   v
-FastAPI 0.162 (Python 3.14 — Render Web Service)
+FastAPI 0.162 (Python 3.14: Render Web Service)
   |  auth middleware: WorkOS JWT → membership → authorize()
   |  one SQLAlchemy async UoW per request; tenant set via SET LOCAL
   v
-PostgreSQL 18 (Neon — AWS ap-southeast-1)
+PostgreSQL 18 (Neon: AWS ap-southeast-1)
   |  Forced Row Level Security on all 84 tenant tables
   |  relay_app role: no superuser, no BYPASSRLS, no DELETE on audit
   |  relay_owner role: migrations only, never used by the app
@@ -28,15 +28,15 @@ PostgreSQL 18 (Neon — AWS ap-southeast-1)
 Procrastinate 3.10 worker (Render Worker Service)
   |
   +-- GitHub App REST API v3 (read-only ingestion)
-  |     github.com/apps/{slug}  — HMAC webhooks, JWT installation auth
+  |     github.com/apps/{slug} : HMAC webhooks, JWT installation auth
   |
   +-- Linear GraphQL API (read-only ingestion)
-  |     api.linear.app/graphql  — OAuth 2.0, encrypted token at rest
+  |     api.linear.app/graphql : OAuth 2.0, encrypted token at rest
   |
   +-- Notion REST API (read-only ingestion)
-  |     api.notion.com/v1       — OAuth, encrypted token at rest
+  |     api.notion.com/v1      : OAuth, encrypted token at rest
   |
-  +-- Google Gemini API  (AI — PydanticAI gateway, key rotation)
+  +-- Google Gemini API  (AI: PydanticAI gateway, key rotation)
   |     generativelanguage.googleapis.com
   |
   +-- WorkOS API (email verification, invitations)
@@ -286,7 +286,7 @@ Rate limit: 20 AI runs per 10 minutes per workspace (token-bucket in PostgreSQL)
 |---|---|---|---|
 | `GET` | `/integrations/github` | admin | Overview: installations, repositories, sync status. |
 | `POST` | `/integrations/github/connect` | admin | Start GitHub App installation flow; returns redirect URL. |
-| `POST` | `/integrations/github/complete` | — | OAuth callback (no session; identity from token). Rate-limited. |
+| `POST` | `/integrations/github/complete` | - | OAuth callback (no session; identity from token). Rate-limited. |
 | `POST` | `/integrations/github/installations/{ref}/sync` | admin | Trigger manual reconciliation sync. Rate-limited. |
 | `POST` | `/integrations/github/installations/{ref}/disconnect` | admin | Disconnect and stamp `disconnected_at`; source records purged after 30 days. |
 | `PATCH` | `/integrations/github/repositories/{id}` | admin | Select or deselect a repository for evidence ingestion. |
@@ -298,7 +298,7 @@ Rate limit: 20 AI runs per 10 minutes per workspace (token-bucket in PostgreSQL)
 | `GET` | `/integrations/github/teams` | admin | GitHub org teams and their Relay team links. |
 | `POST` | `/integrations/github/teams/{id}/link` | admin | Link a GitHub team to a Relay team. |
 | `GET` | `/integrations/github/signals` | manager | Ownership discrepancy signals (declared owner vs. actual contributor). |
-| `POST` | `/integrations/github/webhook` | — | HMAC-authenticated inbound webhook (no user session). Returns `{"queued": N}`. |
+| `POST` | `/integrations/github/webhook` | - | HMAC-authenticated inbound webhook (no user session). Returns `{"queued": N}`. |
 
 #### Linear Integration (`/integrations/linear`)
 
@@ -306,7 +306,7 @@ Rate limit: 20 AI runs per 10 minutes per workspace (token-bucket in PostgreSQL)
 |---|---|---|---|
 | `GET` | `/integrations/linear` | admin | Overview: connections, projects, sync status, identity matches. |
 | `POST` | `/integrations/linear/connect` | admin | Start Linear OAuth 2.0 flow. |
-| `POST` | `/integrations/linear/complete` | — | OAuth callback. Rate-limited. |
+| `POST` | `/integrations/linear/complete` | - | OAuth callback. Rate-limited. |
 | `POST` | `/integrations/linear/connections/{ref}/sync` | admin | Trigger a manual sync (202 No Content). |
 | `POST` | `/integrations/linear/connections/{ref}/disconnect` | admin | Disconnect and stamp `disconnected_at`; source records purged after 30 days. |
 | `POST` | `/integrations/linear/projects/{id}/link` | admin | Link a Linear project to a Relay responsibility. |
@@ -320,7 +320,7 @@ Rate limit: 20 AI runs per 10 minutes per workspace (token-bucket in PostgreSQL)
 |---|---|---|---|
 | `GET` | `/integrations/notion` | admin | Overview: connections, sources, page hierarchy, sync status. |
 | `POST` | `/integrations/notion/connect` | admin | Start Notion OAuth flow. |
-| `POST` | `/integrations/notion/complete` | — | OAuth callback. Rate-limited. |
+| `POST` | `/integrations/notion/complete` | - | OAuth callback. Rate-limited. |
 | `POST` | `/integrations/notion/connections/{ref}/sync` | admin | Manual sync (202). |
 | `POST` | `/integrations/notion/connections/{ref}/disconnect` | admin | Disconnect and stamp `disconnected_at`; source records purged after 30 days. |
 | `GET` | `/integrations/notion/sources/{id}/preview` | admin | Preview the content of a Notion page before mapping it. |
@@ -388,7 +388,7 @@ Rate limit: 20 AI runs per 10 minutes per workspace (token-bucket in PostgreSQL)
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/health` | — | Public health check: returns `{"ok": true}` when API and DB are reachable. |
+| `GET` | `/health` | - | Public health check: returns `{"ok": true}` when API and DB are reachable. |
 | `GET` | `/health/ops` | ops token | Extended health: worker status, job queue depth, failing jobs. |
 
 ---
@@ -560,11 +560,11 @@ RELAY_WORKOS_API_KEY         Server-side key (email verification only)
 **Purpose:** Read-only ingestion of repository metadata, ownership signals, and issue links.
 **Integration type:** GitHub App (organisation installation).
 **Permissions requested:**
-- `contents: read` — repository file access for CODEOWNERS, Backstage descriptors.
-- `metadata: read` — repository metadata, teams.
-- `pull_requests: read` — PR authorship and review activity.
-- `issues: read` — issue metadata for task linking.
-- `issues: write` (optional, `RELAY_GITHUB_ISSUE_WRITES=true`) — create Relay task issues.
+- `contents: read`: repository file access for CODEOWNERS, Backstage descriptors.
+- `metadata: read`: repository metadata, teams.
+- `pull_requests: read`: PR authorship and review activity.
+- `issues: read`: issue metadata for task linking.
+- `issues: write` (optional, `RELAY_GITHUB_ISSUE_WRITES=true`): create Relay task issues.
 - Webhooks: `push`, `pull_request`, `issues`, `installation`.
 
 **What is not ingested:** commit diffs, file source code, discussion bodies, secrets.

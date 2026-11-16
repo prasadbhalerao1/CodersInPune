@@ -15,5 +15,5 @@ tests, and the latest dependency and secret scans. This page summarises it.
 | Business rules | Separation of duties; completion needs done tasks, met readiness and the incoming owner's acceptance; idempotent creates |
 | Accessibility | axe-core (WCAG 2.2 AA): no serious or critical issues on `/` and `/docs` |
 
-There are no known critical vulnerabilities and no known cross-tenant access paths. Secrets
-that passed through development chats are rotated after judging.
+There are no known critical vulnerabilities and no known cross-tenant access paths.
+Production credentials are rotated at the end of the evaluation period.

@@ -34,24 +34,24 @@ No generic or unapproved colors are permitted. All UI elements draw strictly fro
 ```
 
 ### 2.1 Layer Tokens
-* `color-bg-base`: `#06070B` — Deep obsidian canvas; total light absorption.
-* `color-bg-subtle`: `#0A0D13` — Recessed zones, inset tracks, background containers.
-* `color-bg-elevated`: `#0E1118` — Primary card plates, floating HUD panels.
-* `color-bg-overlay`: `rgba(14, 17, 24, 0.85)` — Backdrop-blurred modal dialogs, drawers, command palette.
-* `color-bg-diagonal`: `#7E1520` — The 45° kinetic slash marking urgency, active transfer, and high criticality.
+* `color-bg-base`: `#06070B`: Deep obsidian canvas; total light absorption.
+* `color-bg-subtle`: `#0A0D13`: Recessed zones, inset tracks, background containers.
+* `color-bg-elevated`: `#0E1118`: Primary card plates, floating HUD panels.
+* `color-bg-overlay`: `rgba(14, 17, 24, 0.85)`: Backdrop-blurred modal dialogs, drawers, command palette.
+* `color-bg-diagonal`: `#7E1520`: The 45° kinetic slash marking urgency, active transfer, and high criticality.
 
 ### 2.2 Text & Content Tokens
-* `color-text-primary`: `#F5F5F7` — Bone white; maximum contrast for primary headlines and data values.
-* `color-text-secondary`: `#A1A1AA` — Cement stone; descriptions, secondary labels, disabled tabs.
-* `color-text-muted`: `#52525B` — Inactive metadata, subtle timestamps, placeholder copy.
-* `color-text-accent`: `#D2FF00` — Electric acid chartreuse; key callouts, active links, primary CTA text.
-* `color-text-crimson`: `#FF4D63` — High-visibility critical risk text against dark plates.
+* `color-text-primary`: `#F5F5F7`: Bone white; maximum contrast for primary headlines and data values.
+* `color-text-secondary`: `#A1A1AA`: Cement stone; descriptions, secondary labels, disabled tabs.
+* `color-text-muted`: `#52525B`: Inactive metadata, subtle timestamps, placeholder copy.
+* `color-text-accent`: `#D2FF00`: Electric acid chartreuse; key callouts, active links, primary CTA text.
+* `color-text-crimson`: `#FF4D63`: High-visibility critical risk text against dark plates.
 
 ### 2.3 Semantic Glow & State Tokens
-* `glow-chartreuse`: `0 0 24px rgba(210, 255, 0, 0.35), 0 0 48px rgba(210, 255, 0, 0.15)` — Active cursor focus, primary CTA illumination, live handovers.
-* `glow-copper`: `0 0 20px rgba(245, 158, 11, 0.30)` — Handover in progress, warning overload, pending approvals.
-* `glow-emerald`: `0 0 20px rgba(0, 245, 160, 0.30)` — Verified citations, forced RLS integrity, 100% readiness.
-* `glow-crimson`: `0 0 24px rgba(255, 42, 85, 0.35)` — Single point of failure alert, unowned critical service.
+* `glow-chartreuse`: `0 0 24px rgba(210, 255, 0, 0.35), 0 0 48px rgba(210, 255, 0, 0.15)`: Active cursor focus, primary CTA illumination, live handovers.
+* `glow-copper`: `0 0 20px rgba(245, 158, 11, 0.30)`: Handover in progress, warning overload, pending approvals.
+* `glow-emerald`: `0 0 20px rgba(0, 245, 160, 0.30)`: Verified citations, forced RLS integrity, 100% readiness.
+* `glow-crimson`: `0 0 24px rgba(255, 42, 85, 0.35)`: Single point of failure alert, unowned critical service.
 
 ---
 
@@ -96,7 +96,7 @@ Every visual element must be semantically earned and directly represent what Rel
    - **Tactile Stress-Test Controls**: Live absence selector (`3D`, `7D`, `14D`, `30D`), animated SVG readiness dial, and the successor simulator (`DEV PATEL: +33 PTS`).
 2. **The 45° Kinetic Crimson Slash (The Continuity Fault Line)**:
    - A bold architectural vector (`#7E1520`) running diagonally across the canvas at `45deg`.
-   - Semantically represents the **Continuity Fault Line**—the exact hazardous boundary where revenue, institutional leverage, and engineering context are lost when a key owner departs.
+   - Semantically represents the **Continuity Fault Line**: the exact hazardous boundary where revenue, institutional leverage, and engineering context are lost when a key owner departs.
    - Layers behind the Handover Instrument and beneath the massive outline spatial typography (`CONTINUITY` / `ACCOUNTABILITY`).
 3. **The Architectural Verification Swatch Gallery (Craftsmanship Proof)**:
    - Three square aspect-ratio (`1:1`) tactile preview frames along the rail, inspired directly by the sneaker reference detail photo tiles:
@@ -225,5 +225,5 @@ All motion in Relay obeys physical principles: mechanical snappiness, heavy mass
 ## 8. UX Polish & Edge States
 
 * **Loading Skeletons**: Deep obsidian plates pulsing with a faint acid-chartreuse luminous gradient sweep (`linear-gradient(90deg, transparent, rgba(210,255,0,0.06), transparent)`).
-* **Empty States**: Not an empty box—an illuminated tactical sensor reading: `[ SCAN COMPLETE: 0 ANOMALIES DETECTED ]`.
+* **Empty States**: Not an empty box: an illuminated tactical sensor reading: `[ SCAN COMPLETE: 0 ANOMALIES DETECTED ]`.
 * **Error Fallbacks**: Industrial red HUD warning card detailing the exact database constraint or verification code, with a 1-click `"RESUME RETRY DRILL"` button.

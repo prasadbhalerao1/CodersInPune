@@ -46,21 +46,21 @@ compliance assessment.** No SOC 2, ISO 27001, GDPR or WCAG conformance is claime
 | T15 | Compromised `relay_app` | No superuser, no BYPASSRLS, owns nothing, no DDL; owner URL kept out of the app (migrations run from CI) | `test_tenant_isolation.py::test_tests_run_as_restricted_application_role` | Low |
 | T16 | Secrets in logs | Access logs log route templates only; audit metadata identifiers only; prompts/keys never logged | `test_health.py`, code review | Low |
 | T17 | Unsafe external write by AI | AI has no write tools; external issues created only after a person approves exact content; idempotent | `test_external_actions.py` | Low |
-| T18 | Stolen backup | Compose backups are plain `pg_dump` on a Docker volume | — | **Medium**: encrypt backups / use provider-encrypted storage |
+| T18 | Stolen backup | Compose backups are plain `pg_dump` on a Docker volume | - | **Medium**: encrypt backups / use provider-encrypted storage |
 
 ## 4. Findings from this review
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
-| S-01 | High (privacy) | AI provider data terms: the Decision Register (D10) verified "no training on customer content" for Anthropic. The configured provider is Gemini; its data use depends on the account tier and was not verified. | **Open — external**. Confirm paid-tier terms or use a provider with verified terms before real customer data |
-| S-02 | Medium | Rate limiting is in-process; with more than one API replica limits multiply | Open — fix before scaling out |
-| S-03 | Medium | Per-user source permissions (e.g. private-repo collaborators, Notion page ACLs) are not mirrored; imported content is workspace- or managers-visible | Open — documented; limit imports to org-shared material |
+| S-01 | High (privacy) | AI provider data terms: the Decision Register (D10) verified "no training on customer content" for Anthropic. The configured provider is Gemini; its data use depends on the account tier and was not verified. | **Open: external**. Confirm paid-tier terms or use a provider with verified terms before real customer data |
+| S-02 | Medium | Rate limiting is in-process; with more than one API replica limits multiply | Open: fix before scaling out |
+| S-03 | Medium | Per-user source permissions (e.g. private-repo collaborators, Notion page ACLs) are not mirrored; imported content is workspace- or managers-visible | Open: documented; limit imports to org-shared material |
 | S-04 | Medium | Disconnected sources kept data forever (FR-INT-012, D13) | **Fixed** (`f879fdf`, migration 0036) |
 | S-05 | Medium | Lists silently truncated at 500 rows could hide records from reviewers | **Fixed** (`741d634`, keyset pagination) |
 | S-06 | Low | Interactive API docs exposed in production | **Fixed** (`775ed84`) |
-| S-07 | Low | Backups unencrypted on self-host | Open — operator config |
+| S-07 | Low | Backups unencrypted on self-host | Open: operator config |
 | S-08 | Low | Request ID not propagated into job logs | Open |
-| S-09 | Info | Dependency/container scan results unknown until CI runs on a pushed branch | Open — run CI |
+| S-09 | Info | Dependency/container scan results unknown until CI runs on a pushed branch | Open: run CI |
 
 No critical or high-severity *code* vulnerability is known after this review. S-01 is a
 data-handling decision, not a code defect, but it blocks use with real customer data.

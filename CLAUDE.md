@@ -1,17 +1,17 @@
-# Relay — repository conventions
+# Relay: repository conventions
 
 Relay is an organisational continuity SaaS. Decisions live in `docs/blueprint/`
 (Decision Register = D1–D26, Implementation Plan = milestones). Read the relevant
 section there; don't re-derive decisions. Record any deviation as an ADR in `docs/adr/`.
 
 ## Layout
-- `backend/` — Python 3.14, FastAPI, SQLAlchemy 2.x async, psycopg 3, Alembic. `uv`.
-  - `src/relay/<module>/` — one package per domain module; `src/relay/shared/` for cross-cutting code.
-  - `migrations/versions/` — hand-written, numbered `NNNN_slug.py`.
-  - `tests/` — real PostgreSQL only (never SQLite).
-- `frontend/` — Next.js (App Router), TypeScript, Tailwind, shadcn/ui. `pnpm`.
+- `backend/`: Python 3.14, FastAPI, SQLAlchemy 2.x async, psycopg 3, Alembic. `uv`.
+  - `src/relay/<module>/`: one package per domain module; `src/relay/shared/` for cross-cutting code.
+  - `migrations/versions/`: hand-written, numbered `NNNN_slug.py`.
+  - `tests/`: real PostgreSQL only (never SQLite).
+- `frontend/`: Next.js (App Router), TypeScript, Tailwind, shadcn/ui. `pnpm`.
   Read `frontend/AGENTS.md`: this Next.js version differs from older training data.
-- `infra/db/init/` — local/CI role provisioning. `docker-compose.yml` — local Postgres.
+- `infra/db/init/`, local/CI role provisioning. `docker-compose.yml`, local Postgres.
 
 ## Commands
 - DB: `docker compose up -d --wait`

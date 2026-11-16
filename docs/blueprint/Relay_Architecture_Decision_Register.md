@@ -1,8 +1,8 @@
-# Relay — Architecture Decision Register
+# Relay: Architecture Decision Register
 
 | Field | Value |
 |---|---|
-| Version | 0.1 — for founder review |
+| Version | 0.1: for founder review |
 | Date | 8 Nov 2026 |
 | Companion to | `Relay_Architecture_and_Product_Blueprint.md` (the "Blueprint"), `Relay_Implementation_Plan.md` |
 | Working model | Founder-led, AI-assisted. Founder is the final decision-maker. |
@@ -50,7 +50,7 @@
 | D17 | Self-initiated cases | Coverage yes; Transfer/Departure manager-only | Recommend lock | Cheap | M3 |
 | D18 | External write scope v1 | Create-only (Linear issue, GitHub issue) | Recommend lock | Cheap | M6 |
 | D19 | Billing timing | Defer; metering of AI spend from M8 | Defer | Cheap | M10 |
-| D20 | Public API / MCP | Defer to post-pilot | Defer | Cheap | — |
+| D20 | Public API / MCP | Defer to post-pilot | Defer | Cheap | - |
 | D21 | Readiness configurability | Template defaults + per-case additions of fixed types | Recommend lock | Costly | M3 |
 | D22 | Evidence after source deletion | Excerpts hidden; statements kept with "evidence withdrawn" | **Founder approval** (+legal) | Costly | M7 |
 | D23 *(new)* | Postgres driver | psycopg 3 for SQLAlchemy and the queue | Lock after spike (S4) | Cheap | M0 |
@@ -60,11 +60,11 @@
 
 ---
 
-## Part 1 — Decisions D1–D26
+## Part 1: Decisions D1–D26
 
 Decisions that shape the schema, permissions, tenancy, workflow or data architecture are analysed in the most depth (D1, D2, D5, D11, D23–D26).
 
-### D1 — Ownership model
+### D1: Ownership model
 
 1. **Problem.** Who is accountable for what, over time, with one source of truth. The PRD gives owners to both Responsibilities and Assets (Blueprint C7), which creates two ownership systems that will drift apart.
 2. **Options.**
@@ -85,7 +85,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence needed.** None technical. Validate catalogue bloat in the first design-partner conversation [FOUNDER].
 11. **Status.** Recommend lock.
 
-### D2 — Evidence pool and privacy
+### D2: Evidence pool and privacy
 
 1. **Problem.** Stop an outgoing employee's private or restricted content from reaching a manager or receiver, *including indirectly through AI synthesis*, while still letting the case work.
 2. **Options.**
@@ -110,7 +110,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
     - Recommend: **ON** for `internal` classification, with audit.
     - **OFF** for `confidential`/`restricted`, which require the source owner's consent.
 
-### D3 — Notion visibility strategy
+### D3: Notion visibility strategy
 
 1. **Problem.** Relay must not show Notion-derived content to users who can't see it in Notion.
 2. **Options.**
@@ -132,7 +132,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence needed.** S1 hands-on test: confirm `object_not_found` behaviour after unsharing, and the latency until it's detectable.
 11. **Status.** Recommend lock.
 
-### D4 — Ship a light Departure playbook in v1
+### D4: Ship a light Departure playbook in v1
 
 1. **Problem.** The hero story (a leaver) is otherwise out of scope.
 2. **Options.**
@@ -149,7 +149,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** None technical. This is a positioning choice.
 11. **Status.** **Founder approval.**
 
-### D5 — Workflow engine and job queue
+### D5: Workflow engine and job queue
 
 1. **Problem.** Cases run for days or weeks: waits on humans, reminders, approvals, retries, temporary assignment expiry. All of it must survive crashes and deploys.
 2. **Options.**
@@ -174,7 +174,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** S2 (half-day): psycopg connector + SQLAlchemy coexistence, stalled-job recovery after `kill -9`, periodic task with a single leader, per-tenant concurrency via locks.
 11. **Status.** Lock after spike.
 
-### D6 — LLM execution framework
+### D6: LLM execution framework
 
 1. **Problem.** Typed structured outputs and tool definitions without a second workflow state machine.
 2. **Options.**
@@ -197,7 +197,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** S3: build `synthesize_impact` once with PydanticAI. Judge: output validation retries, streaming, test doubles (fake model), token accounting hooks.
 11. **Status.** Lock after spike. "No LangGraph" can be locked now.
 
-### D7 — Authentication provider
+### D7: Authentication provider
 
 1. **Problem.** Secure sign-in, an invitations UX, a later SSO/SCIM path, and FastAPI JWT verification, with Relay owning authorisation.
 2. **Options.** WorkOS AuthKit, Clerk, Auth0, self-hosted (Keycloak/Zitadel/Better Auth).
@@ -227,7 +227,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** S6 (half-day): AuthKit + Next.js session + FastAPI JWKS verification + invitation-acceptance flow by verified email. **Confirm the AuthKit org/RBAC features don't conflict with keeping orgs in Relay** [UNVERIFIED].
 11. **Status.** **Founder approval** (vendor relationship).
 
-### D8 — Hosting and data region
+### D8: Hosting and data region
 
 1. **Problem.** Where Relay runs and where customer data lives.
 2. **Options.**
@@ -245,7 +245,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** Check the provider's extension list and pgvector version.
 11. **Status.** **Founder approval:** region, and the platform after the extension check.
 
-### D9 — Context Capsule form
+### D9: Context Capsule form
 
 1. **Problem.** Give receivers a package of context without breaking permissions.
 2. **Options.** (a) Live per-viewer rendering; (b) frozen export; (c) both.
@@ -259,7 +259,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** None.
 11. **Status.** Recommend lock.
 
-### D10 — Model and embeddings providers, data terms
+### D10: Model and embeddings providers, data terms
 
 1. **Problem.** Which LLM and embedding providers process customer content, and on what terms.
 2. **Options.** Anthropic (Claude), OpenAI, others via `LLMPort`. Embeddings: Voyage AI (Anthropic's documented partner), OpenAI, a self-hosted open model.
@@ -279,7 +279,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** Decide whether pilots need ZDR (enterprise prospects may require it). Check Voyage's data terms when embeddings are adopted.
 11. **Status.** **Founder approval** (provider contract; ZDR request yes/no).
 
-### D11 — Tenancy model
+### D11: Tenancy model
 
 1. **Problem.** Isolate customers cheaply and reliably.
 2. **Options.** (a) Pooled tables + `tenant_id` + RLS; (b) schema-per-tenant; (c) database-per-tenant.
@@ -293,7 +293,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** S4 trap checks.
 11. **Status.** Recommend lock.
 
-### D12 — Nav label: "Risks" vs "Continuity Debt"
+### D12: Nav label ("Risks" vs "Continuity Debt")
 
 - Problem: clarity for first-time users vs a distinctive brand term.
 - Options: Risks / Continuity Debt / Gaps.
@@ -304,7 +304,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 - Evidence: 3–5 user reactions.
 - **Status: Founder approval.**
 
-### D13 — Retention defaults
+### D13: Retention defaults
 
 1. **Problem.** How long each data class lives.
 2. **Options.** Per-class defaults (Blueprint §M.6), configurable per tenant within bounds.
@@ -322,7 +322,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** Legal review.
 11. **Status.** **Founder approval** + legal.
 
-### D14 — Default visibility of responsibility records
+### D14: Default visibility of responsibility records
 
 1. **Problem.** "Who owns X?" only works if records are broadly visible. Some responsibilities are sensitive (e.g. "Payroll approver", "Security incident lead").
 2. **Options.** (a) Visible to all members by default, with a `restricted` flag; (b) team-scoped by default.
@@ -336,27 +336,27 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 10. **Evidence.** None.
 11. **Status.** **Founder approval** (privacy posture).
 
-### D15 — Criticality tiers
+### D15: Criticality tiers
 
 - Recommendation: 4 fixed tier *keys* (`critical/high/standard/low`) with tenant-editable labels and definitions. Team Managers set ≤ high; `critical` needs Continuity Manager/Admin.
 - Reasoning: fixed keys keep policies, rules and reports stable. Custom tiers would break the rule engine.
 - Reversible: costly (rules depend on keys). Milestone: M1.
 - **Status: Recommend lock.**
 
-### D16 — Separation of duties default
+### D16: Separation of duties default
 
 - Recommendation: off by default; on for `critical` closure (approver ≠ initiator). Exceptions recorded.
 - Reasoning: small organisations would otherwise be blocked.
 - Reversible: cheap (policy). Milestone: M3.
 - **Status: Recommend lock.**
 
-### D17 — Self-initiated cases
+### D17: Self-initiated cases
 
 - Recommendation: a member may open Coverage for their own absence (manager approval required to activate). Transfer/Departure only by Team Manager+ (a member may *request* one).
 - Reversible: cheap. Milestone: M3.
 - **Status: Recommend lock.**
 
-### D18 — External write scope in v1
+### D18: External write scope in v1
 
 1. **Recommendation.** Create-only: Linear `issueCreate`, GitHub issue create. No updates or closes in v1. Status is *pulled* back.
 2. **Reasoning.** It minimises blast radius and conflict handling.
@@ -366,24 +366,24 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 4. **Reversible?** Cheap. **Milestone:** M6.
 5. **Status.** Recommend lock.
 
-### D19 — Billing timing
+### D19: Billing timing
 
 - Recommendation: defer Stripe until paid pilots. Per-tenant AI cost metering ships with M8 because budgets need it anyway.
 - Reversible: cheap. **Status: Defer.**
 
-### D20 — Public API / MCP
+### D20: Public API / MCP
 
 - Recommendation: defer to post-pilot. It must reuse `visible()` and the D2 audiences, so there's no design impact now beyond keeping the service layer the only data path.
 - **Status: Defer.**
 
-### D21 — Readiness configurability
+### D21: Readiness configurability
 
 - Recommendation: playbook templates define default criteria. Coordinators may add per-case criteria of the six fixed types. No custom types.
 - Reasoning: the closure logic and reports depend on the fixed types.
 - Reversible: costly. Milestone: M3.
 - **Status: Recommend lock.**
 
-### D22 — Evidence after source deletion or revocation
+### D22: Evidence after source deletion or revocation
 
 1. **Problem.** A cited source disappears or becomes inaccessible mid-case or after closure.
 2. **Options.**
@@ -398,22 +398,22 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 4. **Reversible?** Costly. **Milestone:** M7.
 5. **Status.** **Founder approval** + legal.
 
-### D23 (new) — Postgres driver
+### D23 (new): Postgres driver
 
 1. **Problem.** SQLAlchemy async needs a driver. Procrastinate uses psycopg. Two drivers means two pooling/prepared-statement behaviours.
 2. **Options.** asyncpg, psycopg 3 (async).
 3. **Recommendation.** psycopg 3 for both.
-4. **Technical.** Trap: with a transaction-mode pooler, psycopg 3 prepares statements after repeated use unless `prepare_threshold=None`. asyncpg has the equivalent statement-cache issue [KNOWN — SQLAlchemy/psycopg docs; re-check during S4].
+4. **Technical.** Trap: with a transaction-mode pooler, psycopg 3 prepares statements after repeated use unless `prepare_threshold=None`. asyncpg has the equivalent statement-cache issue [KNOWN: SQLAlchemy/psycopg docs; re-check during S4].
 5. **Reversible?** Cheap. **Milestone:** M0.
 6. **Status.** Lock after spike S4.
 
-### D24 (new) — Primary keys
+### D24 (new): Primary keys
 
 - Recommendation: UUIDv7. Time-ordered for index locality, safe to expose, no enumeration.
 - PostgreSQL 18 provides a native `uuidv7()` [KNOWN; verify on the chosen managed version]. Otherwise generate in the application.
 - Reversible: one-way. **Status: Recommend lock.**
 
-### D25 (new) — Time-history mechanism
+### D25 (new): Time-history mechanism
 
 1. **Problem.** The Blueprint mixed bitemporal rows (ownership) with ad-hoc history elsewhere.
 2. **Recommendation.**
@@ -424,7 +424,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 4. **Reversible?** One-way. **Milestone:** M1.
 5. **Status.** Recommend lock.
 
-### D26 (new) — Cross-tenant background work
+### D26 (new): Cross-tenant background work
 
 1. **Problem.** Periodic jobs (rules evaluation, reminders, freshness checks) touch all tenants, but RLS confines a connection to one tenant.
 2. **Options.** (a) An app role with `BYPASSRLS` for workers; (b) the scheduler lists active tenants (one narrow query) and enqueues **one job per tenant**, each running under that tenant's RLS context.
@@ -437,9 +437,9 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 
 ---
 
-## Part 2 — Spike findings S1–S7
+## Part 2: Spike findings S1–S7
 
-### S1 — Connector permissions
+### S1: Connector permissions
 
 | Question | GitHub | Linear | Notion |
 |---|---|---|---|
@@ -462,12 +462,12 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 - (b) GitHub App permission set needed for collaborator listing.
 - (c) Notion: behaviour after unsharing a page (error code, detection latency).
 
-### S2 — Background jobs
+### S2: Background jobs
 
 | Criterion | Custom `SKIP LOCKED` | Procrastinate | PgQueuer |
 |---|---|---|---|
 | Licence / maturity | ours | MIT; v3.10.0 (2026-09-23); ~1.4k★; active [VERIFIED] | MIT; v1.6.0 (2026-10-11); ~1.5k★; active [VERIFIED] |
-| Retries | build | yes (retry strategies) [VERIFIED] | [UNVERIFIED — docs fetch failed] |
+| Retries | build | yes (retry strategies) [VERIFIED] | [UNVERIFIED: docs fetch failed] |
 | Periodic jobs | build | yes [VERIFIED] | [UNVERIFIED] |
 | Concurrency control | build | task locks, queueing locks, priorities [VERIFIED] | [UNVERIFIED] |
 | Crash recovery | build (lease + timeout) | "retry stalled jobs" how-to [VERIFIED exists; mechanism UNVERIFIED] | [UNVERIFIED] |
@@ -478,7 +478,7 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 
 **Spike S2 must prove:** worker `kill -9` → job retried; periodic job runs once with 2 workers; a per-tenant lock prevents parallel syncs for one tenant; tests can run jobs synchronously.
 
-### S3 — AI execution framework
+### S3: AI execution framework
 
 | Criterion | PydanticAI | Thin custom over Anthropic SDK | LangGraph |
 |---|---|---|---|
@@ -486,15 +486,15 @@ Decisions that shape the schema, permissions, tenancy, workflow or data architec
 | Typed tools + arg validation | built-in [VERIFIED] | build | yes |
 | Dependency injection for actor/tenant context | `RunContext` [VERIFIED] | build | state object |
 | Provider portability | many providers [VERIFIED] | single provider unless built | many |
-| Workflow/state | optional (avoid) | none | **core** (graph + checkpoints) — duplicates D5 |
+| Workflow/state | optional (avoid) | none | **core** (graph + checkpoints): duplicates D5 |
 | Observability | OTel spans [VERIFIED] | build | LangSmith/OTel |
-| Licence | MIT [VERIFIED] | — | MIT [VERIFIED] |
+| Licence | MIT [VERIFIED] | - | MIT [VERIFIED] |
 
 **Recommendation.** PydanticAI pinned, behind `LLMPort`, with its durable/graph features off. LangGraph gives no concrete benefit here: its main strengths (checkpointing, interrupts) are things we already own in Postgres.
 
 **Spike S3:** one capability end-to-end, a fake-model unit test, and token accounting captured.
 
-### S4 — SQLAlchemy & PostgreSQL traps (check before M0 code)
+### S4: SQLAlchemy & PostgreSQL traps (check before M0 code)
 
 Each trap below is [KNOWN] PostgreSQL/SQLAlchemy behaviour unless marked otherwise. Links are in §R. Re-confirm during the S4 spike.
 
@@ -535,7 +535,7 @@ Each trap below is [KNOWN] PostgreSQL/SQLAlchemy behaviour unless marked otherwi
 
 17. **Filtering happens *after* the HNSW scan.** With `ef_search=40` and a 10%-selective filter, about 4 rows come back on average. → Use iterative index scans (pgvector ≥0.8.0) [VERIFIED 2026-11-08]. `vector` HNSW supports at most 2,000 dimensions; `halfvec` 4,000 [VERIFIED]. Latest tag is v0.8.7 [VERIFIED]. Tenant filter selectivity is high in pooled tenancy, so iterative scans are required.
 
-### S5 — Search & embeddings
+### S5: Search & embeddings
 
 1. **v1 (through pilot): Postgres FTS + `pg_trgm` is sufficient** for what users search early on: titles, identifiers ("payment-service", "PAY-123"), people, short knowledge records. It shares the same permission predicate and transaction, so search results can't leak.
 2. **Hybrid (vector + FTS with reciprocal-rank fusion) becomes necessary when** any of these hold:
@@ -546,7 +546,7 @@ Each trap below is [KNOWN] PostgreSQL/SQLAlchemy behaviour unless marked otherwi
 4. **A separate vector DB is not justified.** It would duplicate permission filtering outside Postgres, which is a leakage risk. Revisit only if a benchmark on real tenant data shows that p95 filtered vector query latency or recall can't meet targets after tuning (`ef_search`, iterative scans, `halfvec`, partitioning). No such evidence exists.
 5. **Embedding choice is deferred** (D10).
 
-### S6 — Authentication
+### S6: Authentication
 
 See D7 for the full comparison table.
 
@@ -565,7 +565,7 @@ See D7 for the full comparison table.
 
 **Unverified:** AuthKit session handling with a separate Python API (token audience configuration); whether AuthKit features push us toward using WorkOS Organizations (we don't want to).
 
-### S7 — Legal & licensing
+### S7: Legal & licensing
 
 **Dependency and project licences** (from the GitHub API and the licence files themselves, checked 2026-11-08):
 
@@ -600,9 +600,9 @@ India's DPDP Act 2023 and GDPR obligations need counsel [UNVERIFIED; not legal a
 
 ---
 
-## Part 3 — Foundational questions
+## Part 3: Foundational questions
 
-### Q-A — Ownership model (resolves D1, D25)
+### Q-A: Ownership model (resolves D1, D25)
 
 - **Exclusive:** yes. `ownership_assignment` targets only `responsibility`. Assets reach owners through `responsibility_asset(relation='stewards')`.
 - **Roles and their interaction:**
@@ -619,7 +619,7 @@ India's DPDP Act 2023 and GDPR obligations need counsel [UNVERIFIED; not legal a
 - **Corrections of history:** a reason-required "correct history" action edits periods and writes change rows. Restricted to Admin/Continuity Manager.
 - **Ending vs deleting:** never delete. Status is `active | cancelled` (cancelled = created in error). Cancelled rows are excluded from the constraint.
 
-### Q-B — Evidence pool and privacy (resolves D2)
+### Q-B: Evidence pool and privacy (resolves D2)
 
 **Pipeline per case:**
 1. **Discovery scope is asset-based, not person-based.** Discovery reads only sources linked to the case's responsibilities and assets, within the case date window. It never queries "everything the person authored" (avoiding the ServiceNow pattern of crawling a person's documents).
@@ -643,7 +643,7 @@ India's DPDP Act 2023 and GDPR obligations need counsel [UNVERIFIED; not legal a
 - Withdrawn entries are never in the context.
 - Per-viewer capsule rendering matches the audience rules.
 
-### Q-C — Domain architecture (entities that must not be duplicated)
+### Q-C: Domain architecture (entities that must not be duplicated)
 
 ```
 Responsibility 1─* OwnershipAssignment *─1 (User|Team)
@@ -667,7 +667,7 @@ Finding → subject (responsibility | asset | knowledge | case | connector), evi
 - **People** live only in `user` + `membership`. External identities link to them; they never become separate "person" records.
 - **Approvals** live only in `approval_request`. Consent is an approval kind, not a separate system.
 
-### Q-D — Workflow engine (resolves D5)
+### Q-D: Workflow engine (resolves D5)
 
 **Can Postgres-backed workflows handle this? Yes.** The requirements map onto rows:
 
@@ -688,7 +688,7 @@ Finding → subject (responsibility | asset | knowledge | case | connector), evi
 4. A customer requirement for **workflow-history replay or audit** that our step logs can't satisfy.
 5. A team grows beyond the founder and needs a standard durable-execution model.
 
-### Q-E — Agentic architecture
+### Q-E: Agentic architecture
 
 The Blueprint §I.2 classification stands:
 - **2 bounded LLM agents:** Interview and Scoped Ask.
@@ -709,7 +709,7 @@ The Blueprint §I.2 classification stands:
 - No LLM changes any case/approval/verification/ownership state.
 - No LLM output is ever `verified`.
 
-### Q-F — Multi-tenancy (resolves D11, D26)
+### Q-F: Multi-tenancy (resolves D11, D26)
 
 **Risks:**
 1. A missing tenant filter in a raw SQL report.
@@ -739,7 +739,7 @@ The Blueprint §I.2 classification stands:
 
 ---
 
-## Part 4 — Decisions requiring founder approval
+## Part 4: Decisions requiring founder approval
 
 | # | Decision | My recommendation | What I need from you |
 |---|---|---|---|
@@ -753,7 +753,7 @@ The Blueprint §I.2 classification stands:
 | D14 | Responsibility records visible to all members | Yes, with a `restricted` flag | Approve |
 | D22 | Evidence after deletion | Follow the source | Approve, pending legal |
 
-## Part 5 — Remaining uncertainties
+## Part 5: Remaining uncertainties
 
 | # | Uncertainty | Resolve by | When |
 |---|---|---|---|
@@ -761,7 +761,7 @@ The Blueprint §I.2 classification stands:
 | U2 | GitHub App permission set for collaborator listing; exact webhook event names for membership changes | S1 hands-on + GitHub App permissions docs | Before M5 |
 | U3 | Notion: error and latency after unsharing | S1 hands-on | Before M7 |
 | U4 | Procrastinate stalled-job mechanism; coexistence with the SQLAlchemy session; test mode | S2 | Before M0 ends |
-| U5 | PgQueuer feature set (docs fetch failed) | Only if S2 rejects Procrastinate | — |
+| U5 | PgQueuer feature set (docs fetch failed) | Only if S2 rejects Procrastinate | - |
 | U6 | Managed Postgres offers PG17/18, `btree_gist`, pgvector ≥0.8 | Provider check | Before D8 |
 | U7 | AuthKit with a separate Python API (token audience) | S6 | Before M0 |
 | U8 | Anthropic subprocessors and ZDR process; vendor DPAs | S7 follow-up | Before the first real-data pilot |
@@ -770,7 +770,7 @@ The Blueprint §I.2 classification stands:
 
 ---
 
-## §R — Verified references (checked 8 Nov 2026 unless marked)
+## §R: Verified references (checked 8 Nov 2026 unless marked)
 
 **Notion**
 - Capabilities: https://developers.notion.com/reference/capabilities

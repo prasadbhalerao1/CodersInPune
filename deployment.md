@@ -128,7 +128,7 @@ tenant isolation would silently stop working.
 |---|---|---|---|---|---|
 | Demo | Vercel Hobby $0 | Render free + keep-warm | Render Starter ~$7 | Neon free | **~$7** |
 | Small production | Vercel Pro | Render Starter ~$7 | Render Starter ~$7 | Neon Launch / Render Basic | **~$40–60** |
-| Single VM (path B) | — | — | — | — | VM price (2 vCPU / 4 GB) |
+| Single VM (path B) | - | - | - | - | VM price (2 vCPU / 4 GB) |
 
 Vercel Hobby is for non-commercial use. A paying organisation needs Pro.
 

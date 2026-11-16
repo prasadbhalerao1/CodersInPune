@@ -92,7 +92,7 @@
   - Copilot answers **strictly** from the case's evidence pool.
   - When an answer is found, it formats the response with verified citation chips `[E3]`, `[E4]`.
   - When the user asks a question whose answer does not exist in the evidence (e.g. *"What is the AWS root password?"*), Copilot displays an illuminated crimson/amber security badge:
-    **`NOT IN AUTHORIZED EVIDENCE — SPECULATION REFUSED.`**
+    **`NOT IN AUTHORIZED EVIDENCE: SPECULATION REFUSED.`**
   - This single behavior proves to judges that Relay is enterprise-grade and immune to hallucinations.
 
 ---

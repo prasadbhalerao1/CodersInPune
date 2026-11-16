@@ -1,16 +1,16 @@
 # Wiki Index
-<!-- AUTO-GENERATED — DO NOT EDIT BY HAND -->
+<!-- AUTO-GENERATED: DO NOT EDIT BY HAND -->
 **Generated:** 2026-11-12T18:00:00Z
 **Total pages:** 7
 
 ## All Pages
-- [[relay]] — What Relay actually does today, verified from the repository and its tests.
-- [[service-catalogues]] — Ownership of software entities, scorecards and dependency graphs.
-- [[knowledge-management]] — Written knowledge with verification cadences and training paths.
-- [[offboarding-knowledge-transfer]] — HR offboarding suites and AI knowledge-capture tools for departing employees.
-- [[ai-knowledge-systems]] — Permission-aware AI search and assistants with cited answers; bus-factor analysis.
-- [[incident-and-oncall]] — Who responds right now, and per-issue history.
-- [[synth-2026-11-12-relay-competitive-position]] — Council verdict: prove a handover took hold, on the work not the worker.
+- [[relay]]: What Relay actually does today, verified from the repository and its tests.
+- [[service-catalogues]]: Ownership of software entities, scorecards and dependency graphs.
+- [[knowledge-management]]: Written knowledge with verification cadences and training paths.
+- [[offboarding-knowledge-transfer]]: HR offboarding suites and AI knowledge-capture tools for departing employees.
+- [[ai-knowledge-systems]]: Permission-aware AI search and assistants with cited answers; bus-factor analysis.
+- [[incident-and-oncall]]: Who responds right now, and per-issue history.
+- [[synth-2026-11-12-relay-competitive-position]]: Council verdict: prove a handover took hold, on the work not the worker.
 
 ## By Tag
 - **competitor:** service-catalogues, knowledge-management, offboarding-knowledge-transfer, ai-knowledge-systems, incident-and-oncall

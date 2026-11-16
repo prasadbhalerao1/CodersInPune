@@ -1,10 +1,10 @@
 # Wiki Index
-<!-- AUTO-GENERATED — DO NOT EDIT BY HAND -->
+<!-- AUTO-GENERATED: DO NOT EDIT BY HAND -->
 **Generated:** 2026-11-12T12:08:56Z
 **Total pages:** 0
 
 ## All Pages
-*No pages yet — use /wiki-ingest to add your first source.*
+*No pages yet: use /wiki-ingest to add your first source.*
 
 ## By Tag
 *No pages yet.*

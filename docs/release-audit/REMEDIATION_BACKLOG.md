@@ -21,10 +21,10 @@ Ordered by priority. "Owner" says who or what must resolve it.
 | `0241b9a` | Production env reference complete (AI, logging, write flags); Blueprint carries 4 Gemini keys | Deployment |
 | `7b359d2` | Jobs log under their event id; queued events logged per request | NFR-OBS-A02 |
 | `16847ba` | GitHub issue write test: lost response recovered, no duplicate, closing completes the task | FR-TASK-004, FR-AGENT-007 |
-| — | Local backup/restore drill with matching counts | NFR-REL-002 |
-| — | Docker images built and smoke-tested in production mode (API health, docs hidden, 401 anon, JSON logs; worker starts; web serves with security headers) | Deployment |
+| - | Local backup/restore drill with matching counts | NFR-REL-002 |
+| - | Docker images built and smoke-tested in production mode (API health, docs hidden, 401 anon, JSON logs; worker starts; web serves with security headers) | Deployment |
 
-## P0 — before any use with real customer data
+## P0: before any use with real customer data
 
 | # | Item | Acceptance criteria | Owner |
 |---|---|---|---|
@@ -32,7 +32,7 @@ Ordered by priority. "Owner" says who or what must resolve it.
 | 2 | Legal/privacy review (NFR-PRIV-A10) incl. retention C-02 | Counsel-approved retention table; DPA/subprocessor list | Founder + counsel |
 | 3 | Production backups proven (NFR-REL-002) | First nightly backup on the real host restored with `deploy/restore-drill.sh`; off-host copy encrypted | Deployment |
 
-## P1 — before a meaningful pilot
+## P1: before a meaningful pilot
 
 | # | Item | Acceptance criteria | Owner |
 |---|---|---|---|
@@ -46,7 +46,7 @@ Ordered by priority. "Owner" says who or what must resolve it.
 | 11 | Usability test (NFR-UX-A02/A03) | 5 managers create a departure case and complete a handover unaided; issues logged | Product |
 | 12 | Real email delivery (FR-NOTIF-002) | One Resend email received with correct content/no source text | User configuration |
 
-## P2 — deferrable with justification
+## P2: deferrable with justification
 
 | Item | Why deferral is safe |
 |---|---|
