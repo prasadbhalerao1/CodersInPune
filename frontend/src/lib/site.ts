@@ -1,7 +1,8 @@
 // The public origin, for absolute URLs in metadata, the sitemap and llms.txt.
-export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://midnight-ciphers.cv"
-).replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://midnight-ciphers.cv").replace(
+  /\/$/,
+  "",
+);
 
 export const REPO_URL = "https://github.com/prasadbhalerao1/CodersInPune";
 
