@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 
 import { ResetSampleButton } from "@/components/reset-sample";
+import { Explain } from "@/components/explain";
 import { ApiErrorNotice } from "@/components/api-error-notice";
 import { RelayLines } from "@/components/brand";
 import { HandoverBanner } from "@/components/handover-banner";
@@ -275,18 +276,44 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
               </div>
               <div className="flex flex-col gap-3 lg:border-l lg:pl-6">
                 {insights?.ok ? (
-                  <Link href={`${base}/insights`} className="group flex flex-col gap-1">
-                    <span className="text-muted-foreground text-xs font-medium">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
                       Continuity debt
+                      <Explain
+                        what="continuity_debt"
+                        align="start"
+                        working={
+                          <span className="flex flex-col gap-0.5">
+                            {insights.data.debt
+                              .filter((d) => d.points > 0)
+                              .map((d) => (
+                                <span key={d.key} className="tabular flex justify-between gap-3">
+                                  <span>
+                                    {d.label} ({d.count})
+                                  </span>
+                                  <span>{d.points}</span>
+                                </span>
+                              ))}
+                            <strong className="text-foreground tabular flex justify-between border-t pt-0.5">
+                              <span>Total</span>
+                              <span>{insights.data.continuity_debt}</span>
+                            </strong>
+                          </span>
+                        }
+                      />
                     </span>
-                    <span className="tabular text-2xl font-semibold">
-                      {insights.data.continuity_debt}
-                      <span className="text-muted-foreground ml-1 text-xs font-normal">points</span>
-                    </span>
-                    <span className="text-muted-foreground group-hover:text-foreground text-xs">
-                      Fixing an item lowers it by its points →
-                    </span>
-                  </Link>
+                    <Link href={`${base}/insights`} className="group flex flex-col gap-1">
+                      <span className="tabular text-2xl font-semibold">
+                        {insights.data.continuity_debt}
+                        <span className="text-muted-foreground ml-1 text-xs font-normal">
+                          points
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground group-hover:text-foreground text-xs">
+                        Fixing an item lowers it by its points →
+                      </span>
+                    </Link>
+                  </div>
                 ) : null}
                 {canSimulate ? (
                   <Link
