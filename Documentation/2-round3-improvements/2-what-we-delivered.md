@@ -85,6 +85,7 @@ left uncovered and the score rises.
 | Score explained and 100 when nothing is at stake | Done | `test_score_is_explained_and_full_for_someone_holding_nothing` |
 | "Why is this affected?": reasons per responsibility, each read from a record, plus the assets it looks after | Done | `test_reasons_explain_why_each_responsibility_is_affected` |
 | Absence duration: work falling due while the person is away is flagged | Done | `test_duration_flags_work_due_while_away` |
+| Downstream impact: work that depends on something left with nobody, followed through the recorded dependencies to any depth (a backup who covers the root clears the chain) | Done | `test_downstream_work_that_depends_on_uncovered_work_is_shown` |
 | Cover candidates by deterministic signals (planned recipient, existing role, team, department), each simulated and compared with "no replacement" | Done | `test_candidates_are_compared_against_nobody_stepping_in`, `test_sample_powers_the_round_three_features` |
 
 Candidates are ranked first by whether they are connected to the work that would
@@ -125,6 +126,8 @@ A chapter or link citing nothing, or an event that doesn't exist, is dropped and
 | Non-empty for the sample workspace's deploy pipeline | Done | `tests/test_sample_workspace.py::test_sample_powers_the_round_three_features` |
 | `?category=bug_fix` returns only bug fixes | Done | `test_category_filter_returns_only_that_category` |
 | Linked events | Done (factual links from references in titles) | `test_references_in_titles_link_events` |
+| Git commits analysed: each pull request carries its commits, shown in the event inspector; a commit naming an issue or a Linear ticket links its pull request to that work | Done (migration `0050`) | `test_linked_records_form_one_thread_of_related_work` |
+| Related activity grouped into one piece of work: an issue, the pull request that fixes it and the pages that name it become one "Related work" thread, joined only by explicit references, rebuilt on every read | Done | `test_linked_records_form_one_thread_of_related_work` |
 | Members see only workspace-audience sources | Done | `test_members_see_only_workspace_audience_sources` |
 | Non-members are refused | Done | `test_outsiders_cannot_read_a_timeline` |
 | Read-only | Done: no writes during a timeline read | `test_timeline_reads_without_writing` |
@@ -138,7 +141,8 @@ event as a dot), an event inspector (provenance, how the category was derived, r
 events, the chapters citing it, a link to the source), and each handover brief links to
 the memory replay of every responsibility it covers.
 
-**Scope, by design.** Relay reads pull request and issue metadata, never commits or source
+**Scope, by design.** Relay reads each pull request's commits (the first line of each message,
+the author and the date) along with pull request and issue metadata, but never diffs or source
 code, so no code ever leaves the customer's repositories. Every number on the timeline is
 read from a record: Relay doesn't reconstruct past counts the sources never recorded. The
 timeline follows a responsibility, because that is the unit a successor inherits.
