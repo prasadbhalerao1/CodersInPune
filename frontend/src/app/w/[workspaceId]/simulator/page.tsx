@@ -5,6 +5,8 @@ import {
   Download,
   ExternalLink,
   FlaskConical,
+  Pin,
+  PinOff,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -40,6 +42,21 @@ const RISK_LABEL: Record<ExposedRisk["kind"], string> = {
 
 const one = (v: string | string[] | undefined) => (typeof v === "string" && v ? v : undefined);
 
+/** A pinned scenario travels in the URL as `person:backup:days` (backup and days optional). */
+type Pinned = { key: string; person: string; backup?: string; days?: string };
+const MAX_PINS = 3;
+
+function readPins(v: string | string[] | undefined): Pinned[] {
+  const raw = typeof v === "string" ? [v] : (v ?? []);
+  const pins: Pinned[] = [];
+  for (const key of raw) {
+    const [person, backup, days] = key.split(":");
+    if (!person || pins.some((p) => p.key === key)) continue;
+    pins.push({ key, person, backup: backup || undefined, days: days || undefined });
+  }
+  return pins.slice(0, MAX_PINS);
+}
+
 export default async function SimulatorPage({
   params,
   searchParams,
@@ -48,17 +65,29 @@ export default async function SimulatorPage({
   const personId = one(query.person);
   const backupId = one(query.backup);
   const days = one(query.days);
-  const [people, result, candidates] = await Promise.all([
+  const pins = readPins(query.pin);
+  const [people, result, candidates, pinned] = await Promise.all([
     attempt(api.listPeople(workspaceId)),
     personId ? attempt(api.simulation(workspaceId, personId, backupId, days)) : null,
     personId ? attempt(api.simulationCandidates(workspaceId, personId, days)) : null,
+    // A pin whose person was removed shows "Couldn't load" rather than failing the page.
+    Promise.all(
+      pins.map((p) => api.simulation(workspaceId, p.person, p.backup, p.days).catch(() => null)),
+    ),
   ]);
-  const scenario = (backup?: string) =>
-    `?${new URLSearchParams({
-      person: personId ?? "",
-      ...(days ? { days } : {}),
-      ...(backup ? { backup } : {}),
-    })}`;
+  // Every link keeps the pinned scenarios, so comparing never loses what was pinned.
+  const href = (scene: { person?: string; backup?: string; days?: string }, keep: string[]) => {
+    const q = new URLSearchParams();
+    if (scene.person) q.set("person", scene.person);
+    if (scene.days) q.set("days", scene.days);
+    if (scene.backup) q.set("backup", scene.backup);
+    for (const key of keep) q.append("pin", key);
+    return `?${q}`;
+  };
+  const pinKeys = pins.map((p) => p.key);
+  const scenario = (backup?: string) => href({ person: personId, backup, days }, pinKeys);
+  const currentKey = personId ? `${personId}:${backupId ?? ""}:${days ?? ""}` : null;
+  const isPinned = currentKey !== null && pinKeys.includes(currentKey);
   if (!people.ok) return <ApiErrorNotice error={people.error} />;
   const active = people.data.filter((p) => p.status === "active");
 
@@ -117,12 +146,30 @@ export default async function SimulatorPage({
                   ))}
               </select>
             </label>
+            {pinKeys.map((key) => (
+              <input key={key} type="hidden" name="pin" value={key} />
+            ))}
             <Button type="submit">
               <FlaskConical aria-hidden />
               Run simulation
             </Button>
           </form>
         </Panel>
+
+        {pins.length > 0 ? (
+          <Comparison
+            pins={pins}
+            views={pinned}
+            names={new Map(people.data.map((p) => [p.id, p.display_name]))}
+            open={(p) => href(p, pinKeys)}
+            unpin={(key) =>
+              href(
+                { person: personId, backup: backupId, days },
+                pinKeys.filter((k) => k !== key),
+              )
+            }
+          />
+        ) : null}
 
         {result === null ? (
           <EmptyState
@@ -133,16 +180,40 @@ export default async function SimulatorPage({
           <ApiErrorNotice error={result.error} />
         ) : (
           <>
-            {result.data.affected_responsibilities.length > 0 ? (
-              <a
-                href={`/w/${workspaceId}/simulator/report${scenario(backupId)}`}
-                download
-                className="text-primary -mb-3 inline-flex items-center gap-1.5 self-end text-sm font-medium hover:underline"
-              >
-                <Download aria-hidden className="size-4" />
-                Download scenario report (with every candidate compared)
-              </a>
-            ) : null}
+            <div className="-mb-3 flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
+              {isPinned ? (
+                <span className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
+                  <Pin aria-hidden className="size-4" />
+                  Pinned for comparison
+                </span>
+              ) : currentKey && pins.length < MAX_PINS ? (
+                <Link
+                  href={href({ person: personId, backup: backupId, days }, [
+                    ...pinKeys,
+                    currentKey,
+                  ])}
+                  scroll={false}
+                  className="text-primary inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+                >
+                  <Pin aria-hidden className="size-4" />
+                  Pin to compare ({pins.length}/{MAX_PINS})
+                </Link>
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  {MAX_PINS} scenarios pinned: unpin one to add this
+                </span>
+              )}
+              {result.data.affected_responsibilities.length > 0 ? (
+                <a
+                  href={`/w/${workspaceId}/simulator/report${scenario(backupId)}`}
+                  download
+                  className="text-primary inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+                >
+                  <Download aria-hidden className="size-4" />
+                  Download scenario report (with every candidate compared)
+                </a>
+              ) : null}
+            </div>
             <Results workspaceId={workspaceId} view={result.data} />
             {candidates?.ok && result.data.affected_responsibilities.length > 0 ? (
               <Candidates view={candidates.data} current={backupId} link={scenario} />
@@ -151,6 +222,125 @@ export default async function SimulatorPage({
         )}
       </div>
     </div>
+  );
+}
+
+const DAYS_LABEL: Record<string, string> = {
+  "3": "3 days",
+  "7": "1 week",
+  "14": "2 weeks",
+  "30": "1 month",
+  "90": "3 months",
+};
+
+const COMPARED: { label: string; value: (v: SimulationView) => number; higherIsBetter: boolean }[] =
+  [
+    { label: "Readiness score", value: (v) => v.readiness_score, higherIsBetter: true },
+    {
+      label: "Responsibilities affected",
+      value: (v) => v.affected_responsibilities.length,
+      higherIsBetter: false,
+    },
+    {
+      label: "Left without an owner",
+      value: (v) => v.uncovered_responsibilities.length,
+      higherIsBetter: false,
+    },
+    { label: "New risks exposed", value: (v) => v.exposed_risks.length, higherIsBetter: false },
+    {
+      label: "Open work without cover",
+      value: (v) => v.open_work_without_cover.length,
+      higherIsBetter: false,
+    },
+    {
+      label: "Knowledge left orphaned",
+      value: (v) => v.orphaned_knowledge_count,
+      higherIsBetter: false,
+    },
+  ];
+
+/** Pinned scenarios side by side. The best value in each row is marked so differences stand out. */
+function Comparison({
+  pins,
+  views,
+  names,
+  open,
+  unpin,
+}: {
+  pins: Pinned[];
+  views: (SimulationView | null)[];
+  names: Map<string, string>;
+  open: (p: Pinned) => string;
+  unpin: (key: string) => string;
+}) {
+  return (
+    <Section
+      title="Pinned scenarios"
+      description="Up to three what-ifs side by side. The best value in each row is highlighted."
+    >
+      <Panel className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-sm">
+          <thead>
+            <tr className="border-b text-left">
+              <th scope="col" className="text-muted-foreground p-3 font-medium">
+                Scenario
+              </th>
+              {pins.map((p) => (
+                <th key={p.key} scope="col" className="p-3 align-top font-medium">
+                  <Link href={open(p)} className="hover:underline">
+                    {names.get(p.person) ?? "Unknown person"} away
+                  </Link>
+                  <span className="text-muted-foreground block text-xs font-normal">
+                    {p.days ? (DAYS_LABEL[p.days] ?? `${p.days} days`) : "Open-ended"} ·{" "}
+                    {p.backup ? `covered by ${names.get(p.backup) ?? "unknown"}` : "no cover"}
+                  </span>
+                  <Link
+                    href={unpin(p.key)}
+                    scroll={false}
+                    className="text-muted-foreground hover:text-foreground mt-1 inline-flex items-center gap-1 text-xs font-normal"
+                  >
+                    <PinOff aria-hidden className="size-3" />
+                    Unpin
+                  </Link>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARED.map((row) => {
+              const values = views.map((v) => (v ? row.value(v) : null));
+              const known = values.filter((n): n is number => n !== null);
+              const best =
+                known.length > 1 ? (row.higherIsBetter ? Math.max : Math.min)(...known) : null;
+              const tie = best !== null && known.every((n) => n === best);
+              return (
+                <tr key={row.label} className="border-b last:border-0">
+                  <th scope="row" className="text-muted-foreground p-3 text-left font-normal">
+                    {row.label}
+                  </th>
+                  {values.map((n, i) => (
+                    <td
+                      key={pins[i].key}
+                      className={cn(
+                        "p-3 tabular-nums",
+                        n !== null &&
+                          n === best &&
+                          !tie &&
+                          "font-semibold text-emerald-700 dark:text-emerald-400",
+                      )}
+                    >
+                      {n ?? (
+                        <span className="text-muted-foreground text-xs">Couldn&apos;t load</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Panel>
+    </Section>
   );
 }
 
