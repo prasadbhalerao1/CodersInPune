@@ -217,6 +217,34 @@ async def _dependencies(access: WorkspaceAccess) -> None:
             )
 
 
+async def _backfill_commits(access: WorkspaceAccess) -> None:
+    """Give the sample's pull requests their commits if they were seeded before commits were
+    read; pull requests that already have commits are left alone."""
+    for item in await access.session.scalars(
+        select(GitHubWorkItem).where(
+            GitHubWorkItem.tenant_id == access.tenant_id,
+            GitHubWorkItem.kind == "pull_request",
+            GitHubWorkItem.number.in_(list(PR_COMMITS)),
+            GitHubWorkItem.github_id >= 990000000,
+        )
+    ):
+        if not item.commits:
+            item.commits = _sample_commits(item.number, item.gh_updated_at)
+
+
+def _sample_commits(number: int, at: datetime) -> list[dict[str, object]]:
+    messages = PR_COMMITS.get(number, ())
+    return [
+        {
+            "sha": f"{number:04d}{i:02d}a7c3e9",
+            "message": message,
+            "author": "leo-nw" if number in (31, 34) else "arjun-nw",
+            "at": (at - timedelta(hours=6 * (len(messages) - i))).isoformat(),
+        }
+        for i, message in enumerate(messages)
+    ]
+
+
 async def _catalog(access: WorkspaceAccess, users: dict[str, uuid.UUID]) -> dict[str, uuid.UUID]:
     d = directory
     eng = await d.create_department(access, d.DepartmentIn(name="Engineering"))
@@ -542,17 +570,7 @@ async def _history(
     session.add(repo)
     await session.flush()
     for kind, number, title, labels, state, days, assignees in DEPLOY_HISTORY:
-        commits = [
-            {
-                "sha": f"{number:04d}{i:02d}a7c3e9",
-                "message": message,
-                "author": "leo-nw" if number in (31, 34) else "arjun-nw",
-                "at": (
-                    NOW - timedelta(days=days, hours=6 * (len(PR_COMMITS.get(number, ())) - i))
-                ).isoformat(),
-            }
-            for i, message in enumerate(PR_COMMITS.get(number, ()))
-        ]
+        commits = _sample_commits(number, NOW - timedelta(days=days))
         at = NOW - timedelta(days=days)
         path = "pull" if kind == "pull_request" else "issues"
         session.add(
@@ -913,6 +931,7 @@ async def seed_judges(spec: str) -> uuid.UUID:
             )
         async with open_workspace_access(factory, _identity(users["owner"].id), ws.id) as access:
             await _dependencies(access)
+            await _backfill_commits(access)
         # Each role account *is* that role's sample person: the person's directory email becomes
         # the account's email, so its My Work and "Accept ownership" are real, while the
         # membership keeps the account's own address, so Relay's emails reach whoever signed in.
