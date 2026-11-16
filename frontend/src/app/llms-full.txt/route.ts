@@ -1,8 +1,6 @@
 import { EXPLAIN, type Explanation } from "@/lib/explain";
 import { REPO_URL, SITE_URL } from "@/lib/site";
 
-export const dynamic = "force-static";
-
 /**
  * The whole product guide as plain text for AI crawlers and assistants: every feature and
  * number with its definition, formula, inputs and source file. Built from the same registry
