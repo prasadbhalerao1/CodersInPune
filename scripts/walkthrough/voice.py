@@ -14,6 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import aiohttp
 import edge_tts
 
 narration, out = Path(sys.argv[1]), Path(sys.argv[2])
@@ -63,19 +64,26 @@ async def speak_with_retry(beat: dict) -> dict:
     for attempt in range(5):
         try:
             return await speak(beat)
-        except edge_tts.exceptions.EdgeTTSException:
+        except (edge_tts.exceptions.EdgeTTSException, aiohttp.ClientError):
             if attempt == 4:
                 raise
-            await asyncio.sleep(2 * (attempt + 1))
+            await asyncio.sleep(5 * (attempt + 1))
     raise AssertionError("unreachable")
 
 
 async def main() -> None:
     beats = json.loads(narration.read_text(encoding="utf-8"))
+    # A beat whose text is unchanged since the last run keeps its audio.
+    saved = out / "timing.json"
+    old = json.loads(saved.read_text(encoding="utf-8")) if saved.exists() else {}
     timing = {}
     for beat in beats:
-        timing[beat["id"]] = await speak_with_retry(beat)
-    (out / "timing.json").write_text(json.dumps(timing, indent=1), encoding="utf-8")
+        prev = old.get(beat["id"])
+        if prev and prev.get("text") == beat["text"] and (out / f"{beat['id']}.wav").exists():
+            timing[beat["id"]] = prev
+        else:
+            timing[beat["id"]] = {**await speak_with_retry(beat), "text": beat["text"]}
+        saved.write_text(json.dumps(timing, indent=1), encoding="utf-8")
     print(len(timing), "beats,", round(sum(t["dur"] for t in timing.values()) / 60, 1), "min")
 
 

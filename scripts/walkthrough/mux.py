@@ -4,7 +4,8 @@ Where the screen is only waiting after a sentence has ended (an AI answer, a slo
 that stretch is played as a short time-lapse instead of dead air; everything else,
 and every sentence, stays at real speed. A faint room tone runs underneath.
 
-Usage: python scripts/walkthrough/mux.py <take dir> <voice dir> <output.mp4>
+Usage: python scripts/walkthrough/mux.py <take dir> <voice dir> <output.mp4> [music]
+An optional music track is looped very quietly under the voice, fading in and out.
 The take dir holds walkthrough.mkv and marks.json from record.mjs; the voice dir holds
 one <id>.wav per beat and timing.json from voice.py.
 """
@@ -19,6 +20,7 @@ LONGEST_WAIT = 3.0  # waits longer than this are fast-forwarded
 WAIT_PLAYS_FOR = 1.5  # how long a fast-forwarded wait lasts in the cut
 
 take, voice, output = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+music = sys.argv[4] if len(sys.argv) > 4 else None
 marks = json.loads((take / "marks.json").read_text(encoding="utf-8"))
 timing = json.loads((voice / "timing.json").read_text(encoding="utf-8"))
 video = take / "walkthrough.mkv"
@@ -60,7 +62,7 @@ n = len(segments)
 filters = [f"[0:v]split={n}" + "".join(f"[s{i}]" for i in range(n))]
 for i, (start, end, speed) in enumerate(segments):
     filters.append(f"[s{i}]trim={start:.3f}:{min(end, length):.3f},setpts=(PTS-STARTPTS)/{speed:.4f}[v{i}]")
-filters.append("".join(f"[v{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0,tpad=stop_mode=clone:stop_duration={hold:.2f},fps=25[vout]")
+filters.append("".join(f"[v{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0,tpad=stop_mode=clone:stop_duration={hold:.2f},fps=30[vout]")
 
 inputs = ["-i", str(video)]
 for i, mark in enumerate(marks, start=1):
@@ -71,9 +73,19 @@ total = cut_time(length) + hold
 filters.append(
     f"anoisesrc=color=brown:amplitude=0.004:sample_rate=48000:duration={total:.2f},lowpass=f=900[room]"
 )
-mix = "".join(f"[a{i}]" for i in range(1, len(marks) + 1))
+mix = "".join(f"[a{i}]" for i in range(1, len(marks) + 1)) + "[room]"
+extra = 1
+if music:
+    m = len(marks) + 1
+    inputs += ["-stream_loop", "-1", "-i", music]
+    filters.append(
+        f"[{m}:a]aresample=48000,volume=0.09,afade=t=in:d=4,"
+        f"afade=t=out:st={max(0.0, total - 6):.2f}:d=6,atrim=0:{total:.2f}[music]"
+    )
+    mix += "[music]"
+    extra += 1
 filters.append(
-    f"{mix}[room]amix=inputs={len(marks) + 1}:normalize=0:dropout_transition=0:duration=longest,volume=1.4[aout]"
+    f"{mix}amix=inputs={len(marks) + extra}:normalize=0:dropout_transition=0:duration=longest,volume=1.4[aout]"
 )
 
 script = take / "mux-filter.txt"
