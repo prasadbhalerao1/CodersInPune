@@ -175,7 +175,9 @@ On the same sample workspace:
 ## Run it yourself
 
 You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/),
-Node.js 22+ and pnpm 10 (`corepack enable`). Relay never handles passwords, so sign-in goes
+Node.js 22+, pnpm 10 (`corepack enable`) and Python 3.10+ for the two helper scripts (no
+Python? use `uv run --no-project python scripts/setup.py`; uv installs the backend's own
+Python 3.14). Relay never handles passwords, so sign-in goes
 through [WorkOS](https://workos.com), which is free for development:
 
 1. Create a WorkOS account and open the **Staging** environment.
