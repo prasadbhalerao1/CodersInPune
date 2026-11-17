@@ -45,6 +45,9 @@ def test_only_given_evidence_counts_as_a_citation() -> None:
     assert (good.mode, good.cited, good.answer) == ("ai", ["E1"], "Rotate it monthly [E1].")
     assert finalise("Rotate it monthly [E7].", given).mode == "not_found"
     assert finalise("NOT_FOUND: nothing about refunds.", given).mode == "not_found"
+    partial = finalise("NOT_FOUND: The full status isn't recorded, but it is blocked [E1].", given)
+    assert (partial.mode, partial.cited) == ("ai", ["E1"])
+    assert not partial.answer.startswith("NOT_FOUND")
 
 
 async def test_answer_streams_and_cites_only_what_the_member_may_see(

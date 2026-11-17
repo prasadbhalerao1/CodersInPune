@@ -48,8 +48,9 @@ HISTORY_TURNS = 6
 ANSWER_FORMAT = (
     "Write plain prose: short paragraphs, or lines starting with '- ' for lists. Put the refs "
     "that support a sentence right after it in square brackets, like [E3] or [E2, E5]. If the "
-    "evidence does not answer a question about the workspace, start with 'NOT_FOUND:' and say "
-    "what is missing. For a greeting, thanks, a question about Relay itself or how to use it, "
+    "evidence answers only part of a question, answer that part with citations and say what "
+    "is missing. Only if it has nothing relevant, start with 'NOT_FOUND:'. For a greeting, "
+    "thanks, a question about Relay itself or how to use it, "
     "or a request you must decline, start with 'CHAT:' and cite nothing."
 )
 # What the assistant may say about Relay itself, without evidence.
@@ -320,7 +321,11 @@ def finalise(text: str, sources: list[Source]) -> AskAnswer:
         chat = re.sub(r"\s*" + _REFS.pattern, "", _CHAT.sub("", body)).strip()
         return AskAnswer(mode="chat", answer=chat[:3000], cited=[])
     if _NOT_FOUND.match(body):
-        return AskAnswer(mode="not_found", answer=_NOT_FOUND.sub("", body)[:2000], cited=[])
+        # A model being over-careful still counts as an answer if it cites what it was given.
+        rest = _NOT_FOUND.sub("", body)
+        if not any(r in given for g in _REFS.findall(rest) for r in re.split(r"\s*,\s*", g)):
+            return AskAnswer(mode="not_found", answer=rest[:2000], cited=[])
+        body = rest
     cited: list[str] = []
     for group in _REFS.findall(body):
         for ref in re.split(r"\s*,\s*", group):
