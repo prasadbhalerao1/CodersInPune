@@ -11,15 +11,15 @@ export function PageHeader({
   description?: ReactNode;
 }) {
   return (
-    <header className="bg-background/85 sticky top-0 z-10 flex min-h-14 shrink-0 items-center justify-between gap-4 border-b px-6 py-3 backdrop-blur">
+    <header className="bg-background/85 sticky top-0 z-10 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3 backdrop-blur md:px-6">
       <div className="min-w-0">
         {/* Syne, as on the landing page: one display face across the product. */}
         <h1 className="font-heading truncate text-base leading-tight font-bold">{title}</h1>
         {description ? (
-          <p className="text-muted-foreground mt-0.5 truncate text-[13px]">{description}</p>
+          <p className="text-muted-foreground mt-0.5 text-[13px] md:truncate">{description}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }
@@ -66,7 +66,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="bg-card/50 flex flex-col items-center rounded-lg border border-dashed px-6 py-12 text-center">
+    <div className="bg-card/50 flex flex-col items-center rounded-lg border border-dashed px-4 py-12 text-center md:px-6">
       <p className="font-medium">{title}</p>
       <p className="text-muted-foreground mt-1 max-w-sm text-sm">{description}</p>
       {action ? <div className="mt-4">{action}</div> : null}

@@ -82,7 +82,7 @@ export default async function HelpPage({ params }: PageProps<"/w/[workspaceId]/h
           </Link>
         }
       />
-      <div className="flex max-w-4xl flex-col gap-8 p-6">
+      <div className="flex max-w-4xl flex-col gap-8 p-4 md:p-6">
         {guidance.ok ? (
           <>
             <div id="learn" className="flex scroll-mt-20 flex-col gap-8">

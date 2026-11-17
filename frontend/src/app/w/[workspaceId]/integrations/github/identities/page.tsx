@@ -119,7 +119,7 @@ export default async function IdentitiesPage({
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="github" />
       <GitHubTabs workspaceId={workspaceId} current="identities" />
-      <div className="flex w-full flex-col gap-4 p-6">
+      <div className="flex w-full flex-col gap-4 p-4 md:p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           GitHub users seen in your repositories. Linking tells Relay who a handle is, so evidence
           and suggestions name real people. Matches are only suggested; nothing is linked or merged

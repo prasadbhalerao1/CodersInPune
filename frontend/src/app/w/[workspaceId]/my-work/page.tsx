@@ -142,7 +142,7 @@ export default async function MyWorkPage({
         title="My Work"
         description="Everything waiting on you: handovers to read, tasks, approvals and questions."
       />
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-6 p-4 md:p-6">
         <HandoverBanner workspaceId={workspaceId} handovers={work.data.handovers} />
         {work.data.to_accept.length > 0 ? (
           <section

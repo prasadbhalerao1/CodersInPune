@@ -34,7 +34,7 @@ export function SettingsNav({
 }) {
   const ws = `/w/${workspaceId}`;
   return (
-    <nav aria-label="Settings" className="flex gap-1 overflow-x-auto border-b px-6 text-sm">
+    <nav aria-label="Settings" className="flex gap-1 overflow-x-auto border-b px-4 text-sm md:px-6">
       {TABS.filter((t) => admin || !t.admin).map((t) => (
         <Link
           key={t.key}

@@ -41,7 +41,7 @@ export default async function SuggestionsPage({
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="github" />
       <GitHubTabs workspaceId={workspaceId} current="suggestions" />
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 p-4 md:p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Proposed from GitHub evidence. Approving records the owner through the normal ownership
           history; an existing primary owner is never replaced.

@@ -31,7 +31,7 @@ export default async function BriefingPage({
           </span>
         }
       />
-      <div className="max-w-4xl p-6">
+      <div className="max-w-4xl p-4 md:p-6">
         {!b.returned ? (
           <p role="status" className="mb-4 rounded-lg border px-4 py-3 text-sm">
             Cover is still running. This is the briefing so far; review it before ending cover.

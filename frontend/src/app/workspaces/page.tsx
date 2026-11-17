@@ -27,7 +27,7 @@ export default function WorkspacesPage() {
   return (
     <div className="bg-page text-strong relative flex flex-1 flex-col overflow-hidden">
       <WorkspacesBackdrop />
-      <section className="relative mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 pt-14 pb-8">
+      <section className="relative mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 pt-14 pb-8 md:px-6">
         <p className="text-ac text-[13px] font-medium">Workspaces</p>
         <h1 className="font-display text-strong text-[2.75rem] leading-[0.95] tracking-[-0.01em] sm:text-7xl">
           Where does your work live?
@@ -37,7 +37,7 @@ export default function WorkspacesPage() {
           when someone is away, and the handovers that keep the work moving.
         </p>
       </section>
-      <section className="relative mx-auto grid w-full max-w-5xl gap-6 px-6 pb-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <section className="relative mx-auto grid w-full max-w-5xl gap-6 px-4 pb-12 md:px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Suspense
           fallback={
             <div className="flex flex-col gap-3">

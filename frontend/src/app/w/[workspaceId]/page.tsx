@@ -196,7 +196,7 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
           </span>
         }
       />
-      <div className="mx-auto flex w-full max-w-350 flex-col gap-6 p-6">
+      <div className="mx-auto flex w-full max-w-350 flex-col gap-6 p-4 md:p-6">
         {mine.ok ? (
           <HandoverBanner workspaceId={workspaceId} handovers={mine.data.handovers} />
         ) : null}
@@ -239,7 +239,7 @@ export default async function OverviewPage({ params }: PageProps<"/w/[workspaceI
             className="bg-card relative overflow-hidden rounded-xl border shadow-xs"
           >
             <RelayLines className="absolute inset-y-0 right-0 hidden h-full w-[34%] opacity-70 lg:block" />
-            <div className="relative grid gap-6 p-6 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,18rem)] lg:items-center">
+            <div className="relative grid gap-6 p-4 md:p-6 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,18rem)] lg:items-center">
               <Ring value={coverage} tone={coverageTone} size={128} stroke={11}>
                 <span className="tabular text-3xl leading-none font-semibold">{coverage}%</span>
                 <span className="text-muted-foreground mt-1 text-[11px]">covered</span>

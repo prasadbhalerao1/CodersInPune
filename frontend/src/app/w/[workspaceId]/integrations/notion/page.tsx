@@ -60,7 +60,7 @@ export default async function NotionPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="notion" />
-      <div className="flex w-full flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-4 md:p-6">
         {query.connected ? (
           <p role="status" className="rounded-lg border px-4 py-3 text-sm">
             Notion connected. Shared pages appear below after the first sync; refresh in a moment.

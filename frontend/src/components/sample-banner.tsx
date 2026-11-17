@@ -73,7 +73,7 @@ export function SampleBanner({ workspaceId, view }: { workspaceId: string; view:
     >
       <div className="mx-auto flex max-w-[105rem] flex-wrap items-center gap-x-4 gap-y-2">
         {trying ? (
-          <p className="flex min-w-0 flex-1 items-center gap-2">
+          <p className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-0">
             <UserRound aria-hidden className="size-4 shrink-0" />
             <span>
               You&apos;re seeing Relay as <strong>{label(view.role)}</strong>
@@ -81,7 +81,7 @@ export function SampleBanner({ workspaceId, view }: { workspaceId: string; view:
             </span>
           </p>
         ) : (
-          <p className="flex min-w-0 flex-1 items-center gap-2">
+          <p className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-0">
             <FlaskConical aria-hidden className="text-primary size-4 shrink-0" />
             <span>
               <strong>Sample organisation.</strong> A year of GitHub, Linear and Notion history is
@@ -95,13 +95,13 @@ export function SampleBanner({ workspaceId, view }: { workspaceId: string; view:
           </p>
         )}
         {view.can_switch ? (
-          <label className="flex items-center gap-2 text-xs font-medium">
+          <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
             Try Relay as
             <select
               value={view.role}
               disabled={pending}
               onChange={(e) => choose(e.target.value)}
-              className="bg-background h-8 rounded-md border px-2 text-sm"
+              className="bg-background h-8 max-w-56 min-w-0 rounded-md border px-2 text-sm"
             >
               {view.roles.map((r) => (
                 <option key={r.role} value={r.role} title={r.purpose}>

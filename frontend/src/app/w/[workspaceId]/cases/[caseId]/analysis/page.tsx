@@ -224,7 +224,7 @@ export default async function AnalysisPage({
           )
         }
       />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-8">
           {a.can_run ? (
             <Autopilot

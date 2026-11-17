@@ -22,7 +22,7 @@ export default async function NewResponsibilityPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="New responsibility" />
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <ResponsibilityForm
           action={createResponsibilityAction.bind(null, workspaceId)}
           submitLabel="Create responsibility"

@@ -75,7 +75,7 @@ export function CaseTabs({
     <TabNav
       current={current}
       aria-label="Case sections"
-      className="flex gap-4 overflow-x-auto border-b px-6 pt-3"
+      className="flex gap-4 overflow-x-auto border-b px-4 pt-3 md:px-6"
     >
       {CASE_TABS.map(([tab, label]) =>
         link(tab, tab === "overview" ? base : `${base}?tab=${tab}`, label, counts?.[tab]),

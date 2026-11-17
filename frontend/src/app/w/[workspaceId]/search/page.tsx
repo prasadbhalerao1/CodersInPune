@@ -42,7 +42,7 @@ export default async function SearchPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="Search" />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-5">
           <form method="get" action={`${base}/search`} role="search" className="flex gap-2">
             <input

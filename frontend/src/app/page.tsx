@@ -64,7 +64,7 @@ export default function HomePage() {
 
       {/* Floating header over the hero (no bar, no border, as in the reference) */}
       <StickyHeader>
-        <div className="mx-auto grid h-16 max-w-7xl grid-cols-2 items-center px-6 sm:px-8 lg:grid-cols-[1fr_auto_1fr] lg:px-12">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr] items-center gap-3 px-4 sm:px-8 lg:grid-cols-[1fr_auto_1fr] lg:px-12">
           <Link href="/" className="mark-link group flex items-center gap-2.5 justify-self-start">
             <RelayMark className="h-7 w-7" />
             <span className="text-strong font-sans text-[21px] font-semibold tracking-[-0.03em]">
@@ -96,7 +96,7 @@ export default function HomePage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3 justify-self-end">
+          <div className="flex min-w-0 items-center gap-2 justify-self-end sm:gap-3">
             <ThemeToggle hint />
             <Suspense fallback={<NavActionLink label="Launch sandbox" short="Sandbox" />}>
               <PrimaryNavAction />

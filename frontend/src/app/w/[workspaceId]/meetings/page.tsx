@@ -36,7 +36,7 @@ export default async function MeetingsPage({ params }: PageProps<"/w/[workspaceI
           </span>
         }
       />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
         <Section
           title="Past meetings"
           description="What each meeting decided, who agreed to do what, and what is still open."

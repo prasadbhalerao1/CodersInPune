@@ -80,7 +80,7 @@ export default async function PeoplePage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="People & Teams" />
-      <div className="flex flex-col gap-8 p-6">
+      <div className="flex flex-col gap-8 p-4 md:p-6">
         <Section
           title="Departments"
           description="Group people and teams. Responsibilities follow their owners' departments."

@@ -28,7 +28,7 @@ export default async function RisksPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="Continuity risks" />
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 p-4 md:p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Rule-based checks on the current catalogue. A risk resolves on its own as soon as the gap
           is fixed; until then it can be acknowledged or accepted for a limited time.{" "}

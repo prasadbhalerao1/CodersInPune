@@ -83,7 +83,7 @@ export default async function MeetingPage({
           {m.note} Rules found the items below instead.
         </p>
       ) : null}
-      <div className="grid gap-8 p-6 xl:grid-cols-2">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-6">
           {m.items.length === 0 ? (
             <p className="text-muted-foreground text-sm">

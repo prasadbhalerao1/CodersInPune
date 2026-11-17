@@ -28,7 +28,7 @@ export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/r
     return (
       <div className="flex flex-1 flex-col">
         <PageHeader title="Risk resolved" />
-        <div className="flex flex-col items-start gap-3 p-6 text-sm">
+        <div className="flex flex-col items-start gap-3 p-4 text-sm md:p-6">
           <p>This risk is no longer detected. The gap that caused it has been fixed.</p>
           <Link
             href={`${base}/risks?status=resolved`}
@@ -58,7 +58,7 @@ export default async function RiskPage({ params }: PageProps<"/w/[workspaceId]/r
           </>
         }
       />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,42rem)_22rem]">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-[minmax(0,42rem)_22rem]">
         <div className="flex flex-col gap-6">
           {assetLink ? (
             <p className="text-sm">

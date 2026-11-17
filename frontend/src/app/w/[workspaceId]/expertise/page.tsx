@@ -53,7 +53,7 @@ export default async function ExpertisePage({ params }: PageProps<"/w/[workspace
         }
         description="Who could carry each responsibility tomorrow. The most fragile work is at the top."
       />
-      <div className="flex min-w-0 flex-col gap-4 p-6">
+      <div className="flex min-w-0 flex-col gap-4 p-4 md:p-6">
         {rows.length === 0 ? (
           <EmptyState
             title="No responsibilities yet"

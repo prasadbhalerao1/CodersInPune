@@ -95,7 +95,7 @@ export function EmergencyBanner({ detail }: { detail: CaseDetail }) {
   return (
     <div
       role="alert"
-      className="flex items-start gap-3 border-b border-red-600/20 bg-red-50 px-6 py-3 text-sm text-red-900 dark:bg-red-950/30 dark:text-red-200"
+      className="flex items-start gap-3 border-b border-red-600/20 bg-red-50 px-4 py-3 text-sm text-red-900 md:px-6 dark:bg-red-950/30 dark:text-red-200"
     >
       <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-red-600" />
       <p>

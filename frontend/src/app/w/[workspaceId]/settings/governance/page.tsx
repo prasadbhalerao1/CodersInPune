@@ -30,7 +30,7 @@ export default async function GovernanceSettingsPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" />
       <SettingsNav workspaceId={workspaceId} current="governance" admin={admin} />
-      <div className="flex max-w-4xl flex-col gap-8 p-6">
+      <div className="flex max-w-4xl flex-col gap-8 p-4 md:p-6">
         <Section
           title="Criticality tiers"
           description="What each criticality requires. Risks and review reminders follow these."

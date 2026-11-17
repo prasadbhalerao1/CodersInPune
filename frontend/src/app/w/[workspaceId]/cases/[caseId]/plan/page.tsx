@@ -44,7 +44,7 @@ export default async function PlanPage({
         caseTitle={caseDetail.data.title}
         current="plan"
       />
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 p-4 md:p-6">
         <p className="text-muted-foreground max-w-3xl text-sm">
           What the person taking over should do, and when, counted from{" "}
           {formatDateTime(plan.data.starts_at)}. Every step comes from this case and says why.{" "}

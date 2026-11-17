@@ -26,7 +26,7 @@ export default async function PoliciesPage({ params }: PageProps<"/w/[workspaceI
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" />
       <SettingsNav workspaceId={workspaceId} current="general" admin={admin} />
-      <div className="flex max-w-3xl flex-col gap-8 p-6">
+      <div className="flex max-w-3xl flex-col gap-8 p-4 md:p-6">
         <Section
           title="Continuity policies"
           description="These rules shape risks, knowledge freshness, insights and automations. Every change is audited."

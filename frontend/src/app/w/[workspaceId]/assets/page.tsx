@@ -60,7 +60,7 @@ export default async function AssetsPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="Assets" />
-      <div className="flex w-full flex-col gap-6 p-6">
+      <div className="flex w-full flex-col gap-6 p-4 md:p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Repositories, services, vendors and processes your responsibilities look after. Assets
           have no owners of their own: ownership always comes from the linked responsibilities.

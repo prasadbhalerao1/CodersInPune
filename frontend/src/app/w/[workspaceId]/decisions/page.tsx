@@ -49,7 +49,7 @@ export default async function DecisionsPage({ params }: PageProps<"/w/[workspace
         }
         description="Every decision Relay knows about, with where it was made, so a successor knows what is settled and why."
       />
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 p-4 md:p-6">
         {log.data.length === 0 ? (
           <EmptyState
             title="No decisions yet"

@@ -59,7 +59,7 @@ export default async function InsightsPage({
           </Link>
         }
       />
-      <div className="flex w-full flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-4 md:p-6">
         <form className="flex flex-wrap items-center gap-2" aria-label="Filters">
           <select
             name="department_id"

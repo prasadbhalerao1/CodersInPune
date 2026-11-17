@@ -21,7 +21,7 @@ export default async function EditResponsibilityPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title={`Edit ${result.data.name}`} />
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <ResponsibilityForm
           action={updateResponsibilityAction.bind(null, workspaceId, responsibilityId)}
           initial={result.data}

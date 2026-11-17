@@ -31,7 +31,7 @@ export default async function SlackPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="slack" />
-      <div className="flex w-full max-w-3xl flex-col gap-8 p-6">
+      <div className="flex w-full max-w-3xl flex-col gap-8 p-4 md:p-6">
         <Section
           title="Slack"
           description="Write-only: Relay posts to one channel only when someone presses “Post to Slack” on a meeting. It never reads Slack messages and never posts on its own."

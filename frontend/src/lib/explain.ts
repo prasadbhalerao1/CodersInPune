@@ -244,10 +244,13 @@ export const EXPLAIN = {
   ask_relay: {
     title: "Ask Relay",
     summary:
-      "Ask anything about the workspace in plain language. Relay searches the records you can see, then writes an answer that cites each one.",
+      "A conversation with Relay's assistant. It sees an overview of the whole workspace you can access, plus the records closest to your question, and answers in its own words.",
     formula:
-      "Search ranks responsibilities, knowledge, cases, people and synced items by text relevance; the top matches become the evidence. Each sentence of the answer must cite them; a reply citing nothing is shown as “not in the evidence”.",
-    inputs: ["Records you can open yourself; restricted knowledge only for managers"],
+      "Evidence = an overview (responsibilities and holders, people, open cases, open risks) + the best search matches, all filtered to what you may open. Facts about the workspace must cite that evidence; a factual reply citing nothing is shown as “not in the records”. Greetings and questions about Relay are answered as conversation; unrelated requests are declined.",
+    inputs: [
+      "Records you can open yourself; restricted knowledge only for managers",
+      "Your last few questions and answers, for follow-ups",
+    ],
     reading: "Click a source chip to open the record behind it.",
     source: "backend/src/relay/intelligence/ask.py",
   },

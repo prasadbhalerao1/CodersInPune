@@ -115,7 +115,7 @@ export default async function AuditPage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title="Audit log" />
-      <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 p-4 md:p-6">
         <p className="text-muted-foreground max-w-prose text-sm">
           Every change, decision and denied access, in order. Entries cannot be edited or deleted,
           and they record identifiers only, never the content people wrote.

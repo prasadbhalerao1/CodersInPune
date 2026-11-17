@@ -37,7 +37,7 @@ export default async function NewCasePage({
     return (
       <div className="flex flex-1 flex-col">
         <PageHeader title="New case" />
-        <div className="grid max-w-5xl gap-4 p-6 md:grid-cols-3">
+        <div className="grid max-w-5xl gap-4 p-4 md:grid-cols-3 md:p-6">
           {(Object.keys(CASE_TYPES) as CaseType[]).map((t) => (
             <Link
               key={t}
@@ -74,7 +74,7 @@ export default async function NewCasePage({
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader title={CASE_TYPES[type].label} />
-      <div className="flex max-w-xl flex-col gap-4 p-6">
+      <div className="flex max-w-xl flex-col gap-4 p-4 md:p-6">
         <p className="text-muted-foreground text-sm">{CASE_TYPES[type].description}</p>
         {request ? (
           <p className="text-muted-foreground text-sm">

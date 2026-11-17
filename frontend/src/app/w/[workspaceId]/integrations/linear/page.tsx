@@ -53,7 +53,7 @@ export default async function LinearPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="linear" />
-      <div className="flex w-full flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-4 md:p-6">
         {query.connected ? (
           <p role="status" className="rounded-lg border px-4 py-3 text-sm">
             Linear connected. The first sync runs in the background; refresh in a moment.

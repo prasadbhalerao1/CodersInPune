@@ -200,8 +200,8 @@ export function MemoryReplay({
 
   if (timeline.events.length === 0) {
     return (
-      <div className="p-6">
-        <div className="bg-card/50 flex flex-col items-center rounded-lg border border-dashed px-6 py-12 text-center">
+      <div className="p-4 md:p-6">
+        <div className="bg-card/50 flex flex-col items-center rounded-lg border border-dashed px-4 py-12 text-center md:px-6">
           <p className="font-medium">No history yet</p>
           <p className="text-muted-foreground mt-1 max-w-md text-sm">
             Link a GitHub repository, Linear project or Notion page to this responsibility, or
@@ -214,7 +214,7 @@ export function MemoryReplay({
   }
 
   return (
-    <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid gap-6 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="flex min-w-0 flex-col gap-4">
         <div className="bg-card flex flex-col gap-3 rounded-lg border p-3 shadow-xs">
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by category">

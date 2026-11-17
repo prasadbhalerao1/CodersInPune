@@ -14,14 +14,14 @@ import { cn } from "@/lib/utils";
 
 type Source = {
   ref: string;
-  kind: SearchHit["kind"] | "meeting";
+  kind: SearchHit["kind"] | "meeting" | "overview";
   id: string;
   title: string;
   detail: string | null;
   url: string | null;
 };
 type Final = {
-  mode: "ai" | "search" | "not_found";
+  mode: "ai" | "chat" | "search" | "not_found";
   answer: string;
   cited: string[];
   note: string | null;
@@ -35,14 +35,16 @@ type Turn = {
 };
 
 const SUGGESTIONS = [
-  "Who is the backup for payments on-call?",
-  "What did we decide about webhooks?",
-  "Which responsibilities have no second owner?",
-  "How do we rotate the webhook secret?",
+  "What can you do?",
+  "Summarise this workspace's biggest risks",
+  "Which handovers are open right now?",
+  "Which responsibilities have no backup?",
 ];
+const HISTORY = 6;
 
 const KIND_LABEL: Partial<Record<Source["kind"], string>> = {
   meeting: "Meeting",
+  overview: "Workspace overview",
   responsibility: "Responsibility",
   knowledge: "Knowledge",
   case: "Case",
@@ -54,7 +56,7 @@ const KIND_LABEL: Partial<Record<Source["kind"], string>> = {
   linear: "Linear",
 };
 
-/** Workspace-wide questions, answered as they are written, every claim a clickable source. */
+/** The workspace assistant: a conversation, every claim about the workspace a clickable source. */
 export function AskRelay({ workspaceId }: { workspaceId: string }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
@@ -67,16 +69,21 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
   async function ask(text: string, e?: FormEvent) {
     e?.preventDefault();
     const q = text.trim();
-    if (q.length < 3 || busy) return;
+    if (!q || busy) return;
     setQuestion("");
     setBusy(true);
+    // Earlier finished turns go back with the question, so follow-ups make sense.
+    const history = turns
+      .filter((t) => t.final)
+      .slice(-HISTORY)
+      .map((t) => ({ question: t.question, answer: t.final!.answer.slice(0, 3000) }));
     setTurns((all) => [...all, { question: q, sources: [], draft: "", final: null }]);
     abort.current = new AbortController();
     try {
       const response = await fetch(`/w/${workspaceId}/ask/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, history }),
         signal: abort.current.signal,
       });
       if (!response.ok || !response.body) {
@@ -101,10 +108,12 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
   }
 
   const sourceHref = (s: Source) =>
-    s.url ??
-    (s.kind === "meeting"
-      ? `/w/${workspaceId}/meetings/${s.id}`
-      : `/w/${workspaceId}${hitPath({ ...s, kind: s.kind, status: null, updated_at: null })}`);
+    s.kind === "overview"
+      ? `/w/${workspaceId}`
+      : (s.url ??
+        (s.kind === "meeting"
+          ? `/w/${workspaceId}/meetings/${s.id}`
+          : `/w/${workspaceId}${hitPath({ ...s, kind: s.kind, status: null, updated_at: null })}`));
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,9 +122,11 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
           <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl">
             <Sparkles aria-hidden className="size-6" />
           </span>
-          <p className="text-muted-foreground max-w-md text-sm">
-            Relay searches responsibilities, knowledge, cases, people, risks and synced GitHub and
-            Linear work, then answers with citations you can open.
+          <p className="max-w-md text-sm font-medium">Hi, I&apos;m Relay&apos;s assistant.</p>
+          <p className="text-muted-foreground -mt-2 max-w-md text-sm">
+            I know this workspace&apos;s responsibilities, people, handovers and risks, and I can
+            read its knowledge, meetings and synced GitHub and Linear work. Ask me anything about
+            it; every fact comes with a source you can open.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {SUGGESTIONS.map((s) => (
@@ -141,7 +152,7 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
               {t.question}
             </p>
             <div className="bg-card rounded-xl border p-4 text-sm">
-              {t.final && t.final.mode !== "ai" ? (
+              {t.final && t.final.mode !== "ai" && t.final.mode !== "chat" ? (
                 <Badge tone={t.final.mode === "search" ? "warning" : "muted"} className="mb-2">
                   {t.final.mode === "search"
                     ? "Matching records, not an AI answer"
@@ -156,9 +167,7 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
               ) : !t.error ? (
                 <p className="text-muted-foreground flex items-center gap-2">
                   <span className="copilot-pulse" aria-hidden />
-                  {t.sources.length
-                    ? `Reading ${t.sources.length} records…`
-                    : "Searching the workspace…"}
+                  {t.sources.length ? `Reading ${t.sources.length} records…` : "Thinking…"}
                 </p>
               ) : null}
               {t.final?.note ? (
@@ -169,10 +178,15 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
                   {t.error}
                 </p>
               ) : null}
-              {t.sources.length ? (
+              {t.sources.length && t.final?.mode !== "chat" ? (
                 <ul className="mt-3 flex flex-wrap gap-1.5 border-t pt-3" aria-label="Sources">
                   {t.sources
-                    .filter((s) => !t.final || cited.has(s.ref) || t.final.mode === "not_found")
+                    .filter((s) =>
+                      t.final
+                        ? cited.has(s.ref) ||
+                          (t.final.mode === "not_found" && s.kind !== "overview")
+                        : s.kind !== "overview",
+                    )
                     .slice(0, t.final?.mode === "not_found" ? 4 : 12)
                     .map((s) => (
                       <li key={s.ref}>
@@ -214,7 +228,7 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={500}
-          placeholder="Ask about owners, decisions, risks, how things work…"
+          placeholder="Ask anything about this workspace, or say hi…"
           className={cn(inputClass, "flex-1 border-0 shadow-none focus-visible:ring-0")}
         />
         {busy ? (
@@ -222,7 +236,7 @@ export function AskRelay({ workspaceId }: { workspaceId: string }) {
             <Square aria-hidden className="size-3.5" /> Stop
           </Button>
         ) : (
-          <Button type="submit" disabled={question.trim().length < 3}>
+          <Button type="submit" disabled={!question.trim()}>
             <SendHorizontal aria-hidden className="size-4" /> Ask
           </Button>
         )}

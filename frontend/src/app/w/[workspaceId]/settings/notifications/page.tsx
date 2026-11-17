@@ -44,7 +44,7 @@ export default async function NotificationSettingsPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" />
       <SettingsNav workspaceId={workspaceId} current="notifications" admin={admin} />
-      <div className="flex max-w-3xl flex-col gap-8 p-6">
+      <div className="flex max-w-3xl flex-col gap-8 p-4 md:p-6">
         <Section
           title="Email me about"
           description="In-app notifications are always on; these choose what also arrives by email."

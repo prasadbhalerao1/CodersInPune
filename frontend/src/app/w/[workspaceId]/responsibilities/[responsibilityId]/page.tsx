@@ -126,7 +126,7 @@ export default async function ResponsibilityPage({
           </>
         }
       />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-8">
           <div className="flex flex-wrap items-center gap-2">
             <CriticalityBadge value={r.criticality} />

@@ -42,7 +42,7 @@ export default async function HealthPage({
     <div className="flex flex-1 flex-col">
       <PageHeader title="Integrations" />
       <IntegrationsNav workspaceId={workspaceId} current="health" />
-      <div className="flex w-full flex-col gap-6 p-6">
+      <div className="flex w-full flex-col gap-6 p-4 md:p-6">
         <p className="text-muted-foreground max-w-2xl text-sm">
           Whether each connected tool is current. Relay never shows data from a source as current
           when its last sync failed or access changed; pages that use it say so.

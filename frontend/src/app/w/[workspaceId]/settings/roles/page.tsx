@@ -47,7 +47,7 @@ export default async function RolesPage({ params }: PageProps<"/w/[workspaceId]/
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" />
       <SettingsNav workspaceId={workspaceId} current="roles" admin={admin} />
-      <div className="flex w-full flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-4 md:p-6">
         <Section
           title="Roles and permissions"
           description="Every role and exactly what it allows. Change someone's role on the Members page."

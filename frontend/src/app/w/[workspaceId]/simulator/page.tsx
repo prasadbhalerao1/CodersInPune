@@ -101,7 +101,7 @@ export default async function SimulatorPage({
         }
         description="See what breaks if someone becomes unavailable, before it happens. Nothing is changed."
       />
-      <div className="flex w-full flex-col gap-6 p-6">
+      <div className="flex w-full flex-col gap-6 p-4 md:p-6">
         <Panel className="p-4">
           <form
             method="get"

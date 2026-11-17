@@ -65,7 +65,7 @@ export default async function DataPage({ params }: PageProps<"/w/[workspaceId]/s
     <div className="flex flex-1 flex-col">
       <PageHeader title="Settings" />
       <SettingsNav workspaceId={workspaceId} current="data" admin={admin} />
-      <div className="flex max-w-4xl flex-col gap-8 p-6">
+      <div className="flex max-w-4xl flex-col gap-8 p-4 md:p-6">
         <Section
           title="What Relay reads, and why"
           description="Everything Relay can see comes from one of these, scoped to this workspace."

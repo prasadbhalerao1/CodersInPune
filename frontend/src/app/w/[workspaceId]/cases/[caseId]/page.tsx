@@ -127,7 +127,7 @@ export default async function CasePage({
         }
       />
       <EmergencyBanner detail={c} />
-      <div className="flex flex-col gap-2 px-6 pt-3">
+      <div className="flex flex-col gap-2 px-4 pt-3 md:px-6">
         <CaseProgress detail={c} />
         <p className="text-muted-foreground text-sm" role="status">
           {nextStep(c)}
@@ -144,7 +144,7 @@ export default async function CasePage({
           approvals: c.status === "planning" || c.status === "awaiting_review" ? 1 : 0,
         }}
       />
-      <div className="grid gap-8 p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid gap-8 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-8">
           {tab === "overview" ? (
             <>

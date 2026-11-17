@@ -17,9 +17,9 @@ export default async function AskPage({ params }: PageProps<"/w/[workspaceId]/as
             Ask Relay <Explain what="ask_relay" align="start" />
           </span>
         }
-        description="Ask anything about this workspace. Answers come only from records you can open, and cite each one."
+        description="Your assistant for this workspace. It knows its owners, people, handovers and risks, and cites every fact."
       />
-      <div className="mx-auto w-full max-w-4xl p-6">
+      <div className="mx-auto w-full max-w-4xl p-4 md:p-6">
         <AskRelay workspaceId={workspaceId} />
       </div>
     </div>

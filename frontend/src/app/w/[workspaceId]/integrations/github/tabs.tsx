@@ -23,7 +23,7 @@ export function GitHubTabs({
 }) {
   const base = `/w/${workspaceId}/integrations`;
   return (
-    <nav aria-label="GitHub" className="flex gap-1 border-b px-6 text-sm">
+    <nav aria-label="GitHub" className="flex gap-1 border-b px-4 text-sm md:px-6">
       {TABS.map((t) => (
         <Link
           key={t.key}

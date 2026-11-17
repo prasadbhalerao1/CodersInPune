@@ -38,7 +38,7 @@ export default async function CapsulesPage({
         caseTitle={caseDetail.data.title}
         current="capsules"
       />
-      <div className="flex w-full flex-col gap-8 p-6">
+      <div className="flex w-full flex-col gap-8 p-4 md:p-6">
         {canGenerate ? (
           <Section
             title="Generate a handover capsule"

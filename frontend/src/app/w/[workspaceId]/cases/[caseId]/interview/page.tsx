@@ -155,7 +155,7 @@ export default async function InterviewPage({
           ) : undefined
         }
       />
-      <div className="flex max-w-3xl flex-col gap-6 p-6">
+      <div className="flex max-w-3xl flex-col gap-6 p-4 md:p-6">
         <p className="text-muted-foreground text-sm">
           Questions only the person handing over can answer. Answers are reviewed by a case manager
           and can be proposed as knowledge; nothing is published automatically.

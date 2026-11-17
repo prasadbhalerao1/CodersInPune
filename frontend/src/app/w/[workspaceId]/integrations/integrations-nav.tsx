@@ -19,7 +19,7 @@ export function IntegrationsNav({
   current: (typeof PROVIDERS)[number]["key"];
 }) {
   return (
-    <nav aria-label="Integrations" className="flex gap-1 border-b px-6 pt-2 text-sm">
+    <nav aria-label="Integrations" className="flex gap-1 border-b px-4 pt-2 text-sm md:px-6">
       {PROVIDERS.map((p) => (
         <Link
           key={p.key}
