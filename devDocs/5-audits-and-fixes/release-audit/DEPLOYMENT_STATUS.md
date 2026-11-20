@@ -3,7 +3,7 @@
 | Component | State |
 |---|---|
 | Database | Neon project `relay` (`plain-poetry-45016432`), PostgreSQL 18.6, `aws-ap-southeast-1`. Roles `relay_owner` and `relay_app` created by SQL; both not superuser, not BYPASSRLS, not in `neon_superuser`. Migrations 0001 to 0039 applied. 84 of 84 tenant tables force RLS. App role sees 0 workspaces without tenant context and cannot delete audit events. |
-| API | Render Blueprint `relay`, web service `relay-api` (free, Singapore, embedded worker): https://relay-api-3m85.onrender.com. Environment configured, including GitHub, Linear and Notion connectors; `/health/ready` returns 200. |
+| API | Render Blueprint `relay`, web service `relay-api` (free, Singapore, embedded worker): https://relay-api-l0e5.onrender.com. Environment configured, including GitHub, Linear and Notion connectors; `/health/ready` returns 200. |
 | Web | Vercel project `relay-continuity`: https://relay-continuity-nine.vercel.app. Landing page 200, CSP, X-Frame-Options and HSTS present, sign-in redirects to WorkOS with the production callback. |
 | WorkOS | Staging environment; production callback `https://relay-continuity-nine.vercel.app/callback` added. |
 | GitHub | `main` pushed. `production` environment holds `RELAY_MIGRATION_DATABASE_URL` and `RELAY_BACKUP_PASSPHRASE`; repository secret `RELAY_OPS_TOKEN`; variables `RELAY_API_URL`, `RELAY_WEB_URL` (Monitor workflow active). |

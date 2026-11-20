@@ -199,7 +199,7 @@ puts the owner URL into the API's environment. The workflow is the stricter opti
    | `RELAY_GITHUB_WEBHOOK_SECRET` (+ the `RELAY_GITHUB_APP_*` values) | Only if you connect GitHub |
 
 3. Deploy. `RELAY_ENVIRONMENT=production` turns on strict configuration validation. A missing or inconsistent value stops startup with a readable message in the logs, rather than half-working.
-4. Check that `https://relay-api.onrender.com/health/ready` returns 200. Use your service's actual URL.
+4. Check that `https://relay-api-l0e5.onrender.com/health/ready` returns 200. Use your service's actual URL.
 5. **Free plan only:** set the repository variable `RELAY_API_HEALTH_URL` to `https://<api>/health/live` to turn on the keep-warm workflow.
 
 ### 3.4 Web (Vercel)
